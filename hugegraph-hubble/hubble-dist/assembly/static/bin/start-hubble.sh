@@ -36,9 +36,26 @@ if [[ ! -d ${LOG_PATH} ]]; then
     mkdir "${LOG_PATH}"
 fi
 
-class_path="."
+PROTO_JAR=""
+for jar in "${LIB_PATH}"/protobuf-java-*.jar; do
+    [[ -e "$jar" ]] || break
+    PROTO_JAR="$jar"
+done
+if [[ -z "${PROTO_JAR}" ]]; then
+    echo "Failed to find protobuf-java-*.jar under ${LIB_PATH}"
+    exit 1
+fi
+class_path=".:${PROTO_JAR}"
 for jar in "${LIB_PATH}"/*.jar; do
     [[ -e "$jar" ]] || break
+    [[ "$jar" == "$PROTO_JAR" ]] && continue
+    base=$(basename "$jar")
+    # Avoid multiple slf4j bindings: keep log4j-slf4j-impl, drop log4j-to-slf4j and logback
+    case "${base}" in
+        log4j-to-slf4j-*.jar|logback-classic-*.jar|logback-core-*.jar)
+            continue
+            ;;
+    esac
     class_path=${class_path}:${jar}
 done
 
