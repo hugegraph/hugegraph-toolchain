@@ -54,9 +54,6 @@ public class HugeClientBuilder {
     public HugeClientBuilder(String url, String graphSpace, String graph) {
         E.checkArgument(url != null && !url.isEmpty(),
                         "Expect a string value as the url parameter argument, but got: %s", url);
-        E.checkArgument(graph != null && !graph.isEmpty(),
-                        "Expect a string value as the graph name parameter argument, but got: %s",
-                        graph);
         this.url = url;
         this.graphSpace = graphSpace;
         this.graph = graph;
@@ -77,7 +74,6 @@ public class HugeClientBuilder {
 
     public HugeClient build() {
         E.checkArgument(this.url != null, "The url parameter can't be null");
-        E.checkArgument(this.graph != null, "The graph parameter can't be null");
         return new HugeClient(this);
     }
 
