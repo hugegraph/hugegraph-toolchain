@@ -54,5 +54,6 @@ public class GroovyExecutor {
         DelegatingScript script = (DelegatingScript) shell.parse(groovyScript);
         script.setDelegate(client);
         script.run();
+        // test
     }
 }
