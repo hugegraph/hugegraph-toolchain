@@ -86,6 +86,7 @@ jobs:
             **/target/surefire-reports/*.txt
             **/target/surefire-reports/*.xml
             **/target/failsafe-reports/*.txt
+            **/hugegraph-loader/logs/*.log
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
