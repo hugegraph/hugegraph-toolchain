@@ -80,6 +80,16 @@ jobs:
           mvn test -P jdbc
           mvn test -P kafka
 
+      - name: Upload Test Reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hugegraph-loader-test-reports
+          path: |
+            **/target/surefire-reports/*.txt
+            **/target/surefire-reports/*.xml
+            **/target/failsafe-reports/*.txt
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
