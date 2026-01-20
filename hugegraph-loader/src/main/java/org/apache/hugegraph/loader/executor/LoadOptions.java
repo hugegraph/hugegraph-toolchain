@@ -329,6 +329,11 @@ public final class LoadOptions implements Cloneable {
                description = "The task scheduler type (when creating graph if not exists")
     public String schedulerType = "distributed";
 
+    @Parameter(names = {"--batch-failure-fallback"}, arity = 1,
+               description = "Whether to fallback to single insert when batch insert fails. " +
+                             "Default: true")
+    public boolean batchFailureFallback = true;
+
     public String workModeString() {
         if (this.incrementalMode) {
             return "INCREMENTAL MODE";

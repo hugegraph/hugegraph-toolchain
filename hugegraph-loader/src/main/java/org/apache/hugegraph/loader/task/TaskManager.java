@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hugegraph.loader.util.Printer;
 import org.slf4j.Logger;
 
 import org.apache.hugegraph.loader.builder.Record;
@@ -152,10 +153,18 @@ public final class TaskManager {
         CompletableFuture.runAsync(task, this.batchService).whenComplete(
             (r, e) -> {
                 if (e != null) {
-                    LOG.warn("Batch insert {} error, try single insert",
-                             mapping.type(), e);
-                    // The time of single insert is counted separately
-                    this.submitInSingle(struct, mapping, batch);
+                    LOG.error("Batch insert {} error, interrupting import", mapping.type(), e);
+                    if (this.options.batchFailureFallback) {
+                        LOG.warn("Batch insert {} error, try single insert",
+                                 mapping.type(), e);
+                        this.submitInSingle(struct, mapping, batch);
+                    } else {
+                        summary.metrics(struct).minusFlighting(batch.size());
+                        this.context.occurredError();
+                        this.context.stopLoading();
+                        Printer.printError("Batch insert %s failed, stop loading. Please check the logs",
+                                           mapping.type().string());
+                    }
                 } else {
                     summary.metrics(struct).minusFlighting(batch.size());
                 }
