@@ -179,7 +179,7 @@ public final class LoadOptions implements Cloneable {
 
     @Parameter(names = {"--parallel-count"}, arity = 1,
             description = "The number of parallel read pipelines")
-    public int parallelCount = 1;
+    public int parallelCount = Math.max(2, CPUS / 2);
 
     @Parameter(names = {"--start-file"}, arity = 1,
             description = "start file index for partial loading")
@@ -328,11 +328,6 @@ public final class LoadOptions implements Cloneable {
     @Parameter(names = {"--scheduler-type"}, arity = 1,
                description = "The task scheduler type (when creating graph if not exists")
     public String schedulerType = "distributed";
-
-    @Parameter(names = {"--batch-failure-fallback"}, arity = 1,
-               description = "Whether to fallback to single insert when batch insert fails. " +
-                             "Default: true")
-    public boolean batchFailureFallback = true;
 
     public String workModeString() {
         if (this.incrementalMode) {
