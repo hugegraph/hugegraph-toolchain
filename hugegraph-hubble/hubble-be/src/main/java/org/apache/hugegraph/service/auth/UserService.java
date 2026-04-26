@@ -375,16 +375,16 @@ public class UserService extends AuthService{
         login.password(oldpwd);
         try {
             hugeClient.auth().login(login);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return Response.builder()
                     .status(Constant.STATUS_BAD_REQUEST)
                     .message(e.getMessage())
                     .cause(e.getCause())
                     .build();
         }
-        User user = new User();
-        user.name(username);
+        // Must fetch user first to get the ID, otherwise updateUser sends
+        // PUT to the collection path (no {id}) and gets HTTP 405.
+        User user = hugeClient.auth().getUser(username);
         user.password(newpwd);
         hugeClient.auth().updateUser(user);
         return Response.builder()
