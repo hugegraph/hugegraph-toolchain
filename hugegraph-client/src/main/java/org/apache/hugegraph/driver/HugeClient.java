@@ -108,7 +108,10 @@ public class HugeClient implements Closeable {
     public HugeClient(HugeClient client, String graphSpace, String graph) {
         this.borrowedClient = true;
         this.client = client.client;
-        this.initManagers(this.client, graphSpace, graph);
+        this.graphSpaceName = (graphSpace == null || graphSpace.isEmpty()) ? 
+                              HugeClientBuilder.DEFAULT_GRAPHSPACE : graphSpace;
+        this.graphName = graph;
+        this.initManagers(this.client, this.graphSpaceName, this.graphName);
     }
 
     public static HugeClientBuilder builder(String url, String graphSpace, String graph) {
@@ -121,11 +124,12 @@ public class HugeClient implements Closeable {
 
     public static HugeClientBuilder builder(String url, String graphSpace, String graph,
                                             boolean skipRequiredChecks) {
-        return new HugeClientBuilder(url, graphSpace, graph, skipRequiredChecks);
+        return new HugeClientBuilder(url, graphSpace, graph).graphRequired(!skipRequiredChecks);
     }
 
     public HugeClient assignGraph(String graphSpace, String graph) {
-        this.graphSpaceName = graphSpace;
+        this.graphSpaceName = (graphSpace == null || graphSpace.isEmpty()) ? 
+                              HugeClientBuilder.DEFAULT_GRAPHSPACE : graphSpace;
         this.graphName = graph;
         this.initManagers(this.client, this.graphSpaceName, this.graphName);
         return this;
