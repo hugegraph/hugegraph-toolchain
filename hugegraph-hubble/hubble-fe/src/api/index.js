@@ -21,7 +21,8 @@ import * as manage from './manage';
 import * as auth from './auth';
 import * as analysis from './analysis';
 import * as cloud from './cloud';
+import * as config from './config';
 
 const uploadUrl = '/api/v1.3/ingest/files/upload';
 
-export {request, manage, auth, analysis, cloud, uploadUrl};
+export {request, manage, auth, analysis, cloud, config, uploadUrl};

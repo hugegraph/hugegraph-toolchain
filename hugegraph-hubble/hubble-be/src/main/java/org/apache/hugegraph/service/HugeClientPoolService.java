@@ -18,7 +18,6 @@
 
 package org.apache.hugegraph.service;
 
-
 import static org.apache.hugegraph.driver.factory.PDHugeClientFactory.DEFAULT_GRAPHSPACE;
 import static org.apache.hugegraph.driver.factory.PDHugeClientFactory.DEFAULT_SERVICE;
 
@@ -30,7 +29,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
-
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -60,7 +58,7 @@ public final class HugeClientPoolService {
     private SettingSSLService sslService;
     @Autowired
     private String cluster;
-    @Autowired
+    @Autowired(required = false)
     private PDHugeClientFactory pdHugeClientFactory;
 
     private final Map<String, HugeClient> clients = new ConcurrentHashMap<>();
@@ -69,10 +67,9 @@ public final class HugeClientPoolService {
      * cache key format: {graphSpace}_{graph}
      */
     private static final String CACHE_KEY_FORMAT = "%s_%s";
-    private Cache<String, List<String>> urlCache =
-            CacheBuilder.newBuilder()
-                        .expireAfterWrite(1, TimeUnit.HOURS)
-                        .build();
+    private Cache<String, List<String>> urlCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .build();
 
     @PreDestroy
     public void destroy() {
@@ -87,23 +84,23 @@ public final class HugeClientPoolService {
         return getOrCreate(null, null, null, null);
     }
 
-    public HugeClient createTempTokenClient(String token){
-        return getOrCreate(null,null,null,token);
+    public HugeClient createTempTokenClient(String token) {
+        return getOrCreate(null, null, null, token);
     }
 
     public HugeClient createAuthClient(String graphSpace,
-                                       String graph, String token) {
+            String graph, String token) {
         return getOrCreate(null, graphSpace, graph, token);
     }
 
     public HugeClient getOrCreate(String url, String graphSpace, String graph,
-                                  String token) {
+            String token) {
         // 去掉缓存，固定每个 request 分配一个 client
         return create(url, graphSpace, graph, token);
     }
 
     public HugeClient create(String url, String graphSpace, String graph,
-                             String token) {
+            String token) {
         if (StringUtils.isEmpty(url)) {
             List<String> urls = this.allAvailableURLs(graphSpace, graph);
 
@@ -115,8 +112,7 @@ public final class HugeClientPoolService {
                 if (StringUtils.isEmpty(tmpurl)) {
                     continue;
                 }
-                HugeClient tmpclient =
-                        this.create(tmpurl, graphSpace, graph, token);
+                HugeClient tmpclient = this.create(tmpurl, graphSpace, graph, token);
 
                 if (checkHealth(tmpclient)) {
                     return tmpclient;
@@ -153,17 +149,24 @@ public final class HugeClientPoolService {
      * 获取所有可用的URL列表
      *
      * @param graphSpace 图形空间名称
-     * @param service 服务名称
+     * @param service    服务名称
      * @return URL列表
      */
     private List<String> allAvailableURLs(String graphSpace, String service) {
+        // Non-PD mode: directly return the configured server URL
+        boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
+        if (!pdEnabled) {
+            String directUrl = config.get(HubbleOptions.SERVER_URL);
+            log.info("PD mode disabled, using direct server URL: {}", directUrl);
+            return ImmutableList.of(directUrl);
+        }
+
         List<String> realtimeurls = new ArrayList<>();
         if (StringUtils.isNotEmpty(graphSpace)) {
             if (StringUtils.isNotEmpty(service)) {
                 // Get realtineurls From service
-                List<String> urls =
-                        pdHugeClientFactory.getURLs(cluster, graphSpace,
-                                                    service);
+                List<String> urls = pdHugeClientFactory.getURLs(cluster, graphSpace,
+                        service);
                 if (!CollectionUtils.isEmpty(urls)) {
                     // 打乱顺序
                     Collections.shuffle(urls);
@@ -171,8 +174,7 @@ public final class HugeClientPoolService {
                 }
             }
 
-            List<String> urls =
-                    pdHugeClientFactory.getURLs(cluster, graphSpace, null);
+            List<String> urls = pdHugeClientFactory.getURLs(cluster, graphSpace, null);
             if (!CollectionUtils.isEmpty(urls)) {
                 // 打乱顺序
                 Collections.shuffle(urls);
@@ -181,9 +183,10 @@ public final class HugeClientPoolService {
         }
 
         List<String> urls = pdHugeClientFactory.getURLs(cluster, DEFAULT_GRAPHSPACE,
-                                                        DEFAULT_SERVICE);
+                DEFAULT_SERVICE);
         String defaultCacheKey = String.format(CACHE_KEY_FORMAT, DEFAULT_GRAPHSPACE,
-                                               DEFAULT_SERVICE);;
+                DEFAULT_SERVICE);
+        ;
         if (!CollectionUtils.isEmpty(urls)) {
             Collections.shuffle(urls);
             // 设置默认URL缓存
@@ -209,7 +212,7 @@ public final class HugeClientPoolService {
             }
 
             log.warn("Get empty list of availabel url from cache: {}/{}",
-                     graphSpace, service);
+                    graphSpace, service);
 
             return ImmutableList.of();
         }

@@ -25,14 +25,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import lombok.extern.log4j.Log4j2;
 
-
+@Log4j2
 @Configuration
 public class MetaConfig {
 
-
     @Autowired
     private HugeConfig config;
+
+    @Bean("pdEnabled")
+    public Boolean pdEnabled() {
+        return this.config.get(HubbleOptions.PD_ENABLED);
+    }
 
     @Bean("cluster")
     public String getCluster() {
@@ -41,11 +46,14 @@ public class MetaConfig {
 
     @Bean
     PDHugeClientFactory pdHugeClientFactory() {
+        boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
+        if (!pdEnabled) {
+            log.info("PD mode is disabled, skip creating PDHugeClientFactory");
+            return null;
+        }
 
         String pdAddrs = this.config.get(HubbleOptions.PD_PEERS);
-
         String routeType = this.config.get(HubbleOptions.ROUTE_TYPE);
-
         return new PDHugeClientFactory(pdAddrs, routeType);
     }
 

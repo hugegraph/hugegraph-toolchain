@@ -18,10 +18,13 @@
 
 package org.apache.hugegraph.service.space;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -36,16 +39,17 @@ public class OLTPServerService {
 
     @Autowired
     protected String cluster;
-    @Autowired
+    @Autowired(required = false)
     PDHugeClientFactory pdHugeClientFactory;
+    @Autowired
+    private HugeConfig config;
 
     public IPage<Object> queryPage(HugeClient client, String query,
-                                        int pageNo, int pageSize) {
+            int pageNo, int pageSize) {
         List<String> serviceNames = client.serviceManager().listService();
-        List<Object> result
-                = serviceNames.stream().filter(s -> s.contains(query)).sorted()
-                              .map((s) -> get(client, s))
-                              .collect(Collectors.toList());
+        List<Object> result = serviceNames.stream().filter(s -> s.contains(query)).sorted()
+                .map((s) -> get(client, s))
+                .collect(Collectors.toList());
 
         return PageUtil.page(result, pageNo, pageSize);
     }
@@ -56,9 +60,14 @@ public class OLTPServerService {
         OLTPService service = client.serviceManager().getService(serviceName);
 
         // 通过PD， 获取当前service可用URL, 判断当前服务是否存活
-        List<String> urls = pdHugeClientFactory.getURLs(cluster, graphSpace,
-                                                        serviceName);
-        urls = urls.stream().distinct().collect(Collectors.toList());
+        List<String> urls;
+        boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
+        if (pdEnabled && pdHugeClientFactory != null) {
+            urls = pdHugeClientFactory.getURLs(cluster, graphSpace, serviceName);
+            urls = urls.stream().distinct().collect(Collectors.toList());
+        } else {
+            urls = Collections.emptyList();
+        }
 
         // service使用pd中的urls
         service.setUrls(urls);

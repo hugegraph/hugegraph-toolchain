@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hugegraph.config.HugeConfig;
@@ -48,7 +49,7 @@ public abstract class BaseController {
     protected String cluster;
     @Autowired
     protected HugeClientPoolService hugeClientPoolService;
-    @Autowired
+    @Autowired(required = false)
     protected PDHugeClientFactory pdHugeClientFactory;
 
     @Autowired
@@ -62,25 +63,25 @@ public abstract class BaseController {
 
     public void checkIdSameAsBody(Object id, Identifiable newEntity) {
         Ex.check(newEntity.getId() != null, () -> id.equals(newEntity.getId()),
-                 "common.param.path-id-should-same-as-body",
-                 id, newEntity.getId());
+                "common.param.path-id-should-same-as-body",
+                id, newEntity.getId());
     }
 
     public void checkParamsNotEmpty(String name, String value,
-                                    boolean creating) {
+            boolean creating) {
         if (creating) {
             Ex.check(!StringUtils.isEmpty(value),
-                     "common.param.cannot-be-null-or-empty", name);
+                    "common.param.cannot-be-null-or-empty", name);
         } else {
             // The default null and user-passed null indicate no update
             Ex.check(value == null || !value.isEmpty(),
-                     "common.param.cannot-be-empty", name);
+                    "common.param.cannot-be-empty", name);
         }
     }
 
     public void checkParamsNotEmpty(String name, List<?> values) {
         Ex.check(values != null && !values.isEmpty(),
-                 "common.param.cannot-be-null-or-empty", name);
+                "common.param.cannot-be-null-or-empty", name);
     }
 
     public <T extends Mergeable> T mergeEntity(T oldEntity, T newEntity) {
@@ -112,8 +113,7 @@ public abstract class BaseController {
     }
 
     protected HttpServletRequest getRequest() {
-        return ((ServletRequestAttributes)
-                RequestContextHolder.getRequestAttributes()).getRequest();
+        return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
     }
 
     protected String getToken() {
@@ -135,9 +135,8 @@ public abstract class BaseController {
             client.assignGraph(graphSpace, graph);
             return client;
         }
-        HugeClient client =
-                this.hugeClientPoolService.createAuthClient(
-                        graphSpace, graph, this.getToken());
+        HugeClient client = this.hugeClientPoolService.createAuthClient(
+                graphSpace, graph, this.getToken());
         request.setAttribute("hugeClient", client);
         return client;
     }
@@ -157,14 +156,13 @@ public abstract class BaseController {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
             HugeClient client = (HugeClient) request.getAttribute("hugeClient");
-            client.setAuthContext("Basic "+this.getToken());
+            client.setAuthContext("Basic " + this.getToken());
             return client;
         }
         HugeClient client = this.hugeClientPoolService.createTempTokenClient(this.getToken());
         request.setAttribute("hugeClient", client);
         return client;
     }
-
 
     protected void clearRequestHugeClient() {
         HttpServletRequest request = getRequest();
@@ -177,7 +175,7 @@ public abstract class BaseController {
 
     protected HugeClient createAuthClient(String graphSpace, String graph) {
         return this.hugeClientPoolService.create(null, graphSpace, graph,
-                                                 this.getToken());
+                this.getToken());
     }
 
     protected HugeClient createUnauthClient(String graphSpace, String graph) {
@@ -185,7 +183,7 @@ public abstract class BaseController {
     }
 
     public <T> T doAuthRequest(Function<HugeClient, T> func) {
-        try(HugeClient client = createAuthClient(null, null)) {
+        try (HugeClient client = createAuthClient(null, null)) {
             return func.apply(client);
         } catch (Throwable t) {
             throw t;
@@ -193,7 +191,7 @@ public abstract class BaseController {
     }
 
     public <T> T doUnauthRequest(Function<HugeClient, T> func) {
-        try(HugeClient client = createUnauthClient(null, null)) {
+        try (HugeClient client = createUnauthClient(null, null)) {
             return func.apply(client);
         } catch (Throwable t) {
             throw t;
@@ -201,36 +199,46 @@ public abstract class BaseController {
     }
 
     protected HugeClient defaultClient(String graphSpace, String graph) {
-        // Get Service url From Default service
-        List<String> urls =
-                pdHugeClientFactory.getURLs(this.cluster,
-                                            PDHugeClientFactory.DEFAULT_GRAPHSPACE,
-                                            PDHugeClientFactory.DEFAULT_SERVICE);
+        boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
+        if (!pdEnabled) {
+            String url = config.get(HubbleOptions.SERVER_URL);
+            return hugeClientPoolService.create(url, graphSpace, graph,
+                    this.getToken());
+        }
+
+        // PD mode: get URL from service discovery
+        List<String> urls = pdHugeClientFactory.getURLs(this.cluster,
+                PDHugeClientFactory.DEFAULT_GRAPHSPACE,
+                PDHugeClientFactory.DEFAULT_SERVICE);
 
         if (CollectionUtils.isEmpty(urls)) {
             throw new ParameterizedException("No url in service(%s/%s)",
-                                             PDHugeClientFactory.DEFAULT_GRAPHSPACE,
-                                             PDHugeClientFactory.DEFAULT_SERVICE);
+                    PDHugeClientFactory.DEFAULT_GRAPHSPACE,
+                    PDHugeClientFactory.DEFAULT_SERVICE);
         }
 
         String url = urls.get((int) (Math.random() * urls.size()));
 
         HugeClient client = hugeClientPoolService.create(url, graphSpace, graph,
-                                                         this.getToken());
+                this.getToken());
 
         return client;
     }
 
     public String getUrl() {
-        List<String> urls =
-                pdHugeClientFactory.getURLs(this.cluster,
-                                            PDHugeClientFactory.DEFAULT_GRAPHSPACE,
-                                            PDHugeClientFactory.DEFAULT_SERVICE);
+        boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
+        if (!pdEnabled) {
+            return config.get(HubbleOptions.SERVER_URL);
+        }
+
+        List<String> urls = pdHugeClientFactory.getURLs(this.cluster,
+                PDHugeClientFactory.DEFAULT_GRAPHSPACE,
+                PDHugeClientFactory.DEFAULT_SERVICE);
 
         if (CollectionUtils.isEmpty(urls)) {
             throw new ParameterizedException("No url in service(%s/%s)",
-                                             PDHugeClientFactory.DEFAULT_GRAPHSPACE,
-                                             PDHugeClientFactory.DEFAULT_SERVICE);
+                    PDHugeClientFactory.DEFAULT_GRAPHSPACE,
+                    PDHugeClientFactory.DEFAULT_SERVICE);
         }
 
         String url = urls.get((int) (Math.random() * urls.size()));

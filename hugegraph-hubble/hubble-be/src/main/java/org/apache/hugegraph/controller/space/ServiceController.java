@@ -33,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.service.space.OLTPServerService;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.structure.space.OLTPService;
 
 import java.util.List;
@@ -47,6 +49,14 @@ public class ServiceController extends BaseController {
     @Autowired
     OLTPServerService oltpService;
 
+    @Autowired
+    HugeConfig config;
+
+    private void checkPdMode() {
+        E.checkArgument(config.get(HubbleOptions.PD_ENABLED),
+                "Service management is not supported in standalone mode");
+    }
+
     @GetMapping
     public Object queryPage(@PathVariable("graphspace") String graphspace,
                             @RequestParam(name = "query", required = false,
@@ -55,6 +65,7 @@ public class ServiceController extends BaseController {
                                     defaultValue = "1") int pageNo,
                             @RequestParam(name = "page_size", required = false,
                                     defaultValue = "10") int pageSize) {
+        checkPdMode();
         try (HugeClient client = defaultClient(graphspace, null);){
             return oltpService.queryPage(client, query, pageNo, pageSize);
         } catch (Throwable t) {
@@ -65,6 +76,7 @@ public class ServiceController extends BaseController {
     @GetMapping("{service}")
     public Object get(@PathVariable("graphspace") String graphspace,
                       @PathVariable("service") String service) {
+        checkPdMode();
         try (HugeClient client = defaultClient(graphspace, null);){
             return oltpService.get(client, service);
         } catch (Throwable t) {
@@ -76,6 +88,7 @@ public class ServiceController extends BaseController {
     public Object create(@PathVariable("graphspace") String graphspace,
                          @RequestBody OLTPService serviceEntity) {
 
+        checkPdMode();
         // return serviceEntity;
         // TODO url or routetype
         if (serviceEntity.getDepleymentType()
@@ -98,6 +111,7 @@ public class ServiceController extends BaseController {
                          @PathVariable("service") String service,
                          @RequestBody OLTPService serviceEntity) {
 
+        checkPdMode();
         E.checkArgument(!serviceEntity.getDepleymentType()
                                       .equals(OLTPService.DepleymentType.MANUAL),
                         "service.manual.disable.modify");
@@ -116,6 +130,7 @@ public class ServiceController extends BaseController {
     @DeleteMapping("{service}")
     public void delete(@PathVariable("graphspace") String graphspace,
                        @PathVariable("service") String service) {
+        checkPdMode();
         if (("DEFAULT".equals(graphspace)) && ("DEFAULT".equals(service))) {
             throw new ParameterizedException("Do not delete the service " +
                                              "'DEFAULT' under the graphspace " +
@@ -132,6 +147,7 @@ public class ServiceController extends BaseController {
     public void start(@PathVariable("graphspace") String graphspace,
                        @PathVariable("service") String service) {
 
+        checkPdMode();
         try (HugeClient client = defaultClient(graphspace, null);){
             oltpService.start(client, service);
         } catch (Throwable t) {
@@ -143,6 +159,7 @@ public class ServiceController extends BaseController {
     public void stop(@PathVariable("graphspace") String graphspace,
                       @PathVariable("service") String service) {
 
+        checkPdMode();
         try (HugeClient client = defaultClient(graphspace, null);){
             oltpService.stop(client, service);
         } catch (Throwable t) {
@@ -152,6 +169,7 @@ public class ServiceController extends BaseController {
 
     @GetMapping("options/list")
     public Object configOptions(@PathVariable("graphspace") String graphspace) {
+        checkPdMode();
         try (HugeClient client = defaultClient(graphspace, null);){
             List<String> fields = oltpService.configOptionList(client);
 

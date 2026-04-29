@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.structure.auth.Login;
+import org.apache.hugegraph.options.HubbleOptions;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,10 @@ public class UserService extends AuthService{
     @Autowired
     private HugeConfig config;
 
+    private boolean isPdEnabled() {
+        return config.get(HubbleOptions.PD_ENABLED);
+    }
+
     public List<UserEntity> listUsers(HugeClient hugeClient) {
         AuthManager auth = hugeClient.auth();
 
@@ -70,23 +75,28 @@ public class UserService extends AuthService{
         Map<String, List<String>> spaceMap = new HashMap<>();
         users.forEach(u -> {
             UserEntity ue = convert(hugeClient, u);
-            ue.setSuperadmin(isSuperAdmin(hugeClient, ue.getId()));
+            if (isPdEnabled()) {
+                ue.setSuperadmin(isSuperAdmin(hugeClient, ue.getId()));
+            } else {
+                ue.setSuperadmin(false);
+            }
             ues.add(ue);
         });
-        List<Map> listMap = getSpaceAndSpacenum(hugeClient);
-        spaceMap = listMap.get(0);
-        countMap = listMap.get(1);
-        for (UserEntity user: ues) {
-            user.setSpacenum(countMap.get(user.getName()));
-            user.setAdminSpaces(spaceMap.get(user.getName()));
+        if (isPdEnabled()) {
+            List<Map> listMap = getSpaceAndSpacenum(hugeClient);
+            spaceMap = listMap.get(0);
+            countMap = listMap.get(1);
+            for (UserEntity user: ues) {
+                user.setSpacenum(countMap.get(user.getName()));
+                user.setAdminSpaces(spaceMap.get(user.getName()));
+            }
         }
 
         return ues;
     }
 
     public UserEntity getUser(HugeClient client, String name) {
-        // No Check if user is superadmin;
-        return convert(client, client.auth().getUser(name));
+        return convert(client, client.auth().getUserByName(name));
     }
 
     public Object queryPage(HugeClient hugeClient, String query,
@@ -105,13 +115,15 @@ public class UserService extends AuthService{
                             return ue;
                         }).collect(Collectors.toList());
 
-        List<Map> listMap = getSpaceAndSpacenum(hugeClient);
-        spaceMap = listMap.get(0);
-        countMap = listMap.get(1);
-        for (UserEntity user: results) {
-            user.setSpacenum(countMap.get(user.getName()));
-            user.setAdminSpaces(spaceMap.get(user.getName()));
-            user.setSuperadmin(isSuperAdmin(hugeClient, user.getId()));
+        if (isPdEnabled()) {
+            List<Map> listMap = getSpaceAndSpacenum(hugeClient);
+            spaceMap = listMap.get(0);
+            countMap = listMap.get(1);
+            for (UserEntity user: results) {
+                user.setSpacenum(countMap.get(user.getName()));
+                user.setAdminSpaces(spaceMap.get(user.getName()));
+                user.setSuperadmin(isSuperAdmin(hugeClient, user.getId()));
+            }
         }
         return PageUtil.page(results, pageNo, pageSize);
     }
@@ -122,24 +134,27 @@ public class UserService extends AuthService{
         Map<String, Integer> countMap = new HashMap<>();
         Map<String, List<String>> spaceMap = new HashMap<>();
 
-        List<UserEntity> results =
-                hugeClient.auth().listUsers().stream()
-                        .filter((u) -> !"admin".equals(u.name())
-                                && !"system".equals(u.name())
-                                && isSuperAdmin(hugeClient, u.id().toString()))
-                        .sorted(Comparator.comparing(User::name))
-                        .map((u) -> {
-                            UserEntity ue = convert(hugeClient, u);
-                            return ue;
-                        }).collect(Collectors.toList());
+        List<UserEntity> results;
+        if (isPdEnabled()) {
+            results = hugeClient.auth().listUsers().stream()
+                    .filter((u) -> !"admin".equals(u.name())
+                            && !"system".equals(u.name())
+                            && isSuperAdmin(hugeClient, u.id().toString()))
+                    .sorted(Comparator.comparing(User::name))
+                    .map((u) -> convert(hugeClient, u))
+                    .collect(Collectors.toList());
 
-        List<Map> listMap = getSpaceAndSpacenum(hugeClient);
-        spaceMap = listMap.get(0);
-        countMap = listMap.get(1);
-        for (UserEntity user: results) {
-            user.setSpacenum(countMap.get(user.getName()));
-            user.setAdminSpaces(spaceMap.get(user.getName()));
-            user.setSuperadmin(isSuperAdmin(hugeClient, user.getId()));
+            List<Map> listMap = getSpaceAndSpacenum(hugeClient);
+            spaceMap = listMap.get(0);
+            countMap = listMap.get(1);
+            for (UserEntity user: results) {
+                user.setSpacenum(countMap.get(user.getName()));
+                user.setAdminSpaces(spaceMap.get(user.getName()));
+                user.setSuperadmin(isSuperAdmin(hugeClient, user.getId()));
+            }
+        } else {
+            // Non-PD mode: no manager/space APIs available
+            results = new ArrayList<>();
         }
         return PageUtil.page(results, pageNo, pageSize);
     }
@@ -153,47 +168,61 @@ public class UserService extends AuthService{
                     userId);
         }
         UserEntity userEntity = convert(hugeClient, user);
-        userEntity.setSuperadmin(isSuperAdmin(hugeClient, userEntity.getId()));
-        List<String> spaces = hugeClient.graphSpace().listGraphSpace();
-        List<Map> listMap = getSpaceAndSpacenum(hugeClient);
-        List<String> adminSpaces = (List<String>) listMap.get(0).get(userId);
-        List<String> resSpaces = new ArrayList<>();
-        for (String space : spaces) {
-            if (hugeClient.graphSpace().checkDefaultRole(space, userId, "analyst")) {
-                resSpaces.add(space);
+        if (isPdEnabled()) {
+            userEntity.setSuperadmin(isSuperAdmin(hugeClient, userEntity.getId()));
+            List<String> spaces = hugeClient.graphSpace().listGraphSpace();
+            List<Map> listMap = getSpaceAndSpacenum(hugeClient);
+            List<String> adminSpaces = (List<String>) listMap.get(0).get(userId);
+            List<String> resSpaces = new ArrayList<>();
+            for (String space : spaces) {
+                if (hugeClient.graphSpace().checkDefaultRole(space, userId, "analyst")) {
+                    resSpaces.add(space);
+                }
             }
+            resSpaces.addAll(adminSpaces);
+            userEntity.setAdminSpaces(adminSpaces);
+            userEntity.setSpacenum(adminSpaces.size());
+            userEntity.setResSpaces(resSpaces);
+        } else {
+            userEntity.setSuperadmin(false);
+            userEntity.setAdminSpaces(new ArrayList<>());
+            userEntity.setSpacenum(0);
+            userEntity.setResSpaces(new ArrayList<>());
         }
-        resSpaces.addAll(adminSpaces);
-        userEntity.setAdminSpaces(adminSpaces);
-        userEntity.setSpacenum(adminSpaces.size());
-        userEntity.setResSpaces(resSpaces);
         return userEntity;
     }
 
     public UserEntity getpersonal(HugeClient hugeClient, String username) {
         AuthManager auth = hugeClient.auth();
-        User user = auth.getUser(username);
+        User user = auth.getUserByName(username);
         if (user == null) {
             throw new InternalException("auth.user.get.%s Not Exits",
                     username);
         }
         UserEntity userEntity = convert(hugeClient, user);
-        userEntity.setSuperadmin(isSuperAdmin(hugeClient));
-        List<String> adminSpaces = new ArrayList<>();
-        List<String> resSpaces = new ArrayList<>();
-        List<String> spaces = hugeClient.graphSpace().listGraphSpace();
-        for (String space: spaces) {
-            if (hugeClient.auth().isSpaceAdmin(space)) {
-                adminSpaces.add(space);
+        if (isPdEnabled()) {
+            userEntity.setSuperadmin(isSuperAdmin(hugeClient));
+            List<String> adminSpaces = new ArrayList<>();
+            List<String> resSpaces = new ArrayList<>();
+            List<String> spaces = hugeClient.graphSpace().listGraphSpace();
+            for (String space: spaces) {
+                if (hugeClient.auth().isSpaceAdmin(space)) {
+                    adminSpaces.add(space);
+                }
+                if (hugeClient.auth().isSpaceAdmin(space) ||
+                        hugeClient.auth().checkDefaultRole(space, "analyst") ) {
+                    resSpaces.add(space);
+                }
             }
-            if (hugeClient.auth().isSpaceAdmin(space) ||
-                    hugeClient.auth().checkDefaultRole(space, "analyst") ) {
-                resSpaces.add(space);
-            }
+            userEntity.setAdminSpaces(adminSpaces);
+            userEntity.setSpacenum(adminSpaces.size());
+            userEntity.setResSpaces(resSpaces);
+        } else {
+            userEntity.setSuperadmin(false);
+            userEntity.setAdminSpaces(new ArrayList<>());
+            userEntity.setSpacenum(0);
+            userEntity.setResSpaces(new ArrayList<>());
         }
-        userEntity.setAdminSpaces(adminSpaces);
-        userEntity.setSpacenum(adminSpaces.size());
-        userEntity.setResSpaces(resSpaces);
         return userEntity;
     }
 
@@ -314,6 +343,12 @@ public class UserService extends AuthService{
     protected List<Map> getSpaceAndSpacenum(HugeClient hugeClient){
         AuthManager auth = hugeClient.auth();
         List<Map> listMap = new ArrayList<Map>();
+        if (!isPdEnabled()) {
+            // Non-PD mode: no GraphSpace/Manager APIs available
+            listMap.add(new HashMap<>());
+            listMap.add(new HashMap<>());
+            return listMap;
+        }
         List<User> users = auth.listUsers();
         List<String> spaces = hugeClient.graphSpace().listGraphSpace();
         Map<String, Integer> countMap = new HashMap<>();
@@ -362,7 +397,7 @@ public class UserService extends AuthService{
 
     public void updatePersonal(HugeClient hugeClient, String username, String nickname, String description){
         AuthManager auth = hugeClient.auth();
-        User user = auth.getUser(username);
+        User user = auth.getUserByName(username);
         user.nickname(nickname);
         user.description(description);
         user.password(null);
@@ -384,7 +419,7 @@ public class UserService extends AuthService{
         }
         // Must fetch user first to get the ID, otherwise updateUser sends
         // PUT to the collection path (no {id}) and gets HTTP 405.
-        User user = hugeClient.auth().getUser(username);
+        User user = hugeClient.auth().getUserByName(username);
         user.password(newpwd);
         hugeClient.auth().updateUser(user);
         return Response.builder()
@@ -393,6 +428,9 @@ public class UserService extends AuthService{
     }
 
     public List<String> listAdminSpace(HugeClient hugeClient, String username) {
+        if (!isPdEnabled()) {
+            return new ArrayList<>();
+        }
         AuthManager auth = hugeClient.auth();
         List<User> users = auth.listUsers();
         List<String> spaces = hugeClient.graphSpace().listGraphSpace();
@@ -410,7 +448,7 @@ public class UserService extends AuthService{
     }
 
     public void updateAdminSpace(HugeClient hugeClient, String username, List<String> adminspaces) {
-        if (adminspaces == null) {
+        if (adminspaces == null || !isPdEnabled()) {
             return ;
         }
         List<String> oldadminspaces = listAdminSpace(hugeClient, username);
@@ -428,6 +466,11 @@ public class UserService extends AuthService{
 
 
     public String userLevel(HugeClient client) {
+        if (!isPdEnabled()) {
+            // In non-PD mode, Manager/GraphSpace APIs are not available.
+            // Treat the logged-in user as ADMIN for full access.
+            return "ADMIN";
+        }
 
         if (isSuperAdmin(client)) {
             return "ADMIN";
@@ -442,12 +485,18 @@ public class UserService extends AuthService{
     }
 
     public boolean isSuperAdmin(HugeClient client, String uid) {
+        if (!isPdEnabled()) {
+            return false;
+        }
         // Only used by superadmin
         // Check: if user is spaceadmin for any graphspace
         return client.auth().listSuperAdmin().contains(uid);
     }
 
     public boolean isSuperAdmin(HugeClient client) {
+        if (!isPdEnabled()) {
+            return false;
+        }
         // Check: if current user is superadmin
         return client.auth().isSuperAdmin();
     }
@@ -462,11 +511,17 @@ public class UserService extends AuthService{
      */
 
     public boolean isAssignSpaceAdmin(HugeClient client, String graphSpace) {
+        if (!isPdEnabled()) {
+            return false;
+        }
         // Check: if current user is spaceadmin
         return client.auth().isSpaceAdmin(graphSpace);
     }
 
     public boolean isSpaceAdmin(HugeClient client) {
+        if (!isPdEnabled()) {
+            return false;
+        }
         // Check: if current user is spaceadmin
         List<String> graphSpaces = client.graphSpace().listGraphSpace();
         for (String gs : graphSpaces) {
@@ -481,6 +536,9 @@ public class UserService extends AuthService{
     // List graphspace admin
     public List<String> listGraphSpaceAdmin(HugeClient client,
                                           String graphSpace) {
+        if (!isPdEnabled()) {
+            return new ArrayList<>();
+        }
         AuthManager auth = client.auth();
 
         return auth.listSpaceAdmin(graphSpace);

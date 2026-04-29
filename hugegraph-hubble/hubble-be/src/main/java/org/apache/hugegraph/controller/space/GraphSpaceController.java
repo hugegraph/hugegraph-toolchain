@@ -40,6 +40,8 @@ import org.apache.hugegraph.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -60,8 +62,16 @@ public class GraphSpaceController extends BaseController {
     @Autowired
     HugeConfig config;
 
+    private boolean isPdEnabled() {
+        return config.get(HubbleOptions.PD_ENABLED);
+    }
+
     @GetMapping("list")
     public Object list() {
+        if (!isPdEnabled()) {
+            return ImmutableMap.of("graphspaces",
+                                   Collections.singletonList("DEFAULT"));
+        }
 
         List<String> graphSpaces =
                 this.graphSpaceService.listAll(this.authClient(null, null));
@@ -79,6 +89,10 @@ public class GraphSpaceController extends BaseController {
                                     defaultValue = "10") int pageSize,
                             @RequestParam(name = "all", required = false,
                                           defaultValue = "false") boolean all) {
+        if (!isPdEnabled()) {
+            return ImmutableMap.of("records", Collections.emptyList(),
+                                  "total", 0);
+        }
         if (all) {
             return this.graphSpaceService.queryAllGs(
                     this.authClient(null, null), query, createTime);
@@ -89,6 +103,9 @@ public class GraphSpaceController extends BaseController {
 
     @GetMapping("{graphspace}/auth")
     public Object isAuth(@PathVariable("graphspace") String graphSpace) {
+        if (!isPdEnabled()) {
+            return ImmutableMap.of("auth", false);
+        }
         boolean isAuth = graphSpaceService.isAuth(this.authClient(null, null),
                                                   graphSpace);
         return ImmutableMap.of("auth", isAuth);
@@ -96,6 +113,13 @@ public class GraphSpaceController extends BaseController {
 
     @GetMapping("{graphspace}")
     public GraphSpaceEntity get(@PathVariable("graphspace") String graphspace) {
+        if (!isPdEnabled()) {
+            // Return a minimal stub entity for non-PD mode
+            GraphSpaceEntity stub = new GraphSpaceEntity();
+            stub.setName(graphspace);
+            stub.setNickname(graphspace);
+            return stub;
+        }
         HugeClient client = this.authClient(null, null);
         // Get GraphSpace Info
         return graphSpaceService.getWithAdmins(client, graphspace);
@@ -103,6 +127,8 @@ public class GraphSpaceController extends BaseController {
 
     @PostMapping
     public Object add(@RequestBody GraphSpaceEntity graphSpaceEntity) {
+        E.checkArgument(isPdEnabled(),
+                "GraphSpace management is not supported in standalone mode");
         // Create GraphSpace
         HugeClient client = this.authClient(null, null);
         if (graphSpaceEntity.getCpuLimit() <= 0) {
@@ -131,6 +157,8 @@ public class GraphSpaceController extends BaseController {
     @PutMapping("{graphspace}")
     public GraphSpace update(@PathVariable("graphspace") String graphspace,
                              @RequestBody GraphSpaceEntity graphSpaceEntity) {
+        E.checkArgument(isPdEnabled(),
+                "GraphSpace management is not supported in standalone mode");
 
         graphSpaceEntity.setName(graphspace);
 
@@ -160,6 +188,8 @@ public class GraphSpaceController extends BaseController {
 
     @DeleteMapping("{graphspace}")
     public void delete(@PathVariable("graphspace") String graphspace) {
+        E.checkArgument(isPdEnabled(),
+                "GraphSpace management is not supported in standalone mode");
         E.checkArgument(StringUtils.isNotEmpty(graphspace), "graphspace " +
                 "must not null");
 
@@ -186,6 +216,8 @@ public class GraphSpaceController extends BaseController {
 
     @PostMapping("builtin")
     public Object initBuiltIn(@RequestBody BuiltInEntity entity) {
+        E.checkArgument(isPdEnabled(),
+                "Built-in initialization is not supported in standalone mode");
         GraphConnection connection = new GraphConnection();
 
         String url = this.getUrl();

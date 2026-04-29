@@ -38,6 +38,7 @@ import {PlusOutlined} from '@ant-design/icons';
 import {Link, useParams, useNavigate} from 'react-router-dom';
 import style from './index.module.scss';
 import * as api from '../../api';
+import {isPdEnabled} from '../../utils/config';
 import moment from 'moment';
 import GraphCard from './Card';
 
@@ -178,7 +179,11 @@ const Graph = () => {
     };
 
     const handleBack = useCallback(() => {
-        navigate('/graphspace');
+        if (isPdEnabled()) {
+            navigate('/graphspace');
+        } else {
+            navigate('/navigation');
+        }
     }, [navigate]);
 
     const handleHideEditLayer = useCallback(() => {
@@ -196,11 +201,11 @@ const Graph = () => {
     const handleDatePickerChange = useCallback((_, val) => setDateData(val), []);
 
     const handleGotoMeta = useCallback(item => {
-        navigate(`/graphspace/${item.graphspace}/graph/${item.name}/meta`);
+        navigate(`/graphspace/${item.graphspace || 'DEFAULT'}/graph/${item.name}/meta`);
     }, [navigate]);
 
     const handleGotoAnalysis = useCallback(item => {
-        navigate(`/gremlin/${item.graphspace}/${item.name}`);
+        navigate(`/gremlin/${item.graphspace || 'DEFAULT'}/${item.name}`);
     }, [navigate]);
 
     const showClone = graph => {
@@ -217,7 +222,7 @@ const Graph = () => {
         {
             title: '图名称',
             render: row => (
-                <Link to={`/gremlin/${row.graphspace}/${row.name}`}>
+                <Link to={`/gremlin/${row.graphspace || 'DEFAULT'}/${row.name}`}>
                     {row.nickname}{row.default && <span className={style.default}>默认</span>}
                 </Link>
             ),
@@ -365,7 +370,7 @@ const Graph = () => {
             <PageHeader
                 ghost={false}
                 onBack={handleBack}
-                title={(graphspaceInfo.nickname ?? graphspace) + ' - 图管理'}
+                title={isPdEnabled() ? (graphspaceInfo.nickname ?? graphspace) + ' - 图管理' : '图管理'}
             >
                 <Row justify='space-between'>
                     <Col>

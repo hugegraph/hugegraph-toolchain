@@ -22,26 +22,25 @@
  */
 
 import Item from '../Item';
+import {isPdEnabled} from '../../../utils/config';
 
 const ManageItem = () => {
+    const pdMode = isPdEnabled();
+    const listData = pdMode
+        ? [
+            {title: '图管理', url: '/graphspace'},
+            {title: '数据管理', url: '/source'},
+            {title: '数据导入', url: '/task'},
+          ]
+        : [
+            {title: '图管理', url: '/graphspace/DEFAULT'},
+          ];
+
     return (
         <Item
             btnIndex={1}
             btnTitle={'数据管理'}
-            listData={[
-                {
-                    title: '图管理',
-                    url: '/graphspace',
-                },
-                {
-                    title: '数据管理',
-                    url: '/source',
-                },
-                {
-                    title: '数据导入',
-                    url: '/task',
-                },
-            ]}
+            listData={listData}
         />
     );
 };

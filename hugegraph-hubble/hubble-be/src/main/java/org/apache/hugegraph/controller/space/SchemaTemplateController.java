@@ -33,10 +33,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.space.SchemaTemplateService;
 import org.apache.hugegraph.structure.space.SchemaTemplate;
+import org.apache.hugegraph.util.E;
 
 
 @RestController
@@ -46,8 +49,18 @@ public class SchemaTemplateController extends BaseController {
     @Autowired
     SchemaTemplateService schemaTemplateService;
 
+    @Autowired
+    HugeConfig config;
+
+    private boolean isPdEnabled() {
+        return config.get(HubbleOptions.PD_ENABLED);
+    }
+
     @GetMapping("list")
     public Object listName(@PathVariable("graphspace") String graphSpace) {
+        if (!isPdEnabled()) {
+            return ImmutableMap.of("schemas", java.util.Collections.emptyList());
+        }
         HugeClient client = this.authClient(graphSpace, null);
         List<String> names = schemaTemplateService.listName(client);
 
@@ -62,6 +75,10 @@ public class SchemaTemplateController extends BaseController {
                                defaultValue = "1") int pageNo,
                        @RequestParam(name = "page_size", required = false,
                                defaultValue = "10") int pageSize) {
+        if (!isPdEnabled()) {
+            return ImmutableMap.of("records", java.util.Collections.emptyList(),
+                                  "total", 0);
+        }
         HugeClient client = this.authClient(graphSpace, null);
         return schemaTemplateService.queryPage(client, query, pageNo, pageSize);
     }
@@ -76,6 +93,8 @@ public class SchemaTemplateController extends BaseController {
     @PostMapping
     public Object create(@PathVariable("graphspace") String graphSpace,
                          @RequestBody SchemaTemplate schemaTemplate) {
+        E.checkArgument(isPdEnabled(),
+                "Schema template is not supported in standalone mode");
         HugeClient client = this.authClient(graphSpace, null);
 
         return schemaTemplateService.create(client, schemaTemplate);

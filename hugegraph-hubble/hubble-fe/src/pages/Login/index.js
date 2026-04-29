@@ -23,6 +23,7 @@ import style from './index.module.scss';
 import * as api from '../../api';
 import {useNavigate} from 'react-router-dom';
 import * as user from '../../utils/user';
+import * as configUtil from '../../utils/config';
 import {useCallback} from 'react';
 
 const Login = () => {
@@ -36,8 +37,18 @@ const Login = () => {
                 if (res.status === 200) {
                     localStorage.setItem('user', value.user_name);
                     user.setUser(res.data);
-                    navigate(sessionStorage.getItem('redirect') ?? '/');
-                    sessionStorage.removeItem('redirect');
+                    // Fetch deployment mode config before navigating
+                    api.config.getConfig().then(configRes => {
+                        if (configRes.status === 200) {
+                            configUtil.setConfig(configRes.data);
+                        }
+                        navigate(sessionStorage.getItem('redirect') ?? '/');
+                        sessionStorage.removeItem('redirect');
+                    }).catch(() => {
+                        // If config fetch fails, proceed with defaults
+                        navigate(sessionStorage.getItem('redirect') ?? '/');
+                        sessionStorage.removeItem('redirect');
+                    });
                 }
             });
         });

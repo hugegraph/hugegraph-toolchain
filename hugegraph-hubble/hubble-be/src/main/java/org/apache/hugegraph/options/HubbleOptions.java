@@ -228,6 +228,24 @@ public class HubbleOptions extends OptionHolder {
                     "hugegraph"
             );
 
+    public static final ConfigOption<Boolean> PD_ENABLED =
+            new ConfigOption<>(
+                    "pd.enabled",
+                    "Whether to enable PD mode. Set to false for standalone " +
+                    "RocksDB mode where PD is not available.",
+                    null,
+                    true
+            );
+
+    public static final ConfigOption<String> SERVER_URL =
+            new ConfigOption<>(
+                    "server.direct_url",
+                    "The direct URL of HugeGraph Server, used only when " +
+                    "pd.enabled=false. Example: http://127.0.0.1:8080",
+                    null,
+                    "http://127.0.0.1:8080"
+            );
+
     public static final ConfigOption<String> PD_CLUSTER =
             new ConfigOption<>(
                     "cluster",

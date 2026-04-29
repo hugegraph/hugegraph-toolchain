@@ -24,36 +24,47 @@ import GraphView from '../../components/GraphinView';
 import moment from 'moment';
 import _ from 'lodash';
 import {formatToGraphInData} from '../../utils/formatGraphInData';
+import {isPdEnabled} from '../../utils/config';
 import style from './index.module.scss';
 import {byteConvert} from '../../utils/format';
 
-const TitleField = ({item, onClick}) => (
-    <>
-        <Typography.Text
-            style={{maxWidth: 244}}
-            ellipsis={{ellipsis: true}}
-            title={`${item.graphspace_nickname}-${item.nickname}`}
-            onClick={onClick}
-        >
-            {_.truncate(item.graphspace_nickname, {length: 12})}-{_.truncate(item.nickname, {length: 12})}
-        </Typography.Text>
-        {item.default && <span className={style.default}>默认</span>}
-        <div className={style.subtitle}>
-            存储空间：{item.storage >= 0 ? byteConvert(item.storage) : '--'}
-        </div>
-    </>
-);
+const TitleField = ({item, onClick}) => {
+    const pdMode = isPdEnabled();
+    const displayName = pdMode
+        ? `${_.truncate(item.graphspace_nickname, {length: 12})}-${_.truncate(item.nickname, {length: 12})}`
+        : (item.nickname || item.name);
+    const fullTitle = pdMode
+        ? `${item.graphspace_nickname}-${item.nickname}`
+        : (item.nickname || item.name);
+
+    return (
+        <>
+            <Typography.Text
+                style={{maxWidth: 244}}
+                ellipsis={{ellipsis: true}}
+                title={fullTitle}
+                onClick={onClick}
+            >
+                {displayName}
+            </Typography.Text>
+            {item.default && <span className={style.default}>默认</span>}
+            <div className={style.subtitle}>
+                存储空间：{item.storage >= 0 ? byteConvert(item.storage) : '--'}
+            </div>
+        </>
+    );
+};
 
 const GraphCard = ({item, menus}) => {
     const navigate = useNavigate();
     const graphinData = formatToGraphInData(item.schemaview, false);
 
     const handleGotoAnalysis = useCallback(() => {
-        navigate(`/gremlin/${item.graphspace}/${item.name}`);
+        navigate(`/gremlin/${item.graphspace || 'DEFAULT'}/${item.name}`);
     }, [item, navigate]);
 
     const handleGotoDetail = useCallback(() => {
-        navigate(`/graphspace/${item.graphspace}/graph/${item.name}/detail`);
+        navigate(`/graphspace/${item.graphspace || 'DEFAULT'}/graph/${item.name}/detail`);
     }, [item, navigate]);
 
     return (

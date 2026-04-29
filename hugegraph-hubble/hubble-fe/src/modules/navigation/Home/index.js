@@ -27,6 +27,7 @@ import AnalyseItem from '../AnalyseItem';
 import AdminItem from '../AdminItem';
 import ConsoleItem from '../ConsoleItem';
 import * as user from '../../../utils/user';
+import {isPdEnabled} from '../../../utils/config';
 
 import imgLogo from '../../../assets/logo_new.png';
 
@@ -35,6 +36,7 @@ import style from './index.module.scss';
 
 const NavigationHome = () => {
     const userInfo = user.getUser();
+    const pdMode = isPdEnabled();
 
     return (
         <>
@@ -50,8 +52,8 @@ const NavigationHome = () => {
                 <div className={style.container}>
                     <ManageItem />
                     <AnalyseItem />
-                    {userInfo.is_superadmin && <AdminItem />}
-                    {userInfo.is_superadmin && <ConsoleItem />}
+                    {pdMode && userInfo.is_superadmin && <AdminItem />}
+                    {pdMode && userInfo.is_superadmin && <ConsoleItem />}
                 </div>
             </div>
         </>

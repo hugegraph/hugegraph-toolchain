@@ -28,10 +28,12 @@ import {
 } from '@ant-design/icons';
 import {Link, useLocation} from 'react-router-dom';
 import * as user from '../../utils/user';
+import {isPdEnabled} from '../../utils/config';
 import {useTranslation} from 'react-i18next';
 
 const items = t => {
     const userInfo = user.getUser();
+    const pdMode = isPdEnabled();
     const MY = {label: <Link to='/my'>{t('home.my')}</Link>, key: 'my'};
     const ACCOUNT = {label: <Link to='/account'>{t('home.account')}</Link>, key: 'account'};
     const RESOURCE = {label: <Link to='/resource'>{t('home.resource')}</Link>, key: 'resource'};
@@ -48,6 +50,17 @@ const items = t => {
         systemList = [MY, ACCOUNT];
     }
 
+    // Dynamic manage menu based on deployment mode
+    const manageChildren = pdMode
+        ? [
+            {label: <Link to='/graphspace'>{t('manage.graphspace')}</Link>, key: 'graphspace'},
+            {label: <Link to='/source'>{t('manage.source')}</Link>, key: 'source'},
+            {label: <Link to='/task'>{t('manage.task')}</Link>, key: 'task'},
+          ]
+        : [
+            {label: <Link to='/graphspace/DEFAULT'>图管理</Link>, key: 'graph'},
+          ];
+
     const menu = [
         {
             label: <Link to='/navigation'>{t('navigation.name')}</Link>,
@@ -58,11 +71,7 @@ const items = t => {
             label: t('manage.name'),
             key: 'manage',
             icon: <FundViewOutlined />,
-            children: [
-                {label: <Link to='/graphspace'>{t('manage.graphspace')}</Link>, key: 'graphspace'},
-                {label: <Link to='/source'>{t('manage.source')}</Link>, key: 'source'}, // TODO X fix import
-                {label: <Link to='/task'>{t('manage.task')}</Link>, key: 'task'},
-            ],
+            children: manageChildren,
         },
         {
             label: t('analysis.name'),

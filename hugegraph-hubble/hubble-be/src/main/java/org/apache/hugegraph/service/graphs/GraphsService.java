@@ -79,6 +79,8 @@ public class GraphsService {
     private AsyncTaskService asyncTaskService;
     @Autowired
     private LoadTaskService loadTaskService;
+    @Autowired
+    private org.apache.hugegraph.config.HugeConfig config;
 
     private static final String GRAPH_STORAGE = "v1/graph/%s/%s/g";
     private static final String RUNNING_TASKS = "running_tasks";
@@ -100,6 +102,9 @@ public class GraphsService {
         Map<String, Object> info = new HashMap<>();
         info.putAll(client.graphs().getGraph(graph));
 //        info.put("storage", storage);
+        // Ensure nickname/graphspace fields exist for frontend display
+        info.putIfAbsent("nickname", graph);
+        info.putIfAbsent("graphspace", graphSpace);
         if (vermeerInfo.size() != 0) {
             info.put("status", vermeerInfo.get("status"));
             String lastLoadTime = vermeerInfo.get("update_time");
@@ -162,25 +167,38 @@ public class GraphsService {
             }
 
             info.put("storage", info.get("data_size"));
+            // Ensure graphspace field is present for frontend navigation
+            info.putIfAbsent("graphspace", graphSpace);
+            info.putIfAbsent("graphspace_nickname", graphSpace);
             info.put("statistic", evCount(client, graphSpace, name));
         }
 
         List<Map<String, Object>> results =
                 graphs.stream()
-                      .filter((s) -> s.get("create_time").toString()
-                                      .compareTo(createTime) > 0)
+                      .filter((s) -> {
+                          Object createTimeVal = s.get("create_time");
+                          // In standalone mode, create_time may be absent
+                          if (createTimeVal == null) {
+                              return true;
+                          }
+                          return createTimeVal.toString()
+                                             .compareTo(createTime) > 0;
+                      })
                       .sorted((graph1, graph2) -> {
-                          boolean default1 = (boolean) graph1.get("default");
-                          boolean default2 = (boolean) graph2.get("default");
+                          Object d1 = graph1.get("default");
+                          Object d2 = graph2.get("default");
+                          boolean default1 = d1 instanceof Boolean && (boolean) d1;
+                          boolean default2 = d2 instanceof Boolean && (boolean) d2;
 
                           if (default1 != default2) {
                               return Boolean.compare(default2, default1);
                           } else if (default1) {
-                              Long time1 =
-                                      (Long) graph1.get("default_update_time");
-                              Long time2 =
-                                      (Long) graph2.get("default_update_time");
-                              return time1.compareTo(time2);
+                              Object t1 = graph1.get("default_update_time");
+                              Object t2 = graph2.get("default_update_time");
+                              if (t1 instanceof Long && t2 instanceof Long) {
+                                  return ((Long) t1).compareTo((Long) t2);
+                              }
+                              return 0;
                           } else {
                               String name1 = graph1.get("name").toString();
                               String name2 = graph2.get("name").toString();
@@ -214,8 +232,12 @@ public class GraphsService {
         }
 
         conf.put("store", graph);
-        // Only for v3.0.0
-        conf.put("backend", "hstore");
+        boolean pdEnabled = config.get(org.apache.hugegraph.options.HubbleOptions.PD_ENABLED);
+        if (pdEnabled) {
+            conf.put("backend", "hstore");
+        } else {
+            conf.put("backend", "rocksdb");
+        }
         conf.put("serializer", "binary");
 
         return client.graphs().createGraph(graph, JsonUtil.toJson(conf));
@@ -226,11 +248,15 @@ public class GraphsService {
         Map<String, String> conf = new HashMap<>();
 
         conf.put("store", graph);
-        // Only for v3.0.0
-        conf.put("backend", "hstore");
+        boolean pdEnabled = config.get(org.apache.hugegraph.options.HubbleOptions.PD_ENABLED);
+        if (pdEnabled) {
+            conf.put("backend", "hstore");
+            conf.put("task.scheduler_type", "distributed");
+        } else {
+            conf.put("backend", "rocksdb");
+            conf.put("task.scheduler_type", "local");
+        }
         conf.put("serializer", "binary");
-        // For 3.5.0
-        conf.put("task.scheduler_type", "distributed");
         conf.put("nickname", nickname);
         
         if (StringUtils.isNotEmpty(schemaTemplate)) {
