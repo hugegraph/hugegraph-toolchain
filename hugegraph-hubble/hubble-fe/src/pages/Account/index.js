@@ -26,17 +26,10 @@ import {
     Modal,
 } from 'antd';
 import {useCallback, useEffect, useState} from 'react';
-import {PlusOutlined} from '@ant-design/icons';
 import TableHeader from '../../components/TableHeader';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import {getUser} from '../../utils/user';
-import Upload from 'antd/lib/upload/Upload';
-
-const IMPORT_TEXT = '导入账号文件，支持csv格式';
-const IMPORT_ING = '导入中...';
-const IMPORT_SUCCESS = '导入成功';
-const IMPORT_ERROR = '导入失败';
 
 const Account = () => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
@@ -47,7 +40,6 @@ const Account = () => {
     const [refresh, setRefresh] = useState(false);
     const [search, setSearch] = useState('');
     const [pagination, setPagination] = useState({toatal: 0, current: 1, pageSize: 10});
-    const [importTip, setImportTip] = useState(IMPORT_TEXT);
 
     const showDetail = row => {
         setDetail(row);
@@ -105,16 +97,6 @@ const Account = () => {
             },
         });
     };
-
-    const handleImport = useCallback(({file}) => {
-        if (file?.status === 'uploading') {
-            setImportTip(IMPORT_ING);
-        }
-
-        if (file?.status === 'done') {
-            setImportTip(file?.response?.status === 200 ? IMPORT_SUCCESS : IMPORT_ERROR);
-        }
-    }, []);
 
     const handleTable = useCallback(page => {
         setPagination({...pagination, ...page});
@@ -190,32 +172,9 @@ const Account = () => {
             />
 
             <div className='container'>
-                // TODO remove here
-                {/* <TableHeader> */}
-                {/*     <Row justify="space-between"> */}
-                {/*         <Col><Button onClick={showAdd} type='primary'><PlusOutlined
-                 />添加账号</Button></Col> */}
-                {/*         <Col> */}
-                {/*             <Input.Search */}
-                {/*                 placeholder='输入账号ID或账号名进行搜索' */}
-                {/*                 onSearch={handleSearch} */}
-                {/*                 style={{width: 240}} */}
-                {/*             /> */}
-                {/*         </Col> */}
-                {/*     </Row> */}
-                {/* </TableHeader> */}
                 <TableHeader>
                     <Space>
                         <Button onClick={showAdd} type='primary'>创建账号</Button>
-                        <Upload
-                            key='2'
-                            action={api.auth.importUserUrl}
-                            showUploadList={false}
-                            accept='*.csv'
-                            onChange={handleImport}
-                        >
-                            <Tooltip placement='bottom' title={importTip}><Button>导入账号</Button></Tooltip>
-                        </Upload>
                     </Space>
                 </TableHeader>
 
