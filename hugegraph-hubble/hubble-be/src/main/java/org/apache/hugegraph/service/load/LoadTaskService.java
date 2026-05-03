@@ -380,12 +380,12 @@ public class LoadTaskService {
                                          HugeClient client) {
         FileSource source = this.buildFileSource(fileMapping);
 
-        List<VertexMapping> vMappings;
+        List<org.apache.hugegraph.loader.mapping.VertexMapping> vMappings;
         vMappings = this.buildVertexMappings(connection, fileMapping, client);
-        List<EdgeMapping> eMappings;
+        List<org.apache.hugegraph.loader.mapping.EdgeMapping> eMappings;
         eMappings = this.buildEdgeMappings(connection, fileMapping, client);
 
-        InputStruct inputStruct = null;//new InputStruct(vMappings, eMappings); //TODO Changed
+        InputStruct inputStruct = new InputStruct(vMappings, eMappings);
         inputStruct.id("1");
         inputStruct.input(source);
         return new LoadMapping(ImmutableList.of(inputStruct));
