@@ -416,22 +416,24 @@ public class LoadTaskService {
         return source;
     }
 
-    private List<VertexMapping>
+    private List<org.apache.hugegraph.loader.mapping.VertexMapping>
             buildVertexMappings(GraphConnection connection,
                                 FileMapping fileMapping, HugeClient client) {
-        List<VertexMapping> vMappings =
+        List<org.apache.hugegraph.loader.mapping.VertexMapping> vMappings =
                 new ArrayList<>();
         for (VertexMapping mapping : fileMapping.getVertexMappings()) {
             VertexLabelEntity vl = this.vlService.get(mapping.getLabel(),
                                                       client);
             List<String> idFields = mapping.getIdFields();
             Map<String, String> fieldMappings = mapping.fieldMappingToMap();
-            VertexMapping vMapping;
+
+            org.apache.hugegraph.loader.mapping.VertexMapping vMapping;
             if (vl.getIdStrategy().isCustomize()) {
                 Ex.check(idFields.size() == 1,
                          "When the ID strategy is CUSTOMIZED, you must " +
                          "select a column in the file as the id");
-                vMapping = new VertexMapping(idFields.get(0), true);
+                vMapping = new org.apache.hugegraph.loader.mapping.VertexMapping(
+                        idFields.get(0), true);
             } else {
                 assert vl.getIdStrategy().isPrimaryKey();
                 List<String> primaryKeys = vl.getPrimaryKeys();
@@ -440,32 +442,28 @@ public class LoadTaskService {
                          "When the ID strategy is PRIMARY_KEY, you must " +
                          "select at least one column in the file as the " +
                          "primary keys");
-                /*
-                 * The id column can be unfold into multi sub-ids only
-                 * when primarykeys contains just one field
-                 */
                 boolean unfold = idFields.size() == 1;
-                vMapping = new VertexMapping(null, unfold);
+                vMapping = new org.apache.hugegraph.loader.mapping.VertexMapping(
+                        null, unfold);
                 for (int i = 0; i < primaryKeys.size(); i++) {
                     fieldMappings.put(idFields.get(i), primaryKeys.get(i));
                 }
             }
-            //TODO Changed vMapping
             // set label
-            //vMapping.label(mapping.getLabel());
+            vMapping.label(mapping.getLabel());
             // set field_mapping
-            //vMapping.mappingFields(fieldMappings);
+            vMapping.mappingFields(fieldMappings);
             // set value_mapping
-            //vMapping.mappingValues(mapping.valueMappingToMap());
-            // set selected
-            //vMapping.selectedFields().addAll(idFields);
-            //vMapping.selectedFields().addAll(fieldMappings.keySet());
+            vMapping.mappingValues(mapping.valueMappingToMap());
+            // set selected fields
+            vMapping.selectedFields().addAll(idFields);
+            vMapping.selectedFields().addAll(fieldMappings.keySet());
             // set null_values
             Set<Object> nullValues = new HashSet<>();
             nullValues.addAll(mapping.getNullValues().getChecked());
             nullValues.addAll(mapping.getNullValues().getCustomized());
-            //vMapping.nullValues(nullValues);
-            // TODO: Update strategies
+            vMapping.nullValues(nullValues);
+
             vMappings.add(vMapping);
         }
         return vMappings;
