@@ -346,20 +346,15 @@ public class LoadTaskService {
     private LoadOptions buildLoadOptions(GraphConnection connection,
                                          FileMapping fileMapping) {
         LoadOptions options = new LoadOptions();
-        // Fill with input and server params
-        // //TODO C Changed Options
+        // Connection params
         options.file = fileMapping.getPath();
-        //options.routeType = connection.getRouteType();
-        //options.pdPeers = connection.getPdPeers();
-        //options.cluster = connection.getCluster();
-        //options.graphSpace = connection.getGraphSpace();
-        // No need to specify a schema file
         options.graph = connection.getGraph();
-        //options.username = connection.getUsername();
-        //options.password = connection.getPassword();
+        options.host = connection.getHost();
+        options.port = connection.getPort();
         options.token = connection.getToken();
-        // options.trustStorePassword = connection.getTrustStorePassword();
-        // Fill with load parameters
+        options.protocol = connection.getProtocol() != null ?
+                           connection.getProtocol() : "http";
+        // Load parameters
         LoadParameter parameter = fileMapping.getLoadParameter();
         options.checkVertex = parameter.isCheckVertex();
         options.timeout = parameter.getInsertTimeout();
@@ -368,7 +363,7 @@ public class LoadTaskService {
         options.maxInsertErrors = parameter.getMaxInsertErrors();
         options.retryTimes = parameter.getRetryTimes();
         options.retryInterval = parameter.getRetryInterval();
-        // Optimized for hubble
+        // Optimized for hubble (conservative defaults)
         options.batchInsertThreads = 4;
         options.singleInsertThreads = 4;
         options.batchSize = 100;
