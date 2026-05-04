@@ -295,18 +295,6 @@ public class LoadTaskService {
             try {
                 if (task.getStatus().inRunning()) {
                     LoadContext context = task.context();
-                    //long readLines = context.newProgress().totalInputReaded(); //TODO C Rmvd
-                    //if (readLines == 0L) {
-                    //    /*
-                    //     * When the Context is just constructed, newProgress
-                    //     * is empty. Only after parsing is started will use
-                    //     * oldProgress and incrementally update newProgress,
-                    //     * if get totalInputReaded value during this process,
-                    //     * it will return 0, so need read it from oldProgress
-                    //     */
-                    //    readLines = context.oldProgress().totalInputReaded();
-                    //}
-                    //task.setFileReadLines(readLines);
                     long readLines = context.newProgress().totalInputRead();
                     if (readLines == 0L) {
                         readLines = context.oldProgress().totalInputRead();
@@ -379,6 +367,10 @@ public class LoadTaskService {
                                          FileMapping fileMapping,
                                          HugeClient client) {
         FileSource source = this.buildFileSource(fileMapping);
+        log.info("Building load mapping for file: {}, vertices: {}, edges: {}",
+                 fileMapping.getName(),
+                 fileMapping.getVertexMappings().size(),
+                 fileMapping.getEdgeMappings().size());
 
         List<org.apache.hugegraph.loader.mapping.VertexMapping> vMappings;
         vMappings = this.buildVertexMappings(connection, fileMapping, client);
@@ -388,6 +380,8 @@ public class LoadTaskService {
         InputStruct inputStruct = new InputStruct(vMappings, eMappings);
         inputStruct.id("1");
         inputStruct.input(source);
+        log.info("Built InputStruct id={}, vertices={}, edges={}",
+                 inputStruct.id(), inputStruct.vertices().size(), inputStruct.edges().size());
         return new LoadMapping(ImmutableList.of(inputStruct));
     }
 
