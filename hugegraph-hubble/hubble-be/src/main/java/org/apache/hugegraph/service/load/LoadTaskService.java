@@ -307,6 +307,11 @@ public class LoadTaskService {
                     //    readLines = context.oldProgress().totalInputReaded();
                     //}
                     //task.setFileReadLines(readLines);
+                    long readLines = context.newProgress().totalInputRead();
+                    if (readLines == 0L) {
+                        readLines = context.oldProgress().totalInputRead();
+                    }
+                    task.setFileReadLines(readLines);
                     task.setCurrDuration(context.summary().totalTime());
                     this.update(task);
                 }

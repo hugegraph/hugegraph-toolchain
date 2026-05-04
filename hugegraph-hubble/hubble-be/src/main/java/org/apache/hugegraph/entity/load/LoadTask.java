@@ -194,7 +194,12 @@ public class LoadTask implements Runnable {
                     this.status = LoadStatus.FAILED;
                 }
             }
-            //this.fileReadLines = this.context().newProgress().totalInputReaded();//TODO Changed
+            // Restore file read lines progress tracking
+            long readLines = this.context().newProgress().totalInputRead();
+            if (readLines == 0L) {
+                readLines = this.context().oldProgress().totalInputRead();
+            }
+            this.fileReadLines = readLines;
             this.lastDuration += this.context().summary().totalTime();
             this.currDuration = 0L;
         } finally {
