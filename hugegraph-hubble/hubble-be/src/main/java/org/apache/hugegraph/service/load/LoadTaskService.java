@@ -408,7 +408,7 @@ public class LoadTaskService {
         source.timeZone(setting.getTimeZone());
         source.skippedLine().regex(setting.getSkippedLine());
         // Set list format
-        //source.listFormat(new ListFormat());//TODO Changed
+        source.listFormat(new org.apache.hugegraph.loader.source.file.ListFormat());
         ListFormat listFormat = setting.getListFormat();
         source.listFormat().startSymbol(listFormat.getStartSymbol());
         source.listFormat().endSymbol(listFormat.getEndSymbol());
