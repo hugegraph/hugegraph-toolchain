@@ -469,30 +469,25 @@ public class LoadTaskService {
         return vMappings;
     }
 
-    private List<EdgeMapping>
+    private List<org.apache.hugegraph.loader.mapping.EdgeMapping>
             buildEdgeMappings(GraphConnection connection,
                               FileMapping fileMapping, HugeClient client) {
-        List<EdgeMapping> eMappings =
+        List<org.apache.hugegraph.loader.mapping.EdgeMapping> eMappings =
                 new ArrayList<>();
         for (EdgeMapping mapping : fileMapping.getEdgeMappings()) {
             List<String> sourceFields = mapping.getSourceFields();
             List<String> targetFields = mapping.getTargetFields();
             EdgeLabelEntity el = this.elService.get(mapping.getLabel(), client);
-            VertexLabelEntity svl = this.vlService.get(el.getSourceLabel(),
-                                                       client);
-            VertexLabelEntity tvl = this.vlService.get(el.getTargetLabel(),
-                                                       client);
+            VertexLabelEntity svl = this.vlService.get(el.getSourceLabel(), client);
+            VertexLabelEntity tvl = this.vlService.get(el.getTargetLabel(), client);
             Map<String, String> fieldMappings = mapping.fieldMappingToMap();
-            /*
-             * When id strategy is customize or primaryKeys contains
-             * just one field, the param 'unfold' can be true
-             */
+
             boolean unfoldSource = true;
             if (svl.getIdStrategy().isPrimaryKey()) {
                 List<String> primaryKeys = svl.getPrimaryKeys();
                 Ex.check(sourceFields.size() >= 1 &&
                          sourceFields.size() == primaryKeys.size(),
-                         "When the source vertex ID strategy is CUSTOMIZED, " +
+                         "When the source vertex ID strategy is PRIMARY_KEY, " +
                          "you must select at least one column in the file " +
                          "as the id");
                 for (int i = 0; i < primaryKeys.size(); i++) {
@@ -507,7 +502,7 @@ public class LoadTaskService {
                 List<String> primaryKeys = tvl.getPrimaryKeys();
                 Ex.check(targetFields.size() >= 1 &&
                          targetFields.size() == primaryKeys.size(),
-                         "When the target vertex ID strategy is CUSTOMIZED, " +
+                         "When the target vertex ID strategy is PRIMARY_KEY, " +
                          "you must select at least one column in the file " +
                          "as the id");
                 for (int i = 0; i < primaryKeys.size(); i++) {
@@ -518,27 +513,26 @@ public class LoadTaskService {
                 }
             }
 
-            // TODO Changed Emapping
-            //EdgeMapping eMapping;
-            //eMapping = new EdgeMapping(
-            //           sourceFields, unfoldSource, targetFields, unfoldTarget);
-            //// set label
-            //eMapping.label(mapping.getLabel());
-            //// set field_mapping
-            //eMapping.mappingFields(fieldMappings);
-            //// set value_mapping
-            //eMapping.mappingValues(mapping.valueMappingToMap());
-            //// set selected
-            //eMapping.selectedFields().addAll(sourceFields);
-            //eMapping.selectedFields().addAll(targetFields);
-            //eMapping.selectedFields().addAll(fieldMappings.keySet());
+            org.apache.hugegraph.loader.mapping.EdgeMapping eMapping =
+                    new org.apache.hugegraph.loader.mapping.EdgeMapping(
+                            sourceFields, unfoldSource, targetFields, unfoldTarget);
+            // set label
+            eMapping.label(mapping.getLabel());
+            // set field_mapping
+            eMapping.mappingFields(fieldMappings);
+            // set value_mapping
+            eMapping.mappingValues(mapping.valueMappingToMap());
+            // set selected fields
+            eMapping.selectedFields().addAll(sourceFields);
+            eMapping.selectedFields().addAll(targetFields);
+            eMapping.selectedFields().addAll(fieldMappings.keySet());
             // set null_values
             Set<Object> nullValues = new HashSet<>();
             nullValues.addAll(mapping.getNullValues().getChecked());
             nullValues.addAll(mapping.getNullValues().getCustomized());
-            //eMapping.nullValues(nullValues);
+            eMapping.nullValues(nullValues);
 
-            //eMappings.add(eMapping);
+            eMappings.add(eMapping);
         }
         return eMappings;
     }
