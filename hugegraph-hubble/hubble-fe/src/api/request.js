@@ -64,15 +64,9 @@ instance.interceptors.response.use(
         return response;
     },
     error => {
-        // if (!error.response) {
-        //     setTimeout(() => {
-        //         window.location = '/check';
-        //     }, 700);
-
-        //     return;
-        // }
         const res = error.response?.data;
-        message.error(`请求出错：${res.message ?? ''}，path：${res.path}`);
+        message.error(`请求出错：${res?.message ?? ''}，path：${res?.path ?? ''}`);
+        return {data: {status: 500, message: res?.message ?? '请求失败'}};
     }
 );
 

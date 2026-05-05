@@ -115,6 +115,15 @@ public class JobManagerService {
         return this.mapper.selectList(null);
     }
 
+    public IPage<JobManager> listAll(int pageNo, int pageSize, String content) {
+        QueryWrapper<JobManager> query = Wrappers.query();
+        if (content != null && !content.isEmpty()) {
+            query.like("job_name", content);
+        }
+        query.orderByDesc("create_time");
+        return this.mapper.selectPage(new Page<>(pageNo, pageSize), query);
+    }
+
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void save(JobManager entity) {
         if (this.mapper.insert(entity) != 1) {

@@ -39,6 +39,7 @@ import {
     LineChartOutlined,
 } from '@ant-design/icons';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import style from './index.module.scss';
 import EditLayer from './components/EditLayer';
 import ViewLayer from './components/ViewLayer';
@@ -50,6 +51,7 @@ import {sourceType, syncType} from './config';
 import TableHeader from '../../components/TableHeader';
 
 const DetailTip = ({row}) => {
+    const {t} = useTranslation();
     const {job_summary} = row;
 
     return (
@@ -57,11 +59,11 @@ const DetailTip = ({row}) => {
             <Tooltip
                 title={(
                     <div className={style.task_detail}>
-                        <div>任务详情</div>
+                        <div>{t('task.detail.title')}</div>
                         <Space>
-                            <Badge status="success" text={<span>完成: {job_summary.success_count}</span>} />
-                            <Badge status="error" text={<span>失败: {job_summary.failed_count}</span>} />
-                            <Badge status="processing" text={<span>运行中: {job_summary.running_count}</span>} />
+                            <Badge status="success" text={<span>{t('task.detail.success')}: {job_summary?.success_count ?? 0}</span>} />
+                            <Badge status="error" text={<span>{t('task.detail.failed')}: {job_summary?.failed_count ?? 0}</span>} />
+                            <Badge status="processing" text={<span>{t('task.detail.running')}: {job_summary?.running_count ?? 0}</span>} />
                         </Space>
                     </div>)
                 }
@@ -73,18 +75,20 @@ const DetailTip = ({row}) => {
 };
 
 const RunningText = ({status, onClick, data}) => {
+    const {t} = useTranslation();
     const handleClick = useCallback(() => {
         onClick(data);
     }, [onClick, data]);
 
     return status === 'enable' ? (
-        <Tooltip title='暂停'><PauseOutlined onClick={handleClick} /></Tooltip>
+        <Tooltip title={t('task.pause')}><PauseOutlined onClick={handleClick} /></Tooltip>
     ) : (
-        <Tooltip title='执行'><CaretRightOutlined onClick={handleClick} /></Tooltip>
+        <Tooltip title={t('task.execute')}><CaretRightOutlined onClick={handleClick} /></Tooltip>
     );
 };
 
 const Task = () => {
+    const {t} = useTranslation();
     const [data, setData] = useState([]);
     const [searchName, setSearchName] = useState('');
     const [editLayer, setEditLayer] = useState(false);
@@ -109,12 +113,12 @@ const Task = () => {
         api.manage.enableTask(id).then(res => {
             if (res.status === 200) {
                 setRefresh(!refresh);
-                message.success('启动成功');
+                message.success(t('common.msg.enable_success'));
 
                 return;
             }
 
-            message.error('启动失败');
+            message.error(t('common.msg.enable_fail'));
         });
     }, [refresh]);
 
@@ -122,12 +126,12 @@ const Task = () => {
         api.manage.disableTask(id).then(res => {
             if (res.status === 200) {
                 setRefresh(!refresh);
-                message.success('暂停成功');
+                message.success(t('common.msg.disable_success'));
 
                 return;
             }
 
-            message.error('暂停失败');
+            message.error(t('common.msg.disable_fail'));
         });
     }, [refresh]);
 
@@ -137,12 +141,12 @@ const Task = () => {
             setLoading(false);
             if (res.status === 200) {
                 setRefresh(!refresh);
-                message.success('删除成功');
+                message.success(t('common.msg.delete_success'));
 
                 return;
             }
 
-            message.error('删除失败');
+            message.error(t('common.msg.delete_fail'));
         });
     };
 
@@ -172,56 +176,55 @@ const Task = () => {
 
     const columns = [
         {
-            title: '任务名称',
+            title: t('task.col.name'),
             dataIndex: 'task_name',
         },
         {
-            title: '源数据类型',
+            title: t('task.col.source_type'),
             dataIndex: 'ingestion_mapping',
             render: val => {
-                const {structs} = val;
-                if (structs === null) {
-                    return '未知';
+                const {structs} = val ?? {};
+                if (!structs?.length) {
+                    return t('common.label.unknown');
                 }
-                const type = structs[0].input.type;
-
-                return sourceType.find(item => item.value === type).label ?? '未知';
+                const type = structs[0]?.input?.type;
+                return sourceType.find(item => item.value === type)?.label ?? t('common.label.unknown');
             },
         },
         {
-            title: '目标图空间',
+            title: t('task.col.target_space'),
             dataIndex: 'ingestion_option',
             render: val => val.graphspace,
         },
         {
-            title: '目标图',
+            title: t('task.col.target_graph'),
             dataIndex: 'ingestion_option',
             render: val => val.graph,
         },
         {
-            title: '导入时间',
+            title: t('task.col.create_time'),
             dataIndex: 'create_time',
         },
         {
-            title: '创建人',
+            title: t('account.col.id'),
             dataIndex: 'creator',
         },
         {
-            title: '最新状态',
+            title: t('task.col.status'),
             dataIndex: 'last_metrics',
             align: 'center',
             width: 120,
             render: val => <StatusField status={val} />,
         },
         {
-            title: '同步策略',
+            title: t('task.col.sync_type'),
             dataIndex: 'task_schedule_type',
             render: val => {
-                return syncType.find(item => item.value === val).label;
+                return syncType.find(item => item.value === val)?.label ?? val;
             },
         },
         {
-            title: '操作',
+            title: t('graphspace.col.operation'),
             align: 'center',
             width: 160,
             render: row => {
@@ -233,9 +236,9 @@ const Task = () => {
                             ? <a onClick={() => editTask(row)}><EditOutlined /></a>
                             : <EditOutlined style={{color: '#8c8c8c'}} />}
                         {/* <a>{row.task_schedule_status === 'ENABLE'
-                            ? <Tooltip title='暂停'><PauseOutlined onClick={() => disableTask(row.task_id)} /></Tooltip>
+                            ? <Tooltip title={t('task.pause')}><PauseOutlined onClick={() => disableTask(row.task_id)} /></Tooltip>
                             : (
-                                <Tooltip title='执行'>
+                                <Tooltip title={t('task.execute')}>
                                     <CaretRightOutlined onClick={() => enableTask(row.task_id)} />
                                 </Tooltip>)}
                         </a> */}
@@ -247,8 +250,8 @@ const Task = () => {
                             ? (
                                 <a
                                     onClick={() => Modal.confirm({
-                                        title: '删除数据源',
-                                        content: '删除后，该数据源将从系统中消失。您确定要删除这个数据源吗？',
+                                        title: t('common.confirm.delete'),
+                                        content: t('common.confirm.delete_irrecoverable'),
                                         onOk: () => deleteTask(row.task_id),
                                     })}
                                 >
@@ -301,11 +304,11 @@ const Task = () => {
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title="数据导入"
+                title={t('task.title')}
             >
                 <TopStatistic data={metricsData} />
                 <Row justify='end' style={{paddingTop: 16}}>
-                    <Col><Input.Search placeholder='请输入任务名称' onSearch={search} /></Col>
+                    <Col><Input.Search placeholder={t('task.search_placeholder')} onSearch={search} /></Col>
                 </Row>
             </PageHeader>
 

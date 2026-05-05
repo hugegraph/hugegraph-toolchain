@@ -18,6 +18,7 @@
 
 import {message, PageHeader, Table} from 'antd';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router-dom';
 import * as api from '../../api';
 import {StatusField} from '../../components/Status';
@@ -35,7 +36,7 @@ const columns = [
         render: val => val?.total_count,
     },
     {
-        title: '创建时间',
+        title: 'Create Time',
         dataIndex: 'create_time',
         align: 'center',
     },
@@ -45,7 +46,7 @@ const columns = [
         align: 'right',
         render: (val, row) => {
             if (val) {
-                const rate = row.job_status.toLowerCase() === 'running' ? val.cur_rate : val.avg_rate;
+                const rate = row.job_status?.toLowerCase() === 'running' ? val.cur_rate : val.avg_rate;
                 return `${rate} 条/s`;
             }
 
@@ -65,7 +66,7 @@ const columns = [
         },
     },
     {
-        title: '状态',
+        title: 'Status',
         dataIndex: 'job_status',
         align: 'center',
         render: val => <StatusField status={val} />,
@@ -80,6 +81,7 @@ const columns = [
 ];
 
 const TaskDetail = () => {
+    const {t} = useTranslation();
     const [data, setData] = useState([]);
     const {taskid} = useParams();
     const navigate = useNavigate();
@@ -102,7 +104,7 @@ const TaskDetail = () => {
             <PageHeader
                 ghost={false}
                 onBack={handleBack}
-                title="任务详情"
+                title={t('async_task.detail.title')}
             />
 
             <div className='container'>

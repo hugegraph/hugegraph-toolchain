@@ -200,3 +200,12 @@ CREATE TABLE IF NOT EXISTS `async_task` (
 
 CREATE INDEX IF NOT EXISTS `load_task_conn_id` ON `load_task`(`conn_id`);
 CREATE INDEX IF NOT EXISTS `load_task_file_id` ON `load_task`(`file_id`);
+
+CREATE TABLE IF NOT EXISTS `datasource` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `datasource_name` VARCHAR(128) NOT NULL,
+    `datasource_config` TEXT NOT NULL,
+    `creator` VARCHAR(64) NOT NULL DEFAULT '',
+    `create_time` DATETIME(6) NOT NULL,
+    PRIMARY KEY (`id`)
+);
