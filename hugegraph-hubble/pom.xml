@@ -94,6 +94,11 @@
                 <artifactId>kotlin-stdlib-common</artifactId>
                 <version>1.5.31</version>
             </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>3.17.3</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
