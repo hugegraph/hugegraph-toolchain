@@ -18,16 +18,23 @@
 
 package org.apache.hugegraph.service.load;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.common.collect.ImmutableMap;
 import lombok.extern.log4j.Log4j2;
+
 import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.enums.LoadStatus;
+import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.entity.load.LoadTask;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.mapper.load.JobManagerMapper;
 import org.apache.hugegraph.util.HubbleUtil;
@@ -35,9 +42,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.List;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Log4j2
 @Service
@@ -47,6 +53,8 @@ public class JobManagerService {
     private JobManagerMapper mapper;
     @Autowired
     private LoadTaskService taskService;
+    @Autowired
+    private FileMappingService fileMappingService;
 
     public int count() {
         return this.mapper.selectCount(null);
@@ -149,5 +157,50 @@ public class JobManagerService {
     public void removeByGraph(String graphSpace, String graph) {
         this.mapper.deleteByMap(ImmutableMap.of("graphspace", graphSpace,
                                                 "graph", graph));
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void deleteJob(int id) {
+        JobManager job = this.get(id);
+        if (job == null) {
+            throw new ExternalException("job.manager.not-exist.id", id);
+        }
+
+        List<LoadTask> loadTasks = this.taskService.taskListByJob(id);
+        for (LoadTask loadTask : loadTasks) {
+            if (loadTask.getStatus().inRunning() ||
+                loadTask.getStatus() == LoadStatus.PAUSED) {
+                this.taskService.stop(loadTask.getId());
+            }
+            this.taskService.remove(loadTask.getId());
+        }
+
+        List<FileMapping> mappings = this.fileMappingService.listByJob(id);
+        this.remove(id);
+        this.deleteDiskFilesAfterCommit(mappings);
+    }
+
+    private void deleteDiskFilesAfterCommit(List<FileMapping> mappings) {
+        if (mappings.isEmpty()) {
+            return;
+        }
+
+        List<FileMapping> copiedMappings = new ArrayList<>(mappings);
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            this.deleteDiskFiles(copiedMappings);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        deleteDiskFiles(copiedMappings);
+                    }
+                });
+    }
+
+    private void deleteDiskFiles(List<FileMapping> mappings) {
+        this.fileMappingService.cleanupMappings(mappings);
     }
 }

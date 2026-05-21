@@ -123,9 +123,33 @@ public class FileMapping {
     @JsonProperty("update_time")
     private Date updateTime;
 
+    @JsonProperty("total_size_bytes")
+    public long getTotalSizeBytes() {
+        return this.totalSize;
+    }
+
     public FileMapping(String graphSpace, String graph, String name,
                        String path) {
         this(graphSpace, graph, name, path, HubbleUtil.nowDate());
+    }
+
+    public FileMapping(int connId, String name, String path) {
+        this(connId, name, path, HubbleUtil.nowDate());
+    }
+
+    public FileMapping(int connId, String name, String path, Date lastAccessTime) {
+        this.id = null;
+        this.connId = connId;
+        this.graphSpace = null;
+        this.graph = null;
+        this.name = name;
+        this.path = path;
+        this.fileSetting = new FileSetting();
+        this.vertexMappings = new LinkedHashSet<>();
+        this.edgeMappings = new LinkedHashSet<>();
+        this.loadParameter = new LoadParameter();
+        this.createTime = lastAccessTime;
+        this.updateTime = lastAccessTime;
     }
 
     public FileMapping(String graphSpace, String graph, String name, String path,
