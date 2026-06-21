@@ -1161,22 +1161,8 @@ public class OltpAlgoService {
     private GraphView buildPathGraphView(HugeClient client, List<Path> results) {
         Map<String, Edge> edges = new HashMap<>();
         Map<Object, Vertex> vertices = new HashMap<>();
-        for(Path result : results) {
-            List<Object> elements = result.objects();
-            List<String> escapedIds = elements.stream()
-                    .map(GremlinUtil::escapeId)
-                    .collect(Collectors.toList());
-            String ids = StringUtils.join(escapedIds, ",");
-            if (ids == ""){
-                continue;
-            }
-            String gremlin = String.format("g.V(%s).limit(1000)", ids);
-            ResultSet resultSet = client.gremlin().gremlin(gremlin).execute();
-            for (Iterator<Result> iter = resultSet.iterator(); iter.hasNext(); ) {
-                Vertex vertex = iter.next().getVertex();
-                vertices.put(vertex.id(), vertex);
-            }
-            edges.putAll(this.edgesOfVertex(vertices, client));
+        for (Path result : results) {
+            this.fillPathGraph(client, result, vertices, edges);
         }
 
         return new GraphView(vertices.values(), edges.values());
@@ -1225,15 +1211,42 @@ public class OltpAlgoService {
     }
 
     private GraphView buildPathGraphView(HugeClient client, Path result) {
-        List<Object> elements = result.objects();
         Map<String, Edge> edges = new HashMap<>();
-        Map<Object, Vertex> vertices = new HashMap<>(elements.size());
-        List<String> escapedIds = elements.stream()
-                .map(GremlinUtil::escapeId)
-                .collect(Collectors.toList());
+        Map<Object, Vertex> vertices = new HashMap<>(result.size());
+        this.fillPathGraph(client, result, vertices, edges);
+        return new GraphView(vertices.values(), edges.values());
+    }
+
+    private void fillPathGraph(HugeClient client, Path result,
+                               Map<Object, Vertex> vertices,
+                               Map<String, Edge> edges) {
+        List<Object> vertexIds = new ArrayList<>();
+        List<Edge> pathEdges = new ArrayList<>();
+        for (Object element : result.objects()) {
+            if (element instanceof Vertex) {
+                Vertex vertex = (Vertex) element;
+                vertices.put(vertex.id(), vertex);
+            } else if (element instanceof Edge) {
+                Edge edge = (Edge) element;
+                edges.put(edge.id(), edge);
+                pathEdges.add(edge);
+            } else {
+                vertexIds.add(element);
+            }
+        }
+        for (Edge edge : pathEdges) {
+            this.fillPathVertex(client, edge.sourceId(), vertices);
+            this.fillPathVertex(client, edge.targetId(), vertices);
+        }
+        if (vertexIds.isEmpty()) {
+            return;
+        }
+        List<String> escapedIds = vertexIds.stream()
+                                           .map(GremlinUtil::escapeId)
+                                           .collect(Collectors.toList());
         String ids = StringUtils.join(escapedIds, ",");
-        if (ids == ""){
-            return new GraphView(vertices.values(), edges.values() );
+        if (ids.isEmpty()) {
+            return;
         }
         String gremlin = String.format("g.V(%s).limit(1000)", ids);
         ResultSet resultSet = client.gremlin().gremlin(gremlin).execute();
@@ -1241,8 +1254,17 @@ public class OltpAlgoService {
             Vertex vertex = iter.next().getVertex();
             vertices.put(vertex.id(), vertex);
         }
-        edges = this.edgesOfVertex(vertices, client);
-        return new GraphView(vertices.values(), edges.values());
+    }
+
+    private void fillPathVertex(HugeClient client, Object vertexId,
+                                Map<Object, Vertex> vertices) {
+        if (vertices.containsKey(vertexId)) {
+            return;
+        }
+        Vertex vertex = client.graph().getVertex(vertexId);
+        if (vertex != null) {
+            vertices.put(vertex.id(), vertex);
+        }
     }
 
     private Map<String, Edge> edgesOfVertex(Map<Object, Vertex> vertices,

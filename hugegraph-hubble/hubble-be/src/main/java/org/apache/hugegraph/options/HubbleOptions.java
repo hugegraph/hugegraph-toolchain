@@ -172,7 +172,7 @@ public class HubbleOptions extends OptionHolder {
                     "upload_file.format_list",
                     "The format white list available for uploading file.",
                     null,
-                    "csv"
+                    "csv", "txt"
             );
 
     public static final ConfigOption<Long> UPLOAD_SINGLE_FILE_SIZE_LIMIT =
