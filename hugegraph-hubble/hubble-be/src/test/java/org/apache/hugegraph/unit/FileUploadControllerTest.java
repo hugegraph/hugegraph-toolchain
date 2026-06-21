@@ -68,11 +68,27 @@ public class FileUploadControllerTest {
         });
     }
 
+    @Test
+    public void testCheckFileValidRejectsEmptyWhitelist() throws Exception {
+        FileUploadController controller = this.controller((String[]) null);
+        MockMultipartFile file = new MockMultipartFile("file", "HLM.TXT",
+                                                       "text/plain",
+                                                       "name\nmarko".getBytes());
+        JobManager job = JobManager.builder()
+                                   .id(1)
+                                   .jobStatus(JobStatus.UPLOADING)
+                                   .build();
+
+        Assert.assertThrows(ExternalException.class, () -> {
+            this.checkFileValid(controller, job, file, "HLM.TXT");
+        });
+    }
+
     private FileUploadController controller(String... formats) throws Exception {
         FileUploadController controller = new FileUploadController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.UPLOAD_FILE_FORMAT_LIST))
-               .thenReturn(Arrays.asList(formats));
+               .thenReturn(formats == null ? null : Arrays.asList(formats));
         this.setField(controller, "config", config);
         this.setField(controller, "jobService", Mockito.mock(JobManagerService.class));
         return controller;

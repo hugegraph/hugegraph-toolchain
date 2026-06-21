@@ -102,6 +102,30 @@ public class OltpAlgoServiceTest {
         Assert.assertSame(GraphView.EMPTY, graphView);
     }
 
+    @Test
+    public void testBuildPathGraphViewSkipsDeletedElements()
+           throws Exception {
+        Vertex marko = new Vertex("person");
+        marko.id("marko");
+
+        GraphManager graph = Mockito.mock(GraphManager.class);
+        Mockito.when(graph.getVertex("marko")).thenReturn(marko);
+        Mockito.when(graph.getVertex("vadas")).thenReturn(null);
+        Mockito.when(graph.getEdge("S1:marko>vadas")).thenReturn(null);
+
+        Path path = new Path(Arrays.asList("marko", "S1:marko>vadas", "vadas"));
+        PathOfVertices result = new PathOfVertices();
+        this.setField(result, "path", path.objects());
+        this.setField(result, "vertices", Arrays.asList("marko", "vadas"));
+        this.setField(result, "edges", Collections.singletonList("S1:marko>vadas"));
+
+        GraphView graphView = this.buildPathGraphView(result, graph);
+
+        Assert.assertEquals(1, graphView.getVertices().size());
+        Assert.assertEquals(0, graphView.getEdges().size());
+        Assert.assertTrue(graphView.getVertices().contains(marko));
+    }
+
     private GraphView buildPathGraphView(Path path) throws Exception {
         OltpAlgoService service = new OltpAlgoService();
         Method method = OltpAlgoService.class.getDeclaredMethod("buildPathGraphView",

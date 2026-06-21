@@ -149,12 +149,16 @@ public class OltpAlgoService {
             Map<String, Edge> edges = new HashMap<>();
             for (String vertexId : vertexIds) {
                 Vertex vertex = graph.getVertex(vertexId);
-                vertices.put(vertex.id(), vertex);
+                if (vertex != null) {
+                    vertices.put(vertex.id(), vertex);
+                }
             }
             if (result.getEdges() != null) {
                 for (String edgeId : result.getEdges()) {
                     Edge edge = graph.getEdge(edgeId);
-                    edges.put(edge.id(), edge);
+                    if (edge != null) {
+                        edges.put(edge.id(), edge);
+                    }
                 }
             }
             return new GraphView(vertices.values(), edges.values());
