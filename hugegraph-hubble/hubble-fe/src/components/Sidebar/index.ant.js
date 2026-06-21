@@ -56,10 +56,10 @@ const items = t => {
             {label: <Link to='/graphspace'>{t('manage.graphspace')}</Link>, key: 'graphspace'},
             {label: <Link to='/source'>{t('manage.source')}</Link>, key: 'source'},
             {label: <Link to='/task'>{t('manage.task')}</Link>, key: 'task'},
-          ]
+        ]
         : [
             {label: <Link to='/graphspace/DEFAULT'>图管理</Link>, key: 'graph'},
-          ];
+        ];
 
     const menu = [
         {

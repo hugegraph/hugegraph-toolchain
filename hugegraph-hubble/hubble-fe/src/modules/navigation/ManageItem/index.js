@@ -31,10 +31,10 @@ const ManageItem = () => {
             {title: '图管理', url: '/graphspace'},
             {title: '数据管理', url: '/source'},
             {title: '数据导入', url: '/task'},
-          ]
+        ]
         : [
             {title: '图管理', url: '/graphspace/DEFAULT'},
-          ];
+        ];
 
     return (
         <Item
