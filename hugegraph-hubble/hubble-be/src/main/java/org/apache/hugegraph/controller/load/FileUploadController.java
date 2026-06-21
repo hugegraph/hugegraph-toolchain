@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -306,10 +307,11 @@ public class FileUploadController extends BaseController {
                  "load.upload.file.format.unsupported");
         List<String> formatWhiteList = this.config.get(
                                        HubbleOptions.UPLOAD_FILE_FORMAT_LIST);
-        String normalizedFormat = format.toLowerCase();
+        String normalizedFormat = format.toLowerCase(Locale.ROOT);
         boolean supported = formatWhiteList != null &&
                             formatWhiteList.stream()
                                            .map(String::trim)
+                                           .map(item -> item.toLowerCase(Locale.ROOT))
                                            .anyMatch(normalizedFormat::equals);
         Ex.check(supported, "load.upload.file.format.unsupported");
     }

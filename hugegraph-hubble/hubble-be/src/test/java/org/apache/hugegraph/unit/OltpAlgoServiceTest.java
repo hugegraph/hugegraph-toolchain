@@ -18,19 +18,23 @@
 
 package org.apache.hugegraph.unit;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import org.apache.hugegraph.api.gremlin.GremlinRequest;
 import org.apache.hugegraph.driver.GraphManager;
+import org.apache.hugegraph.driver.GremlinManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.query.GraphView;
 import org.apache.hugegraph.service.algorithm.OltpAlgoService;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Path;
 import org.apache.hugegraph.structure.graph.Vertex;
+import org.apache.hugegraph.structure.gremlin.ResultSet;
 import org.apache.hugegraph.testutil.Assert;
 
 public class OltpAlgoServiceTest {
@@ -70,11 +74,14 @@ public class OltpAlgoServiceTest {
         knows.source(marko);
         knows.target(vadas);
 
-        GraphManager graph = Mockito.mock(GraphManager.class);
-        Mockito.when(graph.getVertex("marko")).thenReturn(marko);
-        Mockito.when(graph.getVertex("vadas")).thenReturn(vadas);
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        Mockito.when(gremlin.gremlin(Mockito.anyString()))
+               .thenAnswer(invocation -> new GremlinRequest.Builder(
+                       invocation.getArgument(0), gremlin));
+        Mockito.when(gremlin.execute(Mockito.any()))
+               .thenReturn(this.resultSet(marko, vadas));
         HugeClient client = Mockito.mock(HugeClient.class);
-        Mockito.when(client.graph()).thenReturn(graph);
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
         Path path = new Path(Arrays.asList(knows));
 
         GraphView graphView = this.buildPathGraphView(client, path);
@@ -82,6 +89,9 @@ public class OltpAlgoServiceTest {
         Assert.assertEquals(2, graphView.getVertices().size());
         Assert.assertEquals(1, graphView.getEdges().size());
         Assert.assertTrue(graphView.getEdges().contains(knows));
+        Mockito.verify(gremlin, Mockito.times(1))
+               .gremlin("g.V('marko','vadas').limit(1000)");
+        Mockito.verify(client, Mockito.never()).graph();
     }
 
     private GraphView buildPathGraphView(HugeClient client, Path path)
@@ -92,5 +102,19 @@ public class OltpAlgoServiceTest {
                                                                Path.class);
         method.setAccessible(true);
         return (GraphView) method.invoke(service, client, path);
+    }
+
+    private ResultSet resultSet(Object... data) throws Exception {
+        ResultSet resultSet = new ResultSet();
+        this.setField(resultSet, "data", Arrays.asList(data));
+        resultSet.graphManager(Mockito.mock(GraphManager.class));
+        return resultSet;
+    }
+
+    private void setField(Object object, String name, Object value)
+                          throws Exception {
+        Field field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(object, value);
     }
 }

@@ -40,7 +40,7 @@ public class FileUploadControllerTest {
     @Test
     public void testCheckFileValidAcceptsUppercaseTrimmedFormat()
            throws Exception {
-        FileUploadController controller = this.controller(" csv ", " txt ");
+        FileUploadController controller = this.controller(" CSV ", " TXT ");
         MockMultipartFile file = new MockMultipartFile("file", "HLM.TXT",
                                                        "text/plain",
                                                        "name\nmarko".getBytes());

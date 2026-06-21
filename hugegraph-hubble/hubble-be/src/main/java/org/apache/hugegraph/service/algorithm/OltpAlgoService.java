@@ -97,6 +97,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1220,7 +1221,7 @@ public class OltpAlgoService {
     private void fillPathGraph(HugeClient client, Path result,
                                Map<Object, Vertex> vertices,
                                Map<String, Edge> edges) {
-        List<Object> vertexIds = new ArrayList<>();
+        Set<Object> vertexIds = new LinkedHashSet<>();
         List<Edge> pathEdges = new ArrayList<>();
         for (Object element : result.objects()) {
             if (element instanceof Vertex) {
@@ -1231,12 +1232,12 @@ public class OltpAlgoService {
                 edges.put(edge.id(), edge);
                 pathEdges.add(edge);
             } else {
-                vertexIds.add(element);
+                this.addAbsentVertexId(element, vertices, vertexIds);
             }
         }
         for (Edge edge : pathEdges) {
-            this.fillPathVertex(client, edge.sourceId(), vertices);
-            this.fillPathVertex(client, edge.targetId(), vertices);
+            this.addAbsentVertexId(edge.sourceId(), vertices, vertexIds);
+            this.addAbsentVertexId(edge.targetId(), vertices, vertexIds);
         }
         if (vertexIds.isEmpty()) {
             return;
@@ -1256,14 +1257,10 @@ public class OltpAlgoService {
         }
     }
 
-    private void fillPathVertex(HugeClient client, Object vertexId,
-                                Map<Object, Vertex> vertices) {
-        if (vertices.containsKey(vertexId)) {
-            return;
-        }
-        Vertex vertex = client.graph().getVertex(vertexId);
-        if (vertex != null) {
-            vertices.put(vertex.id(), vertex);
+    private void addAbsentVertexId(Object vertexId, Map<Object, Vertex> vertices,
+                                   Set<Object> vertexIds) {
+        if (!vertices.containsKey(vertexId)) {
+            vertexIds.add(vertexId);
         }
     }
 
