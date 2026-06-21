@@ -1,0 +1,32 @@
+{
+  "hubbleUrl": "http://127.0.0.1:8088",
+  "connId": "1",
+  "outputDir": "/Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui",
+  "checks": [
+    {
+      "name": "algorithm-api-inventory",
+      "command": "python3 /Users/looksaw/hugegraph/hugegraph-toolchain/hugegraph-hubble/hubble-dist/assembly/travis/run_algorithm_api_inventory.py --json-output /Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/algorithm-api-inventory.json --markdown-output /Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/algorithm-api-inventory.md",
+      "startedAt": "2026-06-21T09:52:09.158Z",
+      "status": "passed",
+      "stdout": "{\"backend_algorithm_endpoint_count\": 2, \"frontend_algorithm_count\": 16, \"frontend_only_count\": 15, \"supported_by_hubble_be_count\": 1}\n",
+      "stderr": ""
+    },
+    {
+      "name": "ui-browser-smoke",
+      "command": "node /Users/looksaw/hugegraph/hugegraph-toolchain/hugegraph-hubble/hubble-dist/assembly/travis/run_ui_browser_smoke.js --hubble-url http://127.0.0.1:8088 --conn-id 1 --output-dir /Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui --json-output /Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/ui-browser-smoke.json --chromium-executable /Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "startedAt": "2026-06-21T09:52:09.221Z",
+      "status": "passed",
+      "stdout": "{\n  \"hubbleUrl\": \"http://127.0.0.1:8088\",\n  \"results\": [\n    {\n      \"route\": \"/graph-management\",\n      \"screenshot\": \"/Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/graph-management.png\",\n      \"apiMatched\": true,\n      \"requiredApi\": \"/api/v1.2/graph-connections\",\n      \"rawI18nKeyFound\": false,\n      \"requestCount\": 1\n    },\n    {\n      \"route\": \"/graph-management/1/metadata-configs\",\n      \"screenshot\": \"/Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/metadata-configs.png\",\n      \"apiMatched\": true,\n      \"requiredApi\": \"/api/v1.2/graph-connections/1/schema/\",\n      \"rawI18nKeyFound\": false,\n      \"requestCount\": 4\n    },\n    {\n      \"route\": \"/graph-management/1/data-import/import-manager\",\n      \"screenshot\": \"/Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/data-import.png\",\n      \"apiMatched\": true,\n      \"requiredApi\": \"/api/v1.2/graph-connections/1/job-manager\",\n      \"rawI18nKeyFound\": false,\n      \"requestCount\": 2\n    },\n    {\n      \"route\": \"/graph-management/1/data-analyze\",\n      \"screenshot\": \"/Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/data-analyze.png\",\n      \"apiMatched\": true,\n      \"requiredApi\": \"/api/v1.2/graph-connections/1/schema/\",\n      \"rawI18nKeyFound\": false,\n      \"requestCount\": 9\n    },\n    {\n      \"route\": \"/graph-management/1/async-tasks\",\n      \"screenshot\": \"/Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/async-tasks.png\",\n      \"apiMatched\": true,\n      \"requiredApi\": \"/api/v1.2/graph-connections/1/async-tasks\",\n      \"rawI18nKeyFound\": false,\n      \"requestCount\": 2\n    }\n  ],\n  \"consoleErrors\": [],\n  \"status\": \"passed\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "ui-i18n-switch-smoke",
+      "command": "node /Users/looksaw/hugegraph/hugegraph-toolchain/hugegraph-hubble/hubble-dist/assembly/travis/run_ui_i18n_switch_smoke.js --hubble-url http://127.0.0.1:8088 --output-dir /Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui --json-output /Users/looksaw/hugegraph/hugegraph-toolchain/.workflow/hubble-v2-issue-694/evidence/ui/ui-i18n-switch-smoke.json --chromium-executable /Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "startedAt": "2026-06-21T09:52:14.136Z",
+      "status": "passed",
+      "stdout": "{\n  \"hubbleUrl\": \"http://127.0.0.1:8088\",\n  \"zhContainsChinese\": true,\n  \"enContainsGraphManager\": true,\n  \"textChanged\": true,\n  \"status\": \"passed\"\n}\n",
+      "stderr": ""
+    }
+  ],
+  "status": "passed"
+}

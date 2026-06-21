@@ -1,0 +1,17 @@
+{
+  "tarball": "hugegraph-hubble/target/apache-hugegraph-hubble-1.7.0.tar.gz",
+  "root": "apache-hugegraph-hubble-1.7.0",
+  "jar_count": 270,
+  "license_count": 275,
+  "fe_license_count": 43,
+  "native_jar_count": 7,
+  "native_jars": [
+    "apache-hugegraph-hubble-1.7.0/lib/snappy-java-1.1.8.2.jar",
+    "apache-hugegraph-hubble-1.7.0/lib/hbase-shaded-netty-2.2.1.jar",
+    "apache-hugegraph-hubble-1.7.0/lib/hbase-shaded-client-byo-hadoop-2.2.3.jar",
+    "apache-hugegraph-hubble-1.7.0/lib/jline-2.12.jar",
+    "apache-hugegraph-hubble-1.7.0/lib/commons-crypto-1.0.0.jar",
+    "apache-hugegraph-hubble-1.7.0/lib/grpc-netty-shaded-1.39.0.jar",
+    "apache-hugegraph-hubble-1.7.0/lib/lz4-java-1.4.0.jar"
+  ]
+}

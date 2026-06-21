@@ -1,0 +1,116 @@
+{
+  "checks": [
+    {
+      "detail": {
+        "status": "UP"
+      },
+      "name": "hubble-health",
+      "status": "passed"
+    },
+    {
+      "name": "hubble-ui-root",
+      "status": "passed"
+    },
+    {
+      "name": "route:/graph-management",
+      "status": "passed"
+    },
+    {
+      "name": "route:/graph-management/1/metadata-configs",
+      "status": "passed"
+    },
+    {
+      "name": "route:/graph-management/1/data-import/import-manager",
+      "status": "passed"
+    },
+    {
+      "name": "route:/graph-management/1/data-analyze",
+      "status": "passed"
+    },
+    {
+      "name": "route:/graph-management/1/async-tasks",
+      "status": "passed"
+    },
+    {
+      "detail_type": "dict",
+      "name": "server-versions",
+      "status": "passed"
+    },
+    {
+      "conn_id": 1,
+      "name": "hubble-create-graph-connection",
+      "status": "passed"
+    },
+    {
+      "name": "schema-graphview",
+      "status": "passed"
+    },
+    {
+      "name": "job-manager-list",
+      "status": "passed"
+    },
+    {
+      "name": "async-task-list",
+      "status": "passed"
+    },
+    {
+      "name": "hubble-schema-propertykeys",
+      "status": "passed"
+    },
+    {
+      "label": "issue_694_1725_person",
+      "name": "hubble-schema-vertexlabel",
+      "status": "passed"
+    },
+    {
+      "label": "issue_694_1725_knows",
+      "name": "hubble-schema-edgelabel",
+      "status": "passed"
+    },
+    {
+      "label": "issue_694_1725_person",
+      "name": "server-direct-schema-vertexlabel",
+      "status": "passed"
+    },
+    {
+      "file_mapping_id": 1,
+      "job_id": 1,
+      "name": "hubble-upload-csv",
+      "status": "passed"
+    },
+    {
+      "file_mapping_id": 1,
+      "name": "hubble-file-mapping",
+      "status": "passed"
+    },
+    {
+      "job_status": "SUCCESS",
+      "name": "hubble-loader-task",
+      "status": "passed",
+      "task_id": 1,
+      "task_status": "SUCCEED"
+    },
+    {
+      "edges": 2,
+      "name": "hubble-server-gremlin-count-compare",
+      "status": "passed",
+      "vertices": 3
+    },
+    {
+      "hubble_edges": 2,
+      "hubble_vertices": 3,
+      "name": "hubble-server-shortestpath-compare",
+      "server_edges": 2,
+      "server_path_objects": 3,
+      "server_vertices": 3,
+      "status": "passed"
+    }
+  ],
+  "connection_name": "issue_694_1725_conn",
+  "data_prefix": "issue_694_1725",
+  "graph": "hugegraph",
+  "hubble_url": "http://127.0.0.1:8088",
+  "server_url": "http://127.0.0.1:18082",
+  "status": "passed",
+  "tarball": "hugegraph-hubble/target/apache-hugegraph-hubble-1.7.0.tar.gz"
+}

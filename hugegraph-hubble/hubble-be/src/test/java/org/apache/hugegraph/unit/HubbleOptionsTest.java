@@ -18,20 +18,20 @@
 
 package org.apache.hugegraph.unit;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.util.List;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-        EntityUtilTest.class,
-        FileUtilTest.class,
-        FileUploadControllerTest.class,
-        HubbleOptionsTest.class,
-        JobManagerServiceTest.class,
-        LoadTaskServiceTest.class,
-        OltpAlgoControllerTest.class,
-        OltpAlgoServiceTest.class
-})
-public class UnitTestSuite {
+import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.testutil.Assert;
+import org.junit.Test;
 
+public class HubbleOptionsTest {
+
+    @Test
+    public void testDefaultUploadFormatsIncludeCsvAndTxt() {
+        List<String> formats = HubbleOptions.UPLOAD_FILE_FORMAT_LIST.defaultValue();
+
+        Assert.assertEquals(2, formats.size());
+        Assert.assertTrue(formats.contains("csv"));
+        Assert.assertTrue(formats.contains("txt"));
+    }
 }

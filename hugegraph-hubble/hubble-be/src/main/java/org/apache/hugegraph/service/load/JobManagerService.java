@@ -61,7 +61,11 @@ public class JobManagerService {
     }
 
     public JobManager get(int id) {
-        return this.mapper.selectById(id);
+        JobManager job = this.mapper.selectById(id);
+        if (job != null) {
+            this.refreshLoadingJob(job);
+        }
+        return job;
     }
 
     public JobManager getTask(String jobName, int connId) {
@@ -72,7 +76,9 @@ public class JobManagerService {
     }
 
     public List<JobManager> list(int connId, List<Integer> jobIds) {
-        return this.mapper.selectBatchIds(jobIds);
+        List<JobManager> jobs = this.mapper.selectBatchIds(jobIds);
+        jobs.forEach(this::refreshLoadingJob);
+        return jobs;
     }
 
     public IPage<JobManager> list(int connId, int pageNo, int pageSize, String content) {
@@ -85,34 +91,43 @@ public class JobManagerService {
         Page<JobManager> page = new Page<>(pageNo, pageSize);
         IPage<JobManager> list = this.mapper.selectPage(page, query);
         list.getRecords().forEach(task -> {
-            if (task.getJobStatus() == JobStatus.LOADING) {
-                List<LoadTask> tasks = this.taskService.taskListByJob(task.getId());
-                JobStatus status = JobStatus.SUCCESS;
-                for (LoadTask loadTask : tasks) {
-                    if (loadTask.getStatus().inRunning() ||
-                        loadTask.getStatus() == LoadStatus.PAUSED ||
-                        loadTask.getStatus() == LoadStatus.STOPPED) {
-                        status = JobStatus.LOADING;
-                        break;
-                    }
-                    if (loadTask.getStatus() == LoadStatus.FAILED) {
-                        status = JobStatus.FAILED;
-                        break;
-                    }
-                }
-
-                if (status == JobStatus.SUCCESS ||
-                    status == JobStatus.FAILED) {
-                    task.setJobStatus(status);
-                    this.update(task);
-                }
-            }
+            this.refreshLoadingJob(task);
             Date endDate = task.getJobStatus() == JobStatus.FAILED ||
                            task.getJobStatus() == JobStatus.SUCCESS ?
                            task.getUpdateTime() : HubbleUtil.nowDate();
             task.setJobDuration(endDate.getTime() - task.getCreateTime().getTime());
         });
         return list;
+    }
+
+    private void refreshLoadingJob(JobManager job) {
+        if (job.getJobStatus() != JobStatus.LOADING) {
+            return;
+        }
+
+        List<LoadTask> tasks = this.taskService.taskListByJob(job.getId());
+        if (tasks.isEmpty()) {
+            return;
+        }
+
+        JobStatus status = JobStatus.SUCCESS;
+        for (LoadTask loadTask : tasks) {
+            if (loadTask.getStatus().inRunning() ||
+                loadTask.getStatus() == LoadStatus.PAUSED ||
+                loadTask.getStatus() == LoadStatus.STOPPED) {
+                status = JobStatus.LOADING;
+                break;
+            }
+            if (loadTask.getStatus() == LoadStatus.FAILED) {
+                status = JobStatus.FAILED;
+                break;
+            }
+        }
+
+        if (status == JobStatus.SUCCESS || status == JobStatus.FAILED) {
+            job.setJobStatus(status);
+            this.update(job);
+        }
     }
 
     public List<JobManager> listAll() {

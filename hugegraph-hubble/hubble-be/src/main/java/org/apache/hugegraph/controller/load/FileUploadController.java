@@ -295,7 +295,11 @@ public class FileUploadController {
         String format = FilenameUtils.getExtension(fileName);
         List<String> formatWhiteList = this.config.get(
                 HubbleOptions.UPLOAD_FILE_FORMAT_LIST);
-        Ex.check(formatWhiteList.contains(format),
+        String normalizedFormat = format.toLowerCase();
+        boolean supported = formatWhiteList.stream()
+                                           .map(String::trim)
+                                           .anyMatch(normalizedFormat::equals);
+        Ex.check(StringUtils.isNotBlank(format) && supported,
                  "load.upload.file.format.unsupported");
     }
 

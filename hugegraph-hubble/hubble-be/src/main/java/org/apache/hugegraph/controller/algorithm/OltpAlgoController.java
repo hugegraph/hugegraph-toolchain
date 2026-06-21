@@ -39,7 +39,7 @@ public class OltpAlgoController {
     @Autowired
     private OltpAlgoService service;
 
-    @PostMapping("shortestPath")
+    @PostMapping({"shortestPath", "shortpath"})
     public GremlinResult shortPath(@PathVariable("connId") int connId,
                                    @RequestBody ShortestPath body) {
         return this.service.shortestPath(connId, body);

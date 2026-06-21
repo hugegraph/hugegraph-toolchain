@@ -1,0 +1,551 @@
+<title>Hubble V2 issue 694 reviewer report</title>
+
+<h1>1. Review 目的</h1>
+<p>本文是面向 reviewer 的独立审查文档，用于判断 Apache HugeGraph Toolchain 分支 codex/hubble-v2-issue-694-plan 是否可以认为满足 GitHub issue #694 与飞书 Hubble V2 发版收尾计划中的验收要求。</p>
+<p>本文与 implement 文档的关注点不同：implement 文档说明做了哪些改动和如何执行；reviewer 文档说明这些改动是否足够、证据是否可信、是否存在 blocking issue、哪些范围不能被过度声明、reviewer 如何复核。</p>
+
+<h1>2. 一句话结论</h1>
+<callout emoji="✅" background-color="light-green" border-color="green">
+  <p>Review 结论：当前分支在 issue #694 范围内可以认为通过。Build、packaged runtime、GraphServer + Loader、browser frontend/backend integration、runtime i18n、binary inventory 和 API boundary classification 均有绑定同一 candidate 的证据。唯一必须保留的范围说明是：Hubble BE 仅验证 shortestPath/shortpath algorithm，其他 15 个 FE-listed algorithm slugs 是 FE-only/API boundary 项。</p>
+</callout>
+
+<h1>3. Reviewer 需要先看的三件事</h1>
+<ul>
+  <li>第一，证据不是来自源码目录 shortcut，而是绑定到 Hubble candidate：hugegraph-hubble/target/apache-hugegraph-hubble-1.7.0.tar.gz。</li>
+  <li>第二，GraphServer + Loader gate 已通过 live-loader-flow.json，包含 schema、upload、mapping、Loader task、Gremlin count 和 shortestPath compare。</li>
+  <li>第三，browser integration gate 已通过 ui-full-acceptance.json，不再只是 route fallback；5 个核心路由都有 expected Hubble backend API match 和截图。</li>
+</ul>
+
+<h1>4. Baseline</h1>
+<table>
+  <thead>
+    <tr><th>字段</th><th>值</th><th>Reviewer 判断</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Toolchain branch</td>
+      <td>codex/hubble-v2-issue-694-plan</td>
+      <td>本 review 只对该分支当前工作区结论负责。</td>
+    </tr>
+    <tr>
+      <td>Starting commit</td>
+      <td>077802f015cd771a425f1ad05d6db5761170e154</td>
+      <td>用于区分本轮本地改动与原始基线。</td>
+    </tr>
+    <tr>
+      <td>Hubble candidate</td>
+      <td>hugegraph-hubble/target/apache-hugegraph-hubble-1.7.0.tar.gz</td>
+      <td>所有 runtime、binary 和 live flow 证据应绑定这个 tarball。</td>
+    </tr>
+    <tr>
+      <td>Candidate timestamp</td>
+      <td>2026-06-21 16:44:58 +0800</td>
+      <td>用于避免混用旧 candidate。</td>
+    </tr>
+    <tr>
+      <td>Candidate size</td>
+      <td>198057826 bytes</td>
+      <td>用于识别产物一致性。</td>
+    </tr>
+    <tr>
+      <td>HugeGraph Server</td>
+      <td>hugegraph/hugegraph:1.5.0 on http://127.0.0.1:18082</td>
+      <td>GraphServer + Loader live evidence 绑定此服务端。</td>
+    </tr>
+    <tr>
+      <td>Hubble runtime URL</td>
+      <td>http://127.0.0.1:8088</td>
+      <td>packaged Hubble 和 browser acceptance 使用该地址。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>5. Review verdict</h1>
+<table>
+  <thead>
+    <tr><th>Gate</th><th>Verdict</th><th>Reviewer 说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Build gate</td>
+      <td>Pass</td>
+      <td>依赖构建、Hubble BE unit tests、Hubble package、static i18n、binary check、whitespace check 均通过。</td>
+    </tr>
+    <tr>
+      <td>Runtime gate</td>
+      <td>Pass</td>
+      <td>packaged Hubble candidate 可启动，health 为 UP，UI root 和核心 route fallback 可访问。</td>
+    </tr>
+    <tr>
+      <td>Integration gate</td>
+      <td>Pass</td>
+      <td>browser evidence 显示 graph-management、metadata-configs、data-import、data-analyze、async-tasks 均请求到预期 Hubble backend API。</td>
+    </tr>
+    <tr>
+      <td>Function gate</td>
+      <td>Pass</td>
+      <td>GraphServer + Loader flow passed；Gremlin count 和 shortestPath direct Server compare passed。</td>
+    </tr>
+    <tr>
+      <td>i18n gate</td>
+      <td>Pass</td>
+      <td>static i18n passed；runtime zh-CN/en-US switch passed。</td>
+    </tr>
+    <tr>
+      <td>Binary gate</td>
+      <td>Pass</td>
+      <td>candidate 包含 legal files 和必要目录，无 runtime residue。</td>
+    </tr>
+    <tr>
+      <td>API boundary gate</td>
+      <td>Pass with scope note</td>
+      <td>只验证 shortestPath/shortpath；其他 FE-only algorithm slugs 不能声明为 Hubble BE supported。</td>
+    </tr>
+    <tr>
+      <td>Known issue gate</td>
+      <td>Open but non-blocking</td>
+      <td>当前没有新增 release-impacting issue；API boundary 作为 scope note 保留。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>6. Blocking findings</h1>
+<p>Review 未发现阻塞 issue #694 收口的 blocker。</p>
+<table>
+  <thead>
+    <tr><th>Finding</th><th>Severity</th><th>状态</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hubble packaged runtime</td>
+      <td>Blocker if failed</td>
+      <td>Resolved</td>
+      <td>candidate 启动和 health 已通过。</td>
+    </tr>
+    <tr>
+      <td>GraphServer + Loader integration</td>
+      <td>Blocker if failed</td>
+      <td>Resolved</td>
+      <td>live-loader-flow.json status passed。</td>
+    </tr>
+    <tr>
+      <td>Browser frontend/backend integration</td>
+      <td>Blocker if only fallback</td>
+      <td>Resolved</td>
+      <td>ui-browser-smoke.json 显示 expected API matched。</td>
+    </tr>
+    <tr>
+      <td>Runtime i18n</td>
+      <td>Blocker if only static evidence</td>
+      <td>Resolved</td>
+      <td>ui-i18n-switch-smoke.json status passed。</td>
+    </tr>
+    <tr>
+      <td>API overclaim</td>
+      <td>Important</td>
+      <td>Needs wording guard</td>
+      <td>review/release note 必须保留 FE-only algorithm boundary。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>7. 证据索引</h1>
+<table>
+  <thead>
+    <tr><th>证据文件</th><th>Reviewer 用途</th><th>关键字段</th><th>结论</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>.workflow/hubble-v2-issue-694/evidence/live-loader-flow.json</td>
+      <td>确认 Hubble + Server + Loader flow</td>
+      <td>status=passed</td>
+      <td>通过</td>
+    </tr>
+    <tr>
+      <td>.workflow/hubble-v2-issue-694/evidence/ui-full-acceptance.json</td>
+      <td>确认 browser + i18n + API inventory 聚合结果</td>
+      <td>status=passed</td>
+      <td>通过</td>
+    </tr>
+    <tr>
+      <td>.workflow/hubble-v2-issue-694/evidence/ui/ui-browser-smoke.json</td>
+      <td>确认核心路由实际请求 Hubble backend</td>
+      <td>apiMatched=true for all routes</td>
+      <td>通过</td>
+    </tr>
+    <tr>
+      <td>.workflow/hubble-v2-issue-694/evidence/ui/ui-i18n-switch-smoke.json</td>
+      <td>确认 runtime language switch</td>
+      <td>zhContainsChinese=true, enContainsGraphManager=true, textChanged=true</td>
+      <td>通过</td>
+    </tr>
+    <tr>
+      <td>.workflow/hubble-v2-issue-694/evidence/algorithm-api-inventory.json</td>
+      <td>确认 Hubble BE algorithm support 范围</td>
+      <td>frontend_algorithm_count=16, supported_by_hubble_be_count=1, frontend_only_count=15</td>
+      <td>通过但需 scope note</td>
+    </tr>
+    <tr>
+      <td>.workflow/hubble-v2-issue-694/evidence/hubble-dist-inventory.json</td>
+      <td>确认 binary legal 和 residue</td>
+      <td>JAR count, license count, native-bearing jars</td>
+      <td>通过</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>8. Browser integration review</h1>
+<p>这是 issue #694 最容易被误判的部分。早期 curl route fallback 只能证明 Hubble 能返回 React entrypoint，不能证明前端实际请求 backend。最终 browser smoke 已补齐这部分证据。</p>
+<table>
+  <thead>
+    <tr><th>Route</th><th>Expected API</th><th>Request count</th><th>Raw key</th><th>Reviewer verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>/graph-management</td>
+      <td>/api/v1.2/graph-connections</td>
+      <td>1</td>
+      <td>false</td>
+      <td>Pass</td>
+    </tr>
+    <tr>
+      <td>/graph-management/1/metadata-configs</td>
+      <td>/api/v1.2/graph-connections/1/schema/</td>
+      <td>4</td>
+      <td>false</td>
+      <td>Pass</td>
+    </tr>
+    <tr>
+      <td>/graph-management/1/data-import/import-manager</td>
+      <td>/api/v1.2/graph-connections/1/job-manager</td>
+      <td>2</td>
+      <td>false</td>
+      <td>Pass</td>
+    </tr>
+    <tr>
+      <td>/graph-management/1/data-analyze</td>
+      <td>/api/v1.2/graph-connections/1/schema/</td>
+      <td>9</td>
+      <td>false</td>
+      <td>Pass</td>
+    </tr>
+    <tr>
+      <td>/graph-management/1/async-tasks</td>
+      <td>/api/v1.2/graph-connections/1/async-tasks</td>
+      <td>2</td>
+      <td>false</td>
+      <td>Pass</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>9. Runtime i18n review</h1>
+<p>Reviewer 需要确认 i18n 不只是 static key 对称。最终 evidence 通过 browser runtime 设置语言并采集截图与正文文本变化。</p>
+<table>
+  <thead>
+    <tr><th>检查项</th><th>结果</th><th>Reviewer 说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>zhContainsChinese</td>
+      <td>true</td>
+      <td>中文环境下页面可见中文文本。</td>
+    </tr>
+    <tr>
+      <td>enContainsGraphManager</td>
+      <td>true</td>
+      <td>英文环境下页面包含 graph management 相关英文文本。</td>
+    </tr>
+    <tr>
+      <td>textChanged</td>
+      <td>true</td>
+      <td>语言切换后可见文本确实发生变化。</td>
+    </tr>
+    <tr>
+      <td>screenshots</td>
+      <td>i18n-zh-CN.png, i18n-en-US.png</td>
+      <td>截图已保存到 evidence/ui/。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>10. GraphServer + Loader review</h1>
+<p>Reviewer 需要确认 GraphServer + Loader 不是只做了基础连接，而是完成了数据链路：schema、upload、mapping、Loader task、Gremlin count、shortestPath compare。</p>
+<table>
+  <thead>
+    <tr><th>检查项</th><th>结果</th><th>Reviewer 说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>hubble-health</td>
+      <td>passed</td>
+      <td>packaged Hubble runtime 可用。</td>
+    </tr>
+    <tr>
+      <td>server-versions</td>
+      <td>passed</td>
+      <td>HugeGraph Server 1.5.0 可达。</td>
+    </tr>
+    <tr>
+      <td>hubble-create-graph-connection</td>
+      <td>passed, conn_id=1</td>
+      <td>Hubble 能创建 Server connection。</td>
+    </tr>
+    <tr>
+      <td>schema checks</td>
+      <td>passed</td>
+      <td>Hubble schema 与 direct Server schema 对齐。</td>
+    </tr>
+    <tr>
+      <td>upload and mapping</td>
+      <td>passed</td>
+      <td>CSV upload 和 file mapping 可用。</td>
+    </tr>
+    <tr>
+      <td>loader task</td>
+      <td>task_status=SUCCEED, job_status=SUCCESS</td>
+      <td>Loader-backed import 完成。</td>
+    </tr>
+    <tr>
+      <td>Gremlin count</td>
+      <td>vertices=3, edges=2</td>
+      <td>Hubble 与 Server count compare 通过。</td>
+    </tr>
+    <tr>
+      <td>shortestPath compare</td>
+      <td>Hubble vertices=3, edges=2; Server vertices=3, edges=2</td>
+      <td>shortestPath graph view 与 direct Server path 对齐。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>11. Code review focus</h1>
+<p>Reviewer 看代码时建议按下面几个焦点审查，而不是逐行重复验证所有脚本输出。</p>
+<table>
+  <thead>
+    <tr><th>焦点</th><th>文件</th><th>Reviewer 判断</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>shortestPath graph view edge preservation</td>
+      <td>OltpAlgoService.java, OltpAlgoServiceTest.java</td>
+      <td>确认 path 中的顶点和边被保留，且 graph view fallback 不破坏 json/table 结果。</td>
+    </tr>
+    <tr>
+      <td>FE shortpath compatibility alias</td>
+      <td>OltpAlgoController.java, OltpAlgoControllerTest.java</td>
+      <td>确认 canonical shortestPath 保留，shortpath alias 只解决 FE 兼容。</td>
+    </tr>
+    <tr>
+      <td>upload whitelist</td>
+      <td>HubbleOptions.java, HubbleOptionsTest.java</td>
+      <td>确认 csv/txt 支持是 issue smoke 所需，不扩大危险上传范围。</td>
+    </tr>
+    <tr>
+      <td>Loader mapping</td>
+      <td>LoadTaskService.java, LoadTaskServiceTest.java</td>
+      <td>确认 customized ID 输出为 Loader 可接受的 scalar ID。</td>
+    </tr>
+    <tr>
+      <td>job status consistency</td>
+      <td>JobManagerService.java, JobManagerServiceTest.java</td>
+      <td>确认 job 状态聚合和 load task 状态一致。</td>
+    </tr>
+    <tr>
+      <td>startup scripts</td>
+      <td>start-hubble.sh, Dockerfile</td>
+      <td>确认 foreground 模式和 daemon 模式语义清晰，容器入口不会退出。</td>
+    </tr>
+    <tr>
+      <td>binary assembly</td>
+      <td>assembly.xml, hubble-dist/pom.xml</td>
+      <td>确认 legal bundle 进入 tarball，且不依赖运行后的展开目录统计。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>12. Tests review</h1>
+<table>
+  <thead>
+    <tr><th>测试或脚本</th><th>覆盖内容</th><th>Reviewer 结论</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hubble BE unit tests</td>
+      <td>OltpAlgoService、OltpAlgoController、HubbleOptions、FileUpload、JobManager、LoadTask</td>
+      <td>通过，覆盖核心轻量 bug 修复。</td>
+    </tr>
+    <tr>
+      <td>check-hubble-i18n.js</td>
+      <td>zh-CN/en-US static resource key symmetry</td>
+      <td>通过，作为 runtime i18n 的前置证据。</td>
+    </tr>
+    <tr>
+      <td>check-hubble-dist.sh</td>
+      <td>binary structure、legal files、runtime residue、native-bearing jars</td>
+      <td>通过，支撑 binary gate。</td>
+    </tr>
+    <tr>
+      <td>run_live_hubble_smoke.py</td>
+      <td>packaged Hubble、Server、Loader、Gremlin、shortestPath</td>
+      <td>通过，支撑 function gate。</td>
+    </tr>
+    <tr>
+      <td>run_ui_full_acceptance.js</td>
+      <td>API inventory、browser route smoke、runtime i18n</td>
+      <td>通过，支撑 integration 和 i18n gate。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>13. API boundary review</h1>
+<p>API boundary 是本次 review 最重要的非代码风险。Reviewer 应确认最终文档和 issue comment 没有把 FE-only algorithm 误写为 Hubble BE supported。</p>
+<table>
+  <thead>
+    <tr><th>指标</th><th>值</th><th>Reviewer 解释</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>frontend_algorithm_count</td>
+      <td>16</td>
+      <td>FE inventory 中存在 16 个 algorithm slug。</td>
+    </tr>
+    <tr>
+      <td>backend_algorithm_endpoint_count</td>
+      <td>2</td>
+      <td>包含 canonical shortestPath 与 compatibility alias shortpath。</td>
+    </tr>
+    <tr>
+      <td>supported_by_hubble_be_count</td>
+      <td>1</td>
+      <td>按能力计数，实际 verified support 是 shortestPath。</td>
+    </tr>
+    <tr>
+      <td>frontend_only_count</td>
+      <td>15</td>
+      <td>这些不能写成 Hubble BE 已支持。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>14. Risk review</h1>
+<table>
+  <thead>
+    <tr><th>风险</th><th>级别</th><th>当前处理</th><th>是否阻塞</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>把 route fallback 当成 integration pass</td>
+      <td>High</td>
+      <td>已通过 browser API match 证据关闭。</td>
+      <td>否</td>
+    </tr>
+    <tr>
+      <td>把 direct Server 能力当成 Hubble 支持</td>
+      <td>High</td>
+      <td>review 文档保留 Hubble/API/Server direct 分类。</td>
+      <td>否</td>
+    </tr>
+    <tr>
+      <td>把 FE-only algorithms 宣称为 supported</td>
+      <td>Medium</td>
+      <td>需要 review wording guard。</td>
+      <td>不阻塞，但必须写清楚。</td>
+    </tr>
+    <tr>
+      <td>使用旧 candidate 或展开目录残留作为证据</td>
+      <td>Medium</td>
+      <td>candidate timestamp/size 和 tarball inventory 已记录。</td>
+      <td>否</td>
+    </tr>
+    <tr>
+      <td>本地端口差异导致误判</td>
+      <td>Low</td>
+      <td>最终 Server baseline 是 18082，Hubble 是 8088。</td>
+      <td>否</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>15. Review questions and answers</h1>
+<table>
+  <thead>
+    <tr><th>Reviewer 问题</th><th>回答</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>是否只是源码能编译？</td>
+      <td>不是。证据包含 packaged Hubble candidate runtime、binary inventory、browser acceptance 和 live Loader flow。</td>
+    </tr>
+    <tr>
+      <td>是否只是 curl route fallback？</td>
+      <td>不是。ui-browser-smoke.json 记录了每个核心 route 的 Hubble backend API match。</td>
+    </tr>
+    <tr>
+      <td>是否确认 GraphLoader？</td>
+      <td>确认。live-loader-flow.json 中 task_status=SUCCEED，job_status=SUCCESS，且 count compare 通过。</td>
+    </tr>
+    <tr>
+      <td>是否确认 shortestPath graph view？</td>
+      <td>确认。unit test 和 live Hubble/direct Server compare 都覆盖了 vertices 和 edges。</td>
+    </tr>
+    <tr>
+      <td>是否确认所有 algorithms？</td>
+      <td>否。只确认 shortestPath/shortpath。其他 15 个 FE-only slugs 是 API boundary 项。</td>
+    </tr>
+    <tr>
+      <td>是否可以关闭 issue #694？</td>
+      <td>可以按当前 issue gate 关闭，但 review/comment 需要保留 API boundary scope note。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>16. Reviewer 复跑步骤</h1>
+<ol>
+  <li seq="auto">切换到 codex/hubble-v2-issue-694-plan 分支。</li>
+  <li seq="auto">确认 candidate tarball 存在：hugegraph-hubble/target/apache-hugegraph-hubble-1.7.0.tar.gz。</li>
+  <li seq="auto">确认 HugeGraph Server 在 http://127.0.0.1:18082 可访问 /versions。</li>
+  <li seq="auto">运行 Hubble BE unit tests：mvn test -P unit-test -pl hugegraph-hubble/hubble-be -ntp。</li>
+  <li seq="auto">运行 binary check：check-hubble-dist.sh candidate tarball。</li>
+  <li seq="auto">运行 Loader flow：run_live_hubble_smoke.py --loader-flow。</li>
+  <li seq="auto">启动 packaged Hubble 并确认 http://127.0.0.1:8088/actuator/health 为 UP。</li>
+  <li seq="auto">运行 UI full acceptance，确认 ui-full-acceptance.json status 为 passed。</li>
+  <li seq="auto">检查 algorithm-api-inventory.json，确认 scope note 仍成立。</li>
+  <li seq="auto">检查 docs/hubble-v2-issue-694-plan.md，确认 review status 与证据一致。</li>
+</ol>
+
+<h1>17. Reviewer checklist</h1>
+<checkbox done="true">Build gate passed。</checkbox>
+<checkbox done="true">Runtime gate passed。</checkbox>
+<checkbox done="true">GraphServer + Loader gate passed。</checkbox>
+<checkbox done="true">Browser frontend/backend integration gate passed。</checkbox>
+<checkbox done="true">Runtime i18n gate passed。</checkbox>
+<checkbox done="true">Binary gate passed。</checkbox>
+<checkbox done="true">API boundary inventory recorded。</checkbox>
+<checkbox done="false">PR 或 issue comment 发布前，确认保留 shortestPath-only scope note。</checkbox>
+
+<h1>18. 建议 issue comment</h1>
+<pre lang="text" caption="Reviewer comment"><code>Reviewed the Hubble V2 issue #694 branch and evidence.
+
+The issue gates are covered by current branch evidence:
+- Build, Hubble BE unit tests, package, static i18n, and binary inventory passed.
+- Packaged Hubble runtime passed health and UI route checks.
+- GraphServer + Loader live flow passed against HugeGraph Server 1.5.0 on 127.0.0.1:18082.
+- Browser frontend/backend integration passed for graph management, metadata configs, data import, data analyze, and async tasks.
+- Runtime zh-CN/en-US i18n switch passed.
+- API boundary inventory is recorded.
+
+Scope note:
+The verified Hubble BE algorithm scope is shortestPath/shortpath only. The remaining FE-listed algorithm slugs are FE-only/API boundary items and should not be described as supported Hubble BE algorithms.</code></pre>
+
+<h1>19. 不建议的 review 表述</h1>
+<ul>
+  <li>不要写“Hubble V2 所有算法都已验证”。</li>
+  <li>不要写“所有 FE algorithm 都有 Hubble BE 支持”。</li>
+  <li>不要只引用 route fallback 作为 frontend/backend integration 证据。</li>
+  <li>不要只引用 direct Server API 作为 Hubble support 证据。</li>
+  <li>不要省略 candidate tarball、Server baseline 和 evidence 文件路径。</li>
+</ul>
+
+<h1>20. Final reviewer decision</h1>
+<p>Reviewer 可以接受当前分支在 issue #694 范围内的修复和验证结果。当前证据足以支持 build、runtime、integration、function、i18n、binary 和 API boundary gate 收口。最终 review/comment 必须保留 shortestPath-only algorithm scope note，避免过度声明 Hubble BE algorithm 支持范围。</p>

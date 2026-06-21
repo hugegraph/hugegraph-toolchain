@@ -1,0 +1,142 @@
+{
+  "backend_algorithm_endpoints": [
+    "shortestPath",
+    "shortpath"
+  ],
+  "inventory": [
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/LoopDetection.tsx",
+      "frontend_url": "rings",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "loopDetection",
+      "ui_name": "loop-detection"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": null,
+      "frontend_url": null,
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "focusDetection",
+      "ui_name": "focus-detection"
+    },
+    {
+      "backend_endpoint": "shortpath",
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/ShortestPath.tsx",
+      "frontend_url": "shortpath",
+      "status": "supported-by-hubble-be",
+      "symbol": "shortestPath",
+      "ui_name": "shortest-path"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/ShortestPathAll.tsx",
+      "frontend_url": "allshortpath",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "shortestPathAll",
+      "ui_name": "shortest-path-all"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/AllPath.tsx",
+      "frontend_url": "paths",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "allPath",
+      "ui_name": "all-path"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/ModelSimilarity.tsx",
+      "frontend_url": "fsimilarity",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "modelSimilarity",
+      "ui_name": "model-similarity"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/NeighborRank.tsx",
+      "frontend_url": "neighborrank",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "neighborRank",
+      "ui_name": "neighbor-rank"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/KStepNeighbor.tsx",
+      "frontend_url": "kneighbor",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "kStepNeighbor",
+      "ui_name": "k-step-neighbor"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/KHop.tsx",
+      "frontend_url": "kout",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "kHop",
+      "ui_name": "k-hop"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/CustomPath.tsx",
+      "frontend_url": "customizedpaths",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "customPath",
+      "ui_name": "custom-path"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/RadiographicInspection.tsx",
+      "frontend_url": "rays",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "radiographicInspection",
+      "ui_name": "radiographic-inspection"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/SameNeighbor.tsx",
+      "frontend_url": "sameneighbors",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "sameNeighbor",
+      "ui_name": "same-neighbor"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/WeightedShortestPath.tsx",
+      "frontend_url": "weightedshortpath",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "weightedShortestPath",
+      "ui_name": "weighted-shortest-path"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/SingleSourceWeightedShortestPath.tsx",
+      "frontend_url": "singleshortpath",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "singleSourceWeightedShortestPath",
+      "ui_name": "single-source-weighted-shortest-path"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/Jaccard.tsx",
+      "frontend_url": "jaccardsimilarity",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "jaccard",
+      "ui_name": "jaccard"
+    },
+    {
+      "backend_endpoint": null,
+      "frontend_source": "hugegraph-hubble/hubble-fe/src/components/graph-management/data-analyze/algorithm/PersonalRank.tsx",
+      "frontend_url": "personalrank",
+      "status": "frontend-listed-without-hubble-be-route",
+      "symbol": "personalRankRecommendation",
+      "ui_name": "personal-rank"
+    }
+  ],
+  "summary": {
+    "backend_algorithm_endpoint_count": 2,
+    "frontend_algorithm_count": 16,
+    "frontend_only_count": 15,
+    "supported_by_hubble_be_count": 1
+  }
+}

@@ -29,10 +29,12 @@
         <release.name>${project.parent.artifactId}</release.name>
         <final.name>apache-${release.name}-${project.version}</final.name>
         <top.level.dir>${project.basedir}/..</top.level.dir>
+        <repo.root.dir>${top.level.dir}/..</repo.root.dir>
         <current.basedir>${project.basedir}</current.basedir>
         <assembly.dir>${current.basedir}/assembly</assembly.dir>
         <assembly.descriptor.dir>${assembly.dir}/descriptor</assembly.descriptor.dir>
         <assembly.static.dir>${assembly.dir}/static</assembly.static.dir>
+        <release.docs.dir>${repo.root.dir}/hugegraph-dist/release-docs</release.docs.dir>
         <hubble-fe.dir>${project.basedir}/../hubble-fe</hubble-fe.dir>
         <build.node.version>v16.20.2</build.node.version>
         <build.yarn.version>v1.22.21</build.yarn.version>

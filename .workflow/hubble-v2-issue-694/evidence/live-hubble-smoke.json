@@ -1,0 +1,9 @@
+{
+  "checks": [],
+  "error": "Hubble health did not become UP: None",
+  "hubble_log_tail": "Starting Hubble in daemon mode...\n...OK\nlogging to /var/folders/0c/jgjb13257c1_6pc3nfcsv0hc0000gn/T/hubble-694-live-a8ibz5os/apache-hugegraph-hubble-1.7.0/logs/hugegraph-hubble.log, please check it",
+  "hubble_url": "http://127.0.0.1:8088",
+  "server_url": "http://127.0.0.1:8080",
+  "status": "failed",
+  "tarball": "hugegraph-hubble/target/apache-hugegraph-hubble-1.7.0.tar.gz"
+}

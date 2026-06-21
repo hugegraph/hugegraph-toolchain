@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hugegraph.driver.GraphManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.TraverserManager;
 import org.apache.hugegraph.entity.algorithm.ShortestPath;
@@ -40,6 +41,7 @@ import org.apache.hugegraph.service.query.ExecuteHistoryService;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Path;
 import org.apache.hugegraph.structure.graph.Vertex;
+import org.apache.hugegraph.structure.traverser.PathOfVertices;
 import org.apache.hugegraph.util.HubbleUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -64,15 +66,20 @@ public class OltpAlgoService {
     public GremlinResult shortestPath(int connId, ShortestPath body) {
         HugeClient client = this.getClient(connId);
         TraverserManager traverser = client.traverser();
-        Path result = traverser.shortestPath(body.getSource(), body.getTarget(),
-                                             body.getDirection(), body.getLabel(),
-                                             body.getMaxDepth(), body.getMaxDegree(),
-                                             body.getSkipDegree(), body.getCapacity()).getPath();
+        PathOfVertices result = traverser.shortestPath(body.getSource(),
+                                                       body.getTarget(),
+                                                       body.getDirection(),
+                                                       body.getLabel(),
+                                                       body.getMaxDepth(),
+                                                       body.getMaxDegree(),
+                                                       body.getSkipDegree(),
+                                                       body.getCapacity());
+        Path path = result.getPath();
         JsonView jsonView = new JsonView();
-        jsonView.setData(result.objects());
+        jsonView.setData(path.objects());
         Date createTime = HubbleUtil.nowDate();
-        TableView tableView = this.buildPathTableView(result);
-        GraphView graphView = this.buildPathGraphView(result);
+        TableView tableView = this.buildPathTableView(path);
+        GraphView graphView = this.buildPathGraphView(result, client.graph());
         // Insert execute history
         ExecuteStatus status = ExecuteStatus.SUCCESS;
         ExecuteHistory history;
@@ -121,6 +128,39 @@ public class OltpAlgoService {
                 return GraphView.EMPTY;
             }
         }
-        return new GraphView(vertices.values(), new ArrayList<>());
+        return new GraphView(vertices.values(), edges.values());
+    }
+
+    private GraphView buildPathGraphView(PathOfVertices result,
+                                         GraphManager graph) {
+        List<String> vertexIds = result.getVertices();
+        if (vertexIds == null || vertexIds.isEmpty()) {
+            vertexIds = new ArrayList<>();
+            for (Object element : result.getPath().objects()) {
+                if (!(element instanceof String)) {
+                    continue;
+                }
+                vertexIds.add((String) element);
+            }
+        }
+
+        try {
+            Map<Object, Vertex> vertices = new HashMap<>();
+            Map<String, Edge> edges = new HashMap<>();
+            for (String vertexId : vertexIds) {
+                Vertex vertex = graph.getVertex(vertexId);
+                vertices.put(vertex.id(), vertex);
+            }
+            if (result.getEdges() != null) {
+                for (String edgeId : result.getEdges()) {
+                    Edge edge = graph.getEdge(edgeId);
+                    edges.put(edge.id(), edge);
+                }
+            }
+            return new GraphView(vertices.values(), edges.values());
+        } catch (RuntimeException e) {
+            log.warn("Failed to backfill shortestPath graph view", e);
+            return GraphView.EMPTY;
+        }
     }
 }
