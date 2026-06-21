@@ -25,6 +25,9 @@ import {
 import {
     Home,
     Manage,
+    Analysis,
+    Modules,
+    Pages,
 } from './modules';
 
 const translation = {
@@ -33,7 +36,10 @@ const translation = {
         Common,
         Home,
         Manage,
-        ERView
+        ERView,
+        Analysis,
+        Modules,
+        Pages
     ),
 };
 

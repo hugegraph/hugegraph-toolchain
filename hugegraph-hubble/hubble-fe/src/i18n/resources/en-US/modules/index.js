@@ -18,7 +18,13 @@
 
 import Home from './home.json';
 import Manage from './manage.json';
+import Analysis from './analysis.json';
+import Modules from './modules.json';
+import Pages from './pages.json';
 export {
     Home,
+    Analysis,
     Manage,
+    Modules,
+    Pages,
 };

@@ -22,7 +22,7 @@
         "request_memory": "计算节点最小内存需求",
         "JVM_memory": "jvm环境内存大小，默认为32g",
         "source": "起始点ID",
-        "query_tooltip":"仅当选择的图数据加载完成后，才可以使用OLAP算法。"
+        "query_tooltip": "仅当选择的图数据加载完成后，才可以使用OLAP算法。"
       },
       "mode": {
         "OLTP": "OLTP算法",
@@ -57,7 +57,6 @@
         "closeness_centrality": {
           "desc": "计算一个节点到所有其他可达节点的最短距离的倒数，进行累积后归一化的值。用于计算图中每个节点的度中心性值，支持无向图和有向图。",
           "weight_property": "权重属性名",
-          "TODO": "TODO weight_property,sample_rate需要移动 ",
           "sample_rate": "边的采样率",
           "wf_improved": "是否使用 Wasserman and Faust 紧密中心性公式"
         },
@@ -171,7 +170,7 @@
           "minimum_edges_use_superedge_cache": "利用内存减少消息量，如果内存不够，可以从100改成1000，但三角计数可能计算不完"
         },
         "weakly_connected_component": {
-          "desc":"弱连通分量，计算无向图中所有联通的子图，输出各顶点所属的弱联通子图id"
+          "desc": "弱连通分量，计算无向图中所有联通的子图，输出各顶点所属的弱联通子图id"
         }
       },
       "oltp": {

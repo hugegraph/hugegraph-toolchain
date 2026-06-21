@@ -1,9 +1,9 @@
 {
   "home": {
-    "name":"系统管理" ,
-    "my": "个人中心",
-    "account": "账号管理",
-    "resource": "资源管理",
-    "role": "角色管理"
+    "name":"System Management" ,
+    "my": "My Profile",
+    "account": "Account Management",
+    "resource": "Resource Management",
+    "role": "Role Management"
   }
 }

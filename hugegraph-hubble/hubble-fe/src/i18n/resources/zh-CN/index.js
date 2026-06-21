@@ -26,6 +26,8 @@ import {
     Home,
     Manage,
     Analysis,
+    Modules,
+    Pages,
 } from './modules';
 
 const translation = {
@@ -35,7 +37,9 @@ const translation = {
         Home,
         Manage,
         ERView,
-        Analysis
+        Analysis,
+        Modules,
+        Pages
     ),
 };
 
