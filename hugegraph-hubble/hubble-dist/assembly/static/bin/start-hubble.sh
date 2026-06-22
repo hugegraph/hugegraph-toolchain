@@ -46,11 +46,11 @@ JAVA_OPTS="-Xms512m -Dfile.encoding=UTF-8"
 JAVA_DEBUG_OPTS=""
 FOREGROUND="false"
 
-while getopts "f:d" arg; do
+while getopts "fd" arg; do
     case ${arg} in
-        f) FOREGROUND="$OPTARG" ;;
+        f) FOREGROUND="true" ;;
         d) JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=n" ;;
-        ?) echo "USAGE: $0 [-f true|false] [-d] " && exit 1 ;;
+        ?) echo "USAGE: $0 [-f] [-d] " && exit 1 ;;
     esac
 done
 
@@ -70,12 +70,12 @@ LOG=${LOG_PATH}/hugegraph-hubble.log
 
 if [[ $FOREGROUND == "false" ]]; then
     echo "Starting Hubble in daemon mode..."
-    nice -n 0 java -server ${JAVA_OPTS} ${JAVA_DEBUG_OPTS} -Dhubble.home.path="${HOME_PATH}" \
+    nohup nice -n 0 java -server ${JAVA_OPTS} ${JAVA_DEBUG_OPTS} -Dhubble.home.path="${HOME_PATH}" \
   -cp ${class_path} ${MAIN_CLASS} ${ARGS} > ${LOG} 2>&1 < /dev/null &
 else
     echo "Starting Hubble in foreground mode..."
-    nice -n 0 java -server ${JAVA_OPTS} ${JAVA_DEBUG_OPTS} -Dhubble.home.path="${HOME_PATH}" \
-  -cp ${class_path} ${MAIN_CLASS} ${ARGS} > ${LOG} 2>&1 < /dev/null
+    exec nice -n 0 java -server ${JAVA_OPTS} ${JAVA_DEBUG_OPTS} -Dhubble.home.path="${HOME_PATH}" \
+  -cp ${class_path} ${MAIN_CLASS} ${ARGS}
 fi
 
 PID=$!
