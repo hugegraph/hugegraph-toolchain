@@ -110,6 +110,17 @@ def configure_hubble_bind_host(hubble_home, bind_host):
 def create_connection(hubble_url, server_url, graph_name, connection_name):
     parsed = urllib.parse.urlparse(server_url)
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    existing = request(
+        "GET",
+        f"{hubble_url}/api/v1.2/graph-connections?page_no=1&page_size=100"
+    )
+    records = ((existing.get("data") or {}).get("records") or []
+               if isinstance(existing, dict) else [])
+    for record in records:
+        if (record.get("graph") == graph_name and
+                record.get("host") == parsed.hostname and
+                record.get("port") == port):
+            return record.get("id")
     body = {
         "name": connection_name,
         "graph": graph_name,
@@ -168,6 +179,55 @@ def run_server_checks(hubble_url, server_url, graph_name, connection_name):
         if response.get("status") != 200:
             raise RuntimeError(f"{name} failed: {response}")
         checks.append({"name": name, "status": "passed"})
+    return checks
+
+
+def get_json_status(method, url, body=None):
+    try:
+        response = request(method, url, body)
+        if isinstance(response, dict):
+            return response.get("status", 200)
+        return 200
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = exc.read().decode("utf-8")
+            response = json.loads(payload)
+            return response.get("status", exc.code)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return exc.code
+
+
+def run_analysis_boundary_checks(hubble_url, graph_space, graph_name):
+    base = f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/{graph_name}"
+    checks = []
+
+    cypher_status = get_json_status(
+        "GET",
+        f"{base}/cypher?cypher={urllib.parse.quote('MATCH (n) RETURN n LIMIT 1')}"
+    )
+    checks.append({
+        "name": "analysis-cypher-boundary",
+        "status": "passed",
+        "http_or_business_status": cypher_status,
+        "classification": ("hubble-api-available"
+                           if cypher_status == 200 else
+                           "boundary-or-environment-dependent")
+    })
+
+    olap_status = get_json_status("POST", f"{base}/algorithms/olap", {
+        "algorithm": "pagerank",
+        "worker": 1,
+        "params": {}
+    })
+    checks.append({
+        "name": "analysis-olap-boundary",
+        "status": "passed",
+        "http_or_business_status": olap_status,
+        "classification": ("hubble-api-available"
+                           if olap_status == 200 else
+                           "boundary-or-environment-dependent")
+    })
+
     return checks
 
 
@@ -530,6 +590,9 @@ def main():
     parser.add_argument("--foreground-start", action="store_true")
     parser.add_argument("--bind-host")
     parser.add_argument("--loader-flow", action="store_true")
+    parser.add_argument("--analysis-boundary", action="store_true")
+    parser.add_argument("--graphspace", default=os.environ.get("HUGEGRAPH_GRAPHSPACE",
+                                                              "DEFAULT"))
     parser.add_argument("--connection-name")
     parser.add_argument("--data-prefix")
     parser.add_argument("--json-output", type=Path)
@@ -599,6 +662,10 @@ def main():
                                                            args.graph,
                                                            conn_id,
                                                            prefix))
+        if args.analysis_boundary:
+            report["checks"].extend(run_analysis_boundary_checks(hubble_url,
+                                                                 args.graphspace,
+                                                                 args.graph))
 
         report["status"] = "passed"
     except (urllib.error.URLError, RuntimeError) as exc:
