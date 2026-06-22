@@ -158,6 +158,7 @@
                                     rm -f ${final.name}/db.trace.db
                                     rm -f ${final.name}/*.pid
                                     rm -f ${final.name}/bin/pid
+                                    find ${final.name}/ui -name "*.map" -type f -delete
 
                                     tar -zcvf ${top.level.dir}/target/${final.name}.tar.gz ${final.name} || exit 1
                                     rm -rf ./hubble-dist/${final.name}

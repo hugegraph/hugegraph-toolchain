@@ -50,6 +50,8 @@ if [[ -z "${root}" ]]; then
     exit 1
 fi
 
+tar -xzf "${tarball}" -C "${tmp_dir}"
+
 required_paths=(
     "${root}/bin/"
     "${root}/conf/"
@@ -64,6 +66,13 @@ required_paths=(
 for path in "${required_paths[@]}"; do
     if ! grep -qxF "${path}" "${tmp_list}"; then
         echo "Missing required distribution path: ${path}" >&2
+        exit 1
+    fi
+done
+
+for legal_file in LICENSE NOTICE README.md; do
+    if [[ -z "$(tr -d '[:space:]' < "${tmp_dir}/${root}/${legal_file}")" ]]; then
+        echo "Packaged ${legal_file} must not be empty" >&2
         exit 1
     fi
 done
@@ -120,14 +129,30 @@ fe_license_count=$(grep -cE "^${root}/licenses/fe-licenses/[^/]+$" \
                    "${tmp_list}" || true)
 
 while IFS= read -r jar_path; do
-    local_jar="${tmp_dir}/$(basename "${jar_path}")"
-    tar -xOzf "${tarball}" "${jar_path}" > "${local_jar}"
+    local_jar="${tmp_dir}/${jar_path}"
     if jar tf "${local_jar}" | grep -qE "\\.(so|dylib|dll|jnilib)$"; then
         echo "${jar_path}" >> "${native_list}"
     fi
 done < <(grep -E "^${root}/lib/[^/]+\\.jar$" "${tmp_list}")
 
 native_jar_count=$(wc -l < "${native_list}" | tr -d ' ')
+checksum_status="not_checked"
+signature_status="not_checked"
+
+if [[ -f "${tarball}.sha512" ]]; then
+    expected_sha512=$(awk '{print $1}' "${tarball}.sha512")
+    actual_sha512=$(shasum -a 512 "${tarball}" | awk '{print $1}')
+    if [[ "${expected_sha512}" != "${actual_sha512}" ]]; then
+        echo "SHA-512 checksum mismatch for ${tarball}" >&2
+        exit 1
+    fi
+    checksum_status="passed"
+fi
+
+if [[ -f "${tarball}.asc" ]]; then
+    gpg --verify "${tarball}.asc" "${tarball}" >/dev/null 2>&1
+    signature_status="passed"
+fi
 
 if [[ -n "${json_output}" ]]; then
     mkdir -p "$(dirname "${json_output}")"
@@ -138,6 +163,8 @@ if [[ -n "${json_output}" ]]; then
         echo "  \"jar_count\": ${jar_count},"
         echo "  \"license_count\": ${license_count},"
         echo "  \"fe_license_count\": ${fe_license_count},"
+        echo "  \"checksum_status\": \"${checksum_status}\","
+        echo "  \"signature_status\": \"${signature_status}\","
         echo "  \"native_jar_count\": ${native_jar_count},"
         echo "  \"native_jars\": ["
         sed 's#^#    "#; s#$#"#; $!s#$#,#' "${native_list}"
