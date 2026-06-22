@@ -45,7 +45,7 @@ public final class HugeClientUtil {
         String graph = connection.getGraph();
         String host = connection.getHost();
         Integer port = connection.getPort();
-        String token = connection.getToken();
+        String token = normalizeToken(connection.getToken());
         String username = connection.getUsername();
         String password = connection.getPassword();
         int timeout = connection.getTimeout();
@@ -114,6 +114,13 @@ public final class HugeClientUtil {
         }
 
         return client;
+    }
+
+    private static String normalizeToken(String token) {
+        if (StringUtils.isBlank(token) || token.startsWith(" ")) {
+            return token;
+        }
+        return " " + token;
     }
 
     private static boolean isAcceptable(String message) {

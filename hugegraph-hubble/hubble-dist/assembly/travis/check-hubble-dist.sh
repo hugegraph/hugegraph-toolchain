@@ -17,7 +17,7 @@
 #
 set -euo pipefail
 
-if [[ $# -lt 1 || $# -gt 3 ]]; then
+if [[ $# -ne 1 && $# -ne 3 ]]; then
     echo "Usage: $0 <apache-hugegraph-hubble-*.tar.gz> [--json-output <path>]" >&2
     exit 1
 fi
@@ -43,18 +43,45 @@ native_list=$(mktemp)
 trap 'rm -f "${tmp_list}" "${native_list}"; rm -rf "${tmp_dir}"' EXIT
 
 tar -tzf "${tarball}" > "${tmp_list}"
-root=$(sed -n '1s#/.*##p' "${tmp_list}")
 
-if [[ -z "${root}" ]]; then
+if grep -qE '(^/|(^|/)\.\.(/|$))' "${tmp_list}"; then
+    echo "Unsafe tarball path found; absolute paths and '..' are not allowed" >&2
+    grep -E '(^/|(^|/)\.\.(/|$))' "${tmp_list}" >&2
+    exit 1
+fi
+
+if tar -tvzf "${tarball}" | grep -qE '^[lh]'; then
+    echo "Tarball must not contain symbolic or hard links" >&2
+    tar -tvzf "${tarball}" | grep -E '^[lh]' >&2
+    exit 1
+fi
+
+root_count=$(awk -F/ 'NF > 0 && $1 != "" {print $1}' "${tmp_list}" | sort -u | wc -l | tr -d ' ')
+root=$(awk -F/ 'NF > 0 && $1 != "" {print $1; exit}' "${tmp_list}")
+
+if [[ -z "${root}" || "${root}" == "." ]]; then
     echo "Unable to resolve tarball root directory" >&2
     exit 1
 fi
 
+if [[ "${root_count}" -ne 1 ]]; then
+    echo "Tarball must contain exactly one top-level root directory" >&2
+    awk -F/ 'NF > 0 && $1 != "" {print $1}' "${tmp_list}" | sort -u >&2
+    exit 1
+fi
+
+tar -xzf "${tarball}" -C "${tmp_dir}"
+
 required_paths=(
     "${root}/bin/"
+    "${root}/bin/start-hubble.sh"
+    "${root}/bin/stop-hubble.sh"
+    "${root}/bin/common_functions"
     "${root}/conf/"
+    "${root}/conf/hugegraph-hubble.properties"
     "${root}/lib/"
     "${root}/ui/"
+    "${root}/ui/index.html"
     "${root}/README.md"
     "${root}/LICENSE"
     "${root}/NOTICE"
@@ -64,6 +91,13 @@ required_paths=(
 for path in "${required_paths[@]}"; do
     if ! grep -qxF "${path}" "${tmp_list}"; then
         echo "Missing required distribution path: ${path}" >&2
+        exit 1
+    fi
+done
+
+for legal_file in LICENSE NOTICE README.md; do
+    if [[ -z "$(tr -d '[:space:]' < "${tmp_dir}/${root}/${legal_file}")" ]]; then
+        echo "Packaged ${legal_file} must not be empty" >&2
         exit 1
     fi
 done
@@ -82,10 +116,6 @@ done
 
 blocked_patterns=(
     "node_modules"
-    "\\.pid$"
-    "\\.lock$"
-    "\\.db$"
-    "\\.log$"
 )
 
 for pattern in "${blocked_patterns[@]}"; do
@@ -95,6 +125,13 @@ for pattern in "${blocked_patterns[@]}"; do
         exit 1
     fi
 done
+
+blocked_file_pattern="(^|/)(pid|[^/]+\\.(pid|lock|db|log))$"
+if grep -qE "${blocked_file_pattern}" "${tmp_list}"; then
+    echo "Blocked runtime/development file found" >&2
+    grep -E "${blocked_file_pattern}" "${tmp_list}" >&2
+    exit 1
+fi
 
 if grep -qE "^${root}/ui/.*\\.map$" "${tmp_list}"; then
     echo "Frontend source maps must not be packaged" >&2
@@ -119,15 +156,41 @@ license_count=$(grep -cE "^${root}/licenses/[^/]+$" "${tmp_list}" || true)
 fe_license_count=$(grep -cE "^${root}/licenses/fe-licenses/[^/]+$" \
                    "${tmp_list}" || true)
 
+if [[ "${license_count}" -eq 0 ]]; then
+    echo "No dependency license files found under ${root}/licenses" >&2
+    exit 1
+fi
+
+if [[ "${fe_license_count}" -eq 0 ]]; then
+    echo "No frontend license files found under ${root}/licenses/fe-licenses" >&2
+    exit 1
+fi
+
 while IFS= read -r jar_path; do
-    local_jar="${tmp_dir}/$(basename "${jar_path}")"
-    tar -xOzf "${tarball}" "${jar_path}" > "${local_jar}"
+    local_jar="${tmp_dir}/${jar_path}"
     if jar tf "${local_jar}" | grep -qE "\\.(so|dylib|dll|jnilib)$"; then
         echo "${jar_path}" >> "${native_list}"
     fi
 done < <(grep -E "^${root}/lib/[^/]+\\.jar$" "${tmp_list}")
 
 native_jar_count=$(wc -l < "${native_list}" | tr -d ' ')
+checksum_status="not_checked"
+signature_status="not_checked"
+
+if [[ -f "${tarball}.sha512" ]]; then
+    expected_sha512=$(awk '{print $1}' "${tarball}.sha512")
+    actual_sha512=$(shasum -a 512 "${tarball}" | awk '{print $1}')
+    if [[ "${expected_sha512}" != "${actual_sha512}" ]]; then
+        echo "SHA-512 checksum mismatch for ${tarball}" >&2
+        exit 1
+    fi
+    checksum_status="passed"
+fi
+
+if [[ -f "${tarball}.asc" ]]; then
+    gpg --verify "${tarball}.asc" "${tarball}" >/dev/null 2>&1
+    signature_status="passed"
+fi
 
 if [[ -n "${json_output}" ]]; then
     mkdir -p "$(dirname "${json_output}")"
@@ -138,6 +201,8 @@ if [[ -n "${json_output}" ]]; then
         echo "  \"jar_count\": ${jar_count},"
         echo "  \"license_count\": ${license_count},"
         echo "  \"fe_license_count\": ${fe_license_count},"
+        echo "  \"checksum_status\": \"${checksum_status}\","
+        echo "  \"signature_status\": \"${signature_status}\","
         echo "  \"native_jar_count\": ${native_jar_count},"
         echo "  \"native_jars\": ["
         sed 's#^#    "#; s#$#"#; $!s#$#,#' "${native_list}"
@@ -147,4 +212,5 @@ if [[ -n "${json_output}" ]]; then
 fi
 
 echo "Hubble distribution check passed: ${tarball}"
-echo "JARs: ${jar_count}, license files: ${license_count}, FE license files: ${fe_license_count}, native-bearing JARs: ${native_jar_count}"
+printf 'JARs: %s, license files: %s, FE license files: %s, native-bearing JARs: %s\n' \
+       "${jar_count}" "${license_count}" "${fe_license_count}" "${native_jar_count}"

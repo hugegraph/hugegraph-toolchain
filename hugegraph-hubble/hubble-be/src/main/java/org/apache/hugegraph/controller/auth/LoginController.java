@@ -18,8 +18,13 @@
 
 package org.apache.hugegraph.controller.auth;
 
+import java.util.Collections;
+
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import com.google.common.collect.ImmutableMap;
+import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,29 +39,33 @@ import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.structure.auth.LoginResult;
 
-import java.util.Base64;
-
 @RestController
 @RequestMapping(Constant.API_VERSION + "auth")
 public class LoginController extends BaseController {
 
     @Autowired
     UserService userService;
+    @Autowired
+    private HugeConfig config;
 
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
         // Set Expire: 1 Month
         login.expire(60 * 60 * 24 * 30);
-        this.setToken(encodeCredentials(login));
-        HugeClient client = tempTokenClient();
+        HugeClient client = this.hugeClientPoolService.createTempBasicClient(
+                login.name(), login.password());
         LoginResult result = client.auth().login(login);
         this.setUser(login.name());
         this.setSession("password", login.password());
         this.setToken(result.token());
+        client.close();
         clearRequestHugeClient();
 
-        // Get Current User Info
-        client = this.authClient(null, null);
+        if (!this.config.get(HubbleOptions.PD_ENABLED)) {
+            return currentUser(login.name());
+        }
+
+        client = this.authClient(PDHugeClientFactory.DEFAULT_GRAPHSPACE, null);
         UserEntity u = userService.getUser(client, login.name());
         u.setSuperadmin(userService.isSuperAdmin(client));
         client.close();
@@ -64,9 +73,16 @@ public class LoginController extends BaseController {
         return u;
     }
 
-    private String encodeCredentials(Login login) {
-        String combined = login.name() + ":" + login.password();
-        return Base64.getEncoder().encodeToString(combined.getBytes());
+    private static UserEntity currentUser(String username) {
+        UserEntity user = new UserEntity();
+        user.setId(username);
+        user.setName(username);
+        user.setNickname(username);
+        user.setAdminSpaces(Collections.emptyList());
+        user.setResSpaces(Collections.emptyList());
+        user.setSpacenum(0);
+        user.setSuperadmin(false);
+        return user;
     }
 
     @GetMapping("/status")

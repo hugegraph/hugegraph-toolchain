@@ -78,7 +78,8 @@ public final class HugeClientHolder {
             }
         }
         String username = options.username != null ?
-                          options.username : options.graph;
+                          options.username :
+                          (StringUtils.isNotEmpty(options.token) ? "" : options.graph);
         HugeClientBuilder builder;
         try {
             builder = HugeClient.builder(address, options.graphSpace,

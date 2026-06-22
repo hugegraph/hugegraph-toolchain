@@ -88,6 +88,10 @@ public final class HugeClientPoolService {
         return getOrCreate(null, null, null, token);
     }
 
+    public HugeClient createTempBasicClient(String username, String password) {
+        return getOrCreate(null, null, null, null, username, password);
+    }
+
     public HugeClient createAuthClient(String graphSpace,
             String graph, String token) {
         return getOrCreate(null, graphSpace, graph, token);
@@ -96,11 +100,22 @@ public final class HugeClientPoolService {
     public HugeClient getOrCreate(String url, String graphSpace, String graph,
             String token) {
         // 去掉缓存，固定每个 request 分配一个 client
-        return create(url, graphSpace, graph, token);
+        return getOrCreate(url, graphSpace, graph, token, null, null);
+    }
+
+    private HugeClient getOrCreate(String url, String graphSpace, String graph,
+            String token, String username, String password) {
+        // 去掉缓存，固定每个 request 分配一个 client
+        return create(url, graphSpace, graph, token, username, password);
     }
 
     public HugeClient create(String url, String graphSpace, String graph,
             String token) {
+        return create(url, graphSpace, graph, token, null, null);
+    }
+
+    private HugeClient create(String url, String graphSpace, String graph,
+            String token, String username, String password) {
         if (StringUtils.isEmpty(url)) {
             List<String> urls = this.allAvailableURLs(graphSpace, graph);
 
@@ -112,7 +127,8 @@ public final class HugeClientPoolService {
                 if (StringUtils.isEmpty(tmpurl)) {
                     continue;
                 }
-                HugeClient tmpclient = this.create(tmpurl, graphSpace, graph, token);
+                HugeClient tmpclient = this.create(tmpurl, graphSpace, graph, token,
+                                                   username, password);
 
                 if (checkHealth(tmpclient)) {
                     return tmpclient;
@@ -133,6 +149,8 @@ public final class HugeClientPoolService {
         }
 
         connection.setToken(token);
+        connection.setUsername(username);
+        connection.setPassword(password);
         connection.setGraphSpace(graphSpace);
         connection.setGraph(graph);
         if (connection.getTimeout() == null) {
