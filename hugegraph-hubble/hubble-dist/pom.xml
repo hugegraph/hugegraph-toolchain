@@ -29,10 +29,12 @@
         <release.name>${project.parent.artifactId}</release.name>
         <final.name>apache-${release.name}-${project.version}</final.name>
         <top.level.dir>${project.basedir}/..</top.level.dir>
+        <repo.root.dir>${top.level.dir}/..</repo.root.dir>
         <current.basedir>${project.basedir}</current.basedir>
         <assembly.dir>${current.basedir}/assembly</assembly.dir>
         <assembly.descriptor.dir>${assembly.dir}/descriptor</assembly.descriptor.dir>
         <assembly.static.dir>${assembly.dir}/static</assembly.static.dir>
+        <release.docs.dir>${repo.root.dir}/hugegraph-dist/release-docs</release.docs.dir>
         <hubble-fe.dir>${project.basedir}/../hubble-fe</hubble-fe.dir>
         <build.node.version>v18.20.8</build.node.version>
         <build.yarn.version>v1.22.21</build.yarn.version>
@@ -150,8 +152,15 @@
                                     cd ${top.level.dir} &amp;&amp; pwd
                                     rm -rf ${final.name}/ui
                                     cp -r ${hubble-fe.dir}/build ${final.name}/ui
+                                    rm -rf ${final.name}/logs
+                                    rm -rf ${final.name}/upload-files
+                                    rm -f ${final.name}/db.mv.db
+                                    rm -f ${final.name}/db.trace.db
+                                    rm -f ${final.name}/*.pid
+                                    rm -f ${final.name}/bin/pid
 
                                     tar -zcvf ${top.level.dir}/target/${final.name}.tar.gz ${final.name} || exit 1
+                                    rm -rf ./hubble-dist/${final.name}
                                     cp -r ${final.name} ./hubble-dist
                                     echo -n "${final.name} tar.gz available at: "
                                     echo "${top.level.dir}/target/${final.name}.tar.gz"
