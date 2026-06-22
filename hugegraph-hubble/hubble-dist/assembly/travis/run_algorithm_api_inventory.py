@@ -72,7 +72,14 @@ def parse_backend_algorithm_endpoints():
     return sorted(set(endpoints))
 
 
-def write_report(path, inventory):
+def controller_has_mapping(controller_name, pattern):
+    controller = (BE_ROOT / "org" / "apache" / "hugegraph" / "controller" /
+                  controller_name)
+    text = controller.read_text(encoding="utf-8")
+    return re.search(pattern, text, re.DOTALL) is not None
+
+
+def write_report(path, inventory, boundary):
     lines = [
         "# Hubble Algorithm API Inventory",
         "",
@@ -89,6 +96,19 @@ def write_report(path, inventory):
             frontend_url=item["frontend_url"] or "",
             endpoint=endpoint,
             status=item["status"]
+        ))
+    lines.extend([
+        "",
+        "## Boundary Routes",
+        "",
+        "| Area | Hubble route present | Verification scope |",
+        "|-|-|-|",
+    ])
+    for item in boundary:
+        lines.append("| {area} | {present} | {scope} |".format(
+            area=item["area"],
+            present="yes" if item["route_present"] else "no",
+            scope=item["verification_scope"]
         ))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -128,10 +148,36 @@ def main():
         endpoint for endpoint in backend_endpoints
         if endpoint not in frontend_url_set
     ]
+    boundary = [
+        {
+            "area": "OLTP algorithms",
+            "route_present": len(backend_endpoints) > 0,
+            "verification_scope": ("source inventory for all routes; "
+                                   "live smoke covers shortestPath")
+        },
+        {
+            "area": "OLAP algorithms",
+            "route_present": controller_has_mapping(
+                "algorithm/OlapAlgoController.java",
+                r"algorithms/olap"
+            ),
+            "verification_scope": ("source route inventory only; live execution "
+                                   "depends on computer backend configuration")
+        },
+        {
+            "area": "Cypher",
+            "route_present": controller_has_mapping(
+                "query/CypherController.java",
+                r"/\{graph\}/cypher"
+            ),
+            "verification_scope": "source route inventory plus optional live smoke"
+        },
+    ]
 
     result = {
         "backend_algorithm_endpoints": backend_endpoints,
         "backend_only_endpoints": backend_only,
+        "boundary_routes": boundary,
         "inventory": inventory,
         "summary": {
             "frontend_algorithm_count": len(frontend_urls),
@@ -153,7 +199,7 @@ def main():
                                     encoding="utf-8")
     if args.markdown_output:
         args.markdown_output.parent.mkdir(parents=True, exist_ok=True)
-        write_report(args.markdown_output, inventory)
+        write_report(args.markdown_output, inventory, boundary)
 
     print(json.dumps(result["summary"], sort_keys=True))
     if result["summary"]["frontend_algorithm_count"] == 0:
@@ -162,6 +208,8 @@ def main():
         raise SystemExit("No Hubble BE algorithm endpoints found")
     if result["summary"]["frontend_only_count"] > 0:
         raise SystemExit("Some FE algorithm slugs have no Hubble BE route")
+    if not all(item["route_present"] for item in boundary):
+        raise SystemExit("Some Hubble analysis boundary routes are missing")
 
 
 if __name__ == "__main__":
