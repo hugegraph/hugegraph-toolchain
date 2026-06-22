@@ -62,6 +62,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.StringUtils;
+
 @Log4j2
 @Service
 public class LoadTaskService {
@@ -344,7 +346,10 @@ public class LoadTaskService {
         options.graph = connection.getGraph();
         options.host = connection.getHost();
         options.port = connection.getPort();
-        options.token = connection.getToken();
+        options.username = connection.getUsername();
+        // hugegraph-loader 1.3.0 passes token as the Basic auth password.
+        options.token = StringUtils.isNotEmpty(connection.getPassword()) ?
+                        connection.getPassword() : connection.getToken();
         options.protocol = connection.getProtocol() != null ?
                            connection.getProtocol() : "http";
         // Load parameters

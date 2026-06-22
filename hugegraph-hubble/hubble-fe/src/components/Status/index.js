@@ -22,7 +22,8 @@ import {useTranslation} from 'react-i18next';
 
 const StatusField = ({status}) => {
     const {t} = useTranslation();
-    const lower = status ? status.toLowerCase() : 'undefined';
+    const value = status && typeof status === 'object' ? status.status : status;
+    const lower = value ? String(value).toLowerCase() : 'undefined';
     const config = {
         new: t('common.status.new'),
         running: t('common.status.running'),
@@ -35,7 +36,7 @@ const StatusField = ({status}) => {
 
     return (
         <span className={`${style.state} ${config[lower] ? style[lower] : ''}`}>
-            {config[lower] ? config[lower] : status}
+            {config[lower] ? config[lower] : value}
         </span>
     );
 };
