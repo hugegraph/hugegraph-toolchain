@@ -46,12 +46,32 @@ JAVA_OPTS="-Xms512m -Dfile.encoding=UTF-8"
 JAVA_DEBUG_OPTS=""
 FOREGROUND="false"
 
-while getopts "fd" arg; do
-    case ${arg} in
-        f) FOREGROUND="true" ;;
-        d) JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Xrunjdwp:transport=dt_socket,address=8787,server=y,suspend=n" ;;
-        ?) echo "USAGE: $0 [-f] [-d] " && exit 1 ;;
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f|--foreground)
+            FOREGROUND="true"
+            if [[ $# -gt 1 && ( "$2" == "true" || "$2" == "false" ) ]]; then
+                FOREGROUND="$2"
+                shift
+            fi
+            ;;
+        "-f true"|"--foreground true")
+            FOREGROUND="true"
+            ;;
+        "-f false"|"--foreground false")
+            FOREGROUND="false"
+            ;;
+        -d|--debug)
+            JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent"
+            JAVA_DEBUG_OPTS="${JAVA_DEBUG_OPTS} -Xrunjdwp:transport=dt_socket,address=8787"
+            JAVA_DEBUG_OPTS="${JAVA_DEBUG_OPTS},server=y,suspend=n"
+            ;;
+        *)
+            echo "USAGE: $0 [-f [true|false]] [-d] "
+            exit 1
+            ;;
     esac
+    shift
 done
 
 if [[ -f ${PID_FILE} ]] ; then

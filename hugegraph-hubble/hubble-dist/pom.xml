@@ -161,6 +161,8 @@
                                     find ${final.name}/ui -name "*.map" -type f -delete
 
                                     tar -zcvf ${top.level.dir}/target/${final.name}.tar.gz ${final.name} || exit 1
+                                    bash ${assembly.dir}/travis/check-hubble-dist.sh \
+                                         ${top.level.dir}/target/${final.name}.tar.gz || exit 1
                                     rm -rf ./hubble-dist/${final.name}
                                     cp -r ${final.name} ./hubble-dist
                                     echo -n "${final.name} tar.gz available at: "
