@@ -76,6 +76,7 @@
     "@ecomfe/stylelint-config": "^1.1.2",
     "eslint": "^8.19.0",
     "eslint-plugin-react": "^7.30.1",
+    "playwright": "^1.61.1",
     "resize-observer-polyfill": "^1.5.1"
   }
 }

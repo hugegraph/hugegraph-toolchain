@@ -37,6 +37,7 @@ import org.apache.hugegraph.service.load.JobManagerService;
 import org.apache.hugegraph.service.load.LoadTaskService;
 import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -138,6 +139,12 @@ public class LoadTaskController extends BaseController {
         connection.setGraphSpace(graphSpace);
         connection.setGraph(graph);
         connection.setToken(this.getToken());
+        if (!config.get(HubbleOptions.PD_ENABLED)) {
+            UrlUtil.Host host = UrlUtil.parseHost(config.get(HubbleOptions.SERVER_URL));
+            connection.setProtocol(host.getScheme());
+            connection.setHost(host.getHost());
+            connection.setPort(host.getPort());
+        }
 
         JobManager jobEntity = this.jobService.get(jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
