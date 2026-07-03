@@ -24,125 +24,58 @@ fi
 
 tarball=$1
 server_url=${2:-http://127.0.0.1:8080}
-server_url=${server_url%/}
 hubble_url=${HUBBLE_URL:-http://127.0.0.1:8088}
-hubble_url=${hubble_url%/}
 graph_name=${HUGEGRAPH_GRAPH:-hugegraph}
-work_dir=${HUBBLE_694_WORK_DIR:-$(mktemp -d)}
-cleanup_work_dir=${HUBBLE_694_KEEP_WORK_DIR:-false}
-hubble_home=""
-
-server_protocol=${server_url%%://*}
-server_address=${server_url#*://}
-if [[ "${server_protocol}" == "${server_url}" ]]; then
-    server_protocol=http
-    server_address=${server_url}
-fi
-server_address=${server_address%%/*}
-server_host=${server_address%%:*}
-server_port=${server_address##*:}
-if [[ "${server_port}" == "${server_address}" ]]; then
-    if [[ "${server_protocol}" == "https" ]]; then
-        server_port=443
-    else
-        server_port=80
-    fi
-fi
-
-cleanup() {
-    if [[ -n "${hubble_home}" && -x "${hubble_home}/bin/stop-hubble.sh" ]]; then
-        "${hubble_home}/bin/stop-hubble.sh" >/dev/null 2>&1 || true
-    fi
-    if [[ "${cleanup_work_dir}" != "true" ]]; then
-        rm -rf "${work_dir}"
-    fi
-}
-trap cleanup EXIT
+graphspace=${HUGEGRAPH_GRAPHSPACE:-DEFAULT}
+evidence_dir=${HUBBLE_694_EVIDENCE_DIR:-.workflow/hubble-v2-issue-694/evidence}
+script_dir=$(cd "$(dirname "$0")" && pwd)
+python_bin=${PYTHON:-python3}
+node_bin=${NODE:-node}
 
 if [[ ! -f "${tarball}" ]]; then
     echo "Hubble tarball not found: ${tarball}" >&2
     exit 1
 fi
 
-mkdir -p "${work_dir}"
-tar -xzf "${tarball}" -C "${work_dir}"
-hubble_home=$(find "${work_dir}" -maxdepth 1 -type d -name 'apache-hugegraph-hubble-*' | head -n 1)
-if [[ -z "${hubble_home}" ]]; then
-    echo "Unable to find unpacked Hubble home in ${work_dir}" >&2
-    exit 1
-fi
-
-echo "Starting Hubble candidate: ${hubble_home}"
-"${hubble_home}/bin/start-hubble.sh"
-
-for _ in $(seq 1 60); do
-    if curl -fsS "${hubble_url}/actuator/health" >/dev/null; then
-        break
+mkdir -p "${evidence_dir}/ui"
+runtime_work=$(mktemp -d "${TMPDIR:-/tmp}/hubble-694-runtime-XXXXXX")
+cleanup() {
+    hubble_home=$(find "${runtime_work}" -maxdepth 1 -type d \
+        -name 'apache-hugegraph-hubble-*' | head -n 1)
+    if [[ -n "${hubble_home}" && -x "${hubble_home}/bin/stop-hubble.sh" ]]; then
+        "${hubble_home}/bin/stop-hubble.sh" >/dev/null 2>&1 || true
     fi
-    sleep 1
-done
+    rm -rf "${runtime_work}"
+}
+trap cleanup EXIT
 
-curl -fsS "${hubble_url}/actuator/health" | grep -q '"UP"'
-curl -fsS "${hubble_url}/" | grep -q '<div id="root"></div>'
+"${python_bin}" "${script_dir}/run_live_hubble_smoke.py" "${tarball}" \
+    --server-url "${server_url}" \
+    --hubble-url "${hubble_url}" \
+    --graph "${graph_name}" \
+    --graphspace "${graphspace}" \
+    --loader-flow \
+    --analysis-boundary \
+    --work-dir "${runtime_work}" \
+    --keep-work-dir \
+    --leave-running \
+    --json-output "${evidence_dir}/live-hubble-smoke.json"
 
-for route in \
-    /graph-management \
-    /graph-management/1/metadata-configs \
-    /graph-management/1/data-import/import-manager \
-    /graph-management/1/data-analyze \
-    /graph-management/1/async-tasks
-do
-    curl -fsS "${hubble_url}${route}" | grep -q '<div id="root"></div>'
-done
+"${node_bin}" "${script_dir}/run_ui_full_acceptance.js" \
+    --hubble-url "${hubble_url}" \
+    --output-dir "${evidence_dir}/ui" \
+    --json-output "${evidence_dir}/ui-full-acceptance.json"
 
-curl -fsS "${server_url}/versions" >/dev/null
-
-connection_body=$(cat <<JSON
-{"name":"issue_694_local","graph":"${graph_name}","host":"${server_host}","port":${server_port},"username":"","password":"","protocol":"${server_protocol}"}
+cat > "${evidence_dir}/manifest.json" <<JSON
+{
+  "status": "passed",
+  "hubbleUrl": "${hubble_url}",
+  "serverUrl": "${server_url}",
+  "graphspace": "${graphspace}",
+  "graph": "${graph_name}",
+  "runtime": "${evidence_dir}/live-hubble-smoke.json",
+  "ui": "${evidence_dir}/ui-full-acceptance.json"
+}
 JSON
-)
 
-connection_response=$(curl -fsS \
-    -H 'Content-Type: application/json' \
-    -d "${connection_body}" \
-    "${hubble_url}/api/v1.2/graph-connections")
-if ! echo "${connection_response}" | grep -q '"status":200'; then
-    echo "Failed to create Hubble graph connection" >&2
-    echo "${connection_response}" >&2
-    exit 1
-fi
-
-conn_id=$(printf '%s' "${connection_response}" |
-          sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
-
-if [[ -z "${conn_id}" ]]; then
-    echo "Unable to resolve Hubble graph connection id" >&2
-    echo "${connection_response}" >&2
-    exit 1
-fi
-
-schema_response=$(curl -fsS \
-    "${hubble_url}/api/v1.2/graph-connections/${conn_id}/schema/graphview")
-if ! echo "${schema_response}" | grep -q '"status":200'; then
-    echo "Hubble schema graphview API failed" >&2
-    echo "${schema_response}" >&2
-    exit 1
-fi
-
-job_response=$(curl -fsS \
-    "${hubble_url}/api/v1.2/graph-connections/${conn_id}/job-manager?page_no=1&page_size=10")
-if ! echo "${job_response}" | grep -q '"status":200'; then
-    echo "Hubble job-manager API failed" >&2
-    echo "${job_response}" >&2
-    exit 1
-fi
-
-task_response=$(curl -fsS \
-    "${hubble_url}/api/v1.2/graph-connections/${conn_id}/async-tasks?page_no=1&page_size=10")
-if ! echo "${task_response}" | grep -q '"status":200'; then
-    echo "Hubble async-tasks API failed" >&2
-    echo "${task_response}" >&2
-    exit 1
-fi
-
-echo "Hubble issue #694 smoke passed with connection id ${conn_id}"
+echo "Hubble issue #694 smoke passed; evidence: ${evidence_dir}"
