@@ -16,33 +16,20 @@
  * under the License.
  */
 
-/**
- * @file 管理子项块
- * @author
- */
+package org.apache.hugegraph.unit;
 
-import Item from '../Item';
-import {isPdEnabled} from '../../../utils/config';
+import org.junit.Test;
 
-const ManageItem = () => {
-    const pdMode = isPdEnabled();
-    const listData = pdMode
-        ? [
-            {title: '图管理', url: '/graphspace'},
-            {title: '数据管理', url: '/source'},
-            {title: '数据导入', url: '/task'},
-        ]
-        : [
-            {title: '图管理', url: '/graphspace/DEFAULT'},
-        ];
+import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.testutil.Assert;
 
-    return (
-        <Item
-            btnIndex={1}
-            btnTitle={'数据管理'}
-            listData={listData}
-        />
-    );
-};
+public class HubbleOptionsTest {
 
-export default ManageItem;
+    @Test
+    public void testUploadFormatDefaultIncludesCsvAndTxt() {
+        Assert.assertTrue(HubbleOptions.UPLOAD_FILE_FORMAT_LIST.defaultValue()
+                              .contains("csv"));
+        Assert.assertTrue(HubbleOptions.UPLOAD_FILE_FORMAT_LIST.defaultValue()
+                              .contains("txt"));
+    }
+}

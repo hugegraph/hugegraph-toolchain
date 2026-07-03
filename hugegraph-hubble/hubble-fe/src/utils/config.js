@@ -18,7 +18,7 @@
 
 const CONFIG_KEY = 'hubble_config_';
 
-const setConfig = (config) => {
+const setConfig = config => {
     sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config));
 };
 

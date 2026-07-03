@@ -61,9 +61,18 @@ const DetailTip = ({row}) => {
                     <div className={style.task_detail}>
                         <div>{t('task.detail.title')}</div>
                         <Space>
-                            <Badge status="success" text={<span>{t('task.detail.success')}: {job_summary?.success_count ?? 0}</span>} />
-                            <Badge status="error" text={<span>{t('task.detail.failed')}: {job_summary?.failed_count ?? 0}</span>} />
-                            <Badge status="processing" text={<span>{t('task.detail.running')}: {job_summary?.running_count ?? 0}</span>} />
+                            <Badge
+                                status="success"
+                                text={<span>{t('task.detail.success')}: {job_summary?.success_count ?? 0}</span>}
+                            />
+                            <Badge
+                                status="error"
+                                text={<span>{t('task.detail.failed')}: {job_summary?.failed_count ?? 0}</span>}
+                            />
+                            <Badge
+                                status="processing"
+                                text={<span>{t('task.detail.running')}: {job_summary?.running_count ?? 0}</span>}
+                            />
                         </Space>
                     </div>)
                 }
@@ -236,7 +245,11 @@ const Task = () => {
                             ? <a onClick={() => editTask(row)}><EditOutlined /></a>
                             : <EditOutlined style={{color: '#8c8c8c'}} />}
                         {/* <a>{row.task_schedule_status === 'ENABLE'
-                            ? <Tooltip title={t('task.pause')}><PauseOutlined onClick={() => disableTask(row.task_id)} /></Tooltip>
+                            ? (
+                                <Tooltip title={t('task.pause')}>
+                                    <PauseOutlined onClick={() => disableTask(row.task_id)} />
+                                </Tooltip>
+                            )
                             : (
                                 <Tooltip title={t('task.execute')}>
                                     <CaretRightOutlined onClick={() => enableTask(row.task_id)} />

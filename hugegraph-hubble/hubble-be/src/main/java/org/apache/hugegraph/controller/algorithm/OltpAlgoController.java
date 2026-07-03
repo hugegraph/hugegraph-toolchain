@@ -54,6 +54,13 @@ public class OltpAlgoController extends BaseController {
         return this.service.shortestPath(client, body);
     }
 
+    @PostMapping("shortpath")
+    public GremlinResult shortPathAlias(@PathVariable("graphspace") String graphSpace,
+                                        @PathVariable("graph") String graph,
+                                        @RequestBody ShortestPathEntity body) {
+        return this.shortPath(graphSpace, graph, body);
+    }
+
     @PostMapping("rings")
     public GremlinResult rings(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph,
@@ -148,6 +155,13 @@ public class OltpAlgoController extends BaseController {
                                        @RequestBody AllShortestPathsEntity body) {
         HugeClient client = this.authClient(graphSpace, graph);
         return this.service.allShortestPaths(client, body);
+    }
+
+    @PostMapping("allshortpath")
+    public GremlinResult allShortPathAlias(@PathVariable("graphspace") String graphSpace,
+                                           @PathVariable("graph") String graph,
+                                           @RequestBody AllShortestPathsEntity body) {
+        return this.allShortPaths(graphSpace, graph, body);
     }
 
     @PostMapping("weightedshortestpath")

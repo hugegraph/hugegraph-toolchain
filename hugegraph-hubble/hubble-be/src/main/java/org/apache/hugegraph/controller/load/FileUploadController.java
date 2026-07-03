@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -137,7 +138,7 @@ public class FileUploadController extends BaseController {
         try {
             FileMapping reservedMapping;
             synchronized (this.service) {
-                reservedMapping = this.reserveUploadQuota(connId, jobId,
+                reservedMapping = this.reserveUploadQuota(graphSpace, graph, jobId,
                                                           fileName, filePath,
                                                           sourceFileSize);
             }
@@ -150,11 +151,7 @@ public class FileUploadController extends BaseController {
                 FileMapping mapping = this.service.get(graphSpace, graph, jobId,
                                                        fileName);
                 if (mapping == null) {
-                    mapping = new FileMapping(graphSpace, graph, fileName,
-                                              filePath);
-                    mapping.setJobId(jobId);
-                    mapping.setFileStatus(FileMappingStatus.UPLOADING);
-                    this.service.save(mapping);
+                    mapping = reservedMapping;
                 }
                 Ex.check(mapping != null, "load.file-mapping.not-exist.name",
                          fileName);
@@ -306,19 +303,29 @@ public class FileUploadController extends BaseController {
         log.debug("File content type: {}", file.getContentType());
 
         String format = FilenameUtils.getExtension(fileName);
+        Ex.check(StringUtils.isNotBlank(format),
+                 "load.upload.file.format.unsupported");
         List<String> formatWhiteList = this.config.get(
                                        HubbleOptions.UPLOAD_FILE_FORMAT_LIST);
-        Ex.check(formatWhiteList.contains(format),
-                 "load.upload.file.format.unsupported");
+        String normalizedFormat = format.toLowerCase(Locale.ROOT);
+        boolean supported = formatWhiteList != null &&
+                            formatWhiteList.stream()
+                                           .filter(StringUtils::isNotBlank)
+                                           .map(String::trim)
+                                           .map(item -> item.toLowerCase(Locale.ROOT))
+                                           .anyMatch(normalizedFormat::equals);
+        Ex.check(supported, "load.upload.file.format.unsupported");
     }
 
-    private FileMapping reserveUploadQuota(int connId, int jobId,
+    private FileMapping reserveUploadQuota(String graphSpace, String graph,
+                                           int jobId,
                                            String fileName, String filePath,
                                            Long sourceFileSize) {
         JobManager currentJob = this.jobService.get(jobId);
         Ex.check(currentJob != null, "job-manager.not-exist.id", jobId);
 
-        FileMapping mapping = this.service.get(connId, jobId, fileName);
+        FileMapping mapping = this.service.get(graphSpace, graph, jobId,
+                                               fileName);
         Ex.check(mapping == null ||
                  mapping.getFileStatus() == FileMappingStatus.UPLOADING,
                  "load.upload.file.existed", fileName);
@@ -332,7 +339,7 @@ public class FileUploadController extends BaseController {
                                 reservedUploadingSize);
 
         if (mapping == null) {
-            mapping = new FileMapping(connId, fileName, filePath);
+            mapping = new FileMapping(graphSpace, graph, fileName, filePath);
             mapping.setJobId(jobId);
             this.fillUploadingReservation(mapping, reservedFileSize);
             this.service.save(mapping);
@@ -373,13 +380,6 @@ public class FileUploadController extends BaseController {
         Ex.check(fileSize <= singleFileSizeLimit,
                  "load.upload.file.exceed-single-size",
                  FileUtils.byteCountToDisplaySize(singleFileSizeLimit));
-
-        // Check is there a file with the same name
-        FileMapping oldMapping = this.service.get(graphSpace, graph, jobId,
-                                                  fileName);
-        Ex.check(oldMapping == null ||
-                 oldMapping.getFileStatus() == FileMappingStatus.UPLOADING,
-                 "load.upload.file.existed", fileName);
 
         long totalFileSizeLimit = this.config.get(
                                   HubbleOptions.UPLOAD_TOTAL_FILE_SIZE_LIMIT);
