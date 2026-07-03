@@ -25,6 +25,44 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FE_ROOT = REPO_ROOT / "hugegraph-hubble" / "hubble-fe" / "src"
 BE_ROOT = REPO_ROOT / "hugegraph-hubble" / "hubble-be" / "src" / "main" / "java"
+COMPATIBILITY_ALIASES = {
+    "allshortpath": "allshortestpaths",
+    "shortpath": "shortestPath",
+}
+
+
+def parse_object_string_entries(body):
+    pattern = re.compile(
+        r"^\s*(?:(?P<key_quote>['\"])(?P<quoted_key>\w+)(?P=key_quote)|"
+        r"(?P<bare_key>\w+))\s*:\s*(?P<value_quote>['\"])"
+        r"(?P<value>(?:\\.|(?!(?P=value_quote)).)*)(?P=value_quote)",
+        re.MULTILINE
+    )
+    entries = []
+    for match in pattern.finditer(body):
+        entries.append((
+            match.group("quoted_key") or match.group("bare_key"),
+            unescape_js_string(match.group("value"))
+        ))
+    return entries
+
+
+def parse_algorithm_url_entries(body):
+    pattern = re.compile(
+        r"\[\s*ALGORITHM_NAME\.(?P<symbol>\w+)\s*\]\s*:\s*"
+        r"(?P<quote>['\"])(?P<url>(?:\\.|(?!(?P=quote)).)*)(?P=quote)"
+    )
+    entries = []
+    for match in pattern.finditer(body):
+        entries.append((
+            match.group("symbol"),
+            unescape_js_string(match.group("url"))
+        ))
+    return entries
+
+
+def unescape_js_string(value):
+    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
 
 
 def parse_algorithm_names():
@@ -34,8 +72,7 @@ def parse_algorithm_names():
                       re.DOTALL)
     if not match:
         raise RuntimeError("Unable to find ALGORITHM_NAME in constants.js")
-    pattern = re.compile(r"^\s*(\w+):\s*'([^']+)'", re.MULTILINE)
-    return {symbol: name for symbol, name in pattern.findall(match.group("body"))}
+    return dict(parse_object_string_entries(match.group("body")))
 
 
 def parse_frontend_algorithm_urls(algorithm_names):
@@ -45,10 +82,9 @@ def parse_frontend_algorithm_urls(algorithm_names):
                       re.DOTALL)
     if not match:
         raise RuntimeError("Unable to find Algorithm_Url in constants.js")
-    pattern = re.compile(r"\[ALGORITHM_NAME\.(\w+)\]:\s*'([^']+)'")
     urls = []
     seen = set()
-    for symbol, url in pattern.findall(match.group("body")):
+    for symbol, url in parse_algorithm_url_entries(match.group("body")):
         key = (symbol, url)
         if key in seen:
             continue
@@ -80,11 +116,24 @@ def controller_has_mapping(controller_name, pattern):
 
 
 def write_report(path, inventory, boundary):
+    aliases = inventory_aliases(boundary)
+    backend_only = inventory_backend_only(boundary)
     lines = [
         "# Hubble Algorithm API Inventory",
         "",
-        "Generated from source code. This classifies FE algorithm slugs against "
-        "Hubble BE controller routes; it is not live API proof.",
+        "Generated from source code. This classifies FE OLTP algorithm slugs "
+        "against Hubble BE OLTP controller routes. OLAP, Vermeer, and Cypher "
+        "are boundary-route checks; this is not live API proof.",
+        "",
+        "## Summary",
+        "",
+        "| Metric | Count |",
+        "|-|-|",
+        f"| FE OLTP algorithm slugs | {len(inventory)} |",
+        f"| BE compatibility aliases | {len(aliases)} |",
+        f"| Non-alias BE-only endpoints | {len(backend_only)} |",
+        "",
+        "## FE OLTP Slug Inventory",
         "",
         "| UI algorithm | Frontend slug | Hubble BE endpoint | Status |",
         "|-|-|-|-|",
@@ -110,7 +159,46 @@ def write_report(path, inventory, boundary):
             present="yes" if item["route_present"] else "no",
             scope=item["verification_scope"]
         ))
+    lines.extend([
+        "",
+        "## Backend Compatibility Aliases",
+        "",
+        "| Backend endpoint | Canonical endpoint | Status |",
+        "|-|-|-|",
+    ])
+    for item in sorted(inventory_aliases(boundary), key=lambda alias: alias["endpoint"]):
+        lines.append("| {endpoint} | {canonical} | {status} |".format(
+            endpoint=item["endpoint"],
+            canonical=item["canonical_endpoint"],
+            status=item["status"]
+        ))
+    lines.extend([
+        "",
+        "## Non-Alias Backend-Only Endpoints",
+        "",
+        "| Backend endpoint | Status |",
+        "|-|-|",
+    ])
+    if backend_only:
+        for endpoint in backend_only:
+            lines.append(f"| {endpoint} | backend-only-without-frontend-slug |")
+    else:
+        lines.append("|  | none |")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def inventory_aliases(boundary):
+    for item in boundary:
+        if item.get("area") == "OLTP algorithms":
+            return item.get("compatibility_aliases", [])
+    return []
+
+
+def inventory_backend_only(boundary):
+    for item in boundary:
+        if item.get("area") == "OLTP algorithms":
+            return item.get("backend_only_endpoints", [])
+    return []
 
 
 def main():
@@ -119,7 +207,12 @@ def main():
                         help="Optional path for machine-readable inventory")
     parser.add_argument("--markdown-output", type=Path,
                         help="Optional path for markdown inventory")
+    parser.add_argument("--self-test", action="store_true",
+                        help="Run parser self-tests and exit")
     args = parser.parse_args()
+    if args.self_test:
+        run_self_tests()
+        return
 
     algorithm_names = parse_algorithm_names()
     frontend_urls = parse_frontend_algorithm_urls(algorithm_names)
@@ -144,14 +237,25 @@ def main():
         })
 
     frontend_url_set = {item["frontend_url"] for item in frontend_urls}
+    compatibility_aliases = [
+        {
+            "endpoint": endpoint,
+            "canonical_endpoint": COMPATIBILITY_ALIASES[endpoint],
+            "status": "backend-only-compatibility-alias"
+        }
+        for endpoint in backend_endpoints
+        if endpoint in COMPATIBILITY_ALIASES
+    ]
     backend_only = [
         endpoint for endpoint in backend_endpoints
-        if endpoint not in frontend_url_set
+        if endpoint not in frontend_url_set and endpoint not in COMPATIBILITY_ALIASES
     ]
     boundary = [
         {
             "area": "OLTP algorithms",
             "route_present": len(backend_endpoints) > 0,
+            "compatibility_aliases": compatibility_aliases,
+            "backend_only_endpoints": backend_only,
             "verification_scope": ("source inventory for all routes; "
                                    "live smoke covers shortestPath")
         },
@@ -165,6 +269,15 @@ def main():
                                    "depends on computer backend configuration")
         },
         {
+            "area": "Vermeer algorithms",
+            "route_present": controller_has_mapping(
+                "algorithm/VermeerAlgoController.java",
+                r"algorithms/vermeer"
+            ),
+            "verification_scope": ("source route inventory only; live execution "
+                                   "depends on Vermeer graph loading")
+        },
+        {
             "area": "Cypher",
             "route_present": controller_has_mapping(
                 "query/CypherController.java",
@@ -176,6 +289,7 @@ def main():
 
     result = {
         "backend_algorithm_endpoints": backend_endpoints,
+        "backend_compatibility_aliases": compatibility_aliases,
         "backend_only_endpoints": backend_only,
         "boundary_routes": boundary,
         "inventory": inventory,
@@ -189,6 +303,7 @@ def main():
                 1 for item in inventory
                 if item["status"] == "frontend-listed-without-hubble-be-route"
             ),
+            "backend_compatibility_alias_count": len(compatibility_aliases),
             "backend_only_count": len(backend_only)
         }
     }
@@ -208,8 +323,37 @@ def main():
         raise SystemExit("No Hubble BE algorithm endpoints found")
     if result["summary"]["frontend_only_count"] > 0:
         raise SystemExit("Some FE algorithm slugs have no Hubble BE route")
+    if result["summary"]["backend_only_count"] > 0:
+        raise SystemExit("Some non-alias Hubble BE endpoints have no FE slug")
     if not all(item["route_present"] for item in boundary):
         raise SystemExit("Some Hubble analysis boundary routes are missing")
+
+
+def run_self_tests():
+    names = parse_object_string_entries("""
+        PAGE_RANK: 'PageRank',
+        "K_OUT": "K-out",
+        'QUOTE': 'Don\\'t stop',
+    """)
+    assert dict(names) == {
+        "PAGE_RANK": "PageRank",
+        "K_OUT": "K-out",
+        "QUOTE": "Don't stop",
+    }
+
+    urls = parse_frontend_algorithm_urls({"PAGE_RANK": "PageRank", "K_OUT": "K-out"})
+    assert urls, "repository Algorithm_Url entries should parse"
+
+    synthetic_url_body = """
+        [ALGORITHM_NAME.PAGE_RANK]: "pageRank",
+        [ALGORITHM_NAME.K_OUT]: 'kout',
+    """
+    assert parse_algorithm_url_entries(synthetic_url_body) == [
+        ("PAGE_RANK", "pageRank"),
+        ("K_OUT", "kout")
+    ]
+    assert COMPATIBILITY_ALIASES["shortpath"] == "shortestPath"
+    print(json.dumps({"status": "passed", "selfTests": 4}, sort_keys=True))
 
 
 if __name__ == "__main__":
