@@ -1255,10 +1255,16 @@ public class OltpAlgoService {
             Vertex vertex = iter.next().getVertex();
             vertices.put(vertex.id(), vertex);
         }
+        if (pathEdges.isEmpty()) {
+            edges.putAll(this.edgesOfVertex(vertices, client));
+        }
     }
 
     private void addAbsentVertexId(Object vertexId, Map<Object, Vertex> vertices,
                                    Set<Object> vertexIds) {
+        if (vertexId == null) {
+            return;
+        }
         if (!vertices.containsKey(vertexId)) {
             vertexIds.add(vertexId);
         }

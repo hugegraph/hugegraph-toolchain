@@ -157,6 +157,13 @@ public class OltpAlgoController extends BaseController {
         return this.service.allShortestPaths(client, body);
     }
 
+    @PostMapping("allshortpath")
+    public GremlinResult allShortPathAlias(@PathVariable("graphspace") String graphSpace,
+                                           @PathVariable("graph") String graph,
+                                           @RequestBody AllShortestPathsEntity body) {
+        return this.allShortPaths(graphSpace, graph, body);
+    }
+
     @PostMapping("weightedshortestpath")
     public GremlinResult weightedShortestPath(@PathVariable("graphspace") String graphSpace,
                                               @PathVariable("graph") String graph,

@@ -38,4 +38,15 @@ public class OltpAlgoControllerTest {
         PostMapping mapping = method.getAnnotation(PostMapping.class);
         Assert.assertEquals("shortpath", mapping.value()[0]);
     }
+
+    @Test
+    public void testAllShortPathAliasMappingExists() throws Exception {
+        Method method = OltpAlgoController.class.getDeclaredMethod("allShortPathAlias",
+                                                                  String.class,
+                                                                  String.class,
+                                                                  org.apache.hugegraph.entity.algorithm.AllShortestPathsEntity.class);
+
+        PostMapping mapping = method.getAnnotation(PostMapping.class);
+        Assert.assertEquals("allshortpath", mapping.value()[0]);
+    }
 }

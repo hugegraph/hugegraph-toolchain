@@ -310,6 +310,7 @@ public class FileUploadController extends BaseController {
         String normalizedFormat = format.toLowerCase(Locale.ROOT);
         boolean supported = formatWhiteList != null &&
                             formatWhiteList.stream()
+                                           .filter(StringUtils::isNotBlank)
                                            .map(String::trim)
                                            .map(item -> item.toLowerCase(Locale.ROOT))
                                            .anyMatch(normalizedFormat::equals);
