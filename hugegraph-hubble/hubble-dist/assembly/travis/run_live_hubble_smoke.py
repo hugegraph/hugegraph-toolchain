@@ -20,6 +20,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import shutil
 import subprocess
 import tarfile
@@ -73,15 +74,40 @@ def wait_for_health(hubble_url, deadline_seconds):
             response = request("GET", f"{hubble_url}/actuator/health", timeout=3)
             if isinstance(response, dict) and response.get("status") == "UP":
                 return response
+            if isinstance(response, str) and '"UP"' in response:
+                return {"status": "UP", "raw": response}
+            return {"status": "HTTP_200", "raw": response}
         except Exception as exc:  # noqa: BLE001 - smoke tool should report final error
             last_error = exc
         time.sleep(1)
     raise RuntimeError(f"Hubble health did not become UP: {last_error}")
 
 
+def is_healthy(hubble_url):
+    try:
+        response = request("GET", f"{hubble_url}/actuator/health", timeout=2)
+        return response is not None
+    except Exception:  # noqa: BLE001 - preflight only needs a boolean
+        return False
+
+
+def assert_safe_tar_member(member, work_dir):
+    target = (work_dir / member.name).resolve()
+    root = work_dir.resolve()
+    if target != root and root not in target.parents:
+        raise RuntimeError(f"Unsafe tar entry outside work dir: {member.name}")
+    if member.islnk() or member.issym():
+        link_target = (target.parent / member.linkname).resolve()
+        if link_target != root and root not in link_target.parents:
+            raise RuntimeError(f"Unsafe tar link outside work dir: {member.name}")
+
+
 def extract_tarball(tarball, work_dir):
     with tarfile.open(tarball, "r:gz") as archive:
-        archive.extractall(work_dir)
+        members = archive.getmembers()
+        for member in members:
+            assert_safe_tar_member(member, work_dir)
+        archive.extractall(work_dir, members)
     homes = [path for path in work_dir.iterdir()
              if path.is_dir() and path.name.startswith("apache-hugegraph-hubble-")]
     if not homes:
@@ -89,54 +115,31 @@ def extract_tarball(tarball, work_dir):
     return homes[0]
 
 
-def configure_hubble_bind_host(hubble_home, bind_host):
-    if not bind_host:
-        return
+def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
+    parsed = urllib.parse.urlparse(hubble_url)
+    host = bind_host or parsed.hostname
+    port = parsed.port
     conf = hubble_home / "conf" / "hugegraph-hubble.properties"
     text = conf.read_text(encoding="utf-8")
     lines = []
-    replaced = False
+    replaced_host = False
+    replaced_port = False
     for line in text.splitlines():
-        if line.startswith("hubble.host="):
-            lines.append(f"hubble.host={bind_host}")
-            replaced = True
+        if host and line.startswith("hubble.host="):
+            lines.append(f"hubble.host={host}")
+            replaced_host = True
+        elif port and line.startswith("hubble.port="):
+            lines.append(f"hubble.port={port}")
+            replaced_port = True
         else:
             lines.append(line)
-    if not replaced:
-        lines.append(f"hubble.host={bind_host}")
+    if host and not replaced_host:
+        lines.append(f"hubble.host={host}")
+    if port and not replaced_port:
+        lines.append(f"hubble.port={port}")
+    lines.append("pd.enabled=false")
+    lines.append(f"server.direct_url={server_url}")
     conf.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def create_connection(hubble_url, server_url, graph_name, connection_name):
-    parsed = urllib.parse.urlparse(server_url)
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    existing = request(
-        "GET",
-        f"{hubble_url}/api/v1.2/graph-connections?page_no=1&page_size=100"
-    )
-    records = ((existing.get("data") or {}).get("records") or []
-               if isinstance(existing, dict) else [])
-    for record in records:
-        if (record.get("graph") == graph_name and
-                record.get("host") == parsed.hostname and
-                record.get("port") == port):
-            return record.get("id")
-    body = {
-        "name": connection_name,
-        "graph": graph_name,
-        "host": parsed.hostname,
-        "port": port,
-        "username": "",
-        "password": "",
-        "protocol": parsed.scheme or "http"
-    }
-    data = unwrap(request("POST", f"{hubble_url}/api/v1.2/graph-connections",
-                          body),
-                  "create Hubble connection")
-    conn_id = data.get("id")
-    if conn_id is None:
-        raise RuntimeError(f"Create Hubble connection returned no id: {data}")
-    return conn_id
 
 
 def run_hubble_only_checks(hubble_url):
@@ -148,11 +151,11 @@ def run_hubble_only_checks(hubble_url):
         raise RuntimeError("Hubble root did not serve React root")
     checks.append({"name": "hubble-ui-root", "status": "passed"})
     for route in (
-        "/graph-management",
-        "/graph-management/1/metadata-configs",
-        "/graph-management/1/data-import/import-manager",
-        "/graph-management/1/data-analyze",
-        "/graph-management/1/async-tasks",
+        "/navigation",
+        "/graphspace",
+        "/gremlin",
+        "/algorithms",
+        "/asyncTasks",
     ):
         body = request("GET", f"{hubble_url}{route}")
         if '<div id="root"></div>' not in body:
@@ -161,24 +164,27 @@ def run_hubble_only_checks(hubble_url):
     return checks
 
 
-def run_server_checks(hubble_url, server_url, graph_name, connection_name):
+def run_server_checks(hubble_url, server_url, graph_space, graph_name):
     checks = []
-    versions = request("GET", f"{server_url}/versions")
-    checks.append({"name": "server-versions", "status": "passed",
-                   "detail_type": type(versions).__name__})
-    conn_id = create_connection(hubble_url, server_url, graph_name,
-                                connection_name)
-    checks.append({"name": "hubble-create-graph-connection", "status": "passed",
-                   "conn_id": conn_id})
+    api_prefix = f"{hubble_url}/api/v1.3"
     for name, path in (
-        ("schema-graphview", "schema/graphview"),
-        ("job-manager-list", "job-manager?page_no=1&page_size=10"),
-        ("async-task-list", "async-tasks?page_no=1&page_size=10"),
+        ("graphspace-list", "graphspaces/list"),
+        ("schema-graphview",
+         f"graphspaces/{graph_space}/graphs/{graph_name}/schema/graphview"),
+        ("job-manager-list",
+         f"graphspaces/{graph_space}/graphs/{graph_name}/job-manager"
+         "?page_no=1&page_size=10"),
+        ("async-task-list",
+         f"graphspaces/{graph_space}/graphs/{graph_name}/async-tasks"
+         "?page_no=1&page_size=10"),
     ):
-        response = request("GET", f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/{path}")
+        response = request("GET", f"{api_prefix}/{path}")
         if response.get("status") != 200:
             raise RuntimeError(f"{name} failed: {response}")
         checks.append({"name": name, "status": "passed"})
+    versions = request("GET", f"{server_url}/versions")
+    checks.append({"name": "server-versions", "status": "passed",
+                   "detail_type": type(versions).__name__})
     return checks
 
 
@@ -240,8 +246,9 @@ def ignore_conflict(call):
         raise
 
 
-def create_schema(hubble_url, server_url, graph_name, conn_id, prefix):
-    base = f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/schema"
+def create_schema(hubble_url, server_url, graph_space, graph_name, prefix):
+    base = (f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+            f"{graph_name}/schema")
     pk_id = f"{prefix}_id"
     pk_name = f"{prefix}_name"
     pk_rank = f"{prefix}_rank"
@@ -282,6 +289,7 @@ def create_schema(hubble_url, server_url, graph_name, conn_id, prefix):
 
     edge_body = {
         "name": el_knows,
+        "edgelabel_type": "NORMAL",
         "source_label": vl_person,
         "target_label": vl_person,
         "link_multi_times": False,
@@ -334,9 +342,10 @@ def encode_multipart(fields, file_field, file_name, content):
     return b"".join(parts), f"multipart/form-data; boundary={boundary}"
 
 
-def upload_csv(hubble_url, conn_id, prefix, schema):
+def upload_csv(hubble_url, graph_space, graph_name, prefix, schema):
     job = unwrap(request("POST",
-                         f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager",
+                         f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/"
+                         f"graphs/{graph_name}/job-manager",
                          {"job_name": f"{prefix}_job",
                           "job_remarks": "issue_694_live_loader_smoke"}),
                  "create loader job")
@@ -349,7 +358,8 @@ def upload_csv(hubble_url, conn_id, prefix, schema):
     )
     token_map = unwrap(request(
         "GET",
-        f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager/"
+        f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+        f"{graph_name}/job-manager/"
         f"{job_id}/upload-file/token?names={urllib.parse.quote(file_name)}"
     ), "create upload token")
     token = token_map[file_name]
@@ -367,7 +377,8 @@ def upload_csv(hubble_url, conn_id, prefix, schema):
     )
     upload = unwrap(request(
         "POST",
-        f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager/"
+        f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+        f"{graph_name}/job-manager/"
         f"{job_id}/upload-file",
         multipart_body,
         {"Content-Type": content_type}
@@ -375,15 +386,17 @@ def upload_csv(hubble_url, conn_id, prefix, schema):
     file_id = upload["id"]
     unwrap(request(
         "PUT",
-        f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager/"
+        f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+        f"{graph_name}/job-manager/"
         f"{job_id}/upload-file/next-step"
     ), "advance upload step")
     return job_id, file_id
 
 
-def configure_mapping(hubble_url, conn_id, job_id, file_id, schema):
-    base = (f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager/"
-            f"{job_id}/file-mappings")
+def configure_mapping(hubble_url, graph_space, graph_name, job_id, file_id,
+                      schema):
+    base = (f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+            f"{graph_name}/job-manager/{job_id}/file-mappings")
     mapping = unwrap(request("POST", f"{base}/{file_id}/file-setting", {
         "has_header": True,
         "format": "CSV",
@@ -433,9 +446,9 @@ def configure_mapping(hubble_url, conn_id, job_id, file_id, schema):
     }), "configure load parameters")
 
 
-def wait_for_load_task(hubble_url, conn_id, job_id, file_id):
-    base = (f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager/"
-            f"{job_id}/load-tasks")
+def wait_for_load_task(hubble_url, graph_space, graph_name, job_id, file_id):
+    base = (f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+            f"{graph_name}/job-manager/{job_id}/load-tasks")
     tasks = unwrap(request("POST", f"{base}/start?file_mapping_ids={file_id}",
                            {}),
                    "start load task")
@@ -455,7 +468,8 @@ def wait_for_load_task(hubble_url, conn_id, job_id, file_id):
         raise RuntimeError(f"Load task did not succeed: {last_task}")
     job = unwrap(request(
         "GET",
-        f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/job-manager/{job_id}"
+        f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+        f"{graph_name}/job-manager/{job_id}"
     ), "poll loader job")
     return task_id, last_task, job
 
@@ -475,34 +489,83 @@ def first_table_value(gremlin_result):
     return row
 
 
-def run_hubble_gremlin(hubble_url, conn_id, content):
+def run_hubble_gremlin(hubble_url, graph_space, graph_name, content):
     return unwrap(request(
         "POST",
-        f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/gremlin-query",
+        f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+        f"{graph_name}/gremlin-query",
         {"content": content}
     ), f"Hubble Gremlin {content}")
 
 
-def run_server_gremlin_count(server_url, content):
-    response = server_json("POST", server_url, "/gremlin", {"gremlin": content})
-    try:
-        return int(response["result"]["data"][0])
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise RuntimeError(f"Unexpected Server Gremlin response: {response}") from exc
+def run_server_label_count(server_url, graph_name, resource, label):
+    response = server_json(
+        "GET",
+        server_url,
+        f"/graphs/{graph_name}/graph/{resource}"
+        f"?label={urllib.parse.quote(label)}&limit=100"
+    )
+    values = response.get(resource)
+    if not isinstance(values, list):
+        raise RuntimeError(f"Unexpected Server {resource} response: {response}")
+    return len(values)
 
 
-def run_live_function_flow(hubble_url, server_url, graph_name, conn_id, prefix):
+def object_id(item):
+    if isinstance(item, dict):
+        return (item.get("id") or item.get("source") or item.get("target") or
+                item.get("name"))
+    return item
+
+
+def normalize_vertices(vertices):
+    return {str(object_id(vertex)) for vertex in vertices}
+
+
+def normalize_edges(edges):
+    normalized = set()
+    for edge in edges:
+        if not isinstance(edge, dict):
+            match = re.match(r"^S(.+?)>.*>>S(.+)$", str(edge))
+            if match:
+                normalized.add((match.group(1), match.group(2), ""))
+            else:
+                normalized.add((str(edge), "", ""))
+            continue
+        source = (edge.get("source") or edge.get("sourceId") or
+                  edge.get("outV") or edge.get("out"))
+        target = (edge.get("target") or edge.get("targetId") or
+                  edge.get("inV") or edge.get("in"))
+        label = edge.get("label") or edge.get("name") or ""
+        normalized.add((str(source), str(target), str(label)))
+    return normalized
+
+
+def edge_pairs_contain(actual_edges, expected_edges):
+    for source, target, label in expected_edges:
+        if not any(edge_source == source and edge_target == target and
+                   (edge_label in ("", label))
+                   for edge_source, edge_target, edge_label in actual_edges):
+            return False
+    return True
+
+
+def run_live_function_flow(hubble_url, server_url, graph_space, graph_name,
+                           prefix):
     checks = []
-    schema_checks, schema = create_schema(hubble_url, server_url, graph_name,
-                                          conn_id, prefix)
+    schema_checks, schema = create_schema(hubble_url, server_url, graph_space,
+                                          graph_name, prefix)
     checks.extend(schema_checks)
-    job_id, file_id = upload_csv(hubble_url, conn_id, prefix, schema)
+    job_id, file_id = upload_csv(hubble_url, graph_space, graph_name, prefix,
+                                 schema)
     checks.append({"name": "hubble-upload-csv", "status": "passed",
                    "job_id": job_id, "file_mapping_id": file_id})
-    configure_mapping(hubble_url, conn_id, job_id, file_id, schema)
+    configure_mapping(hubble_url, graph_space, graph_name, job_id, file_id,
+                      schema)
     checks.append({"name": "hubble-file-mapping", "status": "passed",
                    "file_mapping_id": file_id})
-    task_id, task, job = wait_for_load_task(hubble_url, conn_id, job_id, file_id)
+    task_id, task, job = wait_for_load_task(hubble_url, graph_space,
+                                            graph_name, job_id, file_id)
     checks.append({"name": "hubble-loader-task", "status": "passed",
                    "task_id": task_id, "task_status": task.get("status"),
                    "job_status": job.get("job_status")})
@@ -511,26 +574,29 @@ def run_live_function_flow(hubble_url, server_url, graph_name, conn_id, prefix):
                       f"hasId(within('{prefix}_alice','{prefix}_bob',"
                       f"'{prefix}_carol')).count()")
     edge_gremlin = (f"g.E().hasLabel('{schema['el_knows']}').count()")
-    h_vertices = int(first_table_value(run_hubble_gremlin(hubble_url, conn_id,
-                                                          vertex_gremlin)))
-    h_edges = int(first_table_value(run_hubble_gremlin(hubble_url, conn_id,
-                                                       edge_gremlin)))
-    server_vertex_gremlin = (
-        f"hugegraph.traversal().V().hasLabel('{schema['vl_person']}')."
-        f"hasId(within('{prefix}_alice','{prefix}_bob',"
-        f"'{prefix}_carol')).count()"
-    )
-    server_edge_gremlin = (
-        f"hugegraph.traversal().E().hasLabel('{schema['el_knows']}').count()"
-    )
-    d_vertices = run_server_gremlin_count(server_url, server_vertex_gremlin)
-    d_edges = run_server_gremlin_count(server_url, server_edge_gremlin)
+    h_vertices = int(first_table_value(run_hubble_gremlin(
+        hubble_url, graph_space, graph_name, vertex_gremlin
+    )))
+    h_edges = int(first_table_value(run_hubble_gremlin(
+        hubble_url, graph_space, graph_name, edge_gremlin
+    )))
+    d_vertices = run_server_label_count(server_url, graph_name, "vertices",
+                                        schema["vl_person"])
+    d_edges = run_server_label_count(server_url, graph_name, "edges",
+                                     schema["el_knows"])
     if (h_vertices, h_edges) != (d_vertices, d_edges):
         raise RuntimeError("Hubble and Server Gremlin counts differ: "
                            f"{(h_vertices, h_edges)} != {(d_vertices, d_edges)}")
+    expected_vertices = 3
+    expected_edges = 2
+    if (h_vertices, h_edges) != (expected_vertices, expected_edges):
+        raise RuntimeError("Loader imported unexpected graph size: "
+                           f"{(h_vertices, h_edges)} != "
+                           f"{(expected_vertices, expected_edges)}")
     checks.append({"name": "hubble-server-gremlin-count-compare",
                    "status": "passed", "vertices": h_vertices,
-                   "edges": h_edges})
+                   "edges": h_edges, "expected_vertices": expected_vertices,
+                   "expected_edges": expected_edges})
 
     shortest_body = {
         "source": f"{prefix}_alice",
@@ -544,7 +610,8 @@ def run_live_function_flow(hubble_url, server_url, graph_name, conn_id, prefix):
     }
     hubble_shortest = unwrap(request(
         "POST",
-        f"{hubble_url}/api/v1.2/graph-connections/{conn_id}/algorithms/shortpath",
+        f"{hubble_url}/api/v1.3/graphspaces/{graph_space}/graphs/"
+        f"{graph_name}/algorithms/oltp/shortpath",
         shortest_body
     ), "Hubble shortestPath")
     direct_shortest = server_json(
@@ -559,13 +626,40 @@ def run_live_function_flow(hubble_url, server_url, graph_name, conn_id, prefix):
                   hubble_shortest.get("graphView") or {})
     vertices = graph_view.get("vertices") or []
     edges = graph_view.get("edges") or []
-    if len(vertices) < 3 or len(edges) < 2:
+    hubble_vertex_ids = normalize_vertices(vertices)
+    expected_vertex_ids = {
+        f"{prefix}_alice",
+        f"{prefix}_bob",
+        f"{prefix}_carol"
+    }
+    if hubble_vertex_ids != expected_vertex_ids:
         raise RuntimeError(f"Hubble shortestPath graph view incomplete: "
                            f"{hubble_shortest}")
+    hubble_edges = normalize_edges(edges)
+    expected_edge_pairs = {
+        (f"{prefix}_alice", f"{prefix}_bob", schema["el_knows"]),
+        (f"{prefix}_bob", f"{prefix}_carol", schema["el_knows"])
+    }
+    if not expected_edge_pairs.issubset(hubble_edges):
+        raise RuntimeError("Hubble shortestPath graph view edges mismatch: "
+                           f"{hubble_edges} missing {expected_edge_pairs}")
     direct_vertices = direct_shortest.get("vertices") or []
     direct_edges = direct_shortest.get("edges") or []
     direct_path = direct_shortest.get("path") or []
-    if len(direct_vertices) < 3 or len(direct_edges) < 2 or len(direct_path) < 3:
+    direct_vertex_ids = normalize_vertices(direct_vertices)
+    if direct_vertex_ids and direct_vertex_ids != expected_vertex_ids:
+        raise RuntimeError("Server direct shortestPath vertices mismatch: "
+                           f"{direct_vertex_ids} != {expected_vertex_ids}")
+    direct_edge_set = normalize_edges(direct_edges)
+    if direct_edge_set and not edge_pairs_contain(direct_edge_set,
+                                                  expected_edge_pairs):
+        raise RuntimeError("Server direct shortestPath edges mismatch: "
+                           f"{direct_edge_set} missing {expected_edge_pairs}")
+    if direct_path and [str(object_id(item)) for item in direct_path] != [
+            f"{prefix}_alice", f"{prefix}_bob", f"{prefix}_carol"]:
+        raise RuntimeError(f"Server direct shortestPath path mismatch: "
+                           f"{direct_path}")
+    if not direct_vertices and not direct_path:
         raise RuntimeError(f"Server direct shortestPath returned no path: "
                            f"{direct_shortest}")
     checks.append({"name": "hubble-server-shortestpath-compare",
@@ -573,8 +667,17 @@ def run_live_function_flow(hubble_url, server_url, graph_name, conn_id, prefix):
                    "hubble_edges": len(edges),
                    "server_vertices": len(direct_vertices),
                    "server_edges": len(direct_edges),
-                   "server_path_objects": len(direct_path)})
+                   "server_path_objects": len(direct_path),
+                   "expected_vertices": sorted(expected_vertex_ids),
+                   "expected_edges": sorted(expected_edge_pairs)})
     return checks
+
+
+def log_tail(path):
+    if path is None or not path.exists():
+        return None
+    return "\n".join(path.read_text(encoding="utf-8", errors="replace")
+                    .splitlines()[-80:])
 
 
 def main():
@@ -588,6 +691,7 @@ def main():
     parser.add_argument("--keep-work-dir", action="store_true")
     parser.add_argument("--skip-start", action="store_true")
     parser.add_argument("--foreground-start", action="store_true")
+    parser.add_argument("--leave-running", action="store_true")
     parser.add_argument("--bind-host")
     parser.add_argument("--loader-flow", action="store_true")
     parser.add_argument("--analysis-boundary", action="store_true")
@@ -606,6 +710,7 @@ def main():
     process = None
     log_handle = None
     hubble_log = None
+    app_log = None
     report = {
         "tarball": str(args.tarball),
         "hubble_url": hubble_url,
@@ -621,14 +726,22 @@ def main():
 
     try:
         if not args.skip_start:
+            if is_healthy(hubble_url):
+                raise RuntimeError("Hubble URL is already healthy before "
+                                   "candidate startup; refusing to validate an "
+                                   "unknown existing process")
             work_dir.mkdir(parents=True, exist_ok=True)
             hubble_home = extract_tarball(args.tarball, work_dir)
-            configure_hubble_bind_host(hubble_home, args.bind_host)
+            report["work_dir"] = str(work_dir)
+            report["hubble_home"] = str(hubble_home)
+            configure_hubble_endpoint(hubble_home, hubble_url, args.bind_host,
+                                      server_url)
             hubble_log = work_dir / "hubble-live-smoke.log"
+            app_log = hubble_home / "logs" / "hugegraph-hubble.log"
             log_handle = hubble_log.open("w", encoding="utf-8")
             if args.foreground_start:
                 process = subprocess.Popen(
-                    [str(hubble_home / "bin" / "start-hubble.sh"), "-f"],
+                    [str(hubble_home / "bin" / "start-hubble.sh"), "-f", "true"],
                     cwd=str(hubble_home),
                     stdout=log_handle,
                     stderr=subprocess.STDOUT,
@@ -652,15 +765,13 @@ def main():
 
         report["checks"].extend(run_hubble_only_checks(hubble_url))
         report["checks"].extend(run_server_checks(hubble_url, server_url,
-                                                  args.graph, connection_name))
+                                                  args.graphspace, args.graph))
 
         if args.loader_flow:
-            conn_id = next(check["conn_id"] for check in report["checks"]
-                           if check["name"] == "hubble-create-graph-connection")
             report["checks"].extend(run_live_function_flow(hubble_url,
                                                            server_url,
+                                                           args.graphspace,
                                                            args.graph,
-                                                           conn_id,
                                                            prefix))
         if args.analysis_boundary:
             report["checks"].extend(run_analysis_boundary_checks(hubble_url,
@@ -670,14 +781,23 @@ def main():
         report["status"] = "passed"
     except (urllib.error.URLError, RuntimeError) as exc:
         report["error"] = str(exc)
-        if hubble_log is not None and hubble_log.exists():
-            report["hubble_log_tail"] = "\n".join(
-                hubble_log.read_text(encoding="utf-8", errors="replace")
-                          .splitlines()[-80:]
-            )
+        if isinstance(exc, urllib.error.HTTPError):
+            try:
+                error_payload = exc.read().decode("utf-8", errors="replace")
+                report["http_error_body"] = error_payload
+            except Exception as body_exc:  # noqa: BLE001 - evidence best effort
+                report["http_error_body_error"] = str(body_exc)
+        wrapper_tail = log_tail(hubble_log)
+        app_tail = log_tail(app_log)
+        if wrapper_tail is not None:
+            report["hubble_wrapper_log"] = str(hubble_log)
+            report["hubble_wrapper_log_tail"] = wrapper_tail
+        if app_tail is not None:
+            report["hubble_app_log"] = str(app_log)
+            report["hubble_app_log_tail"] = app_tail
         raise SystemExit(json.dumps(report, indent=2, sort_keys=True))
     finally:
-        if process is not None:
+        if process is not None and not args.leave_running:
             process.terminate()
             try:
                 process.wait(timeout=20)
@@ -685,7 +805,7 @@ def main():
                 process.kill()
         if log_handle is not None:
             log_handle.close()
-        if hubble_home is not None:
+        if hubble_home is not None and not args.leave_running:
             subprocess.run([str(hubble_home / "bin" / "stop-hubble.sh")],
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL,
@@ -695,7 +815,7 @@ def main():
             args.json_output.write_text(json.dumps(report, indent=2,
                                                    sort_keys=True) + "\n",
                                         encoding="utf-8")
-        if created_work_dir and not args.keep_work_dir:
+        if created_work_dir and not args.keep_work_dir and not args.leave_running:
             shutil.rmtree(work_dir, ignore_errors=True)
 
     print(json.dumps(report, indent=2, sort_keys=True))
