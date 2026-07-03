@@ -149,7 +149,7 @@ const ClosenessCentralityVermeer = props => {
                     label='compute.parallel'
                     name='compute.parallel'
                     initialValue={1}
-                    tooltip={t(TEXT_PATH.ALGORITHM_COMMON + './worker_num')}
+                    tooltip={t(TEXT_PATH.ALGORITHM_COMMON + '.worker_num')}
                     rules={[{validator: positiveIntegerValidator}]}
                 >
                     <InputNumber />
@@ -158,7 +158,7 @@ const ClosenessCentralityVermeer = props => {
                     label='closeness_centrality.sample_rate'
                     name='closeness_centrality.sample_rate'
                     initialValue={1.0}
-                    tooltip={t(TEXT_PATH.ALGORITHM_COMMON + './sample_rate')}
+                    tooltip={t(TEXT_PATH.ALGORITHM_COMMON + '.sample_rate')}
                     rules={[{validator: greaterThanZeroAndLowerThanOneContainsValidator}]}
                 >
                     <InputNumber />
@@ -167,7 +167,7 @@ const ClosenessCentralityVermeer = props => {
                     label='closeness_centrality.wf_improved'
                     name='closeness_centrality.wf_improved'
                     initialValue={1}
-                    tooltip={t(OWNED_TEXT_PATH + './wf_improved')}
+                    tooltip={t(OWNED_TEXT_PATH + '.wf_improved')}
                 >
                     <Select allowClear options={boolOptions} />
                 </Form.Item>

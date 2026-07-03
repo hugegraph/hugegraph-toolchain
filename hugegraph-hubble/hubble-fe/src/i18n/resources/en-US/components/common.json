@@ -1,19 +1,19 @@
 {
   "common" : {
     "verify" : {
-      "ok": "确定",
-      "cancel": "取消",
-      "yes": "是",
-      "no": "否"
+      "ok": "OK",
+      "cancel": "Cancel",
+      "yes": "Yes",
+      "no": "No"
     },
     "status": {
-      "new": "新建",
-      "running": "执行中",
-      "success": "完成",
-      "cancelling": "停止",
-      "cancelled": "停止",
-      "failed": "失败",
-      "undefined": "未知"
+      "new": "New",
+      "running": "Running",
+      "success": "Completed",
+      "cancelling": "Stopping",
+      "cancelled": "Stopped",
+      "failed": "Failed",
+      "undefined": "Unknown"
     }
   }
 }

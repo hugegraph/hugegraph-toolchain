@@ -157,7 +157,7 @@ const PageRankVermeer = props => {
                     label='pagerank.damping'
                     name='pagerank.damping'
                     initialValue={0.85}
-                    tooltip={t(OWNED_TEXT_PATH + '.dampling')}
+                    tooltip={t(OWNED_TEXT_PATH + '.damping')}
                     rules={[{validator: greaterThanZeroAndLowerThanOneValidator}]}
                 >
                     <InputNumber />

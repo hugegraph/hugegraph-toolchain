@@ -382,6 +382,7 @@ export const TEXT_PATH = {
     COMMON_STATUS: 'common.status',
     ALGORITHM: 'analysis.algorithm',
     OLAP: 'analysis.algorithm.olap',
+    OLTP: 'analysis.algorithm.oltp',
     ALGORITHM_COMMON: 'analysis.algorithm.common',
 };
 

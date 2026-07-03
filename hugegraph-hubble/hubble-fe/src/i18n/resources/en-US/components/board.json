@@ -1,15 +1,15 @@
 {
   "Topbar": {
     "exit":{
-      "name": "退出登录",
-      "confirm":"确定退出吗？",
-      "success":"退出成功"
+      "name": "Log Out",
+      "confirm":"Confirm log out?",
+      "success":"Logged out successfully"
     }
   },
   "selector": {
-    "placeholder": "请选择"
+    "placeholder": "Please select"
   },
   "navigation": {
-    "name": "导航"
+    "name": "Navigation"
   }
 }
