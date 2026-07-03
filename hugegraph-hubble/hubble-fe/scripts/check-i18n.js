@@ -26,6 +26,12 @@ const sourceRoot = path.join(projectRoot, 'src');
 const locales = ['zh-CN', 'en-US'];
 const ignoredSourceDirs = new Set(['i18n', 'node_modules']);
 const problems = [];
+const sharedConstants = loadSharedConstants();
+
+if (process.argv.includes('--self-test')) {
+  runSelfTests();
+  process.exit(0);
+}
 
 const localeData = Object.fromEntries(
   locales.map((locale) => [locale, loadLocale(locale)])
@@ -84,30 +90,23 @@ function getMergedModuleFiles(locale) {
   const indexPath = path.join(resourcesRoot, locale, 'index.js');
   const indexText = fs.readFileSync(indexPath, 'utf8');
   const imports = new Map();
-  const importPattern = /import\s+(\w+)\s+from\s+'\.\/([^']+\.json)'/g;
-  let match;
 
-  for (const barrelMatch of getNamedImports(indexText)) {
-    const names = barrelMatch[1].split(',').map((name) => name.trim()).filter(Boolean);
-    const barrel = path.join(resourcesRoot, locale, barrelMatch[2], 'index.js');
+  for (const barrelImport of getNamedImports(indexText)) {
+    const barrel = path.join(resourcesRoot, locale, barrelImport.source, 'index.js');
     if (!fs.existsSync(barrel)) {
       continue;
     }
     const barrelText = fs.readFileSync(barrel, 'utf8');
-    const barrelImports = new Map();
-    importPattern.lastIndex = 0;
-    while ((match = importPattern.exec(barrelText)) !== null) {
-      barrelImports.set(match[1], path.join(barrelMatch[2], match[2]));
-    }
-    for (const name of names) {
+    const barrelImports = getDefaultJsonImports(barrelText, barrelImport.source);
+    for (const name of barrelImport.names) {
       if (barrelImports.has(name)) {
         imports.set(name, barrelImports.get(name));
       }
     }
   }
 
-  while ((match = importPattern.exec(indexText)) !== null) {
-    imports.set(match[1], match[2]);
+  for (const [name, file] of getDefaultJsonImports(indexText)) {
+    imports.set(name, file);
   }
 
   return getMergeArguments(indexText)
@@ -115,32 +114,27 @@ function getMergedModuleFiles(locale) {
     .filter(Boolean);
 }
 
+function getDefaultJsonImports(text, parentDir = '') {
+  const imports = new Map();
+  const importPattern = /import\s+(\w+)\s+from\s+(['"])\.\/([^'"]+\.json)\2/g;
+  let match;
+
+  while ((match = importPattern.exec(text)) !== null) {
+    imports.set(match[1], path.join(parentDir, match[3]));
+  }
+  return imports;
+}
+
 function getNamedImports(text) {
   const imports = [];
-  const lines = text.split('\n');
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index];
-    const inlineMatch = line.match(/^import\s+\{([^}]+)\}\s+from\s+'\.\/([^']+)';?$/);
-    if (inlineMatch) {
-      imports.push(inlineMatch);
-      continue;
-    }
-    if (!line.match(/^import\s+\{\s*$/)) {
-      continue;
-    }
-    const names = [];
-    index++;
-    while (index < lines.length && !lines[index].includes('}')) {
-      names.push(lines[index].trim());
-      index++;
-    }
-    if (index >= lines.length) {
-      break;
-    }
-    const sourceMatch = lines[index].match(/^\}\s+from\s+'\.\/([^']+)';?$/);
-    if (sourceMatch) {
-      imports.push([null, names.join('\n'), sourceMatch[1]]);
-    }
+  const importPattern = /import\s+\{([^}]*)\}\s+from\s+(['"])\.\/([^'"]+)\2;?/g;
+  let match;
+
+  while ((match = importPattern.exec(text)) !== null) {
+    imports.push({
+      names: match[1].split(',').map((name) => name.trim()).filter(Boolean),
+      source: match[3]
+    });
   }
   return imports;
 }
@@ -214,6 +208,9 @@ function checkLocaleValues() {
         ) {
           problems.push(`${locale} Chinese text ${file}:${key}=${value}`);
         }
+        if (locale === 'en-US' && /[，。！？；：（）【】《》]/.test(value)) {
+          problems.push(`${locale} full-width punctuation ${file}:${key}=${value}`);
+        }
         if (/\b(TODO|TBD|xxx)\b/i.test(key) || /\b(TODO|TBD|xxx)\b/i.test(value)) {
           problems.push(`${locale} placeholder ${file}:${key}=${value}`);
         }
@@ -247,14 +244,228 @@ function collectStaticTranslationKeys() {
       continue;
     }
     const content = fs.readFileSync(file, 'utf8');
-    for (const match of content.matchAll(/\bt\(\s*['"`]([^'"`]+)['"`]/g)) {
-      if (match[1].includes('${')) {
-        continue;
-      }
-      keys.add(match[1]);
+    for (const key of extractStaticTranslationKeys(content, sharedConstants)) {
+      keys.add(key);
     }
   }
   return Array.from(keys).sort();
+}
+
+function extractStaticTranslationKeys(content, baseConstants = new Map()) {
+  const keys = [];
+  const constants = collectStringConstants(content, baseConstants);
+  const source = stripComments(content);
+  const translationPattern = /\bt\(\s*([^)]+)\)/g;
+  let match;
+
+  while ((match = translationPattern.exec(source)) !== null) {
+    const key = resolveStringExpression(match[1].trim(), constants);
+    if (key) {
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+function loadSharedConstants() {
+  const constants = new Map();
+  const constantsPath = path.join(sourceRoot, 'utils', 'constants.js');
+  if (!fs.existsSync(constantsPath)) {
+    return constants;
+  }
+
+  const content = fs.readFileSync(constantsPath, 'utf8');
+  const textPathMatch = content.match(/export\s+const\s+TEXT_PATH\s*=\s*\{([\s\S]*?)\};/);
+  if (!textPathMatch) {
+    return constants;
+  }
+
+  const entryPattern = /(\w+)\s*:\s*(['"])((?:\\[\s\S]|(?!\2)[\s\S])*?)\2/g;
+  let match;
+  while ((match = entryPattern.exec(textPathMatch[1])) !== null) {
+    constants.set(`TEXT_PATH.${match[1]}`, unescapeQuotedString(match[3]));
+  }
+  return constants;
+}
+
+function collectStringConstants(content, baseConstants) {
+  const constants = new Map(baseConstants);
+  const source = stripComments(content);
+  const declarationPattern = /\bconst\s+(\w+)\s*=\s*([^;]+);/g;
+  const declarations = [];
+  let match;
+
+  while ((match = declarationPattern.exec(source)) !== null) {
+    declarations.push([match[1], match[2].trim()]);
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [name, expression] of declarations) {
+      if (constants.has(name)) {
+        continue;
+      }
+      const value = resolveStringExpression(expression, constants);
+      if (value) {
+        constants.set(name, value);
+        changed = true;
+      }
+    }
+  }
+  return constants;
+}
+
+function resolveStringExpression(expression, constants) {
+  const value = expression.trim();
+  if (!value) {
+    return null;
+  }
+
+  const literal = parseQuotedLiteral(value);
+  if (literal !== null) {
+    return literal;
+  }
+
+  if (constants.has(value)) {
+    return constants.get(value);
+  }
+
+  const template = resolveTemplateLiteral(value, constants);
+  if (template !== null) {
+    return template;
+  }
+
+  const parts = splitTopLevelConcat(value);
+  if (parts.length > 1) {
+    const resolved = parts.map((part) => resolveStringExpression(part, constants));
+    if (resolved.every((part) => part !== null)) {
+      return resolved.join('');
+    }
+  }
+
+  return null;
+}
+
+function resolveTemplateLiteral(expression, constants) {
+  if (!expression.startsWith('`') || !expression.endsWith('`')) {
+    return null;
+  }
+  const body = expression.slice(1, -1);
+  let unresolved = false;
+  const resolved = body.replace(/\$\{([^}]+)\}/g, (fullMatch, name) => {
+    const value = resolveStringExpression(name, constants);
+    if (value === null) {
+      unresolved = true;
+      return fullMatch;
+    }
+    return value;
+  });
+  return unresolved ? null : unescapeQuotedString(resolved);
+}
+
+function splitTopLevelConcat(expression) {
+  const parts = [];
+  let quote = null;
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < expression.length; index++) {
+    const char = expression[index];
+    const prev = expression[index - 1];
+    if (quote) {
+      if (char === quote && prev !== '\\') {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === '\'' || char === '"' || char === '`') {
+      quote = char;
+      continue;
+    }
+    if (char === '(') {
+      depth++;
+    } else if (char === ')') {
+      depth--;
+    } else if (char === '+' && depth === 0) {
+      parts.push(expression.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(expression.slice(start).trim());
+  return parts;
+}
+
+function parseQuotedLiteral(expression) {
+  if (expression.length < 2) {
+    return null;
+  }
+  const quote = expression[0];
+  if ((quote !== '\'' && quote !== '"') || expression[expression.length - 1] !== quote) {
+    return null;
+  }
+  return unescapeQuotedString(expression.slice(1, -1));
+}
+
+function unescapeQuotedString(value) {
+  return value.replace(/\\(['"`\\])/g, '$1');
+}
+
+function stripComments(content) {
+  let output = '';
+  let quote = null;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < content.length; index++) {
+    const char = content[index];
+    const next = content[index + 1];
+    const prev = content[index - 1];
+
+    if (lineComment) {
+      if (char === '\n') {
+        lineComment = false;
+        output += char;
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (char === '*' && next === '/') {
+        blockComment = false;
+        output += '  ';
+        index++;
+      } else {
+        output += char === '\n' ? '\n' : ' ';
+      }
+      continue;
+    }
+
+    if (quote) {
+      output += char;
+      if (char === quote && prev !== '\\') {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === '\'' || char === '"' || char === '`') {
+      quote = char;
+      output += char;
+    } else if (char === '/' && next === '/') {
+      lineComment = true;
+      output += '  ';
+      index++;
+    } else if (char === '/' && next === '*') {
+      blockComment = true;
+      output += '  ';
+      index++;
+    } else {
+      output += char;
+    }
+  }
+  return output;
 }
 
 function shouldIgnoreSource(file) {
@@ -307,4 +518,42 @@ function deepMerge(target, source) {
     }
   }
   return target;
+}
+
+function runSelfTests() {
+  const defaultImports = getDefaultJsonImports(
+    'import common from "./common.json";\nimport home from \'./modules/home.json\';'
+  );
+  assert(defaultImports.get('common') === 'common.json', 'double-quoted JSON import');
+  assert(defaultImports.get('home') === path.join('modules', 'home.json'), 'single import');
+
+  const namedImports = getNamedImports('import {\n  common,\n  modules\n} from "./modules";');
+  assert(namedImports.length === 1, 'multi-line named import');
+  assert(namedImports[0].names.join(',') === 'common,modules', 'named import names');
+  assert(namedImports[0].source === 'modules', 'double-quoted named import source');
+
+  const staticKeys = extractStaticTranslationKeys(
+    't("addition.save"); // t("missing.comment")\n' +
+    't(\'common.cancel\'); t(`dynamic.${id}`); t("quote.\\"key");\n' +
+    'const BASE = "analysis.algorithm.olap.item"; t(`${BASE}.PAGE_RANK`);\n' +
+    'const OWNED_TEXT_PATH = TEXT_PATH.OLAP + ".page_rank"; t(OWNED_TEXT_PATH + ".desc");',
+    new Map([
+      ['TEXT_PATH.OLAP', 'analysis.algorithm.olap']
+    ])
+  );
+  assert(staticKeys.includes('addition.save'), 'double-quoted static t()');
+  assert(staticKeys.includes('common.cancel'), 'single-quoted static t()');
+  assert(staticKeys.includes('quote."key'), 'escaped quote in static t()');
+  assert(staticKeys.includes('analysis.algorithm.olap.item.PAGE_RANK'), 'template constant t()');
+  assert(staticKeys.includes('analysis.algorithm.olap.page_rank.desc'), 'concatenated t()');
+  assert(!staticKeys.includes('missing.comment'), 'commented t() ignored');
+  assert(!staticKeys.some((key) => key.includes('${')), 'dynamic template key ignored');
+
+  console.log(JSON.stringify({status: 'passed', selfTests: 13}, null, 2));
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(`self-test failed: ${message}`);
+  }
 }

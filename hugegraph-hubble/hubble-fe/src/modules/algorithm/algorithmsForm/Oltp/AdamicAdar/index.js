@@ -42,7 +42,7 @@ import {useTranslation} from 'react-i18next';
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 const {ADAMIC_ADAR} = ALGORITHM_NAME;
 
-const OWNED_TEXT_PATH = TEXT_PATH.OLAP + '.adamic_adar';
+const OWNED_TEXT_PATH = TEXT_PATH.OLTP + '.adamic_adar';
 const AdamicAdar = props => {
     const {
         handleFormSubmit,

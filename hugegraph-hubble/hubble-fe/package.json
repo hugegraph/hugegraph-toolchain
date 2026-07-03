@@ -48,7 +48,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "node scripts/check-i18n.js && react-scripts build",
     "i18n:check": "node scripts/check-i18n.js",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
