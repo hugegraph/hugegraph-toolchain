@@ -19,6 +19,7 @@
 'use strict';
 
 const fs = require('fs');
+const moduleBuiltin = require('module');
 const path = require('path');
 
 const MAC_CHROME_PATHS = [
@@ -53,12 +54,28 @@ function chromiumExecutablePath() {
 }
 
 async function loadPlaywright() {
+  const hubbleRoot = path.resolve(__dirname, '../../..');
+  const candidateModules = [
+    process.env.PLAYWRIGHT_NODE_MODULES || '',
+    path.join(hubbleRoot, 'hubble-fe', 'node_modules')
+  ].filter(Boolean);
   try {
     return require('playwright');
   } catch (error) {
+    for (const nodeModules of candidateModules) {
+      try {
+        const requireFrom = moduleBuiltin.createRequire(
+          path.join(nodeModules, 'playwright', 'package.json')
+        );
+        return requireFrom('playwright');
+      } catch (_) {
+        // Continue to the next configured module root.
+      }
+    }
     throw new Error(
       'Playwright is required for UI browser smoke. Install/enable it before ' +
-      'closing the browser gate. Original error: ' + error.message
+      'closing the browser gate, or set PLAYWRIGHT_NODE_MODULES. Original ' +
+      'error: ' + error.message
     );
   }
 }
@@ -79,10 +96,35 @@ async function main() {
   const network = [];
   const consoleErrors = [];
 
-  page.on('requestfinished', (request) => {
-    const url = request.url();
-    if (url.includes('/api/v1.2/')) {
-      network.push({ method: request.method(), url });
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('user_', JSON.stringify({
+      id: 1,
+      user_name: 'smoke',
+      user_nickname: 'Smoke',
+      is_superadmin: true,
+      resSpaces: ['DEFAULT']
+    }));
+    window.localStorage.setItem('languageType', 'zh-CN');
+  });
+
+  page.on('response', async (response) => {
+    const request = response.request();
+    const url = response.url();
+    if (url.includes('/api/v1.3/')) {
+      let businessStatus = null;
+      try {
+        const body = await response.json();
+        businessStatus = body && body.status !== undefined ? body.status : null;
+      } catch (_) {
+        // Non-JSON API responses are still represented by HTTP status.
+      }
+      network.push({
+        method: request.method(),
+        url,
+        httpStatus: response.status(),
+        ok: response.ok(),
+        businessStatus
+      });
     }
   });
   page.on('console', (message) => {
@@ -92,16 +134,18 @@ async function main() {
   });
 
   const routes = [
-    { name: 'graph-management', path: '/graph-management',
-      requiredApi: '/api/v1.2/graph-connections' },
-    { name: 'metadata-configs', path: `/graph-management/${connId}/metadata-configs`,
-      requiredApi: `/api/v1.2/graph-connections/${connId}/schema/` },
-    { name: 'data-import', path: `/graph-management/${connId}/data-import/import-manager`,
-      requiredApi: `/api/v1.2/graph-connections/${connId}/job-manager` },
-    { name: 'data-analyze', path: `/graph-management/${connId}/data-analyze`,
-      requiredApi: `/api/v1.2/graph-connections/${connId}/schema/` },
-    { name: 'async-tasks', path: `/graph-management/${connId}/async-tasks`,
-      requiredApi: `/api/v1.2/graph-connections/${connId}/async-tasks` }
+    { name: 'graphspace', path: '/graphspace',
+      requiredApis: ['/api/v1.3/graphspaces'],
+      textPattern: /图空间|Graph Space/ },
+    { name: 'gremlin', path: '/gremlin',
+      requiredApis: ['/api/v1.3/graphspaces/list'],
+      textPattern: /Gremlin|图查询|查询/ },
+    { name: 'algorithms', path: '/algorithms',
+      requiredApis: ['/api/v1.3/graphspaces/list'],
+      textPattern: /算法|Algorithm|OLTP|OLAP/ },
+    { name: 'asyncTasks', path: '/asyncTasks',
+      requiredApis: ['/api/v1.3/graphspaces/list'],
+      textPattern: /异步|Async|Task|任务/ }
   ];
 
   const results = [];
@@ -112,17 +156,32 @@ async function main() {
         waitUntil: 'networkidle',
         timeout: 30000
       });
+      await page.waitForTimeout(500);
       const screenshot = path.join(outputDir, `${route.name}.png`);
       await page.screenshot({ path: screenshot, fullPage: true });
       const text = await page.locator('body').innerText({ timeout: 5000 });
-      const rawKeyPattern = /\b(addition|data-analyze|async-tasks|server-data-import)\.[A-Za-z0-9_.-]+/;
-      const apiMatched = network.some((entry) => entry.url.includes(route.requiredApi));
+      const rawKeyPattern = new RegExp(
+        '\\b(addition|analysis|async-tasks|common|home|manage|navigation|' +
+        'server-data-import|Topbar)\\.[A-Za-z0-9_.-]+'
+      );
+      const matchedApis = route.requiredApis.map((requiredApi) => {
+        const entries = network.filter((entry) => entry.url.includes(requiredApi));
+        return {
+          requiredApi,
+          entries,
+          passed: entries.some((entry) => entry.ok &&
+                                  (entry.businessStatus === null ||
+                                   entry.businessStatus === 200 ||
+                                   entry.businessStatus === 401))
+        };
+      });
       results.push({
         route: route.path,
         screenshot,
-        apiMatched,
-        requiredApi: route.requiredApi,
+        matchedApis,
         rawI18nKeyFound: rawKeyPattern.test(text),
+        routeTextMatched: route.textPattern.test(text),
+        notFoundPage: /404|页面不存在|Not Found/.test(text),
         requestCount: network.length
       });
     }
@@ -134,8 +193,12 @@ async function main() {
     hubbleUrl,
     results,
     consoleErrors,
-    status: results.every((result) => result.apiMatched &&
-                                      !result.rawI18nKeyFound) ? 'passed' : 'failed'
+    status: results.every((result) => (
+      result.matchedApis.every((api) => api.passed) &&
+      result.routeTextMatched &&
+      !result.rawI18nKeyFound &&
+      !result.notFoundPage
+    )) && consoleErrors.length === 0 ? 'passed' : 'failed'
   };
   if (jsonOutput) {
     fs.mkdirSync(path.dirname(path.resolve(jsonOutput)), { recursive: true });

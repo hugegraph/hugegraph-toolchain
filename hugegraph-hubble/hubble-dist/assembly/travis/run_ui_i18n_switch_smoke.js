@@ -19,6 +19,7 @@
 'use strict';
 
 const fs = require('fs');
+const moduleBuiltin = require('module');
 const path = require('path');
 
 const MAC_CHROME_PATHS = [
@@ -53,26 +54,53 @@ function chromiumExecutablePath() {
 }
 
 async function loadPlaywright() {
+  const hubbleRoot = path.resolve(__dirname, '../../..');
+  const candidateModules = [
+    process.env.PLAYWRIGHT_NODE_MODULES || '',
+    path.join(hubbleRoot, 'hubble-fe', 'node_modules')
+  ].filter(Boolean);
   try {
     return require('playwright');
   } catch (error) {
+    for (const nodeModules of candidateModules) {
+      try {
+        const requireFrom = moduleBuiltin.createRequire(
+          path.join(nodeModules, 'playwright', 'package.json')
+        );
+        return requireFrom('playwright');
+      } catch (_) {
+        // Continue to the next configured module root.
+      }
+    }
     throw new Error(
-      'Playwright is required for runtime i18n smoke. Original error: ' +
-      error.message
+      'Playwright is required for runtime i18n smoke. Install/enable it or ' +
+      'set PLAYWRIGHT_NODE_MODULES. Original error: ' + error.message
     );
   }
 }
 
-async function captureLanguage(page, hubbleUrl, language, screenshot) {
-  await page.addInitScript((value) => {
-    window.localStorage.setItem('languageType', value);
-  }, language);
-  await page.goto(hubbleUrl + '/graph-management', {
+async function captureLanguage(page, hubbleUrl, screenshot) {
+  await page.goto(hubbleUrl + '/graphspace', {
     waitUntil: 'networkidle',
     timeout: 30000
   });
+  await page.waitForTimeout(500);
   await page.screenshot({ path: screenshot, fullPage: true });
   return await page.locator('body').innerText({ timeout: 5000 });
+}
+
+async function switchToEnglish(page) {
+  await page.locator('.ant-layout-header .ant-select-selector')
+            .click({ timeout: 5000 });
+  await page.locator('.ant-select-item-option[title="English"]')
+            .click({ timeout: 5000 });
+  await page.waitForFunction(
+    () => window.localStorage.getItem('languageType') === 'en-US',
+    null,
+    { timeout: 5000 }
+  );
+  await page.waitForLoadState('networkidle', { timeout: 30000 });
+  await page.waitForTimeout(500);
 }
 
 async function main() {
@@ -87,26 +115,52 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true, executablePath });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('user_', JSON.stringify({
+      id: 1,
+      user_name: 'smoke',
+      user_nickname: 'Smoke',
+      is_superadmin: true,
+      resSpaces: ['DEFAULT']
+    }));
+    if (!window.localStorage.getItem('languageType')) {
+      window.localStorage.setItem('languageType', 'zh-CN');
+    }
+  });
   let zhText;
   let enText;
+  let selectorTextAfterSwitch = '';
   try {
-    zhText = await captureLanguage(page, hubbleUrl, 'zh-CN',
+    zhText = await captureLanguage(page, hubbleUrl,
                                    path.join(outputDir, 'i18n-zh-CN.png'));
-    enText = await captureLanguage(page, hubbleUrl, 'en-US',
-                                   path.join(outputDir, 'i18n-en-US.png'));
+    await switchToEnglish(page);
+    selectorTextAfterSwitch = await page.locator('.ant-select').first()
+                                      .innerText({ timeout: 5000 });
+    await page.screenshot({
+      path: path.join(outputDir, 'i18n-en-US.png'),
+      fullPage: true
+    });
+    enText = await page.locator('body').innerText({ timeout: 5000 });
   } finally {
     await browser.close();
   }
 
+  const rawKeyPattern = new RegExp(
+    '\\b(addition|analysis|async-tasks|common|home|manage|navigation|' +
+    'server-data-import|Topbar)\\.[A-Za-z0-9_.-]+'
+  );
   const report = {
     hubbleUrl,
     zhContainsChinese: /[\u4e00-\u9fff]/.test(zhText),
-    enContainsGraphManager: /Graph|Management|graph|management/.test(enText),
+    enSelectorVisible: /English/.test(selectorTextAfterSwitch),
     textChanged: zhText !== enText,
+    rawI18nKeyFound: rawKeyPattern.test(zhText) || rawKeyPattern.test(enText),
+    notFoundPage: /404|页面不存在|Not Found/.test(zhText + enText),
     status: 'failed'
   };
-  report.status = report.zhContainsChinese && report.enContainsGraphManager &&
-                  report.textChanged ? 'passed' : 'failed';
+  report.status = report.zhContainsChinese && report.enSelectorVisible &&
+                  report.textChanged && !report.rawI18nKeyFound &&
+                  !report.notFoundPage ? 'passed' : 'failed';
 
   if (jsonOutput) {
     fs.mkdirSync(path.dirname(path.resolve(jsonOutput)), { recursive: true });

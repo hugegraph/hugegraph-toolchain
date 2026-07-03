@@ -42,7 +42,8 @@ function run(name, command, args) {
     startedAt,
     status: result.status === 0 ? 'passed' : 'failed',
     stdout: result.stdout,
-    stderr: result.stderr
+    stderr: result.stderr,
+    error: result.error ? result.error.message : undefined
   };
 }
 
@@ -61,7 +62,7 @@ function main() {
   fs.mkdirSync(outputDir, { recursive: true });
 
   const checks = [
-    run('ui-browser-smoke', 'node', [
+    run('ui-browser-smoke', process.execPath, [
       path.join(scriptDir, 'run_ui_browser_smoke.js'),
       '--hubble-url', hubbleUrl,
       '--conn-id', connId,
@@ -69,7 +70,7 @@ function main() {
       '--json-output', path.join(outputDir, 'ui-browser-smoke.json'),
       '--chromium-executable', chromiumExecutable
     ]),
-    run('ui-i18n-switch-smoke', 'node', [
+    run('ui-i18n-switch-smoke', process.execPath, [
       path.join(scriptDir, 'run_ui_i18n_switch_smoke.js'),
       '--hubble-url', hubbleUrl,
       '--output-dir', outputDir,
