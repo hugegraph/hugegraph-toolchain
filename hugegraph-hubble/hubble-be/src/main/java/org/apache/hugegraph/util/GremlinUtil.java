@@ -51,10 +51,10 @@ public final class GremlinUtil {
     };
 
     private static final String[] ESCAPE_SEARCH_LIST = new String[]{
-            "\\", "\"", "'", "\n"
+            "\\", "\"", "'", "\r", "\n"
     };
     private static final String[] ESCAPE_TARGET_LIST = new String[]{
-            "\\\\", "\\\"", "\\'", "\\n"
+            "\\\\", "\\\"", "\\'", "\\r", "\\n"
     };
 
     private static final Set<Pattern> LIMIT_PATTERNS = compile(LIMIT_SUFFIXES);
@@ -296,17 +296,17 @@ public final class GremlinUtil {
         if (!(id instanceof String)) {
             return id.toString();
         }
-        String text = (String) id;
-        text = StringUtils.replaceEach(text, ESCAPE_SEARCH_LIST,
-                                       ESCAPE_TARGET_LIST);
-        return (String) escape(text);
+        return (String) escape(id);
     }
 
     public static Object escape(Object object) {
         if (!(object instanceof String)) {
             return object;
         }
-        return StringUtils.wrap((String) object, '\'');
+        String text = (String) object;
+        text = StringUtils.replaceEach(text, ESCAPE_SEARCH_LIST,
+                                       ESCAPE_TARGET_LIST);
+        return StringUtils.wrap(text, '\'');
     }
 
     public static String optimizeLimit(String gremlin, int limit) {
