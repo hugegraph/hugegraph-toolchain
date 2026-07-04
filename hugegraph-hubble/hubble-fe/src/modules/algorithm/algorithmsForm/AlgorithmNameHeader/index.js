@@ -26,6 +26,7 @@ import Highlighter from 'react-highlight-words';
 import {Typography, Tooltip, Button} from 'antd';
 import c from './index.module.scss';
 import classnames from 'classnames';
+import {useTranslation} from 'react-i18next';
 
 const {Text} = Typography;
 
@@ -35,6 +36,7 @@ import {
 } from '@ant-design/icons';
 
 const AlgorithmNameHeader = props => {
+    const {t} = useTranslation();
     const {
         icon,
         name,
@@ -105,7 +107,7 @@ const AlgorithmNameHeader = props => {
             return (
                 <Tooltip
                     placement="rightTop"
-                    title={<span style={{color: '#000'}}>运行</span>}
+                    title={<span style={{color: '#000'}}>{t('analysis.algorithm.run')}</span>}
                     color={'#fff'}
                 >
                     <Button

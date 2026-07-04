@@ -17,20 +17,42 @@
 #
 set -euo pipefail
 
-if [[ $# -ne 1 && $# -ne 3 ]]; then
-    echo "Usage: $0 <apache-hugegraph-hubble-*.tar.gz> [--json-output <path>]" >&2
+usage() {
+    echo "Usage: $0 <apache-hugegraph-hubble-*.tar.gz> " \
+         "[--json-output <path>] [--require-sidecars]" >&2
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
     exit 1
 fi
 
 tarball=$1
+shift
 json_output=""
-if [[ $# -eq 3 ]]; then
-    if [[ "$2" != "--json-output" ]]; then
-        echo "Unknown option: $2" >&2
-        exit 1
-    fi
-    json_output=$3
-fi
+require_sidecars=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --json-output)
+            if [[ $# -lt 2 ]]; then
+                usage
+                exit 1
+            fi
+            json_output=$2
+            shift 2
+            ;;
+        --require-sidecars)
+            require_sidecars=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
 
 if [[ ! -f "${tarball}" ]]; then
     echo "Hubble tarball not found: ${tarball}" >&2
@@ -152,6 +174,24 @@ if [[ "${jar_count}" -eq 0 ]]; then
     exit 1
 fi
 
+category_x_patterns=(
+    "^${root}/lib/truelicense-[^/]+\\.jar$"
+)
+
+category_x_hits=""
+for pattern in "${category_x_patterns[@]}"; do
+    matches=$(grep -E "${pattern}" "${tmp_list}" || true)
+    if [[ -n "${matches}" ]]; then
+        category_x_hits+="${matches}"$'\n'
+    fi
+done
+
+if [[ -n "${category_x_hits}" ]]; then
+    echo "ASF Category-X dependency must not be packaged:" >&2
+    printf '%s' "${category_x_hits}" >&2
+    exit 1
+fi
+
 license_count=$(grep -cE "^${root}/licenses/[^/]+$" "${tmp_list}" || true)
 fe_license_count=$(grep -cE "^${root}/licenses/fe-licenses/[^/]+$" \
                    "${tmp_list}" || true)
@@ -185,11 +225,21 @@ if [[ -f "${tarball}.sha512" ]]; then
         exit 1
     fi
     checksum_status="passed"
+elif [[ "${require_sidecars}" == "true" ]]; then
+    echo "Missing required SHA-512 sidecar: ${tarball}.sha512" >&2
+    exit 1
 fi
 
 if [[ -f "${tarball}.asc" ]]; then
+    if ! command -v gpg >/dev/null 2>&1; then
+        echo "gpg is required to verify signature sidecar: ${tarball}.asc" >&2
+        exit 1
+    fi
     gpg --verify "${tarball}.asc" "${tarball}" >/dev/null 2>&1
     signature_status="passed"
+elif [[ "${require_sidecars}" == "true" ]]; then
+    echo "Missing required signature sidecar: ${tarball}.asc" >&2
+    exit 1
 fi
 
 if [[ -n "${json_output}" ]]; then
@@ -201,6 +251,7 @@ if [[ -n "${json_output}" ]]; then
         echo "  \"jar_count\": ${jar_count},"
         echo "  \"license_count\": ${license_count},"
         echo "  \"fe_license_count\": ${fe_license_count},"
+        echo "  \"category_x_status\": \"passed\","
         echo "  \"checksum_status\": \"${checksum_status}\","
         echo "  \"signature_status\": \"${signature_status}\","
         echo "  \"native_jar_count\": ${native_jar_count},"

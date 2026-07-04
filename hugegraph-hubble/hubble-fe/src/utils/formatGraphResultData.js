@@ -121,9 +121,9 @@ const formatToGraphData = (queryData, metaData, styleConfig) => {
         });
     }
     for (let item of queryData?.edges || []) {
-        const {label} = item;
-        const customizedStyle = styleConfig?.edges?.[label] || {};
-        const metaConfig = _.find(metaData.edgeMeta, item => item.name === label);
+        const {label: rawLabel} = item;
+        const customizedStyle = styleConfig?.edges?.[rawLabel] || {};
+        const metaConfig = _.find(metaData.edgeMeta, item => item.name === rawLabel);
         const {
             type: customizedType,
             labelCfg: customizedLabelCfg = {},
@@ -148,13 +148,14 @@ const formatToGraphData = (queryData, metaData, styleConfig) => {
         edges.push({
             metaConfig: _.cloneDeep(metaConfig),
             id: item.id,
+            rawLabel,
             source: item.source,
             target: item.target,
             type: customizedType || 'line',
             properties: {...item.properties},
-            label: display_fields?.map(k => (k === '~id' ? label : item.properties[k])).join('\n'),
-            legendType: label,
-            itemType: label,
+            label: display_fields?.map(k => (k === '~id' ? item.id : item.properties[k])).join('\n'),
+            legendType: rawLabel,
+            itemType: rawLabel,
             style: {
                 lineDash: lineDash || false,
                 stroke: customizedStroke || color,
@@ -443,8 +444,8 @@ const formatToDownloadData = graphData => {
     );
     const edges = graphEdges.map(
         item => {
-            const {id, label, source, target, properties} = item;
-            return {id, label, source, target, properties};
+            const {id, rawLabel, itemType, legendType, label, source, target, properties} = item;
+            return {id, label: rawLabel || itemType || legendType || label, source, target, properties};
         }
     );
     return {vertices, edges};

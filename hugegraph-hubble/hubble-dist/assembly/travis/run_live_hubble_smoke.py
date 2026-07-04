@@ -17,7 +17,9 @@
 #
 
 import argparse
+import base64
 import gzip
+import http.cookiejar
 import json
 import os
 import re
@@ -33,6 +35,13 @@ import uuid
 from pathlib import Path
 
 
+COOKIE_JAR = http.cookiejar.CookieJar()
+OPENER = urllib.request.build_opener(
+    urllib.request.HTTPCookieProcessor(COOKIE_JAR)
+)
+SERVER_TOKEN = None
+
+
 def request(method, url, body=None, headers=None, timeout=10):
     data = None
     merged_headers = {"Accept-Encoding": "identity", **(headers or {})}
@@ -45,7 +54,7 @@ def request(method, url, body=None, headers=None, timeout=10):
                               **merged_headers}
     req = urllib.request.Request(url, data=data, headers=merged_headers,
                                  method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as response:
+    with OPENER.open(req, timeout=timeout) as response:
         raw_payload = response.read()
         if response.headers.get("Content-Encoding") == "gzip":
             raw_payload = gzip.decompress(raw_payload)
@@ -63,7 +72,11 @@ def unwrap(response, name):
 
 
 def server_json(method, server_url, path, body=None, timeout=10):
-    return request(method, f"{server_url}{path}", body, timeout=timeout)
+    headers = {}
+    if SERVER_TOKEN:
+        headers["Authorization"] = f"Bearer {SERVER_TOKEN}"
+    return request(method, f"{server_url}{path}", body, headers=headers,
+                   timeout=timeout)
 
 
 def wait_for_health(hubble_url, deadline_seconds):
@@ -124,6 +137,8 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
     lines = []
     replaced_host = False
     replaced_port = False
+    replaced_server_address = False
+    replaced_server_port = False
     for line in text.splitlines():
         if host and line.startswith("hubble.host="):
             lines.append(f"hubble.host={host}")
@@ -131,12 +146,22 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
         elif port and line.startswith("hubble.port="):
             lines.append(f"hubble.port={port}")
             replaced_port = True
+        elif host and line.startswith("server.address="):
+            lines.append(f"server.address={host}")
+            replaced_server_address = True
+        elif port and line.startswith("server.port="):
+            lines.append(f"server.port={port}")
+            replaced_server_port = True
         else:
             lines.append(line)
     if host and not replaced_host:
         lines.append(f"hubble.host={host}")
+    if host and not replaced_server_address:
+        lines.append(f"server.address={host}")
     if port and not replaced_port:
         lines.append(f"hubble.port={port}")
+    if port and not replaced_server_port:
+        lines.append(f"server.port={port}")
     lines.append("pd.enabled=false")
     lines.append(f"server.direct_url={server_url}")
     conf.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -162,6 +187,46 @@ def run_hubble_only_checks(hubble_url):
             raise RuntimeError(f"Route did not serve React root: {route}")
         checks.append({"name": f"route:{route}", "status": "passed"})
     return checks
+
+
+def run_login_checks(hubble_url, username, password):
+    checks = []
+    api_prefix = f"{hubble_url}/api/v1.3"
+    user = unwrap(request("POST", f"{api_prefix}/auth/login", {
+        "user_name": username,
+        "user_password": password
+    }), "hubble-login")
+    user_name = (user.get("user_name") or user.get("name") or
+                 user.get("id") or "")
+    if str(user_name) != username:
+        raise RuntimeError(f"Unexpected login user: {user}")
+    checks.append({"name": "hubble-login", "status": "passed",
+                   "user": username})
+
+    auth_status = unwrap(request("GET", f"{api_prefix}/auth/status"),
+                         "hubble-auth-status")
+    if "level" not in auth_status:
+        raise RuntimeError(f"Unexpected auth status response: {auth_status}")
+    checks.append({"name": "hubble-auth-status", "status": "passed",
+                   "level": auth_status.get("level")})
+    return checks
+
+
+def run_server_login(server_url, username, password):
+    global SERVER_TOKEN
+    auth = f"{username}:{password}"
+    basic = base64.b64encode(auth.encode("utf-8")).decode("ascii")
+    response = request("POST", f"{server_url}/auth/login", {
+        "user_name": username,
+        "user_password": password,
+        "token_expire": 60 * 60 * 24 * 30
+    }, headers={"Authorization": f"Basic {basic}"})
+    token = response.get("token") if isinstance(response, dict) else None
+    if not token:
+        raise RuntimeError(f"Unexpected Server login response: {response}")
+    SERVER_TOKEN = token
+    return [{"name": "server-login", "status": "passed",
+             "user": username}]
 
 
 def run_server_checks(hubble_url, server_url, graph_space, graph_name):
@@ -700,6 +765,10 @@ def main():
     parser.add_argument("--connection-name")
     parser.add_argument("--data-prefix")
     parser.add_argument("--json-output", type=Path)
+    parser.add_argument("--username", default=os.environ.get("HUBBLE_USERNAME",
+                                                            "admin"))
+    parser.add_argument("--password", default=os.environ.get("HUBBLE_PASSWORD",
+                                                            "pa"))
     args = parser.parse_args()
 
     hubble_url = args.hubble_url.rstrip("/")
@@ -764,6 +833,10 @@ def main():
             wait_for_health(hubble_url, 10)
 
         report["checks"].extend(run_hubble_only_checks(hubble_url))
+        report["checks"].extend(run_login_checks(hubble_url, args.username,
+                                                 args.password))
+        report["checks"].extend(run_server_login(server_url, args.username,
+                                                 args.password))
         report["checks"].extend(run_server_checks(hubble_url, server_url,
                                                   args.graphspace, args.graph))
 

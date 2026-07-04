@@ -49,6 +49,7 @@ import org.apache.hugegraph.entity.query.GremlinResult;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.service.query.ExecuteHistoryService;
 import org.apache.hugegraph.service.query.QueryService;
+import org.apache.hugegraph.structure.gremlin.ResultSet;
 import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.HubbleUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -82,25 +83,24 @@ public class GremlinQueryController extends GremlinController {
     public Map<String, String> execute(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph) {
 
-//        HugeClient client = this.authClient(graphSpace, graph);
-//        String vertexCount = "";
-//        String edgeCount = "";
-//        try{
-//            ResultSet gremlinVertexCount = queryService.executeQueryCount(client, "g.V().count()");
-//            vertexCount = gremlinVertexCount.data().get(0).toString();
-//        } catch (Throwable e) {
-//            vertexCount = "max";
-//        }
-//        try {
-//            ResultSet gremlinEdgeCount = queryService.executeQueryCount(client, "g.E().count()");
-//            edgeCount = gremlinEdgeCount.data().get(0).toString();
-//        } catch (Throwable e) {
-//            edgeCount = "max";
-//        }
+        HugeClient client = this.authClient(graphSpace, graph);
         Map<String, String> graphCount = new HashMap<>();
-        graphCount.put("vertexcount", "0");
-        graphCount.put("edgecount", "0");
+        graphCount.put("vertexcount", queryCount(client, "g.V().count()"));
+        graphCount.put("edgecount", queryCount(client, "g.E().count()"));
         return graphCount;
+    }
+
+    private String queryCount(HugeClient client, String gremlin) {
+        try {
+            ResultSet result = this.queryService.executeQueryCount(client, gremlin);
+            if (result.data() == null || result.data().isEmpty()) {
+                return "max";
+            }
+            return String.valueOf(result.data().get(0));
+        } catch (Throwable e) {
+            LOG.warn("Failed to execute gremlin overview count: {}", gremlin, e);
+            return "max";
+        }
     }
 
     /**
