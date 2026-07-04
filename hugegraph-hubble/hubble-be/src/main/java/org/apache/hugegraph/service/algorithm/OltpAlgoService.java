@@ -198,20 +198,22 @@ public class OltpAlgoService {
         this.historyService.save(history);
         StopWatch timer = StopWatch.createStarted();
         try {
-            Map<String, Edge> edges;
+            Map<String, Edge> edges = new HashMap<>();
             Map<Object, Vertex> vertices = new HashMap<>();
             TraverserManager traverser = client.traverser();
-            // TODO withEdge set as false, check correctness
             WeightedPath result = traverser.weightedShortestPath(body.getSource(), body.getTarget(),
                     body.getDirection(), body.getLabel(),
                     body.getWeight(), body.getMaxDegree(),
-                    body.getSkipDegree(), body.getCapacity(), true,false);
+                    body.getSkipDegree(), body.getCapacity(), true, true);
 
             for (Iterator<Vertex> iter = result.vertices().iterator(); iter.hasNext();) {
                 Vertex vertex = iter.next();
                 vertices.put(vertex.id(), vertex);
             }
-            edges = this.edgesOfVertex(vertices, client);
+            for (Iterator<Edge> iter = result.edges().iterator(); iter.hasNext();) {
+                Edge edge = iter.next();
+                edges.put(edge.id(), edge);
+            }
             status = ExecuteStatus.SUCCESS;
             return GremlinResult.builder()
                     .type(GremlinResult.Type.PATH)

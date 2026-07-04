@@ -1,0 +1,171 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hugegraph.unit;
+
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import org.apache.hugegraph.api.gremlin.GremlinRequest;
+import org.apache.hugegraph.config.HugeConfig;
+import org.apache.hugegraph.driver.GraphManager;
+import org.apache.hugegraph.driver.GremlinManager;
+import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.entity.query.AdjacentQuery;
+import org.apache.hugegraph.entity.schema.VertexLabelEntity;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.query.QueryService;
+import org.apache.hugegraph.service.schema.VertexLabelService;
+import org.apache.hugegraph.structure.constant.Direction;
+import org.apache.hugegraph.structure.constant.IdStrategy;
+import org.apache.hugegraph.structure.gremlin.ResultSet;
+import org.apache.hugegraph.testutil.Assert;
+
+public class QueryServiceTest {
+
+    @Test
+    public void testExpandVertexEscapesGremlinLiterals() throws Exception {
+        GremlinManager gremlin = this.mockGremlin();
+        HugeClient client = this.mockClient(gremlin);
+        QueryService service = this.serviceWithConfig();
+
+        AdjacentQuery query = AdjacentQuery.builder()
+                                           .vertexId("marko'id")
+                                           .vertexLabel("person")
+                                           .edgeLabel("edge'label\\x\r\n")
+                                           .direction(Direction.BOTH)
+                                           .conditions(Collections.singletonList(
+                                                   AdjacentQuery.Condition
+                                                   .builder()
+                                                   .key("name'key\r")
+                                                   .operator("eq")
+                                                   .value("value'quote\\slash\r\n")
+                                                   .build()))
+                                           .build();
+
+        service.expandVertex(client, query);
+
+        Mockito.verify(gremlin).gremlin(
+                "g.V('marko\\'id').toE(BOTH, 'edge\\'label\\\\x\\r\\n')" +
+                ".has('name\\'key\\r', eq('value\\'quote\\\\slash\\r\\n'))" +
+                ".limit(100).otherV().path()");
+    }
+
+    @Test
+    public void testExpandVertexRejectsInvalidOperatorInService()
+           throws Exception {
+        GremlinManager gremlin = this.mockGremlin();
+        HugeClient client = this.mockClient(gremlin);
+        QueryService service = this.serviceWithConfig();
+
+        AdjacentQuery query = AdjacentQuery.builder()
+                                           .vertexId("marko")
+                                           .vertexLabel("person")
+                                           .conditions(Collections.singletonList(
+                                                   AdjacentQuery.Condition
+                                                   .builder()
+                                                   .key("name")
+                                                   .operator("drop")
+                                                   .value("value")
+                                                   .build()))
+                                           .build();
+
+        Assert.assertThrows(ExternalException.class, () -> {
+            service.expandVertex(client, query);
+        });
+        Mockito.verify(gremlin, Mockito.never()).gremlin(Mockito.anyString());
+    }
+
+    @Test
+    public void testExpandVertexRejectsStructuredConditionValue()
+           throws Exception {
+        GremlinManager gremlin = this.mockGremlin();
+        HugeClient client = this.mockClient(gremlin);
+        QueryService service = this.serviceWithConfig();
+
+        AdjacentQuery query = AdjacentQuery.builder()
+                                           .vertexId("marko")
+                                           .vertexLabel("person")
+                                           .conditions(Collections.singletonList(
+                                                   AdjacentQuery.Condition
+                                                   .builder()
+                                                   .key("name")
+                                                   .operator("eq")
+                                                   .value(Collections.singletonMap(
+                                                           "payload",
+                                                           "x'));g.V().drop();//"))
+                                                   .build()))
+                                           .build();
+
+        Assert.assertThrows(ExternalException.class, () -> {
+            service.expandVertex(client, query);
+        });
+        Mockito.verify(gremlin, Mockito.never()).gremlin(Mockito.anyString());
+    }
+
+    private QueryService serviceWithConfig() throws Exception {
+        QueryService service = new QueryService();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.GREMLIN_VERTEX_DEGREE_LIMIT))
+               .thenReturn(100);
+        this.setField(service, "config", config);
+        VertexLabelService vlService = Mockito.mock(VertexLabelService.class);
+        Mockito.when(vlService.get(Mockito.eq("person"), Mockito.any()))
+               .thenReturn(VertexLabelEntity.builder()
+                                            .name("person")
+                                            .idStrategy(IdStrategy.CUSTOMIZE_STRING)
+                                            .build());
+        this.setField(service, "vlService", vlService);
+        return service;
+    }
+
+    private HugeClient mockClient(GremlinManager gremlin) {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+        return client;
+    }
+
+    private GremlinManager mockGremlin() throws Exception {
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        Mockito.when(gremlin.gremlin(Mockito.anyString()))
+               .thenAnswer(invocation -> new GremlinRequest.Builder(
+                       invocation.getArgument(0), gremlin));
+        Mockito.when(gremlin.execute(Mockito.any()))
+               .thenReturn(this.resultSet());
+        return gremlin;
+    }
+
+    private ResultSet resultSet() throws Exception {
+        ResultSet resultSet = new ResultSet();
+        this.setField(resultSet, "data", Arrays.asList());
+        resultSet.graphManager(Mockito.mock(GraphManager.class));
+        return resultSet;
+    }
+
+    private void setField(Object object, String name, Object value)
+                          throws Exception {
+        Field field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+}

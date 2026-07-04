@@ -69,6 +69,10 @@ public class QueryService {
             "org.codehaus.groovy.runtime.metaclass.MethodSelectionException"
     );
 
+    public static final Set<String> CONDITION_OPERATORS = ImmutableSet.of(
+            "eq", "gt", "gte", "lt", "lte", "neq"
+    );
+
     private static final String TIMEOUT_EXCEPTION =
             "java.net.SocketTimeoutException";
 
@@ -436,7 +440,8 @@ public class QueryService {
         sb.append(".toE(").append(direction);
         // edge label
         if (query.getEdgeLabel() != null) {
-            sb.append(", '").append(query.getEdgeLabel()).append("')");
+            sb.append(", ").append(GremlinUtil.escape(query.getEdgeLabel()))
+              .append(")");
         } else {
             sb.append(")");
         }
@@ -444,10 +449,14 @@ public class QueryService {
             // properties
             for (AdjacentQuery.Condition condition : query.getConditions()) {
                 // key
-                sb.append(".has('").append(condition.getKey()).append("', ");
+                sb.append(".has(").append(GremlinUtil.escape(condition.getKey()))
+                  .append(", ");
                 // value
-                sb.append(condition.getOperator()).append("(")
-                  .append(GremlinUtil.escape(condition.getValue())).append(")");
+                sb.append(this.checkConditionOperator(condition.getOperator()))
+                  .append("(")
+                  .append(GremlinUtil.escape(
+                          this.checkConditionValue(condition.getValue())))
+                  .append(")");
                 sb.append(")");
             }
         }
@@ -456,6 +465,21 @@ public class QueryService {
         // other vertex
         sb.append(".otherV().path()");
         return sb.toString();
+    }
+
+    private String checkConditionOperator(String operator) {
+        Ex.check(CONDITION_OPERATORS.contains(operator),
+                 "common.param.should-belong-to", "condition.operator",
+                 CONDITION_OPERATORS);
+        return operator;
+    }
+
+    private Object checkConditionValue(Object value) {
+        Ex.check(value instanceof String || value instanceof Number ||
+                 value instanceof Boolean,
+                 "common.param.should-belong-to", "condition.value",
+                 "String/Number/Boolean");
+        return value;
     }
 
     private Object getRealVertexId(HugeClient client, AdjacentQuery query) {

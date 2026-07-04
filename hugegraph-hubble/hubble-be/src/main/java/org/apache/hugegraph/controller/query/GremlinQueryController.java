@@ -21,7 +21,6 @@ package org.apache.hugegraph.controller.query;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hugegraph.driver.HugeClient;
@@ -54,7 +53,6 @@ import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.HubbleUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -68,10 +66,6 @@ public class GremlinQueryController extends GremlinController {
 
     private static final Logger LOG =
             LoggerFactory.getLogger(GremlinQueryController.class);
-
-    private static final Set<String> CONDITION_OPERATORS = ImmutableSet.of(
-            "eq", "gt", "gte", "lt", "lte"
-    );
 
     @Autowired
     private QueryService queryService;
@@ -245,9 +239,10 @@ public class GremlinQueryController extends GremlinController {
                 Ex.check(!StringUtils.isEmpty(condition.getOperator()),
                          "common.param.cannot-be-null-or-empty",
                          "condition.operator");
-                Ex.check(CONDITION_OPERATORS.contains(condition.getOperator()),
+                Ex.check(QueryService.CONDITION_OPERATORS.contains(
+                         condition.getOperator()),
                          "common.param.should-belong-to", "condition.operator",
-                         CONDITION_OPERATORS);
+                         QueryService.CONDITION_OPERATORS);
                 Ex.check(condition.getValue() != null,
                          "common.param.cannot-be-null", "condition.value");
             }

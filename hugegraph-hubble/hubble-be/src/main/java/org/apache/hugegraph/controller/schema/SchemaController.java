@@ -20,6 +20,8 @@ package org.apache.hugegraph.controller.schema;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Date;
@@ -93,7 +95,7 @@ public class SchemaController extends BaseController {
         checkSchemaGroovy(content);
         try {
             client.gremlin().gremlin(content).execute();
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new HugeException(
                     "Add schema groovy failed. caused by" + e.getMessage());
         }
@@ -122,15 +124,62 @@ public class SchemaController extends BaseController {
         String schema = client.schema().getGroovySchema();
 
         response.setCharacterEncoding("UTF-8");
-        response.setContentType("text/html");
-        String fileName = String.format("%s_%s.schema", graphSpace, graph);
-        response.setHeader("Content-Disposition", "attachment;fileName=" + fileName);
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition",
+                           contentDisposition(graphSpace, graph));
         try {
             OutputStream os = response.getOutputStream();
             os.write(schema.getBytes(StandardCharsets.UTF_8));
             os.close();
         } catch (IOException e) {
             throw new InternalException("Schema File Write Error", e);
+        }
+    }
+
+    static String contentDisposition(String graphSpace, String graph) {
+        String fileName = sanitizeFileName(
+                          String.format("%s_%s.schema", graphSpace, graph));
+        String fallback = asciiFileName(fileName);
+        return String.format("attachment; filename=\"%s\"; filename*=UTF-8''%s",
+                             fallback, encodeFileName(fileName));
+    }
+
+    private static String sanitizeFileName(String fileName) {
+        StringBuilder builder = new StringBuilder(fileName.length());
+        for (int i = 0; i < fileName.length(); i++) {
+            char c = fileName.charAt(i);
+            if (c == '\r' || c == '\n' || Character.isISOControl(c)) {
+                builder.append('_');
+            } else {
+                builder.append(c);
+            }
+        }
+        String sanitized = builder.toString().trim();
+        return sanitized.isEmpty() ? "schema.schema" : sanitized;
+    }
+
+    private static String asciiFileName(String fileName) {
+        StringBuilder builder = new StringBuilder(fileName.length());
+        for (int i = 0; i < fileName.length(); i++) {
+            char c = fileName.charAt(i);
+            if (c >= 'A' && c <= 'Z' ||
+                c >= 'a' && c <= 'z' ||
+                c >= '0' && c <= '9' ||
+                c == '.' || c == '_' || c == '-') {
+                builder.append(c);
+            } else {
+                builder.append('_');
+            }
+        }
+        return builder.toString();
+    }
+
+    private static String encodeFileName(String fileName) {
+        try {
+            return URLEncoder.encode(fileName, StandardCharsets.UTF_8.name())
+                             .replace("+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("UTF-8 encoding is unavailable", e);
         }
     }
 

@@ -21,6 +21,7 @@ package org.apache.hugegraph.unit;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -30,13 +31,17 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.GraphManager;
 import org.apache.hugegraph.driver.GremlinManager;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.driver.TraverserManager;
+import org.apache.hugegraph.entity.algorithm.WeightedShortestPathEntity;
 import org.apache.hugegraph.entity.query.GraphView;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.query.ExecuteHistoryService;
 import org.apache.hugegraph.service.algorithm.OltpAlgoService;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Path;
 import org.apache.hugegraph.structure.graph.Vertex;
 import org.apache.hugegraph.structure.gremlin.ResultSet;
+import org.apache.hugegraph.structure.traverser.WeightedPath;
 import org.apache.hugegraph.testutil.Assert;
 
 public class OltpAlgoServiceTest {
@@ -143,6 +148,78 @@ public class OltpAlgoServiceTest {
         Assert.assertEquals(0, graphView.getVertices().size());
         Assert.assertEquals(0, graphView.getEdges().size());
         Mockito.verify(client, Mockito.never()).gremlin();
+    }
+
+    @Test
+    public void testWeightedShortestPathUsesReturnedPathEdges()
+           throws Exception {
+        Vertex marko = new Vertex("person");
+        marko.id("marko");
+        Vertex vadas = new Vertex("person");
+        vadas.id("vadas");
+
+        Edge pathEdge = new Edge("knows");
+        pathEdge.id("S1:marko>vadas");
+        pathEdge.source(marko);
+        pathEdge.target(vadas);
+
+        Edge nonPathEdge = new Edge("created");
+        nonPathEdge.id("S2:marko>vadas");
+        nonPathEdge.source(marko);
+        nonPathEdge.target(vadas);
+
+        WeightedPath path = new WeightedPath();
+        this.setField(path, "vertices", new LinkedHashSet<>(
+                Arrays.asList(marko, vadas)));
+        this.setField(path, "edges", new LinkedHashSet<>(
+                Arrays.asList(pathEdge)));
+
+        TraverserManager traverser = Mockito.mock(TraverserManager.class);
+        Mockito.when(traverser.weightedShortestPath(
+                Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+                Mockito.any(), Mockito.anyLong(), Mockito.anyLong(),
+                Mockito.anyLong(), Mockito.eq(true), Mockito.eq(true)))
+               .thenReturn(path);
+        Mockito.when(traverser.weightedShortestPath(
+                Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+                Mockito.any(), Mockito.anyLong(), Mockito.anyLong(),
+                Mockito.anyLong(), Mockito.eq(true), Mockito.eq(false)))
+               .thenReturn(path);
+
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        Mockito.when(gremlin.gremlin(Mockito.anyString()))
+               .thenAnswer(invocation -> new GremlinRequest.Builder(
+                       invocation.getArgument(0), gremlin));
+        Mockito.when(gremlin.execute(Mockito.any()))
+               .thenReturn(this.resultSet(pathEdge, nonPathEdge));
+
+        HugeClient client = Mockito.mock(HugeClient.class);
+        Mockito.when(client.getGraphSpaceName()).thenReturn("DEFAULT");
+        Mockito.when(client.getGraphName()).thenReturn("hugegraph");
+        Mockito.when(client.traverser()).thenReturn(traverser);
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+
+        OltpAlgoService service = this.serviceWithConfig();
+        this.setField(service, "historyService",
+                      Mockito.mock(ExecuteHistoryService.class));
+
+        WeightedShortestPathEntity body = WeightedShortestPathEntity.builder()
+                                                                    .source("marko")
+                                                                    .target("vadas")
+                                                                    .weight("weight")
+                                                                    .build();
+        GraphView graphView = service.weightedShortestPath(client, body)
+                                     .getGraphView();
+
+        Assert.assertEquals(2, graphView.getVertices().size());
+        Assert.assertEquals(1, graphView.getEdges().size());
+        Assert.assertTrue(graphView.getEdges().contains(pathEdge));
+        Assert.assertFalse(graphView.getEdges().contains(nonPathEdge));
+        Mockito.verify(traverser).weightedShortestPath(
+                Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+                Mockito.any(), Mockito.anyLong(), Mockito.anyLong(),
+                Mockito.anyLong(), Mockito.eq(true), Mockito.eq(true));
+        Mockito.verify(gremlin, Mockito.never()).gremlin(Mockito.contains("bothE"));
     }
 
     private GraphView buildPathGraphView(HugeClient client, Path path)
