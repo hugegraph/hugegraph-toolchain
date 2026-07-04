@@ -30,19 +30,19 @@ import formatTimeDuration from '../../../utils/formatTimeDuration';
 import {
     Async_Task_Type,
     Async_Taskt_Status,
-    Async_Taskt_Status_Name,
     Filter_Task_Status,
-    Async_Task_Manipulations,
     Status_Color,
 } from '../../../utils/constants';
 import {intersection, size} from 'lodash-es';
 import {format} from 'date-fns';
+import {useTranslation} from 'react-i18next';
 import c from './index.module.scss';
 const {Text} = Typography;
 
 const {FAILED, SUCCESS, DELETING, CANCELLING} = Async_Taskt_Status;
 
 const AsyncTaskDetail = props => {
+    const {t} = useTranslation();
     const {
         page,
         pageSize,
@@ -54,6 +54,41 @@ const AsyncTaskDetail = props => {
     const {graphSpace: currentGraphSpace, graph: currentGraph, isVermeer} = useContext(GraphAnalysisContext);
     const {records: asyncManageTaskDataRecords, total: asyncManageTaskDataTotal} = asyncManageTaskData || {};
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+    const taskTypeNames = {
+        '': t('analysis.async_task.type.all'),
+        gremlin: t('analysis.async_task.type.gremlin'),
+        'computer-dis': t('analysis.async_task.type.algorithm'),
+        remove_schema: t('analysis.async_task.type.remove_schema'),
+        create_index: t('analysis.async_task.type.create_index'),
+        rebuild_index: t('analysis.async_task.type.rebuild_index'),
+        cypher: t('analysis.async_task.type.cypher'),
+        'vermeer-task:load': t('analysis.async_task.type.vermeer_load'),
+        'vermeer-task:compute': t('analysis.async_task.type.vermeer_compute'),
+    };
+    const taskStatusNames = {
+        '': t('analysis.async_task.status.all'),
+        UNKNOWN: t('analysis.async_task.status.unknown'),
+        new: t('analysis.async_task.status.new'),
+        scheduling: t('analysis.async_task.status.scheduling'),
+        scheduled: t('analysis.async_task.status.scheduled'),
+        queued: t('analysis.async_task.status.queued'),
+        running: t('analysis.async_task.status.running'),
+        restoring: t('analysis.async_task.status.restoring'),
+        success: t('analysis.async_task.status.success'),
+        failed: t('analysis.async_task.status.failed'),
+        cancelled: t('analysis.async_task.status.cancelled'),
+        cancelling: t('analysis.async_task.status.cancelling'),
+        hanging: t('analysis.async_task.status.hanging'),
+        pending: t('analysis.async_task.status.pending'),
+        deleting: t('analysis.async_task.status.deleting'),
+    };
+    const taskManipulations = {
+        check_reason: t('analysis.async_task.action.check_reason'),
+        check_result: t('analysis.async_task.action.check_result'),
+        delete: t('analysis.async_task.action.delete'),
+        abort: t('analysis.async_task.action.abort'),
+        aborting: t('analysis.async_task.action.aborting'),
+    };
 
     const onSelectChange = (rowKey, selectedRows) => {
         setSelectedRowKeys(rowKey);
@@ -86,12 +121,12 @@ const AsyncTaskDetail = props => {
         const keys = Object.keys(Async_Task_Type);
         for (let i = 0; i < keys.length; i++) {
             const item = keys[i];
-            const text = Async_Task_Type[item];
-            if (!text.includes('vermeer')) {
-                res.push({text: Async_Task_Type[item], value: item});
+            const text = taskTypeNames[item] || Async_Task_Type[item];
+            if (!item.includes('vermeer')) {
+                res.push({text, value: item});
             }
             else if (isVermeer) {
-                res.push({text: Async_Task_Type[item], value: item});
+                res.push({text, value: item});
             }
         }
         return res;
@@ -102,7 +137,7 @@ const AsyncTaskDetail = props => {
         const keys = Object.keys(Filter_Task_Status);
         for (let i = 0; i < keys.length; i++) {
             const item = keys[i];
-            res.push({text: Filter_Task_Status[item], value: item});
+            res.push({text: taskStatusNames[item] || Filter_Task_Status[item], value: item});
         }
         return res;
     };
@@ -122,10 +157,10 @@ const AsyncTaskDetail = props => {
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('删除失败');
+                        !errMsg && message.error(t('analysis.async_task.delete_failed'));
                     }
                 });
-        }, [currentGraph, currentGraphSpace, onRefresh]);
+        }, [currentGraph, currentGraphSpace, onRefresh, t]);
 
     const abortAsyncTaskById = useCallback(
         async taskId => {
@@ -135,9 +170,9 @@ const AsyncTaskDetail = props => {
                 onRefresh();
             }
             else {
-                !abortAsyncTaskMessage && message.error('终止失败');
+                !abortAsyncTaskMessage && message.error(t('analysis.async_task.abort_failed'));
             }
-        }, [currentGraphSpace, currentGraph, onRefresh]);
+        }, [currentGraphSpace, currentGraph, onRefresh, t]);
 
     const onAbortTaskHandler = useCallback(taskId => {
         abortAsyncTaskById(taskId);
@@ -145,48 +180,48 @@ const AsyncTaskDetail = props => {
 
     const onDeleteConfirm = id => {
         Modal.confirm({
-            title: '删除确任',
-            content: '确认删除该任务？删除后无法恢复，请谨慎操作',
-            okText: '确定',
-            cancelText: '取消',
+            title: t('analysis.async_task.delete_confirm_title'),
+            content: t('analysis.async_task.delete_confirm_content'),
+            okText: t('common.action.confirm'),
+            cancelText: t('common.action.cancel'),
             onOk: () => deleteTaskByIds([id]),
         });
     };
 
     const onMassDeleteConfirm = () => {
         Modal.confirm({
-            title: '批量删除',
-            content: '确认删除以下任务？删除后无法恢复，请谨慎操作',
-            okText: '确定',
-            cancelText: '取消',
+            title: t('analysis.async_task.batch_delete_title'),
+            content: t('analysis.async_task.batch_delete_content'),
+            okText: t('common.action.confirm'),
+            cancelText: t('common.action.cancel'),
             onOk: () => deleteTaskByIds(currentSelectedRowKeys),
         });
     };
 
     const columns = [
         {
-            title: '任务ID',
+            title: t('analysis.async_task.column.task_id'),
             dataIndex: 'id',
             fixed: 'left',
         },
         {
-            title: '任务名称',
+            title: t('analysis.async_task.column.task_name'),
             dataIndex: 'task_name',
             render: (task_name, rowData, index) => {
                 return (<Text ellipsis={{tooltip: task_name}}>{task_name}</Text>);
             },
         },
         {
-            title: '任务类型',
+            title: t('analysis.async_task.column.task_type'),
             dataIndex: 'task_type',
             filters: renderTaskTypeFilters(),
             filterMultiple: false,
             render: (task_type, rowData, index) => {
-                return (<>{Async_Task_Type[task_type] || task_type}</>);
+                return (<>{taskTypeNames[task_type] || Async_Task_Type[task_type] || task_type}</>);
             },
         },
         {
-            title: '创建时间',
+            title: t('analysis.async_task.column.create_time'),
             dataIndex: 'task_create',
             render: (task_create, rowData, index) => {
                 const convertedDate = format(new Date(task_create), 'yyyy-MM-dd H:m:ss');
@@ -194,7 +229,7 @@ const AsyncTaskDetail = props => {
             },
         },
         {
-            title: '耗时',
+            title: t('analysis.async_task.column.duration'),
             dataIndex: 'task_progress',
             render: (task_progress, rowData, index) => {
                 const {task_update, task_create} = rowData;
@@ -203,16 +238,16 @@ const AsyncTaskDetail = props => {
             },
         },
         {
-            title: '状态',
+            title: t('analysis.async_task.column.status'),
             dataIndex: 'task_status',
             filterMultiple: false,
             filters: renderTaskStatusFilters(),
             render: (task_status, rowData, index) => {
-                return <Tag color={Status_Color[task_status]}>{Async_Taskt_Status_Name[task_status]}</Tag>;
+                return <Tag color={Status_Color[task_status]}>{taskStatusNames[task_status]}</Tag>;
             },
         },
         {
-            title: '操作',
+            title: t('analysis.async_task.column.action'),
             dataIndex: 'manipulation',
             render: (result, rowData, index) => {
                 const {'task_status': status, 'task_type': type, id: taskId}  = rowData;
@@ -226,7 +261,7 @@ const AsyncTaskDetail = props => {
                     'delete': delText,
                     abort,
                     aborting,
-                } = Async_Task_Manipulations;
+                } = taskManipulations;
                 return (
                     <div style={{whiteSpace: 'nowrap'}}>
                         {status === FAILED && (
@@ -267,8 +302,12 @@ const AsyncTaskDetail = props => {
             {size(currentSelectedRowKeys) !== 0 && (
                 <div className={c.massDelete}>
                     <div className={c.left}>
-                        <span style={{marginRight: '12px'}}>已选{size(currentSelectedRowKeys)}项</span>
-                        <Button onClick={onMassDeleteConfirm}>批量删除</Button>
+                        <span style={{marginRight: '12px'}}>
+                            {t('analysis.async_task.selected_count', {count: size(currentSelectedRowKeys)})}
+                        </span>
+                        <Button onClick={onMassDeleteConfirm}>
+                            {t('analysis.async_task.batch_delete')}
+                        </Button>
                     </div>
                     <CloseOutlined onClick={() => setSelectedRowKeys([])} />
                 </div>

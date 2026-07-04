@@ -21,7 +21,7 @@
  * @author gouzixing@
  */
 
-import React, {useEffect, useState, useRef, useMemo} from 'react';
+import React, {useCallback, useEffect, useState, useRef, useMemo} from 'react';
 import G6 from '@antv/g6';
 import '@antv/graphin-icons/dist/index.css';
 import _ from 'lodash';
@@ -80,6 +80,20 @@ const Graph = (props, ref) => {
     const graphClassName = classnames(
         c.graph,
         {[c.layoutPanelOpen]: isPanelEnable}
+    );
+
+    const syncGraphData = useCallback(
+        graphInstance => {
+            if (!graphInstance || graphInstance.destroyed) {
+                return;
+            }
+            graphInstance.changeData(data || {nodes: [], edges: []}, true);
+            if (layout) {
+                graphInstance.updateLayout(layout);
+            }
+            graphInstance.refresh();
+        },
+        [data, layout]
     );
 
     useEffect(
@@ -202,6 +216,16 @@ const Graph = (props, ref) => {
             };
         },
         [clickount, data, debounceClick, layout, onEdgeClick, onGraphRender, onNodeClick, onNodedbClick]
+    );
+
+    useEffect(
+        () => {
+            const hasGraphInstance = graph.current && !graph.current.destroyed;
+            if (hasGraphInstance) {
+                syncGraphData(graph.current);
+            }
+        },
+        [syncGraphData]
     );
 
     useEffect(

@@ -18,18 +18,28 @@
 export LANG=zh_CN.UTF-8
 set -ev
 
-if [[ $# -ne 1 ]]; then
-    echo "Must input an existing commit id of hugegraph server" && exit 1
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+    echo "Usage: $0 <commit-id> [fetch-ref]" >&2
+    exit 1
 fi
 
 COMMIT_ID=$1
+COMMIT_REF=${2:-}
 HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
 GIT_DIR=hugegraph
 
 # download code and compile
 git clone --depth 150 $HUGEGRAPH_GIT_URL $GIT_DIR
 cd "${GIT_DIR}"
+if [[ -n "${COMMIT_REF}" ]]; then
+    git fetch --depth 1 origin "${COMMIT_REF}"
+fi
 git checkout "${COMMIT_ID}"
+ACTUAL_COMMIT_ID=$(git rev-parse HEAD)
+if [[ "${ACTUAL_COMMIT_ID}" != "${COMMIT_ID}" ]]; then
+    echo "HugeGraph checkout mismatch: expected ${COMMIT_ID}, got ${ACTUAL_COMMIT_ID}" >&2
+    exit 1
+fi
 mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp
 
 cd hugegraph-server

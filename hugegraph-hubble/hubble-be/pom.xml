@@ -104,11 +104,6 @@
             <version>2.0</version>
         </dependency>
         <dependency>
-            <groupId>de.schlichtherle.truelicense</groupId>
-            <artifactId>truelicense-core</artifactId>
-            <version>1.33</version>
-        </dependency>
-        <dependency>
             <!--            TODO X FIX HERE-->
             <groupId>org.apache.hugegraph</groupId>
             <artifactId>hugegraph-common</artifactId>

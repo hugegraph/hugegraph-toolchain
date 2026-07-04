@@ -8,6 +8,7 @@
     "algorithm": {
       "name": "图算法",
       "placeholder": "算法查询",
+      "run": "运行",
       "common": {
         "instance_num": "实例数",
         "input_limit_edges_per_vertex": "最大出边限制",
@@ -186,7 +187,78 @@
       }
     },
     "async_task": {
-      "name": "任务管理"
+      "name": "任务管理",
+      "search_placeholder": "请输入任务ID或名称",
+      "get_failed": "获取异步任务失败",
+      "delete_failed": "删除失败",
+      "abort_failed": "终止失败",
+      "delete_confirm_title": "删除任务",
+      "delete_confirm_content": "确认删除该任务？删除后无法恢复，请谨慎操作",
+      "batch_delete_title": "批量删除",
+      "batch_delete_content": "确认删除以下任务？删除后无法恢复，请谨慎操作",
+      "selected_count": "已选{{count}}项",
+      "batch_delete": "批量删除",
+      "column": {
+        "task_id": "任务ID",
+        "task_name": "任务名称",
+        "task_type": "任务类型",
+        "create_time": "创建时间",
+        "duration": "耗时",
+        "status": "状态",
+        "action": "操作"
+      },
+      "type": {
+        "all": "全部",
+        "gremlin": "Gremlin任务",
+        "algorithm": "算法任务",
+        "remove_schema": "删除元数据",
+        "create_index": "创建索引",
+        "rebuild_index": "重建索引",
+        "cypher": "Cypher任务",
+        "vermeer_load": "vermeer图加载任务",
+        "vermeer_compute": "vermeer图计算任务"
+      },
+      "status": {
+        "all": "全部",
+        "unknown": "未知",
+        "new": "初始化",
+        "scheduling": "调度中",
+        "scheduled": "已调度",
+        "queued": "排队中",
+        "running": "运行中",
+        "restoring": "恢复中",
+        "success": "成功",
+        "failed": "失败",
+        "cancelled": "已取消",
+        "cancelling": "取消中",
+        "hanging": "挂起",
+        "pending": "挂起",
+        "deleting": "删除中"
+      },
+      "action": {
+        "abort": "终止",
+        "aborting": "终止中",
+        "delete": "删除",
+        "check_result": "查看结果",
+        "check_reason": "查看原因"
+      }
+    },
+    "topbar": {
+      "current_graph_space": "当前图空间:",
+      "current_graph": "当前图:",
+      "select": "请选择",
+      "loaded": "已加载",
+      "loading": "加载中",
+      "load_failed": "加载失败",
+      "not_loaded": "未加载",
+      "recent_load_time": "最近加载时间:",
+      "load_to_vermeer": "加载到Vermeer",
+      "reload_to_vermeer": "重加载到Vermeer",
+      "metadata_config": "元数据配置",
+      "metadata_tooltip": "点击可跳转到对应图的元数据配置的页面",
+      "olap_result": "是否查询OLAP结果:",
+      "get_vermeer_failed": "获取vermeer状态失败",
+      "load_vermeer_failed": "加载Vermeer任务失败"
     }
   }
 }

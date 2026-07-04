@@ -41,9 +41,11 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
+      - name: Get HugeGraph Server PR 3008 commit id
         id: get-commit
         uses: ./.github/actions/get-hugegraph-commit
+        with:
+          server-pr-number: '3008'
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -83,11 +85,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: use staged maven repo settings
-        if: ${{ env.USE_STAGE == 'true' }}
+      - name: Frontend i18n check
+        working-directory: hugegraph-hubble/hubble-fe
+        env:
+          CI: false
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          cp $HOME/.m2/settings.xml /tmp/settings.xml
-          mv -vf .github/configs/settings.xml $HOME/.m2/settings.xml
+          yarn install --frozen-lockfile --network-timeout 600000 --prefer-offline --ignore-engines
+          yarn i18n:check
 
       - name: Compile
         run: |
@@ -98,17 +103,20 @@ jobs:
       - name: Prepare env and service
         env:
           CI: false
+          COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
+          COMMIT_REF: ${{ steps.get-commit.outputs.fetch_ref }}
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="
           node -v
           yarn -v
           echo "NODE_OPTIONS: $NODE_OPTIONS"
           echo "CI: $CI"
+          echo "COMMIT_ID: $COMMIT_ID"
+          echo "COMMIT_REF: $COMMIT_REF"
           free -h || true
           echo "======================="
-          
-          COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
-        run: |
+
           python -m pip install -r ${TRAVIS_DIR}/requirements.txt
           cd hugegraph-hubble
           mvn package -Dmaven.test.skip=true
@@ -118,7 +126,37 @@ jobs:
           ./stop-hubble.sh
           cd ../../../
           pwd
-          $TRAVIS_DIR/install-hugegraph.sh $COMMIT_ID
+          $TRAVIS_DIR/install-hugegraph.sh $COMMIT_ID $COMMIT_REF
+
+      - name: Release package audit
+        env:
+          GNUPGHOME: ${{ runner.temp }}/hubble-release-gate-gpghome
+        run: |
+          HUBBLE_TARBALL="$(ls hugegraph-hubble/target/apache-hugegraph-hubble-*.tar.gz | head -n 1)"
+          if [[ -z "${HUBBLE_TARBALL}" ]]; then
+            echo "Hubble tarball not found" >&2
+            exit 1
+          fi
+
+          mkdir -p "${GNUPGHOME}"
+          chmod 700 "${GNUPGHOME}"
+          shasum -a 512 "${HUBBLE_TARBALL}" > "${HUBBLE_TARBALL}.sha512"
+          printf '%s\n' \
+            '%no-protection' \
+            'Key-Type: RSA' \
+            'Key-Length: 2048' \
+            'Subkey-Type: RSA' \
+            'Subkey-Length: 2048' \
+            'Name-Real: Hubble CI Release Gate' \
+            'Name-Email: hubble-ci-release-gate@example.invalid' \
+            'Expire-Date: 0' \
+            '%commit' \
+            > "${RUNNER_TEMP}/hubble-release-gate-key.conf"
+          gpg --batch --generate-key "${RUNNER_TEMP}/hubble-release-gate-key.conf"
+          gpg --batch --yes --armor --detach-sign "${HUBBLE_TARBALL}"
+          bash "${TRAVIS_DIR}/check-hubble-dist.sh" "${HUBBLE_TARBALL}" \
+               --require-sidecars \
+               --json-output hugegraph-hubble/target/hubble-dist-check.json
 
       - name: Unit test
         run: mvn test -P unit-test -pl hugegraph-hubble/hubble-be -ntp
@@ -127,8 +165,11 @@ jobs:
         env:
           CI: false
         run: |
-          cd hugegraph-hubble && ls
-          hubble-dist/assembly/travis/run-api-test.sh
+          cd hugegraph-hubble
+          HUBBLE_TARBALL="$(ls target/apache-hugegraph-hubble-*.tar.gz | head -n 1)"
+          HUBBLE_694_EVIDENCE_DIR=target/hubble-live-acceptance \
+            hubble-dist/assembly/travis/verify-hubble-issue-694.sh \
+            "${HUBBLE_TARBALL}" http://127.0.0.1:8080
 
       - name: Upload coverage to Codecov
         uses: ./.github/actions/upload-coverage

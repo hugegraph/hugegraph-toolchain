@@ -27,12 +27,13 @@ import {useParams} from 'react-router-dom';
 import {message, Input} from 'antd';
 import AsyncTaskDetail from '../Detail';
 import * as api from '../../../api/index';
-import _ from 'lodash';
+import {useTranslation} from 'react-i18next';
 import c from './index.module.scss';
 
 const defaultPageParams = {page: 1, pageSize: 10};
 
 const AsyncTaskHome = () => {
+    const {t} = useTranslation();
     const {taskId} = useParams();
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
     const [page, setPage] = useState(defaultPageParams.page);
@@ -66,10 +67,10 @@ const AsyncTaskHome = () => {
             setAsyncManageTaskData({records: data.records, total: data.total});
             if (status !== 200) {
                 clearInterval(timer.current);
-                message.error(asyncManageTaskListMessage || '获取异步任务失败');
+                message.error(asyncManageTaskListMessage || t('analysis.async_task.get_failed'));
             }
         },
-        [filters, pageSize, page, search, graphSpace, graph]
+        [filters, pageSize, page, search, graphSpace, graph, t]
     );
 
     useEffect(
@@ -135,7 +136,7 @@ const AsyncTaskHome = () => {
                         value={searchCache}
                         onChange={onSearchChange}
                         onSearch={onSearch}
-                        placeholder='请输入任务ID或名称'
+                        placeholder={t('analysis.async_task.search_placeholder')}
                         allowClear
                         style={{width: '215px'}}
                     />

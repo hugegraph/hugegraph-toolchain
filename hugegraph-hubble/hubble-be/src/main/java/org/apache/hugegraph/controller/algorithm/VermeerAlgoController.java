@@ -67,8 +67,7 @@ public class VermeerAlgoController extends BaseController {
         params.put("output.hg_pd_peers", pdJson);
         params.put("output.hugegraph_name", graphspace + "/" + graph + "/g");
         params.put("output.hugegraph_username", this.getUser());
-        params.put("output.hugegraph_password", (String) this.getSession(
-                "password"));
+        params.put("output.hugegraph_password", this.getCredentialPassword());
         params.put("output.hugegraph_property", body.params.get("compute" +
                 ".algorithm"));
         // input params

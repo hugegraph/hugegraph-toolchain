@@ -26,17 +26,19 @@ import TopBar from '../component/TopBar';
 import {GRAPH_ANALYSIS_MODULE} from '../../utils/constants';
 import _ from 'lodash';
 import * as api from '../../api';
+import {useTranslation} from 'react-i18next';
 
 const {GREMLIN, ALGORITHMS, ASYNCTASKS} = GRAPH_ANALYSIS_MODULE;
 
-const pageHeaderName = {
-    [GREMLIN]: '图语言分析',
-    [ALGORITHMS]: '图算法',
-    [ASYNCTASKS]: '任务管理',
+const pageHeaderNameKeys = {
+    [GREMLIN]: 'analysis.query.name',
+    [ALGORITHMS]: 'analysis.algorithm.name',
+    [ASYNCTASKS]: 'analysis.async_task.name',
 };
 
 const GraphAnalysisHome = props => {
     const {moduleName} = props;
+    const {t} = useTranslation();
 
     const [currentOlapMode, setCurrentOlapMode] = useState(false);
     const [isOlapModeLoading, setOlapModeLoading] = useState(false);
@@ -122,17 +124,18 @@ const GraphAnalysisHome = props => {
                     ));
                 }
                 else {
-                    !errMsg && message.error('获取vermeer状态失败');
+                    !errMsg && message.error(t('analysis.topbar.get_vermeer_failed'));
                 }
             })();
         },
-        []
+        [t]
     );
 
     return (
         <GraphAnalysisContext.Provider value={context}>
-            <PageHeader ghost={false} onBack={false} title={pageHeaderName[moduleName]}>
+            <PageHeader ghost={false} onBack={false} title={t(pageHeaderNameKeys[moduleName])}>
                 <TopBar
+                    moduleName={moduleName}
                     onGraphInfoChange={onGraphInfoChange}
                     showOlapSwitch={moduleName !== ASYNCTASKS}
                     showNavigationButton={moduleName !== ASYNCTASKS}

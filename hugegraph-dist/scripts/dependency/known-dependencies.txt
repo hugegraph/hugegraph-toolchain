@@ -464,8 +464,6 @@ token-provider-2.0.0.jar
 tomcat-embed-core-9.0.24.jar
 tomcat-embed-el-9.0.24.jar
 tomcat-embed-websocket-9.0.24.jar
-truelicense-core-1.33.jar
-truelicense-xml-1.33.jar
 validation-api-2.0.1.Final.jar
 websocket-api-9.4.40.v20210413.jar
 websocket-client-9.4.40.v20210413.jar

@@ -8,6 +8,7 @@
     "algorithm": {
       "name": "Graph Algorithm",
       "placeholder": "Algorithm Query",
+      "run": "Run",
       "common": {
         "instance_num": "Instance Count",
         "input_limit_edges_per_vertex": "Max Outgoing Edges",
@@ -186,7 +187,78 @@
       }
     },
     "async_task": {
-      "name": "Task Management"
+      "name": "Task Management",
+      "search_placeholder": "Enter a task ID or name",
+      "get_failed": "Failed to get async tasks",
+      "delete_failed": "Delete failed",
+      "abort_failed": "Abort failed",
+      "delete_confirm_title": "Delete Task",
+      "delete_confirm_content": "Delete this task? This cannot be undone.",
+      "batch_delete_title": "Batch Delete",
+      "batch_delete_content": "Delete the selected tasks? This cannot be undone.",
+      "selected_count": "{{count}} selected",
+      "batch_delete": "Batch Delete",
+      "column": {
+        "task_id": "Task ID",
+        "task_name": "Task Name",
+        "task_type": "Task Type",
+        "create_time": "Created At",
+        "duration": "Duration",
+        "status": "Status",
+        "action": "Action"
+      },
+      "type": {
+        "all": "All",
+        "gremlin": "Gremlin Task",
+        "algorithm": "Algorithm Task",
+        "remove_schema": "Remove Metadata",
+        "create_index": "Create Index",
+        "rebuild_index": "Rebuild Index",
+        "cypher": "Cypher Task",
+        "vermeer_load": "Vermeer Graph Load Task",
+        "vermeer_compute": "Vermeer Graph Compute Task"
+      },
+      "status": {
+        "all": "All",
+        "unknown": "Unknown",
+        "new": "Initializing",
+        "scheduling": "Scheduling",
+        "scheduled": "Scheduled",
+        "queued": "Queued",
+        "running": "Running",
+        "restoring": "Restoring",
+        "success": "Success",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "cancelling": "Cancelling",
+        "hanging": "Hanging",
+        "pending": "Pending",
+        "deleting": "Deleting"
+      },
+      "action": {
+        "abort": "Abort",
+        "aborting": "Aborting",
+        "delete": "Delete",
+        "check_result": "View Result",
+        "check_reason": "View Reason"
+      }
+    },
+    "topbar": {
+      "current_graph_space": "Current Graphspace:",
+      "current_graph": "Current Graph:",
+      "select": "Select",
+      "loaded": "Loaded",
+      "loading": "Loading",
+      "load_failed": "Load Failed",
+      "not_loaded": "Not Loaded",
+      "recent_load_time": "Last Load Time:",
+      "load_to_vermeer": "Load to Vermeer",
+      "reload_to_vermeer": "Reload to Vermeer",
+      "metadata_config": "Metadata",
+      "metadata_tooltip": "Open metadata configuration for the selected graph",
+      "olap_result": "Query OLAP Result:",
+      "get_vermeer_failed": "Failed to get Vermeer status",
+      "load_vermeer_failed": "Failed to load Vermeer task"
     }
   }
 }

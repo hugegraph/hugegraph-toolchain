@@ -101,19 +101,19 @@ const handleExpandGraph = (newData, metaData, styleConfigData, graphInstance) =>
         return id;
     });
     const saveEdgesIds = saveData.edges.map(item => {
-        const {id, label, labelCfg, itemType, loopCfg, metaConfig, properties,
+        const {id, label, rawLabel, labelCfg, itemType, loopCfg, metaConfig, properties,
             source, stateStyles, style, target, type} = item;
-        edges.push({id, label, labelCfg, itemType, loopCfg, metaConfig, properties,
+        edges.push({id, label, rawLabel, labelCfg, itemType, loopCfg, metaConfig, properties,
             source, stateStyles, style, target, type, legendType: itemType});
         return id;
     });
-    newGraphData.nodes.map(item => {
-        if (!saveNodeIds.includes(saveData)) {
+    newGraphData.nodes.forEach(item => {
+        if (!saveNodeIds.includes(item.id)) {
             nodes.push(item);
         }
     });
-    newGraphData.edges.map(item => {
-        if (!saveEdgesIds.includes(saveData)) {
+    newGraphData.edges.forEach(item => {
+        if (!saveEdgesIds.includes(item.id)) {
             edges.push(item);
         }
     });

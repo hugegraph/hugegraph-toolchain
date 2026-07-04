@@ -18,8 +18,14 @@
 export LANG=zh_CN.UTF-8
 set -ev
 
-COMMIT_ID=$1
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+    echo "Usage: $0 <commit-id> [fetch-ref]" >&2
+    exit 1
+fi
 
-"$TRAVIS_DIR"/download-hugegraph.sh "$COMMIT_ID"
+COMMIT_ID=$1
+COMMIT_REF=${2:-}
+
+"$TRAVIS_DIR"/download-hugegraph.sh "$COMMIT_ID" "$COMMIT_REF"
 "$TRAVIS_DIR"/hugegraph-server1/install-hugegraph.sh
 "$TRAVIS_DIR"/hugegraph-server2/install-hugegraph.sh

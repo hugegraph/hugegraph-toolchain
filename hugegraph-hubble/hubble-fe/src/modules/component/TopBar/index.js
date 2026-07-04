@@ -29,6 +29,7 @@ import * as api from '../../../api';
 import {format} from 'date-fns';
 import {GRAPH_LOAD_STATUS} from '../../../utils/constants';
 import {useNavigate, useParams} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 import _ from 'lodash';
 import c from './index.module.scss';
 
@@ -44,6 +45,7 @@ const {
 const TopBar = props => {
     const {
         onGraphInfoChange,
+        moduleName,
         showOlapSwitch,
         showNavigationButton,
         isOlapModeEnable,
@@ -51,8 +53,13 @@ const TopBar = props => {
         onOlapModeChange,
     } = props;
 
+    const {t} = useTranslation();
     const navigate = useNavigate();
-    const {graphSpace: graphSpaceFromParam, graph: graphFromParam} = useParams();
+    const {
+        graphSpace: graphSpaceFromParam,
+        graph: graphFromParam,
+        taskId,
+    } = useParams();
 
     const {isVermeer} = useContext(GraphAnalysisContext);
     const [graphSpaceList, setGraphSpaceList] = useState([]);
@@ -80,13 +87,13 @@ const TopBar = props => {
         }
         switch (status) {
             case LOADED:
-                return <Tag color="success">已加载</Tag>;
+                return <Tag color="success">{t('analysis.topbar.loaded')}</Tag>;
             case LOADING:
-                return <Tag color="processing">加载中</Tag>;
+                return <Tag color="processing">{t('analysis.topbar.loading')}</Tag>;
             case ERROR:
-                return <Tag color="error">加载失败</Tag>;
+                return <Tag color="error">{t('analysis.topbar.load_failed')}</Tag>;
             case CREATED:
-                return <Tag color="default">未加载</Tag>;
+                return <Tag color="default">{t('analysis.topbar.not_loaded')}</Tag>;
             default:
                 return null;
         }
@@ -177,6 +184,27 @@ const TopBar = props => {
         [currentGraph, currentGraphSpace, onGraphInfoChange]
     );
 
+    useEffect(
+        () => {
+            if (taskId || !moduleName || !currentGraphSpace || !currentGraph?.name) {
+                return;
+            }
+            if (graphSpaceFromParam === currentGraphSpace && graphFromParam === currentGraph.name) {
+                return;
+            }
+            navigate(`/${moduleName}/${currentGraphSpace}/${currentGraph.name}`, {replace: true});
+        },
+        [
+            currentGraph.name,
+            currentGraphSpace,
+            graphFromParam,
+            graphSpaceFromParam,
+            moduleName,
+            navigate,
+            taskId,
+        ]
+    );
+
     const handleGraphSpaceChange = useCallback(
         value => {
             setCurrentGraphSpace(value);
@@ -215,7 +243,7 @@ const TopBar = props => {
         const res = await api.analysis.loadVermeerTask(params);
         const {status, message: errMsg} = res || {};
         if (status !== 200) {
-            !errMsg && message.error('加载Vermeer任务失败');
+            !errMsg && message.error(t('analysis.topbar.load_vermeer_failed'));
             setLoadRequestLoading(false);
         }
         else {
@@ -232,7 +260,7 @@ const TopBar = props => {
 
     return (
         <div className={c.pageHeader}>
-            <span>当前图空间:</span>
+            <span>{t('analysis.topbar.current_graph_space')}</span>
             <Select
                 value={currentGraphSpace}
                 onChange={handleGraphSpaceChange}
@@ -241,7 +269,7 @@ const TopBar = props => {
                 bordered={false}
                 loading={isGraphSpaceLoading}
             />
-            <span>当前图:</span>
+            <span>{t('analysis.topbar.current_graph')}</span>
             <Select
                 popupClassName={c.currentGraphSelect}
                 value={currentGraph.name}
@@ -250,7 +278,7 @@ const TopBar = props => {
                 style={{width: 120}}
                 bordered={false}
                 loading={isGraphLoading}
-                placeholder="请选择"
+                placeholder={t('analysis.topbar.select')}
                 optionLabelProp="value"
             />
             {
@@ -262,11 +290,14 @@ const TopBar = props => {
                         {
                             currentGraphLoadTime && (
                                 <span className={c.graphLoadTime}>
-                                    <span>最近加载时间:</span><span>{renderLoadTime()}</span>
+                                    <span>{t('analysis.topbar.recent_load_time')}</span>
+                                    <span>{renderLoadTime()}</span>
                                 </span>)
                         }
                         <Button size='small' onClick={onLoadBtnClick} disabled={currentGraphStatus === LOADING}>
-                            {currentGraphStatus === LOADED ? '重加载' : '加载'}到Vermeer
+                            {currentGraphStatus === LOADED
+                                ? t('analysis.topbar.reload_to_vermeer')
+                                : t('analysis.topbar.load_to_vermeer')}
                         </Button>
                     </span>
                 )
@@ -279,9 +310,13 @@ const TopBar = props => {
                             onClick={handleClickNavigate}
                             disabled={_.isEmpty(currentGraph)}
                         >
-                            <span>元数据配置</span>
+                            <span>{t('analysis.topbar.metadata_config')}</span>
                         </Button>
-                        <Tooltip placement="bottom" title={'点击可跳转到对应图的元数据配置的页面'} className={c.questionCircleIcon}>
+                        <Tooltip
+                            placement="bottom"
+                            title={t('analysis.topbar.metadata_tooltip')}
+                            className={c.questionCircleIcon}
+                        >
                             <QuestionCircleOutlined />
                         </Tooltip>
                     </>
@@ -290,11 +325,11 @@ const TopBar = props => {
             {
                 showOlapSwitch && (
                     <div className={c.olapSwitchButton}>
-                        <span className={c.olapSwitchTitle}>是否查询OLAP结果:</span>
+                        <span className={c.olapSwitchTitle}>{t('analysis.topbar.olap_result')}</span>
                         <Switch
                             checked={isOlapModeEnable}
-                            checkedChildren="开启"
-                            unCheckedChildren="关闭"
+                            checkedChildren={t('common.verify.yes')}
+                            unCheckedChildren={t('common.verify.no')}
                             onChange={handleSwitchOlapMode}
                             loading={isOlapModeLoading}
                         />
