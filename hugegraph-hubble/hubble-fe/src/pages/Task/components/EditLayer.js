@@ -24,19 +24,21 @@ import {
     message,
 } from 'antd';
 import {useEffect, useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
 import * as api from '../../../api';
 
 const EditLayer = ({visible, onCancel, data, refresh}) => {
+    const {t} = useTranslation();
     const [form] = Form.useForm();
     const [syncType, setSyncType] = useState('');
     const datasourceType = data?.ingestion_mapping?.structs[0]?.input?.type;
     const scheduleOptions = datasourceType === 'KAFKA'
-        ? [{label: '实时执行', value: 'REALTIME'}]
+        ? [{label: t('task.sync.realtime'), value: 'REALTIME'}]
         : [
-            {label: '执行一次', value: 'ONCE'},
-            {label: '实时执行', value: 'REALTIME', disabled: true},
-            {label: '周期执行', value: 'CRON'},
+            {label: t('task.sync.once'), value: 'ONCE'},
+            {label: t('task.sync.realtime'), value: 'REALTIME', disabled: true},
+            {label: t('task.sync.cron'), value: 'CRON'},
         ];
 
     const handleSyncType = useCallback(e => {
@@ -51,7 +53,7 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
 
             api.manage.updateTask(data.task_id, values).then(res => {
                 if (res.status === 200) {
-                    message.success('修改成功');
+                    message.success(t('task.edit.update_success'));
                     onCancel();
                     refresh();
                     return;
@@ -60,7 +62,7 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 message.error(res.message);
             });
         });
-    }, [data.task_id, form, onCancel, refresh, syncType]);
+    }, [data.task_id, form, onCancel, refresh, syncType, t]);
 
     useEffect(() => {
         if (!visible) {
@@ -80,7 +82,7 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
 
     return (
         <Modal
-            title='编辑任务'
+            title={t('task.edit_title_edit')}
             onCancel={onCancel}
             open={visible}
             onOk={onFinish}
@@ -92,10 +94,14 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 // initialValues={data}
                 preserve={false}
             >
-                <Form.Item label='任务名称' name='task_name' rules={[rules.required()]}>
-                    <Input placeholder='请输入任务名称' showCount maxLength={20} />
+                <Form.Item label={t('task.edit.name')} name='task_name' rules={[rules.required()]}>
+                    <Input placeholder={t('task.edit.name_placeholder')} showCount maxLength={20} />
                 </Form.Item>
-                <Form.Item label='同步方式' name='task_schedule_type' rules={[rules.required()]}>
+                <Form.Item
+                    label={t('task.edit.sync_type')}
+                    name='task_schedule_type'
+                    rules={[rules.required()]}
+                >
                     <Radio.Group
                         options={scheduleOptions}
                         onChange={handleSyncType}
@@ -105,12 +111,12 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 {syncType === 'CRON' && (
                     <Form.Item
                         wrapperCol={{offset: 4, span: 14}}
-                        extra='quartz表达式：秒 分钟 小时 天 月 星期 年(选填)'
+                        extra={t('task.edit.cron_extra')}
                         name='task_schedule_extend'
-                        rules={[rules.required('请输入调度信息'), rules.isCron]}
+                        rules={[rules.required(t('task.edit.cron_required')), rules.isCron]}
                         hidden={syncType !== 'CRON'}
                     >
-                        <Input placeholder='定时 * 5 * * * * (*)' />
+                        <Input placeholder={t('task.edit.cron_placeholder')} />
                     </Form.Item>
                 )}
             </Form>

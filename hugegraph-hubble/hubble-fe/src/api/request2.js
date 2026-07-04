@@ -21,22 +21,56 @@ import {message} from 'antd';
 import JSONbig from 'json-bigint';
 import _ from 'lodash';
 import qs from 'qs';
+import i18n from '../i18n';
+import * as user from '../utils/user';
+
+const isJsonResponse = headers => {
+    const contentType = headers?.['content-type'] || headers?.['Content-Type'] || '';
+    return contentType.includes('application/json');
+};
+
+const parseResponse = (data, headers) => {
+    if (!data || !isJsonResponse(headers)) {
+        return data;
+    }
+    return JSONbig.parse(data);
+};
+
+const redirectToLogin = () => {
+    user.clearLogin();
+    if (window.location.pathname !== '/login') {
+        const redirect = `${window.location.pathname}${window.location.search}`;
+        sessionStorage.setItem('redirect', redirect);
+        window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
+    }
+};
+
+const showRequestError = res => {
+    message.error(i18n.t('request.error', {
+        message: res?.message ?? '',
+        path: res?.path ?? '',
+    }));
+};
+
+const isUnauthorizedError = error => {
+    return error.response?.status === 401
+           || error.response?.data?.status === 401
+           || error.message?.includes('status code 401');
+};
 
 const instance = axios.create({
     baseURL: '/api/v1.3',
     withCredentials: true,
-    // 后端请求时延为30s，30s后后端统一处理返回400报错，这里设置31s为了尽可能不走timeout逻辑拿到超时报错。
+    // Backend times out after 30s; keep this slightly higher to receive its error body.
     timeout: 31000,
-    transformResponse: [data => {
-        return JSONbig.parse(data);
-    }],
+    transformResponse: [parseResponse],
 });
 
 instance.interceptors.request.use(
     config => {
         if (!config.headers['Content-Type']) {
-            // config.data = JSON.stringify(config.data);
             config.headers = {
+                ...config.headers,
                 'Content-Type': 'application/x-www-form-urlencoded',
             };
         }
@@ -49,61 +83,60 @@ instance.interceptors.request.use(
 
 instance.interceptors.response.use(
     response => {
-        if (response.data.status !== 200 && response.data.status !== 401) {
+        if (response.status === 401 || response.data?.status === 401) {
+            redirectToLogin();
+        }
+        else if (response.data?.status !== 200) {
             if (!_.isEmpty(response.data.message)) {
                 message.error(response.data.message);
             }
         }
-        else if (response.data.status === 401) {
-            // message.error('授权过期');
-            localStorage.setItem('user', '');
-            // storageFn.removeStorage(['lg','userInfo','tenant'])
-            setTimeout(() => {
-                window.location = '/check';
-            }, 700);
-        }
         return response;
     },
     error => {
-        if (!error.response) {
-            setTimeout(() => {
-                window.location = '/check';
-            }, 700);
-
-            return;
+        if (isUnauthorizedError(error)) {
+            redirectToLogin();
+            return {data: {status: 401, message: 'Unauthorized'}};
         }
         const res = error.response?.data;
-        message.error(`请求出错：${res.message ?? ''}，path：${res.path}`);
+        showRequestError(res);
+        return {data: {status: 500, message: res?.message ?? i18n.t('request.failed')}};
     }
 );
 
 const request = {};
 
+const responseData = response => {
+    const data = response?.data;
+    if (data?.status === 401) {
+        redirectToLogin();
+    }
+    return data;
+};
+
 request.get = async (url, params) => {
     const resposne = await instance.get(`${url}`, params);
-    return resposne?.data;
+    return responseData(resposne);
 };
 
 request.post = async (url, params, config) => {
-    console.log(params, qs.stringify(params));
     const resposne = await instance.post(
         `${url}`,
         qs.stringify(params),
         config
     );
 
-    return resposne?.data;
+    return responseData(resposne);
 };
 
 request.post1 = async (url, params, config) => {
-    console.log(params, qs.stringify(params));
     const resposne = await instance.post(
         `${url}`,
         params,
         config
     );
 
-    return resposne?.data;
+    return responseData(resposne);
 };
 
 request.put = async (url, params) => {
@@ -112,7 +145,7 @@ request.put = async (url, params) => {
         params
     );
 
-    return resposne?.data;
+    return responseData(resposne);
 };
 
 request.delete = async (url, params) => {
@@ -121,7 +154,7 @@ request.delete = async (url, params) => {
         {params}
     );
 
-    return resposne?.data;
+    return responseData(resposne);
 };
 
 export default request;

@@ -100,11 +100,27 @@ public abstract class BaseController {
     }
 
     protected String getUser() {
-        return (String) getSession("username");
+        return (String) getSession(Constant.USERNAME_KEY);
     }
 
     protected void setUser(String username) {
-        setSession("username", username);
+        setSession(Constant.USERNAME_KEY, username);
+    }
+
+    protected void setCredentialPassword(String password) {
+        setSession(Constant.CREDENTIAL_PASSWORD_KEY, password);
+        setSession(Constant.CREDENTIAL_EXPIRES_AT_KEY,
+                   System.currentTimeMillis() + Constant.CREDENTIAL_TTL_MILLIS);
+    }
+
+    protected String getCredentialPassword() {
+        Long expiresAt = (Long) getSession(Constant.CREDENTIAL_EXPIRES_AT_KEY);
+        if (expiresAt == null || expiresAt <= System.currentTimeMillis()) {
+            delSession(Constant.CREDENTIAL_PASSWORD_KEY);
+            delSession(Constant.CREDENTIAL_EXPIRES_AT_KEY);
+            return null;
+        }
+        return (String) getSession(Constant.CREDENTIAL_PASSWORD_KEY);
     }
 
     protected void delSession(String key) {
@@ -126,6 +142,13 @@ public abstract class BaseController {
 
     protected void delToken() {
         this.delSession(Constant.TOKEN_KEY);
+    }
+
+    protected void clearAuthSession() {
+        this.delSession(Constant.TOKEN_KEY);
+        this.delSession(Constant.USERNAME_KEY);
+        this.delSession(Constant.CREDENTIAL_PASSWORD_KEY);
+        this.delSession(Constant.CREDENTIAL_EXPIRES_AT_KEY);
     }
 
     protected HugeClient authClient(String graphSpace, String graph) {

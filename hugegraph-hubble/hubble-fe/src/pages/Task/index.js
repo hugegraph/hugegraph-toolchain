@@ -63,15 +63,30 @@ const DetailTip = ({row}) => {
                         <Space>
                             <Badge
                                 status="success"
-                                text={<span>{t('task.detail.success')}: {job_summary?.success_count ?? 0}</span>}
+                                text={(
+                                    <span>
+                                        {t('task.detail.success')}:
+                                        {job_summary?.success_count ?? 0}
+                                    </span>
+                                )}
                             />
                             <Badge
                                 status="error"
-                                text={<span>{t('task.detail.failed')}: {job_summary?.failed_count ?? 0}</span>}
+                                text={(
+                                    <span>
+                                        {t('task.detail.failed')}:
+                                        {job_summary?.failed_count ?? 0}
+                                    </span>
+                                )}
                             />
                             <Badge
                                 status="processing"
-                                text={<span>{t('task.detail.running')}: {job_summary?.running_count ?? 0}</span>}
+                                text={(
+                                    <span>
+                                        {t('task.detail.running')}:
+                                        {job_summary?.running_count ?? 0}
+                                    </span>
+                                )}
                             />
                         </Space>
                     </div>)
@@ -108,6 +123,8 @@ const Task = () => {
     const [metricsData, setMetricsData] = useState({});
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const sourceTypes = sourceType(t);
+    const syncTypes = syncType(t);
 
     const search = useCallback(val => {
         setSearchName(val);
@@ -129,7 +146,7 @@ const Task = () => {
 
             message.error(t('common.msg.enable_fail'));
         });
-    }, [refresh]);
+    }, [refresh, t]);
 
     const disableTask = useCallback(id => {
         api.manage.disableTask(id).then(res => {
@@ -142,7 +159,7 @@ const Task = () => {
 
             message.error(t('common.msg.disable_fail'));
         });
-    }, [refresh]);
+    }, [refresh, t]);
 
     const deleteTask = id => {
         setLoading(true);
@@ -197,7 +214,8 @@ const Task = () => {
                     return t('common.label.unknown');
                 }
                 const type = structs[0]?.input?.type;
-                return sourceType.find(item => item.value === type)?.label ?? t('common.label.unknown');
+                return sourceTypes.find(item => item.value === type)?.label
+                       ?? t('common.label.unknown');
             },
         },
         {
@@ -229,7 +247,7 @@ const Task = () => {
             title: t('task.col.sync_type'),
             dataIndex: 'task_schedule_type',
             render: val => {
-                return syncType.find(item => item.value === val)?.label ?? val;
+                return syncTypes.find(item => item.value === val)?.label ?? val;
             },
         },
         {
@@ -256,7 +274,12 @@ const Task = () => {
                                 </Tooltip>)}
                         </a> */}
                         <a>{row.task_schedule_status === 'ENABLE'
-                            ? <RunningText status='enable' data={row.task_id} onClick={disableTask} />
+                            ? (
+                                <RunningText
+                                    status='enable'
+                                    data={row.task_id}
+                                    onClick={disableTask}
+                                />)
                             : <RunningText data={row.task_id} onClick={enableTask} />}
                         </a>
                         {row.task_schedule_status === 'DISABLE'
@@ -294,7 +317,6 @@ const Task = () => {
 
         api.manage.getMetricsTask().then(res => {
             if (res.status === 200) {
-                // console.log(res);
                 setMetricsData(res.data);
                 return;
             }
@@ -321,14 +343,21 @@ const Task = () => {
             >
                 <TopStatistic data={metricsData} />
                 <Row justify='end' style={{paddingTop: 16}}>
-                    <Col><Input.Search placeholder={t('task.search_placeholder')} onSearch={search} /></Col>
+                    <Col>
+                        <Input.Search
+                            placeholder={t('task.search_placeholder')}
+                            onSearch={search}
+                        />
+                    </Col>
                 </Row>
             </PageHeader>
 
             <div className='container'>
                 <Spin spinning={loading}>
                     <TableHeader>
-                        <Button type='primary' onClick={handleBack}>创建任务</Button>
+                        <Button type='primary' onClick={handleBack}>
+                            {t('task.create')}
+                        </Button>
                     </TableHeader>
                     <Table
                         columns={columns}

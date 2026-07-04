@@ -436,6 +436,10 @@ public class LoadTaskService {
             } else {
                 assert vl.getIdStrategy().isPrimaryKey();
                 List<String> primaryKeys = vl.getPrimaryKeys();
+                if (idFields == null || idFields.isEmpty()) {
+                    idFields = this.inferPrimaryKeyFields(fieldMappings,
+                                                          primaryKeys);
+                }
                 Ex.check(idFields.size() >= 1 &&
                          idFields.size() == primaryKeys.size(),
                          "When the ID strategy is PRIMARY_KEY, you must " +
@@ -466,6 +470,20 @@ public class LoadTaskService {
             vMappings.add(vMapping);
         }
         return vMappings;
+    }
+
+    private List<String> inferPrimaryKeyFields(Map<String, String> fieldMappings,
+                                               List<String> primaryKeys) {
+        List<String> idFields = new ArrayList<>();
+        for (String primaryKey : primaryKeys) {
+            for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
+                if (primaryKey.equals(entry.getValue())) {
+                    idFields.add(entry.getKey());
+                    break;
+                }
+            }
+        }
+        return idFields;
     }
 
     private List<org.apache.hugegraph.loader.mapping.EdgeMapping>

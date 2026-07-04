@@ -19,6 +19,7 @@
 package org.apache.hugegraph.config;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
@@ -29,14 +30,16 @@ import org.mitre.dsmiley.httpproxy.ProxyServlet;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 
 public class IngestionProxyServlet extends ProxyServlet {
+
     @Override
     protected String rewriteQueryStringFromRequest(
             HttpServletRequest servletRequest, String queryString) {
-        String username =
-                (String) servletRequest.getSession().getAttribute("username");
+        String username = this.sessionString(servletRequest,
+                                             Constant.USERNAME_KEY);
 
         String requestQueryString = servletRequest.getQueryString();
 
@@ -53,20 +56,32 @@ public class IngestionProxyServlet extends ProxyServlet {
     protected HttpResponse doExecute(HttpServletRequest servletRequest,
                                      HttpServletResponse servletResponse,
                                      HttpRequest proxyRequest) throws IOException {
-        String username =
-                (String) servletRequest.getSession().getAttribute("username");
-
-        if (username == null) {
+        if (!this.authenticated(servletRequest)) {
             // check user login
             HttpResponse response =  new BasicHttpResponse(HttpVersion.HTTP_1_1,
-                                                           Constant.STATUS_OK,
-                                                           "{\"status\": 401}");
+                                                           Constant.STATUS_UNAUTHORIZED,
+                                                           "Unauthorized");
 
-            response.setEntity(new StringEntity("{\"status\": 401}"));
+            response.setHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+            response.setEntity(new StringEntity("{\"status\": 401}",
+                                                StandardCharsets.UTF_8));
 
             return response;
         }
 
         return super.doExecute(servletRequest, servletResponse, proxyRequest);
+    }
+
+    private boolean authenticated(HttpServletRequest servletRequest) {
+        return StringUtils.isNotBlank(this.sessionString(servletRequest,
+                                                        Constant.USERNAME_KEY)) &&
+               StringUtils.isNotBlank(this.sessionString(servletRequest,
+                                                        Constant.TOKEN_KEY));
+    }
+
+    private String sessionString(HttpServletRequest servletRequest,
+                                 String key) {
+        Object value = servletRequest.getSession().getAttribute(key);
+        return value instanceof String ? (String) value : null;
     }
 }

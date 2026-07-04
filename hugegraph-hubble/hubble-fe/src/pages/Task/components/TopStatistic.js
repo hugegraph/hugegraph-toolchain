@@ -18,6 +18,7 @@
 
 import {Row, Col} from 'antd';
 import style from './index.module.scss';
+import {useTranslation} from 'react-i18next';
 
 const CardBox = ({title, listItems}) => {
 
@@ -39,42 +40,55 @@ const CardBox = ({title, listItems}) => {
 };
 
 const TopStatistic = ({data}) => {
+    const {t} = useTranslation();
 
     return (
         <Row className={style.row}>
             <Col span={5}>
                 <CardBox
-                    title='实时任务'
+                    title={t('task.statistic.realtime')}
                     listItems={[
-                        {label: '最大并发', value: data.total_realtime_size},
+                        {
+                            label: t('task.statistic.max_concurrency'),
+                            value: data.total_realtime_size,
+                        },
                     ]}
                 />
             </Col>
             <Col span={5}>
                 <CardBox
-                    title='非实时任务'
+                    title={t('task.statistic.offline')}
                     listItems={[
-                        {label: '最大并发', value: data.total_other_size},
+                        {
+                            label: t('task.statistic.max_concurrency'),
+                            value: data.total_other_size,
+                        },
                     ]}
                 />
             </Col>
             <Col span={7}>
                 <CardBox
-                    title='待执行'
+                    title={t('task.statistic.pending')}
                     listItems={[
-                        {label: '一次性任务', value: data?.todo?.ONCE},
-                        {label: '周期任务', value: data?.todo?.CRON},
-                        {label: '实时任务', value: data?.todo?.REALTIME},
+                        {label: t('task.statistic.once'), value: data?.todo?.ONCE},
+                        {label: t('task.statistic.cron'), value: data?.todo?.CRON},
+                        {
+                            label: t('task.statistic.realtime_task'),
+                            value: data?.todo?.REALTIME,
+                        },
                     ]}
                 />
             </Col>
             <Col span={7} className={style.last}>
                 <CardBox
-                    title='正在执行'
+                    title={t('task.statistic.executing')}
                     listItems={[
-                        {label: '一次性任务', value: data?.running?.ONCE},
-                        {label: '周期任务', value: data?.running?.CRON},
-                        {label: '实时任务', value: data?.running?.REALTIME},
+                        {label: t('task.statistic.once'), value: data?.running?.ONCE},
+                        {label: t('task.statistic.cron'), value: data?.running?.CRON},
+                        {
+                            label: t('task.statistic.realtime_task'),
+                            value: data?.running?.REALTIME,
+                        },
                     ]}
                 />
             </Col>

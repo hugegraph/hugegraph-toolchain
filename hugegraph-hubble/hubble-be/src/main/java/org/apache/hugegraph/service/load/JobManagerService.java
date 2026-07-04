@@ -89,28 +89,7 @@ public class JobManagerService {
         Page<JobManager> page = new Page<>(pageNo, pageSize);
         IPage<JobManager> list = this.mapper.selectPage(page, query);
         list.getRecords().forEach(task -> {
-            if (task.getJobStatus() == JobStatus.LOADING) {
-                List<LoadTask> tasks = this.taskService.taskListByJob(task.getId());
-                JobStatus status = JobStatus.SUCCESS;
-                for (LoadTask loadTask : tasks) {
-                    if (loadTask.getStatus().inRunning() ||
-                        loadTask.getStatus() == LoadStatus.PAUSED ||
-                        loadTask.getStatus() == LoadStatus.STOPPED) {
-                        status = JobStatus.LOADING;
-                        break;
-                    }
-                    if (loadTask.getStatus() == LoadStatus.FAILED) {
-                        status = JobStatus.FAILED;
-                        break;
-                    }
-                }
-
-                if (status == JobStatus.SUCCESS ||
-                    status == JobStatus.FAILED) {
-                    task.setJobStatus(status);
-                    this.update(task);
-                }
-            }
+            this.refreshStatus(task);
             Date endDate = task.getJobStatus() == JobStatus.FAILED ||
                            task.getJobStatus() == JobStatus.SUCCESS ?
                            task.getUpdateTime() : HubbleUtil.nowDate();
@@ -129,7 +108,38 @@ public class JobManagerService {
             query.like("job_name", content);
         }
         query.orderByDesc("create_time");
-        return this.mapper.selectPage(new Page<>(pageNo, pageSize), query);
+        IPage<JobManager> list = this.mapper.selectPage(new Page<>(pageNo,
+                                                                   pageSize),
+                                                        query);
+        list.getRecords().forEach(this::refreshStatus);
+        return list;
+    }
+
+    public void refreshStatus(JobManager task) {
+        if (task == null || task.getJobStatus() != JobStatus.LOADING) {
+            return;
+        }
+
+        List<LoadTask> tasks = this.taskService.taskListByJob(task.getId());
+        JobStatus status = JobStatus.SUCCESS;
+        for (LoadTask loadTask : tasks) {
+            if (loadTask.getStatus().inRunning() ||
+                loadTask.getStatus() == LoadStatus.PAUSED ||
+                loadTask.getStatus() == LoadStatus.STOPPED) {
+                status = JobStatus.LOADING;
+                break;
+            }
+            if (loadTask.getStatus() == LoadStatus.FAILED) {
+                status = JobStatus.FAILED;
+                break;
+            }
+        }
+
+        if (status == JobStatus.SUCCESS || status == JobStatus.FAILED) {
+            task.setJobStatus(status);
+            task.setUpdateTime(HubbleUtil.nowDate());
+            this.update(task);
+        }
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

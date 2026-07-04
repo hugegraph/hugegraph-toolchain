@@ -135,7 +135,7 @@ public class ExceptionAdvisor {
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Response exceptionHandler(UnauthorizedException e) {
         log.info("Log UnauthorizedException: ", e);
         String message = e.getMessage();

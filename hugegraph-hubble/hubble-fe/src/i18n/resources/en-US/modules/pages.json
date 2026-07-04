@@ -276,6 +276,18 @@
     "execute": "Run",
     "edit_title_create": "Create Task",
     "edit_title_edit": "Edit Task",
+    "create": "Create Task",
+    "source": {
+      "file": "Local Upload",
+      "hdfs": "HDFS",
+      "kafka": "Kafka",
+      "jdbc": "JDBC"
+    },
+    "sync": {
+      "once": "Run Once",
+      "realtime": "Realtime",
+      "cron": "Scheduled"
+    },
     "col": {
       "name": "Task Name",
       "source_type": "Source Type",
@@ -290,7 +302,15 @@
       "total": "Total",
       "running": "Running",
       "success": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "realtime": "Realtime Tasks",
+      "offline": "Offline Tasks",
+      "pending": "Pending",
+      "executing": "Running",
+      "max_concurrency": "Max Concurrency",
+      "once": "One-time Tasks",
+      "cron": "Scheduled Tasks",
+      "realtime_task": "Realtime Tasks"
     },
     "detail": {
       "title": "Task Detail",
@@ -308,6 +328,12 @@
     },
     "edit": {
       "name": "Task Name",
+      "name_placeholder": "Enter task name",
+      "sync_type": "Sync Type",
+      "cron_extra": "Quartz expression: seconds minutes hours day month week year (optional)",
+      "cron_required": "Enter schedule information",
+      "cron_placeholder": "Schedule * 5 * * * * (*)",
+      "update_success": "Updated successfully",
       "graphspace": "Graph Space",
       "graph": "Graph",
       "source": "Data Source",
@@ -465,6 +491,8 @@
     "submit": "Sign In",
     "username": "Username",
     "password": "Password",
+    "username_required": "Please enter your username.",
+    "password_required": "Please enter your password.",
     "title": "Sign in to HugeGraph"
   }
 }

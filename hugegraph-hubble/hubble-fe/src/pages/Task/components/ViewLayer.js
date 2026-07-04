@@ -24,8 +24,10 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import * as api from '../../../api';
 import ReactJsonView from 'react-json-view';
+import {useTranslation} from 'react-i18next';
 
 const ViewLayer = ({visible, onCancel, task_id}) => {
+    const {t} = useTranslation();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -50,7 +52,7 @@ const ViewLayer = ({visible, onCancel, task_id}) => {
 
     return (
         <Modal
-            title='查看任务'
+            title={t('task.view.title')}
             onCancel={onCancel}
             open={visible}
             width={600}
@@ -58,28 +60,6 @@ const ViewLayer = ({visible, onCancel, task_id}) => {
             destroyOnClose
         >
             <Spin spinning={loading}>
-                {/* {data && (
-                    <Form
-                        labelCol={{span: 4}}
-                        form={form}
-                        // initialValues={data}
-                        preserve={false}
-                    >
-                        <Form.Item label='任务名称'>{data.task_name}</Form.Item>
-                        <Form.Item label='数据源类型'>
-                            {sourceType.find(item =>
-                                item.value === getStruct(data).input?.type)?.label ?? ''}
-                        </Form.Item>
-                        <Form.Item label='目标图空间'>{data.ingestion_option.graphspace}</Form.Item>
-                        <Form.Item label='目标图'>{data.ingestion_option.graph}</Form.Item>
-                        <Form.Item label='同步方式'>
-                            {syncType.find(item => item.value === data.task_schedule_type)?.label ?? ''}
-                            {data.task_schedule_extend ? `(${data.task_schedule_extend})` : ''}
-                        </Form.Item>
-                        <Form.Item label='导入时间'>{data.create_time}</Form.Item>
-                        <Form.Item label='创建人'>{data.creator}</Form.Item>
-                    </Form>
-                )} */}
                 {data && (
                     <div style={{height: 400, overflow: 'scroll'}}>
                         <ReactJsonView

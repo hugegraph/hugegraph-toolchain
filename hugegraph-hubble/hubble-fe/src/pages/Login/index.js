@@ -21,38 +21,72 @@ import {Button, Form, Input, Row, Col} from 'antd';
 import Logo from '../../assets/logo.png';
 import style from './index.module.scss';
 import * as api from '../../api';
-import {useNavigate} from 'react-router-dom';
+import {useLocation} from 'react-router-dom';
 import * as user from '../../utils/user';
 import * as configUtil from '../../utils/config';
-import {useCallback} from 'react';
+import {useCallback, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
+
+const LOGIN_PATH = '/login';
+const UNSAFE_REDIRECT_RE = /[\x00-\x1F\x7F\\]/;
+
+const getSafeRedirect = redirect => {
+    if (!redirect || !redirect.startsWith('/') || UNSAFE_REDIRECT_RE.test(redirect)) {
+        return '/';
+    }
+
+    try {
+        const target = new URL(redirect, window.location.origin);
+        if (target.origin !== window.location.origin || target.pathname === LOGIN_PATH) {
+            return '/';
+        }
+        return `${target.pathname}${target.search}${target.hash}`;
+    }
+    catch {
+        return '/';
+    }
+};
 
 const Login = () => {
     const [form] = Form.useForm();
-    const navigate = useNavigate();
+    const location = useLocation();
+    const {t} = useTranslation();
 
-    const onFinish = useCallback(() => {
-        // console.log(form.getFieldsValue());
-        form.validateFields().then(value => {
-            api.auth.login(value).then(res => {
-                if (res.status === 200) {
-                    localStorage.setItem('user', value.user_name);
-                    user.setUser(res.data);
-                    // Fetch deployment mode config before navigating
-                    api.config.getConfig().then(configRes => {
-                        if (configRes.status === 200) {
-                            configUtil.setConfig(configRes.data);
-                        }
-                        navigate(sessionStorage.getItem('redirect') ?? '/');
-                        sessionStorage.removeItem('redirect');
-                    }).catch(() => {
-                        // If config fetch fails, proceed with defaults
-                        navigate(sessionStorage.getItem('redirect') ?? '/');
-                        sessionStorage.removeItem('redirect');
-                    });
-                }
-            });
-        });
-    }, [form, navigate]);
+    useEffect(() => {
+        const queryRedirect = new URLSearchParams(location.search).get('redirect');
+        if (getSafeRedirect(queryRedirect) === queryRedirect) {
+            sessionStorage.setItem('redirect', queryRedirect);
+        }
+    }, [location.search]);
+
+    const navigateAfterLogin = useCallback(() => {
+        const queryRedirect = new URLSearchParams(location.search).get('redirect');
+        const redirect = queryRedirect || sessionStorage.getItem('redirect');
+        const safeRedirect = getSafeRedirect(redirect);
+
+        sessionStorage.removeItem('redirect');
+        window.location.replace(safeRedirect);
+    }, [location.search]);
+
+    const onFinish = useCallback(async value => {
+        const res = await api.auth.login(value);
+        if (res.status !== 200) {
+            return;
+        }
+
+        localStorage.setItem('user', value.user_name);
+        user.setUser(res.data);
+        try {
+            const configRes = await api.config.getConfig();
+            if (configRes.status === 200) {
+                configUtil.setConfig(configRes.data);
+            }
+        }
+        finally {
+            navigateAfterLogin();
+        }
+    }, [navigateAfterLogin]);
+
     return (
         <div className={style.loginContainer}>
             <Form
@@ -62,33 +96,38 @@ const Login = () => {
                 form={form}
             >
                 <Row>
-                    <Col span={24} className={style.title}><img src={Logo} alt='' /> | Admin Portal</Col>
+                    <Col span={24} className={style.title}>
+                        <img src={Logo} alt='' /> | {t('login.title')}
+                    </Col>
                 </Row>
                 <Form.Item
                     name="user_name"
-                    rules={[{required: true, message: 'Please input your Username!'}]}
+                    rules={[{required: true, message: t('login.username_required')}]}
                 >
-                    <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="Username" />
+                    <Input
+                        prefix={<UserOutlined className="site-form-item-icon" />}
+                        placeholder={t('login.username')}
+                    />
                 </Form.Item>
                 <Form.Item
                     name="user_password"
-                    rules={[{required: true, message: 'Please input your Password!'}]}
+                    rules={[{required: true, message: t('login.password_required')}]}
                 >
                     <Input
                         prefix={<LockOutlined className="site-form-item-icon" />}
                         type="password"
-                        placeholder="Password"
+                        placeholder={t('login.password')}
                     />
                 </Form.Item>
 
                 <Form.Item>
-                    <Button type="primary" htmlType="submit" style={{width: '100%'}}>
-                        登录
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        style={{width: '100%'}}
+                    >
+                        {t('login.submit')}
                     </Button>
-                    <Row justify='space-between'>
-                        {/* <Col className={style.left}>更改密码</Col> */}
-                        {/* <Col className={style.right}>上次登录时间：2022-06-24 10:56:17</Col> */}
-                    </Row>
                 </Form.Item>
             </Form>
         </div>

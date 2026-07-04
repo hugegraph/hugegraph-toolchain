@@ -161,11 +161,11 @@ public class FileMappingService {
                HubbleUtil.nowTime().getEpochSecond();
     }
 
-    public FileUploadResult uploadFile(MultipartFile srcFile, int index,
-                                       String dirPath) {
+    public FileUploadResult uploadFile(MultipartFile srcFile, String fileName,
+                                       int index, String dirPath) {
         FileUploadResult result = new FileUploadResult();
         // Current part saved path
-        String partName = srcFile.getOriginalFilename();
+        String partName = fileName;
         result.setName(partName);
         result.setSize(srcFile.getSize());
 
@@ -206,7 +206,18 @@ public class FileMappingService {
 
         File newFile = new File(dir.getPath() + ".all");
         File destFile = new File(dir.getPath());
+        if (newFile.exists()) {
+            try {
+                FileUtils.forceDelete(newFile);
+            } catch (IOException e) {
+                log.error("Failed to delete stale merged upload file {}",
+                          newFile, e);
+                throw new InternalException("load.upload.delete-temp-dir.failed",
+                                            e);
+            }
+        }
         if (partFiles.length == 1) {
+            this.checkPartFileIndex(partFiles[0], 0);
             try {
                 // Rename file to dest file
                 FileUtils.moveFile(partFiles[0], newFile);
@@ -225,9 +236,10 @@ public class FileMappingService {
                 Integer idx2 = Integer.valueOf(file2Idx);
                 return idx1.compareTo(idx2);
             });
-            try (OutputStream os = new FileOutputStream(newFile, true)) {
+            try (OutputStream os = new FileOutputStream(newFile, false)) {
                 for (int i = 0; i < partFiles.length; i++) {
                     File partFile = partFiles[i];
+                    this.checkPartFileIndex(partFile, i);
                     try (InputStream is = new FileInputStream(partFile)) {
                         IOUtils.copy(is, os);
                     } catch (IOException e) {
@@ -255,6 +267,20 @@ public class FileMappingService {
             throw new InternalException("load.upload.rename-file.failed");
         }
         return true;
+    }
+
+    private void checkPartFileIndex(File partFile, int expectedIndex) {
+        String fileIdx = StringUtils.substringAfterLast(partFile.getName(),
+                                                        "-");
+        try {
+            int actualIndex = Integer.parseInt(fileIdx);
+            if (actualIndex == expectedIndex) {
+                return;
+            }
+        } catch (NumberFormatException ignored) {
+            // Fall through to a uniform error below.
+        }
+        throw new InternalException("load.upload.merge-file.failed");
     }
 
     public void extractColumns(FileMapping mapping) {
