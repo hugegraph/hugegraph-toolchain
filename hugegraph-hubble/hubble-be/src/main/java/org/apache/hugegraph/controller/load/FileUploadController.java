@@ -142,7 +142,7 @@ public class FileUploadController extends BaseController {
                                                           fileName, filePath,
                                                           sourceFileSize);
             }
-            result = this.service.uploadFile(file, index, filePath);
+            result = this.service.uploadFile(file, fileName, index, filePath);
             if (result.getStatus() == FileUploadResult.Status.FAILURE) {
                 return result;
             }
@@ -270,6 +270,10 @@ public class FileUploadController extends BaseController {
         }
         if (index < 0) {
             throw new InternalException("The request params 'index' must >= 0");
+        }
+        if (index >= total) {
+            throw new InternalException("The request params 'index' must < " +
+                                        "'total'");
         }
     }
 

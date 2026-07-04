@@ -18,6 +18,9 @@
 
 package org.apache.hugegraph.handler;
 
+import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.exception.UnauthorizedException;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -29,15 +32,21 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
-        String uri = request.getRequestURI();
-        if ("check".equals(uri) || "/api/v1.3/bill/cron".equals(uri)) { // TODO C rmv required?
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
 
-//        if (request.getSession().getAttribute(Constant.TOKEN_KEY) == null) { // TODO C why anno.?
-//            throw new UnauthorizedException();
-//        }
+        if (!this.hasTextSessionAttribute(request, Constant.TOKEN_KEY) ||
+            !this.hasTextSessionAttribute(request, Constant.USERNAME_KEY)) {
+            throw new UnauthorizedException();
+        }
 
         return true;
+    }
+
+    private boolean hasTextSessionAttribute(HttpServletRequest request,
+                                            String key) {
+        Object value = request.getSession().getAttribute(key);
+        return value instanceof String && StringUtils.hasText((String) value);
     }
 }

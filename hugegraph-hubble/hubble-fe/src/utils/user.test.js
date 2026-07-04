@@ -4,8 +4,8 @@
  * contributor license agreements. See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership. The ASF
  * licenses this file to You under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,23 +16,18 @@
  * under the License.
  */
 
-package org.apache.hugegraph.unit;
+import {clearUser, getUser, isAdmin} from './user';
 
-import org.apache.hugegraph.controller.ingest.IngestControllerTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+describe('user storage helpers', () => {
+    beforeEach(() => {
+        clearUser();
+    });
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    AuthSecurityTest.class,
-    AuthzRouteRegistrationTest.class,
-    FileUploadControllerTest.class,
-    FileUtilTest.class,
-    HubbleOptionsTest.class,
-    IngestControllerTest.class,
-    JobManagerServiceTest.class,
-    OltpAlgoControllerTest.class,
-    OltpAlgoServiceTest.class
-})
-public class UnitTestSuite {
-}
+    test('returns an empty user object when no session user is stored', () => {
+        expect(getUser()).toEqual({});
+    });
+
+    test('treats missing session user as a non-admin user', () => {
+        expect(isAdmin()).toBe(false);
+    });
+});

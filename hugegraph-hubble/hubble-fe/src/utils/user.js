@@ -28,11 +28,16 @@ const getUser = () => {
         return JSON.parse(userStr);
     }
 
-    return null;
+    return {};
 };
 
 const clearUser = () => {
     sessionStorage.removeItem(key);
+};
+
+const clearLogin = () => {
+    localStorage.removeItem('user');
+    clearUser();
 };
 
 const getDefaultGraphspace = () => {
@@ -56,7 +61,7 @@ const getDefaultGraphspace = () => {
 const isAdmin = () => {
     const user = getUser();
 
-    return user.is_superadmin;
+    return Boolean(user.is_superadmin);
 };
 
-export {setUser, getUser, clearUser, getDefaultGraphspace, isAdmin};
+export {setUser, getUser, clearUser, clearLogin, getDefaultGraphspace, isAdmin};

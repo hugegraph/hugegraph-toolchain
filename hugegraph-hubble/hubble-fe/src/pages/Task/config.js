@@ -16,17 +16,17 @@
  * under the License.
  */
 
-const sourceType = [
-    {label: 'HDFS', value: 'HDFS'},
-    {label: '本地上传', value: 'FILE'},
-    {label: 'Kafka', value: 'KAFKA'},
-    {label: 'JDBC', value: 'JDBC'},
+const sourceType = t => [
+    {label: t('task.source.hdfs'), value: 'HDFS'},
+    {label: t('task.source.file'), value: 'FILE'},
+    {label: t('task.source.kafka'), value: 'KAFKA'},
+    {label: t('task.source.jdbc'), value: 'JDBC'},
 ];
 
-const syncType = [
-    {label: '执行一次', value: 'ONCE'},
-    {label: '实时执行', value: 'REALTIME'},
-    {label: '周期执行', value: 'CRON'},
+const syncType = t => [
+    {label: t('task.sync.once'), value: 'ONCE'},
+    {label: t('task.sync.realtime'), value: 'REALTIME'},
+    {label: t('task.sync.cron'), value: 'CRON'},
 ];
 
 export {sourceType, syncType};

@@ -23,7 +23,7 @@ import Logo from '../../assets/logo.png';
 import {useNavigate, useLocation} from 'react-router-dom';
 import * as api from '../../api/index';
 import * as user from '../../utils/user';
-import {useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
 const {Option} = Select;
@@ -33,11 +33,37 @@ const Topbar = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const {t} = useTranslation();
-    const [languageType, setLanguageType] = useState(localStorage.getItem('languageType') || 'zh-CN');
+    const [languageType, setLanguageType] = useState(
+        localStorage.getItem('languageType') || 'zh-CN'
+    );
+
+    const redirectToLogin = useCallback(() => {
+        const redirect = `${location.pathname}${location.search}`;
+        user.clearLogin();
+        sessionStorage.setItem('redirect', redirect);
+        window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
+    }, [location.pathname, location.search]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        if (!userInfo || !userInfo.id) {
+            return undefined;
+        }
+
+        api.auth.status().then(res => {
+            if (!cancelled && res.status === 401) {
+                redirectToLogin();
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [redirectToLogin, userInfo]);
 
     if (!userInfo || !userInfo.id) {
-        sessionStorage.setItem('redirect', `${location.pathname}${location.search}`);
-        window.location.href = '/login';
+        redirectToLogin();
     }
 
     const i18Change = e => {
@@ -51,7 +77,7 @@ const Topbar = () => {
         api.auth.logout().then(res => {
             if (res.status === 200) {
                 sessionStorage.removeItem('redirect');
-                user.clearUser();
+                user.clearLogin();
                 message.success(t('Topbar.exit.success'));
                 navigate('/login');
             }
@@ -72,7 +98,7 @@ const Topbar = () => {
             <div className={style.logo}><img src={Logo} alt='' /></div>
             <div className={style.rightContainer}>
                 <Select
-                    defaultValue={languageType}
+                    value={languageType}
                     style={{width: 120}}
                     size="small"
                     onChange={i18Change}
@@ -80,8 +106,10 @@ const Topbar = () => {
                     <Option value="zh-CN">中文</Option>
                     <Option value="en-US">English</Option>
                 </Select>
-                <Dropdown overlay={<Menu
-                    items={[{key: 'logout', label: <a onClick={confirm}>{t('Topbar.exit.name')}</a>}]}
+                <Dropdown overlay={<Menu items={[{
+                    key: 'logout',
+                    label: <a onClick={confirm}>{t('Topbar.exit.name')}</a>,
+                }]}
                 />}
                 >
                     <Space className={style.right}>

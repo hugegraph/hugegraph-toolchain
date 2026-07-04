@@ -18,14 +18,18 @@
 
 package org.apache.hugegraph.unit;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -38,6 +42,7 @@ import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.load.FileMappingService;
 import org.apache.hugegraph.service.load.JobManagerService;
@@ -202,6 +207,58 @@ public class FileUploadControllerTest {
         Mockito.verify(service, Mockito.never()).save(Mockito.any());
     }
 
+    @Test
+    public void testCheckTotalAndIndexValidRejectsIndexAtTotal()
+           throws Exception {
+        FileUploadController controller = this.controller("csv");
+
+        Assert.assertThrows(InternalException.class, () -> {
+            this.checkTotalAndIndexValid(controller, 2, 2);
+        });
+    }
+
+    @Test
+    public void testUploadFileUsesValidatedFileNameForPartPath()
+           throws Exception {
+        Path tempDir = Files.createTempDirectory("hubble-upload");
+        try {
+            FileMappingService service = new FileMappingService();
+            MockMultipartFile file = new MockMultipartFile(
+                    "file", "../evil.csv", "text/csv", "id,name".getBytes());
+
+            service.uploadFile(file, "safe.csv", 0, tempDir.toString());
+
+            Assert.assertTrue(Files.exists(tempDir.resolve("safe.csv-0")));
+            Assert.assertFalse(Files.exists(tempDir.resolve("evil.csv-0")));
+            Assert.assertFalse(Files.exists(tempDir.getParent()
+                                                  .resolve("evil.csv-0")));
+        } finally {
+            FileUtils.deleteDirectory(tempDir.toFile());
+        }
+    }
+
+    @Test
+    public void testTryMergePartFilesReplacesStaleAllFile() throws Exception {
+        Path parent = Files.createTempDirectory("hubble-merge");
+        File dest = parent.resolve("data.csv").toFile();
+        File all = parent.resolve("data.csv.all").toFile();
+        File partDir = dest;
+        try {
+            FileUtils.forceMkdir(partDir);
+            Files.write(all.toPath(), "stale".getBytes());
+            Files.write(new File(partDir, "data.csv-0").toPath(),
+                        "new".getBytes());
+
+            FileMappingService service = new FileMappingService();
+            Assert.assertTrue(service.tryMergePartFiles(partDir.toString(), 1));
+
+            Assert.assertEquals("new",
+                                new String(Files.readAllBytes(dest.toPath())));
+        } finally {
+            FileUtils.deleteDirectory(parent.toFile());
+        }
+    }
+
     private FileUploadController controller(String... formats) throws Exception {
         FileUploadController controller = new FileUploadController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
@@ -252,6 +309,23 @@ public class FileUploadControllerTest {
             return (FileMapping) method.invoke(controller, graphSpace, graph,
                                                jobId, fileName, filePath,
                                                sourceFileSize);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw e;
+        }
+    }
+
+    private void checkTotalAndIndexValid(FileUploadController controller,
+                                         int total, int index)
+                                         throws Exception {
+        Method method = FileUploadController.class.getDeclaredMethod(
+                        "checkTotalAndIndexValid", int.class, int.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(controller, total, index);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             if (cause instanceof Exception) {

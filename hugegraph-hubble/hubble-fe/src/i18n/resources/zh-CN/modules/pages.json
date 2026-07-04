@@ -276,6 +276,18 @@
     "execute": "执行",
     "edit_title_create": "创建任务",
     "edit_title_edit": "编辑任务",
+    "create": "创建任务",
+    "source": {
+      "file": "本地上传",
+      "hdfs": "HDFS",
+      "kafka": "Kafka",
+      "jdbc": "JDBC"
+    },
+    "sync": {
+      "once": "执行一次",
+      "realtime": "实时执行",
+      "cron": "周期执行"
+    },
     "col": {
       "name": "任务名称",
       "source_type": "源数据类型",
@@ -290,7 +302,15 @@
       "total": "总任务",
       "running": "运行中",
       "success": "已完成",
-      "failed": "失败"
+      "failed": "失败",
+      "realtime": "实时任务",
+      "offline": "非实时任务",
+      "pending": "待执行",
+      "executing": "正在执行",
+      "max_concurrency": "最大并发",
+      "once": "一次性任务",
+      "cron": "周期任务",
+      "realtime_task": "实时任务"
     },
     "detail": {
       "title": "任务详情",
@@ -308,6 +328,12 @@
     },
     "edit": {
       "name": "任务名称",
+      "name_placeholder": "请输入任务名称",
+      "sync_type": "同步方式",
+      "cron_extra": "quartz表达式：秒 分钟 小时 天 月 星期 年(选填)",
+      "cron_required": "请输入调度信息",
+      "cron_placeholder": "定时 * 5 * * * * (*)",
+      "update_success": "修改成功",
       "graphspace": "图空间",
       "graph": "图",
       "source": "数据源",
@@ -465,6 +491,8 @@
     "submit": "登录",
     "username": "用户名",
     "password": "密码",
+    "username_required": "请输入用户名。",
+    "password_required": "请输入密码。",
     "title": "登录 HugeGraph"
   }
 }

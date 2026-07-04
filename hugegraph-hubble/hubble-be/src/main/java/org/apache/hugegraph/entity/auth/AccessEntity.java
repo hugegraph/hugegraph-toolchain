@@ -19,10 +19,10 @@
 package org.apache.hugegraph.entity.auth;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hugegraph.structure.auth.HugePermission;
-import org.apache.hugegraph.structure.auth.HugeResource;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,7 +60,7 @@ public class AccessEntity {
     protected String description;
 
     @JsonProperty("target_resources")
-    protected List<HugeResource> resources;
+    protected List<Map<String, Object>> resources;
 
     public void addPermission(HugePermission p) {
         permissions.add(p);

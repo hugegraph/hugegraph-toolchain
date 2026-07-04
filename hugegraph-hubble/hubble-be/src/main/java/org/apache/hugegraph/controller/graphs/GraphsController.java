@@ -76,7 +76,7 @@ public class GraphsController extends BaseController {
 
     public boolean isVermeerEnabled() {
         String username = this.getUser();
-        String password = (String) this.getSession("password");
+        String password = this.getCredentialPassword();
         return vermeerService.isVermeerEnabled(username, password);
     }
 

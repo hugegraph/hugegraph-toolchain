@@ -53,12 +53,18 @@ const items = t => {
     // Dynamic manage menu based on deployment mode
     const manageChildren = pdMode
         ? [
-            {label: <Link to='/graphspace'>{t('manage.graphspace')}</Link>, key: 'graphspace'},
+            {
+                label: <Link to='/graphspace'>{t('manage.graphspace')}</Link>,
+                key: 'graphspace',
+            },
             {label: <Link to='/source'>{t('manage.source')}</Link>, key: 'source'},
             {label: <Link to='/task'>{t('manage.task')}</Link>, key: 'task'},
         ]
         : [
-            {label: <Link to='/graphspace/DEFAULT'>图管理</Link>, key: 'graph'},
+            {
+                label: <Link to='/graphspace/DEFAULT'>{t('manage.graphspace')}</Link>,
+                key: 'graph',
+            },
         ];
 
     const menu = [
@@ -78,9 +84,18 @@ const items = t => {
             key: 'analysis',
             icon: <DatabaseOutlined />,
             children: [
-                {label: <Link to='/gremlin'>{t('analysis.query.name')}</Link>, key: 'gremlin'},
-                {label: <Link to='/algorithms'>{t('analysis.algorithm.name')}</Link>, key: 'algorithms'},
-                {label: <Link to='/asyncTasks'>{t('analysis.async_task.name')}</Link>, key: 'asyncTasks'},
+                {
+                    label: <Link to='/gremlin'>{t('analysis.query.name')}</Link>,
+                    key: 'gremlin',
+                },
+                {
+                    label: <Link to='/algorithms'>{t('analysis.algorithm.name')}</Link>,
+                    key: 'algorithms',
+                },
+                {
+                    label: <Link to='/asyncTasks'>{t('analysis.async_task.name')}</Link>,
+                    key: 'asyncTasks',
+                },
             ],
         },
         {

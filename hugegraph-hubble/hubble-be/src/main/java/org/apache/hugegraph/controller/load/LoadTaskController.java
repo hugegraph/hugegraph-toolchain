@@ -140,7 +140,7 @@ public class LoadTaskController extends BaseController {
         connection.setGraph(graph);
         connection.setToken(this.getToken());
         connection.setUsername(this.getUser());
-        connection.setPassword((String) this.getSession("password"));
+        connection.setPassword(this.getCredentialPassword());
         if (!config.get(HubbleOptions.PD_ENABLED)) {
             UrlUtil.Host host = UrlUtil.parseHost(config.get(HubbleOptions.SERVER_URL));
             connection.setProtocol(host.getScheme());

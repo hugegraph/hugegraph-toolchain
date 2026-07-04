@@ -21,6 +21,7 @@ package org.apache.hugegraph.config;
 import org.apache.hugegraph.options.HubbleOptions;
 
 import org.mitre.dsmiley.httpproxy.ProxyServlet;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
@@ -28,7 +29,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class ProxyServletConfiguration{
+public class ProxyServletConfiguration {
     @Autowired
     private HugeConfig config;
 
@@ -39,17 +40,20 @@ public class ProxyServletConfiguration{
      */
     @Bean
     @ConditionalOnProperty(name = "proxy.servlet_url", matchIfMissing = false)
-    public ServletRegistrationBean servletRegistrationBean(){
+    public ServletRegistrationBean servletRegistrationBean() {
         String servletUrl = config.get(HubbleOptions.PROXY_SERVLET_URL);
         String targetUrl = config.get(HubbleOptions.PROXY_TARGET_URL);
-        
+
         // Additional safety check
-        if (servletUrl == null || servletUrl.isEmpty()) {
+        if (StringUtils.isBlank(servletUrl) ||
+            StringUtils.isBlank(targetUrl) ||
+            "WhatURLAtHere".equals(targetUrl)) {
             return null;
         }
-        
-        ServletRegistrationBean servletRegistrationBean = new ServletRegistrationBean(new IngestionProxyServlet(),
-                servletUrl);
+
+        ServletRegistrationBean servletRegistrationBean =
+                new ServletRegistrationBean(new IngestionProxyServlet(),
+                                            servletUrl);
         servletRegistrationBean.addInitParameter("targetUri", targetUrl);
         servletRegistrationBean.addInitParameter(ProxyServlet.P_LOG, "true");
         return servletRegistrationBean;

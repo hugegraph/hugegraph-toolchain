@@ -18,8 +18,16 @@
 
 package org.apache.hugegraph.controller.auth;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +51,9 @@ import org.apache.hugegraph.structure.auth.LoginResult;
 @RequestMapping(Constant.API_VERSION + "auth")
 public class LoginController extends BaseController {
 
+    private static final int TOKEN_EXPIRE_SECONDS = 60 * 60 * 24 * 30;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Autowired
     UserService userService;
     @Autowired
@@ -51,14 +62,22 @@ public class LoginController extends BaseController {
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
         // Set Expire: 1 Month
-        login.expire(60 * 60 * 24 * 30);
-        HugeClient client = this.hugeClientPoolService.createTempBasicClient(
-                login.name(), login.password());
-        LoginResult result = client.auth().login(login);
+        login.expire(TOKEN_EXPIRE_SECONDS);
+        LoginResult result;
+        HugeClient client = null;
+        if (!this.config.get(HubbleOptions.PD_ENABLED)) {
+            result = this.loginStandalone(login);
+        } else {
+            client = this.hugeClientPoolService.createTempBasicClient(
+                    login.name(), login.password());
+            result = client.auth().login(login);
+        }
         this.setUser(login.name());
-        this.setSession("password", login.password());
+        this.setCredentialPassword(login.password());
         this.setToken(result.token());
-        client.close();
+        if (client != null) {
+            client.close();
+        }
         clearRequestHugeClient();
 
         if (!this.config.get(HubbleOptions.PD_ENABLED)) {
@@ -71,6 +90,42 @@ public class LoginController extends BaseController {
         client.close();
 
         return u;
+    }
+
+    protected LoginResult loginStandalone(Login login) {
+        String endpoint = this.config.get(HubbleOptions.SERVER_URL) +
+                          "/auth/login";
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(endpoint)
+                                           .openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type",
+                                          "application/json;charset=UTF-8");
+            String auth = login.name() + ":" + login.password();
+            String basic = Base64.getEncoder().encodeToString(
+                           auth.getBytes(StandardCharsets.UTF_8));
+            connection.setRequestProperty("Authorization", "Basic " + basic);
+            Map<String, Object> body = ImmutableMap.of(
+                    "user_name", login.name(),
+                    "user_password", login.password(),
+                    "token_expire", TOKEN_EXPIRE_SECONDS
+            );
+            try (OutputStream output = connection.getOutputStream()) {
+                output.write(MAPPER.writeValueAsBytes(body));
+            }
+            if (connection.getResponseCode() >= 400) {
+                throw new IOException("Standalone login failed: HTTP " +
+                                      connection.getResponseCode());
+            }
+            Map<?, ?> response = MAPPER.readValue(connection.getInputStream(),
+                                                 Map.class);
+            LoginResult result = new LoginResult();
+            result.token(String.valueOf(response.get("token")));
+            return result;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to login HugeGraph Server", e);
+        }
     }
 
     private static UserEntity currentUser(String username) {
@@ -97,6 +152,6 @@ public class LoginController extends BaseController {
 
     @GetMapping("/logout")
     public void logout() {
-        this.delToken();
+        this.clearAuthSession();
     }
 }

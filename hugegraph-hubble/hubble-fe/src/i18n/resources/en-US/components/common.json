@@ -15,5 +15,9 @@
       "failed": "Failed",
       "undefined": "Unknown"
     }
+  },
+  "request": {
+    "failed": "Request failed",
+    "error": "Request failed: {{message}}, path: {{path}}"
   }
 }
