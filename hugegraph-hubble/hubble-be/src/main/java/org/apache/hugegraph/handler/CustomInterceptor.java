@@ -22,12 +22,14 @@ import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 //import org.apache.hugegraph.license.LicenseVerifier; // TODO C Remove Licence
 import org.apache.hugegraph.service.HugeClientPoolService;
 //import org.apache.hugegraph.service.license.LicenseService;// TODO C Remove Licence
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import org.apache.hugegraph.common.Constant;
@@ -74,9 +76,18 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
     public void setHugeClientToRequest(HttpServletRequest request) {
         String uri = request.getRequestURI();
         HugeClient client = null;
-        if ((Constant.API_VERSION + "auth/login").equals(uri)) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return;
+        }
+        if (this.isLoginRequest(uri)) {
             client = unauthClient();
         } else {
+            if (this.isLogoutRequest(uri)) {
+                return;
+            }
+            if (!this.hasAuthSession(request)) {
+                return;
+            }
             String token =
                     (String) request.getSession().getAttribute(Constant.TOKEN_KEY);
             String [] res = uri.split("/");
@@ -94,6 +105,30 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
         }
 
         request.setAttribute("hugeClient", client);
+    }
+
+    private boolean isLoginRequest(String uri) {
+        return (Constant.API_VERSION + "auth/login").equals(uri) ||
+               uri.endsWith("/auth/login");
+    }
+
+    private boolean isLogoutRequest(String uri) {
+        return (Constant.API_VERSION + "auth/logout").equals(uri) ||
+               uri.endsWith("/auth/logout");
+    }
+
+    private boolean hasAuthSession(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return false;
+        }
+        return this.hasTextSessionAttribute(session, Constant.TOKEN_KEY) &&
+               this.hasTextSessionAttribute(session, Constant.USERNAME_KEY);
+    }
+
+    private boolean hasTextSessionAttribute(HttpSession session, String key) {
+        Object value = session.getAttribute(key);
+        return value instanceof String && StringUtils.hasText((String) value);
     }
 
     protected HugeClient authClient(String graphSpace, String graph,

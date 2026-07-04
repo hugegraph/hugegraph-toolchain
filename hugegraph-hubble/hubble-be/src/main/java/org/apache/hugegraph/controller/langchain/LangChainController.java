@@ -19,15 +19,20 @@
 package org.apache.hugegraph.controller.langchain;
 
 import java.io.BufferedReader;
-import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hugegraph.controller.query.GremlinController;
 import org.apache.hugegraph.driver.SchemaManager;
@@ -36,6 +41,9 @@ import org.apache.hugegraph.entity.query.JsonView;
 import org.apache.hugegraph.service.query.QueryService;
 import org.apache.hugegraph.structure.schema.EdgeLabel;
 import org.apache.hugegraph.structure.schema.VertexLabel;
+import org.apache.hugegraph.config.ConfigOption;
+import org.apache.hugegraph.config.HugeConfig;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.JsonUtil;
 import org.apache.commons.collections.CollectionUtils;
@@ -69,6 +77,7 @@ import lombok.extern.log4j.Log4j2;
 public class LangChainController extends BaseController {
 
     private static final String DEFAULT_PYTHON_FILE = "langchaincode/excute_langchain.py";
+    private static final String DEFAULT_PYTHON_SCRIPT = "excute_langchain.py";
 
     private static final String G_V = "g.v";
     private static final String G_E = "g.e";
@@ -80,6 +89,9 @@ public class LangChainController extends BaseController {
 
     @Autowired
     private QueryService queryService;
+
+    @Autowired
+    private HugeConfig config;
 
     @PostMapping("langchain")
     public Object langchain(@PathVariable("graphspace") String graphSpace,
@@ -102,13 +114,12 @@ public class LangChainController extends BaseController {
                                   @PathVariable("graph") String graph,
                                   @RequestBody RequestLangChainParams requestLangChainParams) {
         E.checkNotNull(requestLangChainParams, "params must not be null");
-        log.info("LangChainController langchain params:{}",
-                 requestLangChainParams);
+        log.info("LangChainController langchain request model:{} file:{}",
+                 requestLangChainParams.model, requestLangChainParams.fileName);
         this.checkParams(requestLangChainParams);
 
         return this.langChainQuery(graphSpace, graph, requestLangChainParams);
     }
-
 
     private ResponseLangChain langChainQuery(String graphSpace, String graph,
                                              RequestLangChainParams requestLangChainParams) {
@@ -120,19 +131,17 @@ public class LangChainController extends BaseController {
         String schema = JsonUtil.toJson(this.getBigModelSchema(vertexLabels, edgeLabels));
         log.info("langchain schema:{}", schema);
 
-        String filePath;
-        if (StringUtils.isNotEmpty(requestLangChainParams.fileName)) {
-            URL url = LangChainController.class.getClassLoader().getResource("");
-            filePath = String.format("%s%s", url.getPath(), requestLangChainParams.fileName);
-            this.judgeFileExist(filePath);
-            log.info("LangChainController filePath:{}", filePath);
-        } else {
-            throw new RuntimeException("fileName must not be null");
-        }
+        String filePath = this.resolvePythonScriptPath(
+                          requestLangChainParams.fileName);
+        log.info("LangChainController filePath:{}", filePath);
 
-        List<String> result = this.excutePythonRuntime(requestLangChainParams.pythonPath,
-                filePath, requestLangChainParams.query, requestLangChainParams.openKey, schema,
-                requestLangChainParams.model, requestLangChainParams.ernieClientId, requestLangChainParams.ernieClientSecret);
+        List<String> result =
+                this.excutePythonRuntime(requestLangChainParams.pythonPath,
+                                         filePath, requestLangChainParams.query,
+                                         requestLangChainParams.openKey, schema,
+                                         requestLangChainParams.model,
+                                         requestLangChainParams.ernieClientId,
+                                         requestLangChainParams.ernieClientSecret);
         if (CollectionUtils.isEmpty(result)) {
             return this.generateResponseLangChain(requestLangChainParams.query,
                     "LangChain not generate gremlin");
@@ -142,14 +151,13 @@ public class LangChainController extends BaseController {
         }
     }
 
-
     @PostMapping("langchain/schema")
     public Object langchainSchema(@PathVariable("graphspace") String graphSpace,
                                   @PathVariable("graph") String graph,
                                   @RequestBody RequestLangChainParams requestLangChainParams) {
         E.checkNotNull(requestLangChainParams, "params must not be null");
-        log.info("LangChainController langchain params:{}",
-                 requestLangChainParams);
+        log.info("LangChainController langchain schema request username:{}",
+                 requestLangChainParams.userName);
         this.checkUserParam(requestLangChainParams);
 
         this.tryLogin(graphSpace, graph,
@@ -191,28 +199,25 @@ public class LangChainController extends BaseController {
                                     @PathVariable("graph") String graph,
                                     @RequestBody RequestLangChainParams requestLangChainParams) {
         E.checkNotNull(requestLangChainParams, "params must not be null");
-        log.info("LangChainController langchain params:{}",
-                 requestLangChainParams);
+        log.info("LangChainController langchain no schema request model:{} file:{}",
+                 requestLangChainParams.model, requestLangChainParams.fileName);
 
         this.checkParams(requestLangChainParams);
         this.checkModelParams(requestLangChainParams);
 
-        String filePath;
-        if (StringUtils.isNotEmpty(requestLangChainParams.fileName)) {
-            URL url = LangChainController.class.getClassLoader().getResource("");
-            filePath = String.format("%s%s", url.getPath(), requestLangChainParams.fileName);
-            this.judgeFileExist(filePath);
-            log.info("LangChainController filePath:{}", filePath);
-        } else {
-            throw new RuntimeException("fileName must not be null");
-        }
+        String filePath = this.resolvePythonScriptPath(
+                          requestLangChainParams.fileName);
+        log.info("LangChainController filePath:{}", filePath);
 
         List<String> result =
                 this.excutePythonByProcessBuilder(
                         requestLangChainParams.pythonPath, filePath,
-                        requestLangChainParams.query, requestLangChainParams.openKey,
-                        requestLangChainParams.graphSchema, requestLangChainParams.model,
-                        requestLangChainParams.ernieClientId, requestLangChainParams.ernieClientSecret);
+                        requestLangChainParams.query,
+                        requestLangChainParams.openKey,
+                        requestLangChainParams.graphSchema,
+                        requestLangChainParams.model,
+                        requestLangChainParams.ernieClientId,
+                        requestLangChainParams.ernieClientSecret);
         if (CollectionUtils.isEmpty(result)) {
             return this.generateResponseLangChain(requestLangChainParams.query,
                     "LangChain not generate gremlin");
@@ -230,7 +235,7 @@ public class LangChainController extends BaseController {
         E.checkNotNull(password, "password cannot be null");
         String token = this.getToken();
         if (StringUtils.isNotEmpty(token)) {
-            log.info("Attempting to login token exist, username:{} token:{}", username, token);
+            log.info("Attempting to login token exist, username:{}", username);
             return;
         }
         //uuapLoginController.loginVerifyUser(graphSpace, graph, username, password, null);
@@ -258,36 +263,14 @@ public class LangChainController extends BaseController {
                                              String model,
                                              String ernieClientId,
                                              String ernieClientSecret) {
-        String[] args1 = this.getExcuteArgs(pythonPath, pythonScriptPath, query, openKey, graphSchema,
-                model, ernieClientId, ernieClientSecret);
-        log.info("lang chain execute python command:\n [{}] \n", String.join(" ", args1));
-
-        // 执行Python文件，并传入参数
-        List<String> lineList = new ArrayList<>();
-        try {
-            Process proc = Runtime.getRuntime().exec(args1);
-            BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String line = null;
-            while ((line = in.readLine()) != null) {
-                lineList.add(line);
-                log.info("execute ret:{}", line);
-            }
-            if (!this.judgeResultSuccess(lineList, model)) {
-                this.calculateError(lineList, model);
-                log.error("excutePython lineList:{}", lineList);
-                lineList.clear();
-            } else {
-                lineList = getGremlinResults(lineList, model);
-            }
-            in.close();
-            proc.waitFor();
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("excutePythonRuntime error", e);
-        }
-        return lineList;
+        String[] args1 = this.getExcuteArgs(pythonPath, pythonScriptPath,
+                                            query, openKey, graphSchema,
+                                            model, ernieClientId,
+                                            ernieClientSecret);
+        return this.executePythonProcess(args1, model,
+                                         this.secretValues(openKey,
+                                                           ernieClientSecret));
     }
-
 
     /**
      * 使用ProcessBuilder执行python脚本
@@ -306,49 +289,151 @@ public class LangChainController extends BaseController {
                                                       String model,
                                                       String ernieClientId,
                                                       String ernieClientSecret) {
-        String[] args1 = this.getExcuteArgs(pythonPath, pythonScriptPath, query, openKey, graphSchema,
-                model, ernieClientId, ernieClientSecret);
+        String[] args1 = this.getExcuteArgs(pythonPath, pythonScriptPath,
+                                            query, openKey, graphSchema,
+                                            model, ernieClientId,
+                                            ernieClientSecret);
+        return this.executePythonProcess(args1, model,
+                                         this.secretValues(openKey,
+                                                           ernieClientSecret));
+    }
 
-        // 构造ProcessBuilder对象
-        ProcessBuilder pb = new ProcessBuilder(args1);
+    private String resolvePythonScriptPath(String fileName) {
+        E.checkArgument(StringUtils.isNotBlank(fileName),
+                        "fileName must not be blank");
+        Path requested = Paths.get(fileName).normalize();
+        E.checkArgument(!requested.isAbsolute() &&
+                        requested.getFileName() != null &&
+                        (requested.getNameCount() == 1 ||
+                         DEFAULT_PYTHON_FILE.equals(requested.toString())),
+                        "python file is not allowed");
 
-        // 将python脚本的输出和错误输出合并
+        String scriptName = requested.getFileName().toString();
+        List<String> allowlist =
+                this.configValue(HubbleOptions.LANGCHAIN_SCRIPT_ALLOWLIST);
+        E.checkArgument(allowlist.contains(scriptName),
+                        "python file is not allowed");
+
+        Path root = Paths.get(this.configValue(HubbleOptions.LANGCHAIN_SCRIPT_DIR))
+                         .normalize();
+        E.checkArgument(root.toFile().isDirectory(),
+                        "langchain script dir not exist");
+        Path script = root.resolve(scriptName).normalize();
+        E.checkArgument(script.startsWith(root), "python file is not allowed");
+        E.checkArgument(script.toFile().exists(), "python file not exist");
+        return script.toString();
+    }
+
+    private List<String> executePythonProcess(String[] args, String model,
+                                              Set<String> secrets) {
+        log.info("lang chain execute python command: {}",
+                 this.sanitizeCommandForLog(args));
+
+        ProcessBuilder pb = new ProcessBuilder(args);
         pb.redirectErrorStream(false);
 
         List<String> lineList = new ArrayList<>();
+        List<String> errorList = new ArrayList<>();
+        Process process;
         try {
-            // 启动进程
-            Process process = pb.start();
-            // 读取进程的输出
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-            String ret;
-            while ((ret = in.readLine()) != null) {
-                lineList.add(ret);
-                log.info("execute ret:{}", ret);
+            process = pb.start();
+            Thread stdout = this.readProcessStream(process.getInputStream(),
+                                                   lineList, "stdout", secrets);
+            Thread stderr = this.readProcessStream(process.getErrorStream(),
+                                                   errorList, "stderr", secrets);
+            int timeout = this.configValue(HubbleOptions.LANGCHAIN_EXECUTE_TIMEOUT);
+            if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new IllegalStateException("LangChain python execution timeout");
             }
+            stdout.join(TimeUnit.SECONDS.toMillis(1L));
+            stderr.join(TimeUnit.SECONDS.toMillis(1L));
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                log.error("LangChain python stderr:{}",
+                          this.redactLines(errorList, secrets));
+                throw new IllegalStateException(
+                          "LangChain python exited with code " + exitCode);
+            }
+
             if (!this.judgeResultSuccess(lineList, model)) {
-                this.calculateError(lineList, model);
-                log.error("excutePython lineList:{}", lineList);
+                List<String> redactedLines = this.redactLines(lineList, secrets);
+                this.calculateError(redactedLines, model);
+                log.error("excutePython lineList:{}", redactedLines);
                 lineList.clear();
             } else {
                 lineList = getGremlinResults(lineList, model);
             }
-            // 等待进程结束
-            int exitCode = process.waitFor();
-            log.info("Exited with error code : " + exitCode);
-        } catch (Exception e) {
-            log.error("excutePythonRuntime error", e);
+        } catch (IOException e) {
+            throw new IllegalStateException("LangChain python execution failed", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("LangChain python execution interrupted", e);
         }
         return lineList;
     }
 
-    private void judgeFileExist(String filePath) {
-        File file = new File(filePath);
-        if (!file.exists()) {
-            log.error("python file not exist:{}", filePath);
-            throw new IllegalArgumentException("python file not exist");
+    private Thread readProcessStream(InputStream stream, List<String> lines,
+                                     String streamName, Set<String> secrets) {
+        Thread thread = new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lines.add(line);
+                    log.info("execute {} ret:{}", streamName,
+                             this.redact(line, secrets));
+                }
+            } catch (IOException e) {
+                log.error("Read LangChain process {} failed", streamName, e);
+            }
+        }, "langchain-" + streamName + "-reader");
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
+    }
+
+    private Set<String> secretValues(String openKey, String ernieClientSecret) {
+        Set<String> secrets = new java.util.HashSet<>();
+        if (StringUtils.isNotEmpty(openKey)) {
+            secrets.add(openKey);
         }
+        if (StringUtils.isNotEmpty(ernieClientSecret)) {
+            secrets.add(ernieClientSecret);
+        }
+        return secrets;
+    }
+
+    private List<String> redactLines(List<String> lines, Set<String> secrets) {
+        List<String> redacted = new ArrayList<>(lines.size());
+        for (String line : lines) {
+            redacted.add(this.redact(line, secrets));
+        }
+        return redacted;
+    }
+
+    private String redact(String value, Set<String> secrets) {
+        String redacted = value;
+        for (String secret : secrets) {
+            redacted = StringUtils.replace(redacted, secret, "******");
+        }
+        return redacted;
+    }
+
+    private String sanitizeCommandForLog(String[] args) {
+        List<String> sanitized = new ArrayList<>();
+        for (int i = 0; i < args.length; i++) {
+            sanitized.add(args[i]);
+            if ("--open_key".equals(args[i]) ||
+                "--ernie_client_secret".equals(args[i])) {
+                if (i + 1 < args.length) {
+                    sanitized.add("******");
+                    i++;
+                }
+            }
+        }
+        return String.join(" ", sanitized);
     }
 
     private List<String> getGremlinResults(List<String> lineList, String model) {
@@ -493,23 +578,30 @@ public class LangChainController extends BaseController {
     }
 
     private void checkUserParam(RequestLangChainParams requestLangChainParams) {
-        E.checkNotNull(requestLangChainParams.getUserName(), "params username must not be null");
-        E.checkNotNull(requestLangChainParams.getPassword(), "params password must not be null");
+        E.checkNotNull(requestLangChainParams.getUserName(),
+                       "params username must not be null");
+        E.checkNotNull(requestLangChainParams.getPassword(),
+                       "params password must not be null");
     }
+
     private void checkParams(RequestLangChainParams requestLangChainParams) {
         E.checkNotNull(requestLangChainParams, "params must not be null");
         E.checkNotNull(requestLangChainParams.getQuery(), "params query must not be null");
         E.checkNotNull(requestLangChainParams.getModel(), "params model must not be null");
-        E.checkState(DEFAULT_MODEL.contains(requestLangChainParams.getModel()), "mode must be [\"wenxin4\", \"gpt4\"]");
+        E.checkState(DEFAULT_MODEL.contains(requestLangChainParams.getModel()),
+                     "mode must be [\"wenxin4\", \"gpt4\"]");
     }
 
     private void checkModelParams(RequestLangChainParams requestLangChainParams) {
         if (GPT_4_MODEL.equals(requestLangChainParams.getModel())) {
-            E.checkNotNull(requestLangChainParams.getOpenKey(), "params open_key must not be null");
+            E.checkNotNull(requestLangChainParams.getOpenKey(),
+                           "params open_key must not be null");
         }
         if (WENXIN_4_MODEL.equals(requestLangChainParams.getModel())) {
-            E.checkNotNull(requestLangChainParams.getErnieClientId(), "params ernie_client_id must not be null");
-            E.checkNotNull(requestLangChainParams.getErnieClientSecret(), "params ernie_client_secret must not be null");
+            E.checkNotNull(requestLangChainParams.getErnieClientId(),
+                           "params ernie_client_id must not be null");
+            E.checkNotNull(requestLangChainParams.getErnieClientSecret(),
+                           "params ernie_client_secret must not be null");
         }
     }
 
@@ -522,12 +614,12 @@ public class LangChainController extends BaseController {
                                    String ernieClientId,
                                    String ernieClientSecret) {
         List<String> argsList = new ArrayList<>();
-        argsList.add(pythonPath);
+        argsList.add(this.configValue(HubbleOptions.LANGCHAIN_PYTHON_PATH));
         argsList.add(pythonScriptPath);
         argsList.add("--query");
         argsList.add(query);
         argsList.add("--graph_schema");
-        argsList.add(graphSchema);
+        argsList.add(StringUtils.defaultString(graphSchema));
         if (WENXIN_4_MODEL.equals(model)) {
             if (ernieClientSecret != null) {
                 argsList.add("--ernie_client_secret");
@@ -548,6 +640,13 @@ public class LangChainController extends BaseController {
         return argsList.toArray(new String[argsList.size()]);
     }
 
+    private <T> T configValue(ConfigOption<T> option) {
+        if (this.config == null) {
+            return option.defaultValue();
+        }
+        return this.config.get(option);
+    }
+
     private void checkParamsValid(GremlinQuery query) {
         Ex.check(!StringUtils.isEmpty(query.getContent()),
                 "common.param.cannot-be-null-or-empty",
@@ -556,7 +655,8 @@ public class LangChainController extends BaseController {
                 "gremlin.statement.exceed-limit", GremlinController.CONTENT_LENGTH_LIMIT);
     }
 
-    private HashMap<String, Object> getBigModelSchema(List<VertexLabel> vertexLabels, List<EdgeLabel> edgeLabels) {
+    private HashMap<String, Object> getBigModelSchema(List<VertexLabel> vertexLabels,
+                                                      List<EdgeLabel> edgeLabels) {
         List<VertexLabelVo> vertexLabelVoList = Lists.newArrayList();
         List<EdgeLabelVo> edgeLabelVoList = Lists.newArrayList();
         List<String> relationshipsList = Lists.newArrayList();
