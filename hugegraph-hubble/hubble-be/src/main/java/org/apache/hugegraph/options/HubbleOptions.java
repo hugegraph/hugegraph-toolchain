@@ -201,6 +201,38 @@ public class HubbleOptions extends OptionHolder {
                     12L * 60 * 60
             );
 
+    public static final ConfigOption<String> LANGCHAIN_PYTHON_PATH =
+            new ConfigOption<>(
+                    "langchain.python_path",
+                    "The fixed python executable path for LangChain scripts.",
+                    disallowEmpty(),
+                    "python3"
+            );
+
+    public static final ConfigOption<String> LANGCHAIN_SCRIPT_DIR =
+            new ConfigOption<>(
+                    "langchain.script_dir",
+                    "The fixed directory for LangChain scripts.",
+                    disallowEmpty(),
+                    "langchaincode"
+            );
+
+    public static final ConfigListOption<String> LANGCHAIN_SCRIPT_ALLOWLIST =
+            new ConfigListOption<>(
+                    "langchain.script_allowlist",
+                    "The allowed LangChain script file names.",
+                    input -> !CollectionUtils.isEmpty(input),
+                    "excute_langchain.py"
+            );
+
+    public static final ConfigOption<Integer> LANGCHAIN_EXECUTE_TIMEOUT =
+            new ConfigOption<>(
+                    "langchain.execute_timeout",
+                    "The timeout in seconds for LangChain script execution.",
+                    positiveInt(),
+                    30
+            );
+
     public static final ConfigOption<String> SERVER_PROTOCOL =
             new ConfigOption<>(
                     "server.protocol",

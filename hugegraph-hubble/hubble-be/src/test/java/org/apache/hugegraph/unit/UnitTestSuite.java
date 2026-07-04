@@ -19,6 +19,7 @@
 package org.apache.hugegraph.unit;
 
 import org.apache.hugegraph.controller.ingest.IngestControllerTest;
+import org.apache.hugegraph.controller.langchain.LangChainControllerSecurityTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -30,6 +31,7 @@ import org.junit.runners.Suite;
     FileUtilTest.class,
     HubbleOptionsTest.class,
     IngestControllerTest.class,
+    LangChainControllerSecurityTest.class,
     JobManagerServiceTest.class,
     OltpAlgoControllerTest.class,
     OltpAlgoServiceTest.class

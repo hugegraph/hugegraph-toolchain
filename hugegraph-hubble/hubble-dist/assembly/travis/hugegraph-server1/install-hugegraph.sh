@@ -35,5 +35,5 @@ cp "${SERVER_CONFIG_DIR}"/graphs/hugegraph2.properties "${SERVER_DIR}"/conf/grap
 
 cd "${SERVER_DIR}" && pwd
 
-bin/init-store.sh || exit 1
+echo -e "pa" | bin/init-store.sh || exit 1
 bin/start-hugegraph.sh || exit 1

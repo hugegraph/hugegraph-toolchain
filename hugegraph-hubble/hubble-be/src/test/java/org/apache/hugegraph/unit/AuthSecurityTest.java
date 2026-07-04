@@ -48,6 +48,7 @@ import org.apache.hugegraph.config.IngestionProxyServlet;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.controller.auth.LoginController;
 import org.apache.hugegraph.exception.UnauthorizedException;
+import org.apache.hugegraph.handler.CustomInterceptor;
 import org.apache.hugegraph.handler.ExceptionAdvisor;
 import org.apache.hugegraph.handler.LoginInterceptor;
 import org.apache.hugegraph.options.HubbleOptions;
@@ -118,6 +119,160 @@ public class AuthSecurityTest {
         Assert.assertTrue(interceptor.preHandle(request,
                                                new MockHttpServletResponse(),
                                                null));
+    }
+
+    @Test
+    public void testCustomInterceptorDoesNotCreateClientForMissingSession()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET", "/api/v1.3/auth/status");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testCustomInterceptorDoesNotCreateClientForPartialSession()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET", "/api/v1.3/auth/status");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testCustomInterceptorDoesNotCreateClientWithoutToken()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET", "/api/v1.3/auth/status");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testCustomInterceptorDoesNotCreateClientForBlankSession()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET", "/api/v1.3/auth/status");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, " ");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, " ");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testCustomInterceptorDoesNotCreateClientForOptions()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "OPTIONS",
+                                            "/api/v1.3/graphspaces/space1");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testCustomInterceptorKeepsUnauthClientForLogin()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "POST", "/api/v1.3/auth/login");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(1, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testCustomInterceptorCreatesClientForAuthenticatedApi()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET",
+                                            "/api/v1.3/graphspaces/space1" +
+                                            "/graphs/graph1/schema");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(1, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertEquals("space1", interceptor.graphSpace);
+        Assert.assertEquals("graph1", interceptor.graph);
+        Assert.assertEquals("token", interceptor.token);
+    }
+
+    @Test
+    public void testCustomInterceptorDoesNotCreateClientForLogout()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "POST", "/api/v1.3/auth/logout");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
     }
 
     @Test
@@ -279,6 +434,31 @@ public class AuthSecurityTest {
 
         public LoginResult standalone(Login login) {
             return this.loginStandalone(login);
+        }
+    }
+
+    private static class TestCustomInterceptor extends CustomInterceptor {
+
+        private int authClients;
+        private int unauthClients;
+        private String graphSpace;
+        private String graph;
+        private String token;
+
+        @Override
+        protected org.apache.hugegraph.driver.HugeClient authClient(
+                  String graphSpace, String graph, String token) {
+            this.authClients++;
+            this.graphSpace = graphSpace;
+            this.graph = graph;
+            this.token = token;
+            return null;
+        }
+
+        @Override
+        protected org.apache.hugegraph.driver.HugeClient unauthClient() {
+            this.unauthClients++;
+            return null;
         }
     }
 
