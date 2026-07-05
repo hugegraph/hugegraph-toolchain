@@ -18,7 +18,6 @@
 
 /**
  * @file 图分析组件 算法标题
- * @author
  */
 
 import React from 'react';
@@ -27,6 +26,10 @@ import {Typography, Tooltip, Button} from 'antd';
 import c from './index.module.scss';
 import classnames from 'classnames';
 import {useTranslation} from 'react-i18next';
+import {
+    getAlgorithmDisplayName,
+    isAlgorithmNameMatched,
+} from '../../../../utils/constants';
 
 const {Text} = Typography;
 
@@ -53,21 +56,22 @@ const AlgorithmNameHeader = props => {
         {[c.panelHeaderIconHighlight]: highlightName}
 
     );
+    const displayName = getAlgorithmDisplayName(name, t);
 
     const renderAlgorithmName = name => {
         let res;
-        if (name.includes(searchValue)) {
+        if (isAlgorithmNameMatched(name, searchValue, t)) {
             res = (
                 <Text
                     ellipsis={{
-                        tooltip: name,
+                        tooltip: displayName,
                     }}
                 >
                     <Highlighter
                         highlightClassName={c.highlight}
                         searchWords={[searchValue]}
                         autoEscape
-                        textToHighlight={name}
+                        textToHighlight={displayName}
                     />
                 </Text>
             );
@@ -76,10 +80,10 @@ const AlgorithmNameHeader = props => {
             res = (
                 <Text
                     ellipsis={{
-                        tooltip: name,
+                        tooltip: displayName,
                     }}
                 >
-                    {name}
+                    {displayName}
                 </Text>
             );
         }
@@ -87,14 +91,14 @@ const AlgorithmNameHeader = props => {
             res = (
                 <Text
                     ellipsis={{
-                        tooltip: name,
+                        tooltip: displayName,
                     }}
                 >
                     <Highlighter
                         highlightClassName={c.highlight}
-                        searchWords={[name]}
+                        searchWords={[displayName]}
                         autoEscape
-                        textToHighlight={name}
+                        textToHighlight={displayName}
                     />
                 </Text>
             );

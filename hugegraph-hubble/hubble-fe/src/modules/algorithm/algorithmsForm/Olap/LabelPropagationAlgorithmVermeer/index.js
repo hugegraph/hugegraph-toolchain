@@ -18,7 +18,6 @@
 
 /**
  * @file LabelPropagationAlgorithmVermeer算法
- * @author gouzixing@constant
  */
 
 import React, {useState, useCallback, useContext, useEffect} from 'react';

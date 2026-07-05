@@ -18,7 +18,6 @@
 
 /**
  * @file Rings Detection算法
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext} from 'react';

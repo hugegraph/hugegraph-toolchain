@@ -18,7 +18,6 @@
 
 /**
  * @file 系统管理子项块
- * @author
  */
 
 import Item from '../Item';

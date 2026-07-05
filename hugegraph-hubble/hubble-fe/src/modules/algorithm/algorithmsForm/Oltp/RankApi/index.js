@@ -18,12 +18,12 @@
 
 /**
  * @file Rank API
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, InputNumber} from 'antd';
 import {DeleteColumnOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import _ from 'lodash';
 import GraphAnalysisContext from '../../../../Context';
 import * as api from '../../../../../api';
@@ -36,24 +36,6 @@ import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 const {RANK_API} = ALGORITHM_NAME;
-const withLabelOptions = [
-    {label: '仅保留与源顶点相同类别的顶点', value: 'SAME_LABEL'},
-    {label: '仅保留与源顶点不同类别（二分图的另一端）的顶点', value: 'OTHER_LABEL'},
-    {label: '同时保留与源顶点相同和相反类别的顶点', value: 'BOTH_LABEL'},
-];
-
-const description = {
-    source: '源顶点id',
-    label: '源点出发的某类边 label，须连接两类不同顶点',
-    alpha: '每轮迭代时从某个点往外走的概率，与 PageRank 算法中的 alpha 类似',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    max_depth: '迭代次数',
-    limit: '返回顶点的最大数目',
-    max_diff: '提前收敛的精度差',
-    sorted: '返回的结果是否根据 rank 排序',
-    with_label: `筛选结果中保留哪些结果，可从三种类型选一个: SAME_LABEL：仅保留与源顶点相同类别的顶点; OTHER_LABEL：仅保留与源顶点不同类别（二分图的另
-    一端）的顶点; BOTH_LABEL：同时保留与源顶点相同和相反类别的顶点`,
-};
 
 const initialValue = {
     alpha: 0.85,
@@ -65,9 +47,8 @@ const initialValue = {
     with_label: 'BOTH_LABEL',
 };
 
-const algorithmDescription = '根据某个点现有的出边, 推荐具有相近 / 相同关系的其他点';
-
 const RankApi = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -79,6 +60,11 @@ const RankApi = props => {
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
+    const withLabelOptions = [
+        {label: t('analysis.algorithm.oltp.rank_api.same_label'), value: 'SAME_LABEL'},
+        {label: t('analysis.algorithm.oltp.rank_api.other_label'), value: 'OTHER_LABEL'},
+        {label: t('analysis.algorithm.oltp.rank_api.both_label'), value: 'BOTH_LABEL'},
+    ];
 
     const handleSubmit = useCallback(
         async algorithmParams => {
@@ -137,7 +123,7 @@ const RankApi = props => {
                 <AlgorithmNameHeader
                     icon={<DeleteColumnOutlined />}
                     name={RANK_API}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.rank_api.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -158,7 +144,7 @@ const RankApi = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip={description.source}
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -166,7 +152,7 @@ const RankApi = props => {
                     name='label'
                     label="label"
                     rules={[{required: true}]}
-                    tooltip={description.label}
+                    tooltip={t('analysis.algorithm.oltp.rank_api.label')}
                 >
                     <Input />
                 </Form.Item>
@@ -174,7 +160,7 @@ const RankApi = props => {
                     name='alpha'
                     label="alpha"
                     rules={[{validator: alphaValidator}]}
-                    tooltip={description.alpha}
+                    tooltip={t('analysis.algorithm.oltp.common.alpha')}
                 >
                     <InputNumber step={0.01} />
                 </Form.Item>
@@ -182,7 +168,7 @@ const RankApi = props => {
                     name='max_degree'
                     label="max_degree"
                     rules={[{validator: positiveIntegerValidator}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -190,7 +176,7 @@ const RankApi = props => {
                     name='max_depth'
                     label="max_depth"
                     rules={[{validator: maxDepthForRankValidator}]}
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.oltp.common.iterations')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -198,7 +184,7 @@ const RankApi = props => {
                     name='limit'
                     label="limit"
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.limit}
+                    tooltip={t('analysis.algorithm.oltp.common.limit_vertices')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -206,18 +192,18 @@ const RankApi = props => {
                     name='max_diff'
                     label="max_diff"
                     rules={[{validator: maxDiffValidator}]}
-                    tooltip={description.max_diff}
+                    tooltip={t('analysis.algorithm.oltp.rank_api.max_diff')}
                 >
                     <InputNumber step={0.0001} />
                 </Form.Item>
                 <BoolSelectItem
                     name={'sorted'}
-                    desc={description.sorted}
+                    desc={t('analysis.algorithm.oltp.rank_api.sorted')}
                 />
                 <Form.Item
                     name='with_label'
                     label="with_label"
-                    tooltip={description.with_label}
+                    tooltip={t('analysis.algorithm.oltp.rank_api.with_label')}
                 >
                     <Select options={withLabelOptions} allowClear />
                 </Form.Item>

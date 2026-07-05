@@ -18,7 +18,6 @@
 
 /**
  * @file  GraphToolBar
- * @author
  */
 
 import React, {useState, useCallback} from 'react';

@@ -18,7 +18,6 @@
 
 /**
  * @file  统计Panel Home
- * @author gouzixing
  */
 
 import React, {useCallback, useState} from 'react';

@@ -18,7 +18,6 @@
 
 /**
  * @file 折叠组件
- * @author
  */
 
 import React, {useState, useCallback} from 'react';

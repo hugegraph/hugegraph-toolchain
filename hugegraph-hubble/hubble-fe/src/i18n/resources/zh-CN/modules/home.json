@@ -1,5 +1,6 @@
 {
   "home": {
+    "navigation": "导航",
     "name":"系统管理" ,
     "my": "个人中心",
     "account": "账号管理",

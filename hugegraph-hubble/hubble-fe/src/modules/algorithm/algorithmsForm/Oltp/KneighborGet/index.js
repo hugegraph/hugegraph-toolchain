@@ -18,10 +18,10 @@
 
 /**
  * @file KneighborGet算法
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Input, Form, Collapse} from 'antd';
 import {HeatMapOutlined} from '@ant-design/icons';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
@@ -40,9 +40,8 @@ import GraphAnalysisContext from '../../../../Context';
 const {K_NEIGHBOR} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const algorithmDescription = '根据起始顶点、方向、边的类型（可选）和深度depth，查找包括起始顶点在内、depth步之内可达的所有顶点';
-
 const KneighborGet = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -113,7 +112,7 @@ const KneighborGet = props => {
                     icon={<HeatMapOutlined />}
                     name={K_NEIGHBOR}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.kneighbor_get.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -132,11 +131,11 @@ const KneighborGet = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip="起始顶点id"
+                    tooltip={t('analysis.algorithm.oltp.kout_post.source')}
                 >
                     <Input />
                 </Form.Item>
-                <DirectionItem desc='起始顶点向外发散的方向' />
+                <DirectionItem desc={t('analysis.algorithm.form.step.direction')} />
                 <MaxDepthItem validator={positiveIntegerValidator} />
                 <LabelItem />
                 <MaxDegreeItem
@@ -144,7 +143,10 @@ const KneighborGet = props => {
                     initialValue={10000}
                     validator={maxDegreeValidator}
                 />
-                <LimitItem initialValue={10000000} desc='返回的顶点的最大数目' />
+                <LimitItem
+                    initialValue={10000000}
+                    desc={t('analysis.algorithm.oltp.kout_post.limit')}
+                />
             </Form>
         </Collapse.Panel>
     );

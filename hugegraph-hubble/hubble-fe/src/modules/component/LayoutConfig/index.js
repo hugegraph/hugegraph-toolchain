@@ -18,14 +18,15 @@
 
 /**
  * @file LayoutConfig
- * @author gouzixing@
  */
 
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {DeploymentUnitOutlined} from '@ant-design/icons';
 
 const LayoutConfig = props => {
+    const {t} = useTranslation();
     const {
         buttonEnable,
         onClick,
@@ -47,7 +48,7 @@ const LayoutConfig = props => {
                 type={'text'}
                 disabled={!buttonEnable}
             >
-                布局方式
+                {t('analysis.canvas.layout')}
             </Button>
         </Tooltip>
     );

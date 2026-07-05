@@ -18,7 +18,6 @@
 
 /**
  * @file DegreeCentralityVermeer算法
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext, useEffect} from 'react';
@@ -160,7 +159,7 @@ const DegreeCentralityVermeer = props => {
                     label='degree.direction'
                     name='degree.direction'
                     initialValue='out'
-                    tooltip={'边的方向'}
+                    tooltip={t(OWNED_TEXT_PATH + '.direction')}
                 >
                     <Select allowClear options={directionOptions} />
                 </Form.Item>

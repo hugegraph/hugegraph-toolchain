@@ -18,7 +18,6 @@
 
 /**
  * @file  图统计标题头
- * @author gouzixing
  */
 
 import React from 'react';

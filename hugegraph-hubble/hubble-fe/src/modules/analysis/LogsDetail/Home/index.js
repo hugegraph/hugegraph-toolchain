@@ -18,10 +18,10 @@
 
 /**
  * @file gremlin表格 Home
- * @author
  */
 
 import React, {useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Tabs, message} from 'antd';
 import ExecuteLog from '../ExecuteLog';
 import Favorite from '../Favorite';
@@ -36,6 +36,7 @@ const FAVORITE_TYPE  = {
 };
 
 const LogsDetail = props => {
+    const {t} = useTranslation();
     const {
         executionLogsData,
         favoriteQueriesData,
@@ -69,15 +70,15 @@ const LogsDetail = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('收藏成功');
+                        message.success(t('analysis.logs.favorite_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('收藏失败');
+                        !errMsg && message.error(t('analysis.logs.favorite_failed'));
                     }
                 });
         },
-        [analysisMode, currentGraph, currentGraphSpace, onRefresh]
+        [analysisMode, currentGraph, currentGraphSpace, onRefresh, t]
     );
 
     const delItemByRowId = useCallback(
@@ -86,15 +87,15 @@ const LogsDetail = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('删除成功');
+                        message.success(t('analysis.logs.delete_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('删除失败');
+                        !errMsg && message.error(t('analysis.logs.delete_failed'));
                     }
                 });
         },
-        [currentGraph, currentGraphSpace, onRefresh]
+        [currentGraph, currentGraphSpace, onRefresh, t]
     );
 
     const editItemByRow =  useCallback(
@@ -109,15 +110,15 @@ const LogsDetail = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('修改成功');
+                        message.success(t('analysis.logs.edit_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('修改失败');
+                        !errMsg && message.error(t('analysis.logs.edit_failed'));
                     }
                 });
         },
-        [analysisMode, currentGraph, currentGraphSpace, onRefresh]
+        [analysisMode, currentGraph, currentGraphSpace, onRefresh, t]
     );
 
     const onAddHandler = useCallback(
@@ -149,7 +150,7 @@ const LogsDetail = props => {
 
     const tabItems = [
         {
-            label: '执行记录',
+            label: t('analysis.logs.execute_tab'),
             key: 'excutes',
             children: (
                 <ExecuteLog
@@ -164,7 +165,7 @@ const LogsDetail = props => {
                 />),
         },
         {
-            label: '收藏的查询',
+            label: t('analysis.logs.favorite_tab'),
             key: 'favorites',
             children: (
                 <Favorite

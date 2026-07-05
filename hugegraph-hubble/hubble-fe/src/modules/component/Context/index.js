@@ -18,7 +18,6 @@
 
 /**
  * @file 画布Context
- * @author gouzixing@
  */
 
 import React from 'react';

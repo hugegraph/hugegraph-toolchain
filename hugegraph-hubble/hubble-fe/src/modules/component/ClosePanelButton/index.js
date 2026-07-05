@@ -18,7 +18,6 @@
 
 /**
  * @file  Panel操作按钮
- * @author
  */
 
 import React, {useCallback} from 'react';

@@ -18,28 +18,18 @@
 
 /**
  * @file StepFormItem封装
- * @author gouzixing@
  */
 
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Form, Input, Button, Tooltip} from 'antd';
 import {RightOutlined, DownOutlined, PlusOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {propertiesValidator} from '../utils';
 import classnames from 'classnames';
 import c from './index.module.scss';
 
-const description = {
-    edge_steps: {
-        label: '边类型',
-        properties: '通过属性的值过滤边',
-    },
-    vertex_steps: {
-        label: '点类型',
-        properties: '通过属性的值过滤点',
-    },
-};
-
 const StepsItems = props => {
+    const {t} = useTranslation();
 
     const {param, type, desc} = props;
 
@@ -61,14 +51,14 @@ const StepsItems = props => {
                 <Form.Item
                     name={[name, 'label']}
                     label="label"
-                    tooltip={description[type].label}
+                    tooltip={t(`analysis.algorithm.form.${type}.label`)}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     name={[name, 'properties']}
                     label="properties"
-                    tooltip={description[type].properties}
+                    tooltip={t(`analysis.algorithm.form.${type}.properties`)}
                     rules={[{validator: propertiesValidator}]}
                 >
                     <Input.TextArea />

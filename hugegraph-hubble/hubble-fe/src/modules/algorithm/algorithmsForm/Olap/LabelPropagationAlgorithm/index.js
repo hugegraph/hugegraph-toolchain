@@ -18,7 +18,6 @@
 
 /**
  * @file LabelPropagationAlgorithm算法
- * @author zhanghao14@constant
  */
 
 import React, {useState, useCallback, useContext} from 'react';

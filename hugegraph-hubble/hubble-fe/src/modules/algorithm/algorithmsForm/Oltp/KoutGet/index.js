@@ -18,10 +18,10 @@
 
 /**
  * @file KoutGet算法
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Input, Form, Collapse, Select} from 'antd';
 import {RadarChartOutlined} from '@ant-design/icons';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
@@ -42,14 +42,8 @@ import GraphAnalysisContext from '../../../../Context';
 const {K_OUT} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const algorithmOptions = [
-    {label: '广度优先', value: 'breadth_first'},
-    {label: '深度优先', value: 'deep_first'},
-];
-
-const algorithmDescription = '根据起始顶点、方向、边的类型（可选）和深度depth，查找从起始顶点出发恰好depth步可达的顶点';
-
 const KoutGet = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -62,6 +56,10 @@ const KoutGet = props => {
     const [isRequiring, setRequiring] = useState(false);
 
     const [crosspointsForm] = Form.useForm();
+    const algorithmOptions = [
+        {label: t('analysis.algorithm.oltp.kout_post.breadth_first'), value: 'breadth_first'},
+        {label: t('analysis.algorithm.oltp.kout_post.deep_first'), value: 'deep_first'},
+    ];
 
     const handleSubmit = useCallback(
         async algorithmParams => {
@@ -120,7 +118,7 @@ const KoutGet = props => {
                     icon={<RadarChartOutlined />}
                     name={K_OUT}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.kout_get.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -139,11 +137,11 @@ const KoutGet = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip="起始顶点id"
+                    tooltip={t('analysis.algorithm.oltp.kout_post.source')}
                 >
                     <Input />
                 </Form.Item>
-                <DirectionItem desc='起始顶点向外发散的方向' />
+                <DirectionItem desc={t('analysis.algorithm.form.step.direction')} />
                 <MaxDepthItem validator={positiveIntegerValidator} />
                 <LabelItem />
                 <NearestItem />
@@ -153,14 +151,21 @@ const KoutGet = props => {
                     validator={maxDegreeValidator}
                 />
                 <CapacityItem />
-                <LimitItem initialValue={10000000} desc='返回的顶点的最大数目' />
+                <LimitItem
+                    initialValue={10000000}
+                    desc={t('analysis.algorithm.oltp.kout_post.limit')}
+                />
                 <Form.Item
                     label='algorithm'
                     name='algorithm'
                     initialValue='breadth_first'
-                    tooltip="遍历方式,常情况下，deep_first（深度优先搜索）方式会具有更好的遍历性能。但当参数nearest为true时，可能会包含非最近邻的节点，尤其是数据量较大时"
+                    tooltip={t('analysis.algorithm.oltp.kout_post.algorithm')}
                 >
-                    <Select placeholder="选择遍历方式" allowClear options={algorithmOptions} />
+                    <Select
+                        placeholder={t('analysis.algorithm.oltp.kout_post.algorithm_placeholder')}
+                        allowClear
+                        options={algorithmOptions}
+                    />
                 </Form.Item>
             </Form>
         </Collapse.Panel>

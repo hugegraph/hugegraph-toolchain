@@ -302,38 +302,6 @@ public class HubbleOptions extends OptionHolder {
                     "127.0.0.1:8620"
             );
 
-    public static final ConfigOption<String> AFS_DIR =
-            new ConfigOption<>(
-                    "afs.dir",
-                    "the directory in afs stored for the olap algorithm's result",
-                    null,
-                    "/user/hugegraph/graph_sketch/"
-            );
-    //// TODO REMOVED
-    //public static final ConfigOption<String> AFS_URI =
-    //        new ConfigOption<>(
-    //                "afs.uri",
-    //                "the uri of afs stored for the olap algorithm's result",
-    //                null,
-    //                "afs://cnn-bd-main.afs.baidu.com:9902"
-    //        );
-    //
-    //public static final ConfigOption<String> AFS_USER =
-    //        new ConfigOption<>(
-    //                "afs.user",
-    //                "the user name for accessing afs stored",
-    //                null,
-    //                "user"
-    //        );
-    //
-    //public static final ConfigOption<String> AFS_PASSWORD =
-    //        new ConfigOption<>(
-    //                "afs.password",
-    //                "the user password for accessing afs stored",
-    //                null,
-    //                "password"
-    //        );
-
     public static final ConfigOption<String> DASHBOARD_ADDRESS =
             new ConfigOption<>(
                     "dashboard.address",

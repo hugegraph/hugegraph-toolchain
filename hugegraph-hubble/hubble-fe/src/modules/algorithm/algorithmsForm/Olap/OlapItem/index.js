@@ -18,7 +18,6 @@
 
 /**
  * @file OLAP算法item
- * @author zhanghao14@
  */
 
 import React, {useContext} from 'react';

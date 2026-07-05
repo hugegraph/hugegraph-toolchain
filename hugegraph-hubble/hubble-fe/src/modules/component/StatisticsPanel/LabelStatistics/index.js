@@ -18,7 +18,6 @@
 
 /**
  * @file  标签统计
- * @author
  */
 
 import React, {useMemo} from 'react';

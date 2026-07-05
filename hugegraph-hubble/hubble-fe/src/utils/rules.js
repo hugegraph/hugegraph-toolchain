@@ -87,11 +87,13 @@ const isCNName = () => ({
 });
 
 // 中文，字母，数字，_
-const isPropertyName = () => ({
+const isPropertyName = msg => ({
     validator(_, value) {
         let res = /[^\u4E00-\u9FA5\uFE30-\uFFA0\_a-zA-Z0-9]+/.test(value);
         if (res) {
-            return Promise.reject('只能包含中文、字母、数字、_');
+            return Promise.reject(
+                typeof msg === 'string' ? msg : '只能包含中文、字母、数字、_'
+            );
         }
 
         return Promise.resolve();
@@ -111,11 +113,17 @@ const isNoramlName = () => ({
 });
 
 // jdbc
-const isJDBC = () => ({
+const isJDBC = msg => ({
     validator(_, value) {
-        let res = /jdbc:(\w+:){1,2}(\/\/)?(.+):(\d+)/.test(value);
+        let normalized = typeof value === 'string' ? value.trim() : '';
+        let res = normalized.startsWith('jdbc:')
+            && /^jdbc:[a-zA-Z0-9]+:\S+$/.test(normalized);
         if (!res) {
-            return Promise.reject('请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name');
+            return Promise.reject(
+                typeof msg === 'string'
+                    ? msg
+                    : '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name'
+            );
         }
 
         return Promise.resolve();

@@ -18,7 +18,6 @@
 
 /**
  * @file 异步任务结果
- * @author
  */
 
 import React, {useCallback, useEffect, useState} from 'react';

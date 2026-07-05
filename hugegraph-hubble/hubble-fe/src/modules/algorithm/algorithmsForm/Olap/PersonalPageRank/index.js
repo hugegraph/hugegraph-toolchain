@@ -18,7 +18,6 @@
 
 /**
  * @file PersonalPageRank算法
- * @author zhanghao14@
  */
 
 import React, {useState, useCallback, useContext} from 'react';
@@ -187,8 +186,8 @@ const PersonalPageRank = props => {
                         placeholder={t(OWNED_TEXT_PATH + '.use_id_fixlength_query')}
                         allowClear
                     >
-                        <Select.Option value>是</Select.Option>
-                        <Select.Option value={false}>否</Select.Option>
+                        <Select.Option value>{t('common.verify.yes')}</Select.Option>
+                        <Select.Option value={false}>{t('common.verify.no')}</Select.Option>
                     </Select>
                 </Form.Item>
                 <Form.Item

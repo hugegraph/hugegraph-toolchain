@@ -18,7 +18,6 @@
 
 /**
  * @file  网格布局
- * @author
  */
 
 import React, {useCallback} from 'react';

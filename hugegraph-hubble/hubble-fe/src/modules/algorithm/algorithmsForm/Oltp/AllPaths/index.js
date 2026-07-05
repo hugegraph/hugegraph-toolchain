@@ -18,12 +18,12 @@
 
 /**
  * @file AllPaths算法
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, Tooltip, InputNumber} from 'antd';
 import {ClusterOutlined, QuestionCircleOutlined, DownOutlined, RightOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import VerticesItems from '../../VerticesItems';
 import MaxDepthItem from '../../MaxDepthItem';
@@ -45,15 +45,8 @@ import s from '../OltpItem/index.module.scss';
 const {ALLPATHS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const directionOptions = [
-    {label: '出边', value: 'OUT'},
-    {label: '入边', value: 'IN'},
-    {label: '双边', value: 'BOTH'},
-];// TODO WORK AT HERE
-
-const algorithmDescription = '根据起始顶点、目的顶点、步骤（step）和最大深度等条件查找所有路径';
-
 const AllPaths = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -65,6 +58,11 @@ const AllPaths = props => {
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
     const [stepVisible, setStepVisible] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
 
     const stepContentClassName = classnames(
@@ -154,7 +152,7 @@ const AllPaths = props => {
                 <div className={s.tooltip}>
                     <Tooltip
                         placement="rightTop"
-                        title='表示从起始顶点到终止顶点走过的路径'
+                        title={t('analysis.algorithm.oltp.common.source_target_path')}
                     >
                         <QuestionCircleOutlined />
                     </Tooltip>
@@ -165,22 +163,25 @@ const AllPaths = props => {
                     name={['step', 'direction']}
                     label="direction"
                     initialValue='BOTH'
-                    tooltip="起始顶点向外发散的方向(出边，入边，双边)"
+                    tooltip={t('analysis.algorithm.form.step.direction')}
                 >
-                    <Select placeholder="顶点向外发散的方向" allowClear options={directionOptions} />
+                    <Select
+                        placeholder={t('analysis.algorithm.direction_item.tooltip')}
+                        allowClear
+                        options={directionOptions}
+                    />
                 </Form.Item>
                 <Form.Item
                     name={['step', 'label']}
                     label="label"
-                    tooltip="边的类型, 默认代表所有edge label"
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     name={['step', 'properties']}
                     label="properties"
-                    tooltip={`属性Map，key为属性名(String类型)，value为属性值(类型由schema定义决定)。注意：properties中的属性值可以是列表，
-                    表示只要key对应的value在列表中就可以`}
+                    tooltip={t('analysis.algorithm.form.step.edge_properties')}
                     rules={[{validator: propertiesValidator}]}
                 >
                     <Input.TextArea />
@@ -191,9 +192,7 @@ const AllPaths = props => {
                     label="skip_degree"
                     initialValue={0}
                     rules={[{validator: integerValidator}]}
-                    tooltip={`用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，完全舍弃该顶点。选填项，如果开启时，需满足
-                    skip_degree >= max_degree 约束，默认为0 (不启用)，表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的 skip_degree 条
-                    边，而不仅仅是 max_degree 条边，这样有额外的遍历开销，对查询性能影响可能有较大影响，请确认理解后再开启)`}
+                    tooltip={t('analysis.algorithm.form.step.skip_degree')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -208,7 +207,7 @@ const AllPaths = props => {
                     icon={<ClusterOutlined />}
                     name={ALLPATHS}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.all_paths.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -224,13 +223,13 @@ const AllPaths = props => {
                 layout="vertical"
                 className={s.oltpForms}
             >
-                <VerticesItems name="sources" desc='起始顶点' />
-                <VerticesItems name="targets" desc='终止顶点' />
+                <VerticesItems name="sources" desc={t('analysis.algorithm.oltp.template_paths.sources')} />
+                <VerticesItems name="targets" desc={t('analysis.algorithm.oltp.template_paths.targets')} />
                 {stepFormItems}
                 <MaxDepthItem validator={maxDepthValidator} />
                 <NearestItem />
                 <CapacityItem />
-                <LimitItem initialValue={10} desc='返回的路径的最大条数' />
+                <LimitItem initialValue={10} desc={t('analysis.algorithm.oltp.template_paths.limit')} />
             </Form>
         </Collapse.Panel>
     );

@@ -18,7 +18,6 @@
 
 /**
  * @file 运维管理子项块
- * @author
  */
 import {useEffect, useState} from 'react';
 import {message} from 'antd';

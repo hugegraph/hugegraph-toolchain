@@ -18,23 +18,25 @@
 
 /**
  * @file 分析子项块
- * @author
  */
 
 import Item from '../Item';
+import {useTranslation} from 'react-i18next';
 
 const AnalyseItem = () => {
+    const {t} = useTranslation();
+
     return (
         <Item
             btnIndex={2}
-            btnTitle={'业务分析'}
+            btnTitle={t('analysis.name')}
             listData={[
                 {
-                    title: '图语言分析',
+                    title: t('analysis.query.name'),
                     url: '/gremlin',
                 },
                 {
-                    title: '图算法',
+                    title: t('analysis.algorithm.name'),
                     url: '/algorithms',
                 },
             ]}

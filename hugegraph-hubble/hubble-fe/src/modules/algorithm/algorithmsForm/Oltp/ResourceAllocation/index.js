@@ -18,12 +18,12 @@
 
 /**
  * @file ResourceAllocation算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, InputNumber} from 'antd';
 import {BlockOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../../../Context';
 import * as api from '../../../../../api';
 import removeNilKeys from '../../../../../utils/removeNilKeys';
@@ -35,17 +35,9 @@ import _ from 'lodash';
 
 const {RESOURCE_ALLOCATION} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const algorithmDescription = '主要用于社交网络中判断两点紧密度的算法,用来求两点间共同邻居密集度的一个系数';
-const description = {
-    vertex: '起始顶点',
-    other: '终点顶点',
-    direction: '起始顶点到目的顶点的方向，目的地到起始点是反方向，BOTH时不考虑方向',
-    label: '默认代表所有edge label',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    limit: '返回的交点的最大数目',
-};
 
 const ResourceAllocation = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -114,7 +106,7 @@ const ResourceAllocation = props => {
                 <AlgorithmNameHeader
                     icon={<BlockOutlined />}
                     name={RESOURCE_ALLOCATION}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.resource_allocation.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -134,7 +126,7 @@ const ResourceAllocation = props => {
                     label='vertex'
                     name='vertex'
                     rules={[{required: true}]}
-                    tooltip={description.vertex}
+                    tooltip={t('analysis.algorithm.oltp.common.vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -142,17 +134,17 @@ const ResourceAllocation = props => {
                     name='other'
                     label="other"
                     rules={[{required: true}]}
-                    tooltip={description.other}
+                    tooltip={t('analysis.algorithm.oltp.common.other_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
                 <DirectionItem
-                    desc={description.direction}
+                    desc={t('analysis.algorithm.oltp.common.direction_source_target')}
                 />
                 <Form.Item
                     name='label'
                     label="label"
-                    tooltip={description.label}
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
@@ -161,7 +153,7 @@ const ResourceAllocation = props => {
                     name='max_degree'
                     initialValue='10000'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>

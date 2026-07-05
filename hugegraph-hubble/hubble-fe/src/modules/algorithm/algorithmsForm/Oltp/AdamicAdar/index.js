@@ -18,7 +18,6 @@
 
 /**
  * @file AdamicAdar算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';

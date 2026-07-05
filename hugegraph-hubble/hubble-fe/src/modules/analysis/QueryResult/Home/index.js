@@ -18,23 +18,18 @@
 
 /**
  * @file Gremlin语法分析 查询结果
- * @author anxiaojie@
  */
 
 import React from 'react';
+import {useTranslation} from 'react-i18next';
 import {Tabs} from 'antd';
 import JsonView from '../JsonView';
 import GraphResult from '../GraphResult/Home';
 import TableView from '../TableView';
 import c from './index.module.scss';
 
-const TABS = {
-    GRAPH_VIEW: '图',
-    TABLE_VIEW: '表格',
-    JSON_VIEW: 'Json',
-};
-
 const QueryResult = props => {
+    const {t} = useTranslation();
     const {
         queryResult,
         asyncTaskResult,
@@ -52,7 +47,9 @@ const QueryResult = props => {
 
     const jsonViewContent = JSON.parse(JSON.stringify(queryResultJson?.data || []));
 
-    const {GRAPH_VIEW, TABLE_VIEW, JSON_VIEW} = TABS;
+    const GRAPH_VIEW = t('analysis.query_result.graph');
+    const TABLE_VIEW = t('analysis.query_result.table');
+    const JSON_VIEW = 'Json';
     const renderTab = type => {
         let iconClassName = '';
         switch (type) {

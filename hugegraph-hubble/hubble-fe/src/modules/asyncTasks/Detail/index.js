@@ -18,7 +18,6 @@
 
 /**
  * @file 任务管理 table页面
- * @author zhanghao14@
  */
 
 import React, {useState, useCallback, useContext} from 'react';

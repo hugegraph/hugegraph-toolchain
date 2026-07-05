@@ -18,24 +18,29 @@
 
 /**
  * @file 3D/2D 切换按钮
- * @author gouzixing
  */
 
 import React from 'react';
+import {useTranslation} from 'react-i18next';
 import {Tooltip, Segmented} from 'antd';
 import {GRAPH_RENDER_MODE} from '../../../utils/constants';
 import c from './index.module.scss';
 
 const RenderModeSwitcher = props => {
+    const {t} = useTranslation();
 
     const {buttonEnable, onClick, value, tooltip} = props;
+    const options = [
+        {label: t('analysis.canvas.mode_2d'), value: GRAPH_RENDER_MODE.CANVAS2D},
+        {label: t('analysis.canvas.mode_3d'), value: GRAPH_RENDER_MODE.CANVAS3D},
+    ];
 
     return (
         <Tooltip placement="bottom" title={!buttonEnable ? tooltip : ''}>
             <div className={c.threeModeSegment}>
                 <Segmented
                     disabled={!buttonEnable}
-                    options={Object.values(GRAPH_RENDER_MODE)}
+                    options={options}
                     onChange={onClick}
                     value={value}
                 />

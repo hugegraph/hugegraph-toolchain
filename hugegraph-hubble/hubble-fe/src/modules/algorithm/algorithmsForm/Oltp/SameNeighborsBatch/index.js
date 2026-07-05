@@ -18,12 +18,12 @@
 
 /**
  * @file SameNeighborsBatch算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, InputNumber} from 'antd';
 import {ForkOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../../../Context';
 import * as api from '../../../../../api';
 import removeNilKeys from '../../../../../utils/removeNilKeys';
@@ -36,17 +36,9 @@ import _ from 'lodash';
 
 const {SAME_NEIGHBORS_BATCH} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const description = {
-    vertex_list: '点ID对列表，如：[["0000000001","0000376440"],["0000000001","0001822679"]]',
-    direction: '起始顶点到目的顶点的方向，目的地到起始点是反方向，BOTH时不考虑方向',
-    label: '默认代表所有edge label',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    limit: '返回的交点的最大数目',
-};
-
-const algorithmDescription = '批量查询两个点的共同邻居';
 
 const SameNeighborsBatch = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -119,7 +111,7 @@ const SameNeighborsBatch = props => {
                 <AlgorithmNameHeader
                     icon={<ForkOutlined />}
                     name={SAME_NEIGHBORS_BATCH}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.same_neighbors_batch.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -138,19 +130,19 @@ const SameNeighborsBatch = props => {
                 <Form.Item
                     label='vertex_list'
                     name='vertex_list'
-                    tooltip={description.vertex_list}
+                    tooltip={t('analysis.algorithm.oltp.same_neighbors_batch.vertex_list')}
                     rules={[{required: true}]}
 
                 >
                     <Input />
                 </Form.Item>
                 <DirectionItem
-                    desc={description.direction}
+                    desc={t('analysis.algorithm.oltp.common.direction_source_target')}
                 />
                 <Form.Item
                     name='label'
                     label="label"
-                    tooltip={description.label}
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
@@ -159,13 +151,13 @@ const SameNeighborsBatch = props => {
                     name='max_degree'
                     initialValue='10000'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
                 <LimitItem
                     initialValue='10000000'
-                    desc={description.limit}
+                    desc={t('analysis.algorithm.oltp.common.limit_crosspoints')}
                 />
             </Form>
         </Collapse.Panel>

@@ -18,9 +18,9 @@
 
 /**
  * @file 图分析画布 Home
- * @author
  */
 import React, {useCallback, useEffect, useState, useContext, useMemo, useRef} from 'react';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../../Context';
 import Graph from '../../../component/Graph';
 import Legend from '../../../component/Legend';
@@ -50,12 +50,13 @@ import {formatToGraphData, formatToOptionedGraphData, formatToStyleData,
 import {fetchExpandInfo, handleAddGraphNode, handleAddGraphEdge, handleExpandGraph} from '../utils';
 import {mapLayoutNameToLayoutDetails} from '../../../../utils/graph';
 import {
-    GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, useTranslatedConstants,
+    GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, getAlgorithmNameI18nKey, useTranslatedConstants,
 } from '../../../../utils/constants';
 import c from './index.module.scss';
 import _ from 'lodash';
 
 const GraphResult = props => {
+    const {t} = useTranslation();
     const {
         data = {vertexs: [], edges: []},
         metaData,
@@ -74,6 +75,8 @@ const GraphResult = props => {
         onGraphRenderModeChange,
     } = props;
     const {ALGORITHM_NAME, Algorithm_Layout} = useTranslatedConstants();
+    const algorithmNameI18nKey = getAlgorithmNameI18nKey(algorithmName);
+    const displayAlgorithmName = algorithmNameI18nKey ? t(algorithmNameI18nKey) : algorithmName;
 
     const {STANDBY, LOADING, SUCCESS, FAILED, UPLOAD_FAILED} = GRAPH_STATUS;
     const {JACCARD_SIMILARITY, JACCARD_SIMILARITY_POST, RANK_API,
@@ -465,24 +468,31 @@ const GraphResult = props => {
     const renderCanvas3D = () => (<Canvas3D data={graphData} />);
 
     const statusMessage = useMemo(() => ({
-        [STANDBY]: '暂无数据结果',
-        [LOADING]: '程序运行中，请稍候...',
-        [FAILED]: queryMessage || '运行失败',
-        [UPLOAD_FAILED]: queryMessage || '导入失败',
-    }), [queryMessage]);
+        [STANDBY]: t('analysis.query_result.no_data'),
+        [LOADING]: t('analysis.query_result.loading'),
+        [FAILED]: queryMessage || t('analysis.query_result.run_failed'),
+        [UPLOAD_FAILED]: queryMessage || t('analysis.query_result.import_failed'),
+    }), [LOADING, FAILED, STANDBY, UPLOAD_FAILED, queryMessage, t]);
 
     const renderMainContent = () => {
         if (queryStatus === SUCCESS) {
             if (!isQueryMode) {
                 return (
                     <TaskNavigateView
-                        message={`${algorithmName}算法任务提交成功`}
+                        message={t('analysis.algorithm.task_submit_success', {
+                            name: displayAlgorithmName,
+                        })}
                         taskId={asyncTaskId}
                     />
                 );
             }
             if (!showCanvasInfo && !noneGraphAlgorithm.includes(algorithmName)) {
-                return <GraphStatusView status={SUCCESS} message={'无图结果'} />;
+                return (
+                    <GraphStatusView
+                        status={SUCCESS}
+                        message={t('analysis.query_result.no_graph_result')}
+                    />
+                );
             }
             switch (algorithmName) {
                 case JACCARD_SIMILARITY:

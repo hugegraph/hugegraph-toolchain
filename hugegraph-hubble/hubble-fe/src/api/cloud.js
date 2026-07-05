@@ -17,7 +17,6 @@
  */
 
 // import request from './request';
-// TODO REMOVED
 // const getAccountsList = username => {
 //     return request.get('/uic/accounts', {params: {username}});
 // };

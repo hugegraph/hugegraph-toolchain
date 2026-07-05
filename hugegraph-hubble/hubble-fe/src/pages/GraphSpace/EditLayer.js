@@ -125,7 +125,12 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
         if (detail.name) {
             api.manage.getGraphSpace(detail.name).then(res => {
                 if (res.status === 200) {
-                    form.setFieldsValue(res.data);
+                    form.setFieldsValue({
+                        ...res.data,
+                        algorithm_image_url: res.data.algorithm_image_url
+                                             || res.data['internal_'
+                                                         + 'algorithm_image_url'],
+                    });
                 }
             });
         }
@@ -310,7 +315,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                 </Form.Item>
 
                 <Form.Item
-                    name="internal_algorithm_image_url"
+                    name="algorithm_image_url"
                     label="算法镜像地址"
                     extra='ie: example.com/org_1/xx_img:1.0.0'
                     rules={[

@@ -18,12 +18,12 @@
 
 /**
  * @file 查找带权重的最短路径
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, InputNumber} from 'antd';
 import {SecurityScanOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import * as api from '../../../../../api';
 import removeNilKeys from '../../../../../utils/removeNilKeys';
@@ -34,24 +34,6 @@ import _ from 'lodash';
 
 const {FINDSHORTESTPATHWITHWEIGHT} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const directionOptions = [
-    {label: '出边', value: 'OUT'},
-    {label: '入边', value: 'IN'},
-    {label: '双边', value: 'BOTH'},
-];
-
-const description = {
-    source: '起始顶点id',
-    target: '目的顶点id',
-    direction: '起始顶点向外发散的方向(出边，入边，双边)',
-    label: '边的类型, 默认代表所有edge label',
-    weight: '边的权重属性，属性的类型必须为数字类型，如果不填或者虽然填了但是边没有该属性，则权重为1.0',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    skip_degree: `用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，
-    完全舍弃该顶点。选填项，如果开启时，需满足 skip_degree >= max_degree 约束，默认为0 (不启用)，表示不跳过任何点 (注意: 开启此配置后，
-    遍历时会尝试访问一个顶点的 skip_degree 条边，而不仅仅是 max_degree 条边，这样有额外的遍历开销，对查询性能影响可能有较大影响，请确认理解后再开启)`,
-    capacity: '遍历过程中最大的访问的顶点数目',
-};
 
 const initialValue = {
     direction: 'BOTH',
@@ -60,9 +42,8 @@ const initialValue = {
     capacity: 10000000,
 };
 
-const algorithmDescription = '根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度，查找一条带权最短路径';
-
 const FindShortestPathWithWeight = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -74,6 +55,11 @@ const FindShortestPathWithWeight = props => {
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const handleSubmit = useCallback(
         async algorithmParams => {
@@ -131,7 +117,7 @@ const FindShortestPathWithWeight = props => {
                     icon={<SecurityScanOutlined />}
                     name={FINDSHORTESTPATHWITHWEIGHT}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.find_shortest_path_with_weight.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -151,7 +137,7 @@ const FindShortestPathWithWeight = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip={description.source}
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -159,21 +145,21 @@ const FindShortestPathWithWeight = props => {
                     name='target'
                     label="target"
                     rules={[{required: true}]}
-                    tooltip={description.target}
+                    tooltip={t('analysis.algorithm.oltp.common.target_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     name='direction'
                     label="direction"
-                    tooltip={description.direction}
+                    tooltip={t('analysis.algorithm.form.step.direction')}
                 >
                     <Select options={directionOptions} allowClear />
                 </Form.Item>
                 <Form.Item
                     name='label'
                     label="label"
-                    tooltip={description.label}
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
@@ -181,7 +167,7 @@ const FindShortestPathWithWeight = props => {
                     name='weight'
                     label="weight"
                     rules={[{required: true}]}
-                    tooltip={description.weight}
+                    tooltip={t('analysis.algorithm.oltp.common.weight_property')}
                 >
                     <Input />
                 </Form.Item>
@@ -189,7 +175,7 @@ const FindShortestPathWithWeight = props => {
                     name='max_degree'
                     label="max_degree"
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -197,7 +183,7 @@ const FindShortestPathWithWeight = props => {
                     name='skip_degree'
                     label="skip_degree"
                     rules={[{validator: integerValidator}]}
-                    tooltip={description.skip_degree}
+                    tooltip={t('analysis.algorithm.form.step.skip_degree')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -205,7 +191,7 @@ const FindShortestPathWithWeight = props => {
                     name='capacity'
                     label="capacity"
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>

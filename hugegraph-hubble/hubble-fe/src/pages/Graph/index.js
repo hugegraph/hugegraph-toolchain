@@ -33,16 +33,23 @@ import {
     Spin,
 } from 'antd';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {EditLayer, ViewLayer, CloneLayer} from './EditLayer';
 import {PlusOutlined} from '@ant-design/icons';
 import {Link, useParams, useNavigate} from 'react-router-dom';
 import style from './index.module.scss';
 import * as api from '../../api';
 import {isPdEnabled} from '../../utils/config';
+import {
+    DEFAULT_GRAPHSPACE,
+    isGraphCreateEnabled,
+    isGraphDefaultMutationEnabled,
+} from '../../utils/productMode';
 import moment from 'moment';
 import GraphCard from './Card';
 
 const Graph = () => {
+    const {t} = useTranslation();
     const [data, setData] = useState([]);
     const [dateData, setDateData] = useState('');
     const [graphname, setGraphname] = useState('');
@@ -57,6 +64,9 @@ const Graph = () => {
     const [loading, setLoading] = useState(false);
     const {graphspace} = useParams();
     const navigate = useNavigate();
+    const pdMode = isPdEnabled();
+    const graphCreateEnabled = isGraphCreateEnabled(pdMode);
+    const graphDefaultMutationEnabled = isGraphDefaultMutationEnabled(pdMode);
 
     const handlePagination = useCallback(current => {
         setPagination({...pagination, current});
@@ -167,7 +177,7 @@ const Graph = () => {
 
             if (res.data.default_graph) {
                 Modal.confirm({
-                    title: '确认更改图的默认设置?',
+                    title: t('graph.set_default_confirm'),
                     onOk: () => setDefault(graph),
                 });
 
@@ -181,7 +191,8 @@ const Graph = () => {
     const handleBack = useCallback(() => {
         if (isPdEnabled()) {
             navigate('/graphspace');
-        } else {
+        }
+        else {
             navigate('/navigation');
         }
     }, [navigate]);
@@ -223,56 +234,67 @@ const Graph = () => {
             title: '图名称',
             render: row => (
                 <Link to={`/gremlin/${row.graphspace || 'DEFAULT'}/${row.name}`}>
-                    {row.nickname}{row.default && <span className={style.default}>默认</span>}
+                    {row.nickname}
+                    {row.default && (
+                        <span className={style.default}>
+                            {t('common.label.default')}
+                        </span>
+                    )}
                 </Link>
             ),
         },
         {
-            title: '图空间',
+            title: t('graph.detail.graphspace'),
             dataIndex: 'graphspace_nickname',
         },
         {
-            title: '创建时间',
+            title: t('graph.col.create_time'),
             dataIndex: 'create_time',
             align: 'center',
             width: 140,
             render: val => moment(val).format('YYYY-MM-DD'),
         },
         {
-            title: '更新时间',
+            title: t('graph.detail.update_data'),
             dataIndex: 'update_time',
             align: 'center',
             width: 140,
             render: val => moment(val).format('YYYY-MM-DD'),
         },
         {
-            title: '创建人',
+            title: t('graph.col.creator'),
             dataIndex: 'creator',
             align: 'center',
             width: 140,
         },
         {
-            title: '操作',
+            title: t('graph.col.operation'),
             width: 420,
             align: 'center',
             render: row => {
                 return (
                     <Space>
-                        <Link to={`/graphspace/${graphspace}/graph/${row.name}/meta`}>元数据配置</Link>
+                        <Link to={`/graphspace/${graphspace}/graph/${row.name}/meta`}>
+                            {t('graph.menu.meta_config')}
+                        </Link>
                         {(row.default)
-                            ? <span className={style.disable}>清空</span>
-                            : <a onClick={() => clearSchema(row.name)}>清空</a>}
+                            ? <span className={style.disable}>{t('graph.menu.clear_data')}</span>
+                            : <a onClick={() => clearSchema(row.name)}>{t('graph.menu.clear_data')}</a>}
                         {(row.graphspace === 'neizhianli')
-                            ? <span className={style.disable}>删除</span>
-                            : <a onClick={() => deleteGraph(row.name)}>删除</a>}
-                        <a onClick={() => showSchema(row.name)}>查看schema</a>
+                            ? <span className={style.disable}>{t('common.action.delete')}</span>
+                            : <a onClick={() => deleteGraph(row.name)}>{t('common.action.delete')}</a>}
+                        <a onClick={() => showSchema(row.name)}>{t('graph.menu.view_schema')}</a>
                         {(row.graphspace === 'neizhianli')
-                            ? <span className={style.disable}>编辑</span>
-                            : <a onClick={() => editGraph(row.name)}>编辑</a>}
-                        {row.default
-                            ? <span className={style.disable}>设为默认</span>
-                            : <a onClick={() => handleSetDefault(row.name)}>设为默认</a>}
-                        <a onClick={() => showClone(row.name)}>克隆图</a>
+                            ? <span className={style.disable}>{t('common.action.edit')}</span>
+                            : <a onClick={() => editGraph(row.name)}>{t('common.action.edit')}</a>}
+                        {graphDefaultMutationEnabled && (
+                            row.default
+                                ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
+                                : <a onClick={() => handleSetDefault(row.name)}>{t('graph.menu.set_default')}</a>
+                        )}
+                        {graphCreateEnabled && (
+                            <a onClick={() => showClone(row.name)}>{t('graph.menu.clone')}</a>
+                        )}
                     </Space>
                 );
             },
@@ -282,55 +304,60 @@ const Graph = () => {
     const getMenus = item => [
         {
             key: '0',
-            label: <a onClick={() => handleGotoAnalysis(item)}>进入图分析平台</a>,
+            label: <a onClick={() => handleGotoAnalysis(item)}>{t('graph.menu.enter_analysis')}</a>,
         },
         {
             key: '1',
-            label: <a onClick={() => handleGotoMeta(item)}>元数据配置</a>,
+            label: <a onClick={() => handleGotoMeta(item)}>{t('graph.menu.meta_config')}</a>,
         },
         {
             key: '2',
             label: item.isDefault
-                ? <span className={style.disable}>清空schema+数据</span>
-                : <a onClick={() => clearSchema(item.name)}>清空schema+数据</a>,
+                ? <span className={style.disable}>{t('graph.menu.clear_schema_data')}</span>
+                : <a onClick={() => clearSchema(item.name)}>{t('graph.menu.clear_schema_data')}</a>,
         },
         {
             key: '3',
-            label: <a onClick={() => clearData(item.name)}>清空数据</a>,
+            label: <a onClick={() => clearData(item.name)}>{t('graph.menu.clear_data')}</a>,
         },
-        {
+        graphDefaultMutationEnabled && {
             key: '4',
             label: item.isDefault
-                ? <span className={style.disable}>设为默认</span>
-                : <a onClick={() => handleSetDefault(item.name)}>设为默认</a>,
+                ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
+                : <a onClick={() => handleSetDefault(item.name)}>{t('graph.menu.set_default')}</a>,
         },
         {
             key: '5',
-            label: <a onClick={() => showSchema(item.name)}>查看schema</a>,
+            label: <a onClick={() => showSchema(item.name)}>{t('graph.menu.view_schema')}</a>,
         },
         {
             key: '6',
             label: item.graphspace === 'neizhianli'
-                ? <span className={style.disable}>编辑</span>
-                : <a onClick={() => editGraph(item.name)}>编辑</a>,
+                ? <span className={style.disable}>{t('common.action.edit')}</span>
+                : <a onClick={() => editGraph(item.name)}>{t('common.action.edit')}</a>,
         },
         {
             key: '7',
             label: item.graphspace === 'neizhianli'
-                ? <span className={style.disable}>删除</span>
-                : <a onClick={() => deleteGraph(item.name)}>删除</a>,
+                ? <span className={style.disable}>{t('common.action.delete')}</span>
+                : <a onClick={() => deleteGraph(item.name)}>{t('common.action.delete')}</a>,
         },
-        {
+        graphCreateEnabled && {
             key: '8',
-            label: <a onClick={() => showClone(item.name)}>克隆图</a>,
+            label: <a onClick={() => showClone(item.name)}>{t('graph.menu.clone')}</a>,
         },
         // {
         //     key: '8',
         //     label: <a onClick={() => showClone(item.name)}>克隆图</a>,
         // },
-    ];
+    ].filter(Boolean);
 
     useEffect(() => {
+        if (!pdMode && graphspace === DEFAULT_GRAPHSPACE) {
+            setGraphspaceInfo({name: DEFAULT_GRAPHSPACE, nickname: DEFAULT_GRAPHSPACE});
+            return;
+        }
+
         api.manage.getGraphSpace(graphspace).then(res => {
             if (res.status === 200) {
                 setGraphspaceInfo(res.data);
@@ -339,7 +366,7 @@ const Graph = () => {
 
             message.error(res.message);
         });
-    }, [graphspace]);
+    }, [graphspace, pdMode]);
 
     useEffect(() => {
         setLoading(true);
@@ -370,7 +397,9 @@ const Graph = () => {
             <PageHeader
                 ghost={false}
                 onBack={handleBack}
-                title={isPdEnabled() ? (graphspaceInfo.nickname ?? graphspace) + ' - 图管理' : '图管理'}
+                title={pdMode
+                    ? (graphspaceInfo.nickname ?? graphspace) + ` - ${t('graph.title')}`
+                    : t('graph.title')}
             >
                 <Row justify='space-between'>
                     <Col>
@@ -379,7 +408,10 @@ const Graph = () => {
                     <Col>
                         <Space>
                             <Radio.Group
-                                options={[{label: '图模式', value: 'image'}, {label: '列表模式', value: 'list'}]}
+                                options={[
+                                    {label: t('common.label.view_mode'), value: 'image'},
+                                    {label: t('common.label.list_mode'), value: 'list'},
+                                ]}
                                 optionType='button'
                                 buttonStyle='solid'
                                 defaultValue={'image'}
@@ -387,7 +419,7 @@ const Graph = () => {
                             />
                             <Input.Search
                                 onSearch={handleSearch}
-                                placeholder='请输入图名称'
+                                placeholder={t('graph.search_placeholder')}
                             />
                         </Space>
                     </Col>
@@ -399,11 +431,13 @@ const Graph = () => {
                     ? (
                         <>
                             <Row gutter={[10, 10]} justify='start'>
-                                <Col span={8} key='add'>
-                                    <Card className={style.add_card} onClick={showEditLayer}>
-                                        <Space><PlusOutlined />创建图</Space>
-                                    </Card>
-                                </Col>
+                                {graphCreateEnabled && (
+                                    <Col span={8} key='add'>
+                                        <Card className={style.add_card} onClick={showEditLayer}>
+                                            <Space><PlusOutlined />{t('graph.create')}</Space>
+                                        </Card>
+                                    </Col>
+                                )}
 
                                 {data.map(item => {
                                     const menus = getMenus(item);
@@ -433,12 +467,18 @@ const Graph = () => {
                     )
                     : (
                         <>
-                            <Row>
-                                <Col>
-                                    <Button onClick={showEditLayer} type='primary'>创建图</Button>
-                                </Col>
-                            </Row>
-                            <br />
+                            {graphCreateEnabled && (
+                                <>
+                                    <Row>
+                                        <Col>
+                                            <Button onClick={showEditLayer} type='primary'>
+                                                {t('graph.create')}
+                                            </Button>
+                                        </Col>
+                                    </Row>
+                                    <br />
+                                </>
+                            )}
                             <Table
                                 columns={columns}
                                 dataSource={data}

@@ -19,8 +19,10 @@
 import {Modal, Button, Form, Input, Typography, Select,
     Divider, Upload, Radio, AutoComplete, Checkbox, message, Space} from 'antd';
 import {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
+import {resolveJdbcConnectionStatus} from './connectionStatus';
 
 const compressionOptions = [
     'NONE',
@@ -89,7 +91,6 @@ const normFile = e => {
     }
 
     const {fileList} = e;
-    // 以下顺序不可变
     if (fileList.length === 0) {
         return null;
     }
@@ -118,7 +119,11 @@ const formatDatasource = values => {
     return {datasource_name, datasource_config};
 };
 
+const requiredRule = (t, label) => rules.required(t('datasource.form.required', {label}));
+const requiredUploadRule = (t, label) => rules.required(t('datasource.form.required_upload', {label}));
+
 const UploadForm = ({label, name, accept}) => {
+    const {t} = useTranslation();
     const [visible, setVisible] = useState(true);
 
     const handleChange = useCallback(e => {
@@ -129,11 +134,11 @@ const UploadForm = ({label, name, accept}) => {
         <Form.Item
             label={label}
             rules={[
-                rules.required(`请上传${label}`),
+                requiredUploadRule(t, label),
                 () => ({
                     validator(_, value) {
                         if (value === 'error') {
-                            return Promise.reject('上传失败');
+                            return Promise.reject(t('datasource.form.upload_failed'));
                         }
 
                         return Promise.resolve();
@@ -150,19 +155,19 @@ const UploadForm = ({label, name, accept}) => {
                 onChange={handleChange}
                 accept={accept}
             >
-                <Button type='link' disabled={!visible}>上传文件</Button>
+                <Button type='link' disabled={!visible}>{t('datasource.form.upload')}</Button>
             </Upload>
         </Form.Item>
     );
 };
 
-// 认证 form
 const CertForm = ({isHive}) => {
+    const {t} = useTranslation();
     const [authType, setAuthType] = useState(0);
 
     const authTypeList = [
-        {label: '无', value: 0},
-        {label: 'kerberos认证', value: 1},
+        {label: t('datasource.form.auth_none'), value: 0},
+        {label: t('datasource.form.auth_kerberos'), value: 1},
     ];
 
     const handleAuthType = useCallback(e => setAuthType(e.target.value), []);
@@ -170,8 +175,11 @@ const CertForm = ({isHive}) => {
     return (
         <>
             <Divider />
-            <Typography.Title level={5}>认证信息</Typography.Title>
-            <Form.Item label='特殊认证方式' rules={[rules.required()]}>
+            <Typography.Title level={5}>{t('datasource.form.auth_info')}</Typography.Title>
+            <Form.Item
+                label={t('datasource.form.auth_type')}
+                rules={[requiredRule(t, t('datasource.form.auth_type'))]}
+            >
                 <Radio.Group
                     onChange={handleAuthType}
                     options={authTypeList}
@@ -181,11 +189,11 @@ const CertForm = ({isHive}) => {
             {authType === 1 && !isHive
             && (
                 <>
-                    <UploadForm label='kertab文件' name={['kerberos_config', 'keytab']} />
-                    <UploadForm label='conf文件' name={['kerberos_config', 'krb5_conf']} />
+                    <UploadForm label={t('datasource.form.keytab_file')} name={['kerberos_config', 'keytab']} />
+                    <UploadForm label={t('datasource.form.conf_file')} name={['kerberos_config', 'krb5_conf']} />
                     <Form.Item
                         label='principal'
-                        rules={[rules.required()]}
+                        rules={[requiredRule(t, 'principal')]}
                         name={['kerberos_config', 'principal']}
                     >
                         <Input showCount maxLength={50} />
@@ -197,14 +205,26 @@ const CertForm = ({isHive}) => {
             && (
                 <>
                     <UploadForm label='krb5.conf' name={['principals', 'krb5.conf']} />
-                    <Form.Item label='principal' rules={[rules.required()]} name={['principals', 'principal']}>
+                    <Form.Item
+                        label='principal'
+                        rules={[requiredRule(t, 'principal')]}
+                        name={['principals', 'principal']}
+                    >
                         <Input />
                     </Form.Item>
-                    <Form.Item label='user.name' rules={[rules.required()]} name={['principals', 'user.name']}>
+                    <Form.Item
+                        label='user.name'
+                        rules={[requiredRule(t, 'user.name')]}
+                        name={['principals', 'user.name']}
+                    >
                         <Input />
                     </Form.Item>
                     <UploadForm label='user.keytab' name={['principals', 'user.keytab']} />
-                    <Form.Item label='zk.quorum' rules={[rules.required()]} name={['principals', 'zk.quorum']}>
+                    <Form.Item
+                        label='zk.quorum'
+                        rules={[requiredRule(t, 'zk.quorum')]}
+                        name={['principals', 'zk.quorum']}
+                    >
                         <Input />
                     </Form.Item>
                 </>
@@ -213,8 +233,8 @@ const CertForm = ({isHive}) => {
     );
 };
 
-// 本地上传form
 const LocalFileForm = () => {
+    const {t} = useTranslation();
     const [fileType, setFileType] = useState('CSV');
     const [accept, setAccept] = useState('.csv');
     const [compression, setCompression] = useState('NONE');
@@ -241,31 +261,51 @@ const LocalFileForm = () => {
     return (
         <>
             <Divider />
-            <Typography.Title level={5}>配置信息</Typography.Title>
-            <Form.Item label='文件类型' wrapperCol={{span: 4}} rules={[rules.required()]} name='format'>
+            <Typography.Title level={5}>{t('datasource.form.config_info')}</Typography.Title>
+            <Form.Item
+                label={t('datasource.form.file_type')}
+                wrapperCol={{span: 4}}
+                rules={[requiredRule(t, t('datasource.form.file_type'))]}
+                name='format'
+            >
                 <Select
                     options={fileTypeOptions}
                     onChange={handleFormat}
-                    placeholder='请选择'
+                    placeholder={t('datasource.form.select')}
                 />
             </Form.Item>
             <Form.Item label='header' name='header'>
-                <Input placeholder='请输入header,以,分割' />
+                <Input placeholder={t('datasource.form.header_placeholder')} />
             </Form.Item>
             {(fileType === 'TEXT')
             && (
-                <Form.Item label='列分隔符' wrapperCol={{span: 2}} name='delimiter'>
+                <Form.Item label={t('datasource.form.delimiter')} wrapperCol={{span: 2}} name='delimiter'>
                     <Input />
                 </Form.Item>
             )}
-            <Form.Item label='编码字符集' wrapperCol={{span: 6}} rules={[rules.required()]} name='charset'>
+            <Form.Item
+                label={t('datasource.form.charset')}
+                wrapperCol={{span: 6}}
+                rules={[requiredRule(t, t('datasource.form.charset'))]}
+                name='charset'
+            >
                 <AutoComplete options={charsetOptions} />
             </Form.Item>
-            <Form.Item label='日期格式' wrapperCol={{span: 10}} rules={[rules.required()]} name='date_format'>
+            <Form.Item
+                label={t('datasource.form.date_format')}
+                wrapperCol={{span: 10}}
+                rules={[requiredRule(t, t('datasource.form.date_format'))]}
+                name='date_format'
+            >
                 {/* <Input placeholder='yyyy-MM-dd HH:mm:ss' /> */}
                 <AutoComplete options={dateformatOptions} />
             </Form.Item>
-            <Form.Item label='时区' wrapperCol={{span: 4}} rules={[rules.required()]} name='time_zone'>
+            <Form.Item
+                label={t('datasource.form.time_zone')}
+                wrapperCol={{span: 4}}
+                rules={[requiredRule(t, t('datasource.form.time_zone'))]}
+                name='time_zone'
+            >
                 <Select
                     options={[...new Array(25).keys()].map(item => {
                         const str = item === 11 ? '' : (item > 11 ? `+${item - 12}` : item - 12);
@@ -273,35 +313,32 @@ const LocalFileForm = () => {
                     })}
                 />
             </Form.Item>
-            <Form.Item label='跳过行' wrapperCol={{span: 8}} rules={[rules.required()]} name={['skipped_line', 'regex']}>
+            <Form.Item
+                label={t('datasource.form.skipped_line')}
+                wrapperCol={{span: 8}}
+                rules={[requiredRule(t, t('datasource.form.skipped_line'))]}
+                name={['skipped_line', 'regex']}
+            >
                 <Input placeholder='(^#|^//).*' />
             </Form.Item>
-            <Form.Item label='压缩格式' wrapperCol={{span: 8}} rules={[rules.required()]} name='compression'>
+            <Form.Item
+                label={t('datasource.form.compression')}
+                wrapperCol={{span: 8}}
+                rules={[requiredRule(t, t('datasource.form.compression'))]}
+                name='compression'
+            >
                 <Select
                     options={compressionOptions.map(item => ({label: item, value: item}))}
                     onChange={handleCompression}
                 />
             </Form.Item>
-            <UploadForm label='本地文件' name={'path'} accept={accept} />
-            {/* <Form.Item
-                label='本地文件'
-                rules={[rules.required('请上传文件')]}
-                name='path'
-                valuePropName='file'
-                getValueFromEvent={normFile}
-            >
-                <Upload
-                    action={api.manage.datasourceUploadUrl}
-                    maxCount={1}
-                ><a>上传文件</a>
-                </Upload>
-            </Form.Item> */}
+            <UploadForm label={t('datasource.form.local_file')} name={'path'} accept={accept} />
         </>
     );
 };
 
-// hdfs form
 const HdfsForm = () => {
+    const {t} = useTranslation();
     const [fileType, setFileType] = useState('');
 
     const handleFileType = useCallback(val => setFileType(val), []);
@@ -309,35 +346,55 @@ const HdfsForm = () => {
     return (
         <>
             <Divider />
-            <Typography.Title level={5}>配置信息</Typography.Title>
-            <Form.Item label='path' rules={[rules.required()]} name='path'>
+            <Typography.Title level={5}>{t('datasource.form.config_info')}</Typography.Title>
+            <Form.Item label='path' rules={[requiredRule(t, 'path')]} name='path'>
                 <Input />
             </Form.Item>
             <UploadForm label='core_site' name={'core_site_path'} accept='.xml' />
             <UploadForm label='hdfs_site' name={'hdfs_site_path'} accept='.xml' />
-            <Form.Item label='文件类型' wrapperCol={{span: 4}} rules={[rules.required()]} name='format'>
+            <Form.Item
+                label={t('datasource.form.file_type')}
+                wrapperCol={{span: 4}}
+                rules={[requiredRule(t, t('datasource.form.file_type'))]}
+                name='format'
+            >
                 <Select
                     options={fileTypeOptions}
                     onChange={handleFileType}
-                    placeholder='请选择'
+                    placeholder={t('datasource.form.select')}
                 />
             </Form.Item>
             <Form.Item label='header' name='header'>
-                <Input placeholder='请输入header,以,分割' />
+                <Input placeholder={t('datasource.form.header_placeholder')} />
             </Form.Item>
             {(fileType === 'TEXT')
             && (
-                <Form.Item label='列分隔符' wrapperCol={{span: 2}} name='delimiter'>
+                <Form.Item label={t('datasource.form.delimiter')} wrapperCol={{span: 2}} name='delimiter'>
                     <Input />
                 </Form.Item>
             )}
-            <Form.Item label='编码字符集' wrapperCol={{span: 6}} rules={[rules.required()]} name='charset'>
+            <Form.Item
+                label={t('datasource.form.charset')}
+                wrapperCol={{span: 6}}
+                rules={[requiredRule(t, t('datasource.form.charset'))]}
+                name='charset'
+            >
                 <AutoComplete options={charsetOptions} />
             </Form.Item>
-            <Form.Item label='日期格式' wrapperCol={{span: 10}} rules={[rules.required()]} name='date_format'>
+            <Form.Item
+                label={t('datasource.form.date_format')}
+                wrapperCol={{span: 10}}
+                rules={[requiredRule(t, t('datasource.form.date_format'))]}
+                name='date_format'
+            >
                 <AutoComplete options={dateformatOptions} />
             </Form.Item>
-            <Form.Item label='时区' wrapperCol={{span: 4}} rules={[rules.required()]} name='time_zone'>
+            <Form.Item
+                label={t('datasource.form.time_zone')}
+                wrapperCol={{span: 4}}
+                rules={[requiredRule(t, t('datasource.form.time_zone'))]}
+                name='time_zone'
+            >
                 <Select
                     options={[...new Array(25).keys()].map(item => {
                         const str = item === 11 ? '' : (item > 11 ? `+${item - 12}` : item - 12);
@@ -345,10 +402,20 @@ const HdfsForm = () => {
                     })}
                 />
             </Form.Item>
-            <Form.Item label='跳过行' wrapperCol={{span: 8}} rules={[rules.required()]} name={['skipped_line', 'regex']}>
+            <Form.Item
+                label={t('datasource.form.skipped_line')}
+                wrapperCol={{span: 8}}
+                rules={[requiredRule(t, t('datasource.form.skipped_line'))]}
+                name={['skipped_line', 'regex']}
+            >
                 <Input placeholder='(^#|^//).*' />
             </Form.Item>
-            <Form.Item label='压缩格式' wrapperCol={{span: 8}} rules={[rules.required()]} name='compression'>
+            <Form.Item
+                label={t('datasource.form.compression')}
+                wrapperCol={{span: 8}}
+                rules={[requiredRule(t, t('datasource.form.compression'))]}
+                name='compression'
+            >
                 <Select
                     options={compressionOptions.map(item => ({label: item, value: item}))}
                 />
@@ -358,8 +425,8 @@ const HdfsForm = () => {
     );
 };
 
-// kafka form
 const KafkaForm = () => {
+    const {t} = useTranslation();
     const [fileType, setFileType] = useState('');
 
     const handleFileType = useCallback(val => setFileType(val), []);
@@ -367,40 +434,60 @@ const KafkaForm = () => {
     return (
         <>
             <Divider />
-            <Typography.Title level={5}>配置信息</Typography.Title>
-            <Form.Item label='server' rules={[rules.required()]} name='bootstrap-server'>
-                <Input placeholder='请输入kafka server list' />
+            <Typography.Title level={5}>{t('datasource.form.config_info')}</Typography.Title>
+            <Form.Item label='server' rules={[requiredRule(t, 'server')]} name='bootstrap-server'>
+                <Input placeholder={t('datasource.form.server_placeholder')} />
             </Form.Item>
-            <Form.Item label='topic' rules={[rules.required()]} name='topic'>
-                <Input placeholder='请输入topic' />
+            <Form.Item label='topic' rules={[requiredRule(t, 'topic')]} name='topic'>
+                <Input placeholder={t('datasource.form.topic_placeholder')} />
             </Form.Item>
-            <Form.Item label='是否从头读取' name='from-beginning' valuePropName='checked'>
+            <Form.Item label={t('datasource.form.from_beginning')} name='from-beginning' valuePropName='checked'>
                 <Checkbox />
             </Form.Item>
-            <Form.Item label='文件类型' wrapperCol={{span: 4}} rules={[rules.required()]} name='format'>
+            <Form.Item
+                label={t('datasource.form.file_type')}
+                wrapperCol={{span: 4}}
+                rules={[requiredRule(t, t('datasource.form.file_type'))]}
+                name='format'
+            >
                 <Select
                     options={fileTypeOptions}
                     onChange={handleFileType}
-                    placeholder='请选择'
+                    placeholder={t('datasource.form.select')}
                 />
             </Form.Item>
             <Form.Item label='header' name='header'>
-                <Input placeholder='请输入header,以,分割' />
+                <Input placeholder={t('datasource.form.header_placeholder')} />
             </Form.Item>
             {(fileType === 'TEXT')
             && (
-                <Form.Item label='列分隔符' wrapperCol={{span: 2}} name='delimiter'>
+                <Form.Item label={t('datasource.form.delimiter')} wrapperCol={{span: 2}} name='delimiter'>
                     <Input />
                 </Form.Item>
             )}
-            <Form.Item label='编码字符集' wrapperCol={{span: 6}} rules={[rules.required()]} name='charset'>
+            <Form.Item
+                label={t('datasource.form.charset')}
+                wrapperCol={{span: 6}}
+                rules={[requiredRule(t, t('datasource.form.charset'))]}
+                name='charset'
+            >
                 <AutoComplete options={charsetOptions} />
             </Form.Item>
-            <Form.Item label='日期格式' wrapperCol={{span: 10}} rules={[rules.required()]} name='date_format'>
+            <Form.Item
+                label={t('datasource.form.date_format')}
+                wrapperCol={{span: 10}}
+                rules={[requiredRule(t, t('datasource.form.date_format'))]}
+                name='date_format'
+            >
                 {/* <Input placeholder='yyyy-MM-dd HH:mm:ss' /> */}
                 <AutoComplete options={dateformatOptions} />
             </Form.Item>
-            <Form.Item label='时区' wrapperCol={{span: 4}} rules={[rules.required()]} name='time_zone'>
+            <Form.Item
+                label={t('datasource.form.time_zone')}
+                wrapperCol={{span: 4}}
+                rules={[requiredRule(t, t('datasource.form.time_zone'))]}
+                name='time_zone'
+            >
                 <Select
                     options={[...new Array(25).keys()].map(item => {
                         const str = item === 11 ? '' : (item > 11 ? `+${item - 12}` : item - 12);
@@ -408,7 +495,12 @@ const KafkaForm = () => {
                     })}
                 />
             </Form.Item>
-            <Form.Item label='跳过行' wrapperCol={{span: 8}} rules={[rules.required()]} name={['skipped_line', 'regex']}>
+            <Form.Item
+                label={t('datasource.form.skipped_line')}
+                wrapperCol={{span: 8}}
+                rules={[requiredRule(t, t('datasource.form.skipped_line'))]}
+                name={['skipped_line', 'regex']}
+            >
                 <Input placeholder='(^#|^//).*' />
             </Form.Item>
         </>
@@ -416,8 +508,9 @@ const KafkaForm = () => {
 };
 
 const JDBCForm = ({setField, form}) => {
+    const {t} = useTranslation();
     const [vendor, setVendor] = useState('');
-    const [status, setStatus] = useState('');
+    const [status, setStatus] = useState({type: '', message: ''});
 
     const vendorOptions = [
         {label: 'MySQL', value: 'MySQL'},
@@ -434,15 +527,16 @@ const JDBCForm = ({setField, form}) => {
         ]).then(values => {
             const formatData = formatDatasource(values);
             api.manage.checkJDBC(formatData).then(res => {
-                if (res.status === 200) {
-                    setStatus(res.data.result);
+                const nextStatus = resolveJdbcConnectionStatus(res, t);
+                setStatus(nextStatus);
+
+                if (res.status !== 200) {
+                    message.error(nextStatus.message);
                     return;
                 }
-
-                message.error(res.message);
             });
         });
-    }, [form]);
+    }, [form, t]);
 
     const handleVendor = useCallback(val => {
         setField({'driver': driverList[val]});
@@ -452,58 +546,84 @@ const JDBCForm = ({setField, form}) => {
     return (
         <>
             <Divider />
-            <Typography.Title level={5}>配置信息</Typography.Title>
-            <Form.Item label='数据库类型' rules={[rules.required()]} name='vendor'>
+            <Typography.Title level={5}>{t('datasource.form.config_info')}</Typography.Title>
+            <Form.Item
+                label={t('datasource.form.db_type')}
+                rules={[requiredRule(t, t('datasource.form.db_type'))]}
+                name='vendor'
+            >
                 <Select
                     options={vendorOptions}
                     onChange={handleVendor}
-                    placeholder='请选择数据库类型'
+                    placeholder={t('datasource.form.select_db_type')}
                 />
             </Form.Item>
             <Form.Item label='driver' name='driver'>
                 <Input readOnly />
             </Form.Item>
-            <Form.Item label='URL' rules={[rules.required(), rules.isJDBC]} name='url'>
-                <Input placeholder='请输入URL' />
+            <Form.Item
+                label='URL'
+                rules={[requiredRule(t, 'URL'), rules.isJDBC(t('datasource.form.url_rule'))]}
+                name='url'
+            >
+                <Input placeholder={t('datasource.form.url_placeholder')} />
             </Form.Item>
-            <Form.Item label='数据库名' rules={[rules.required()]} name='database'>
-                <Input placeholder='请输入数据库名' />
+            <Form.Item
+                label={t('datasource.form.database')}
+                rules={[requiredRule(t, t('datasource.form.database'))]}
+                name='database'
+            >
+                <Input placeholder={t('datasource.form.database_placeholder')} />
             </Form.Item>
             {(vendor === 'Oracle' || vendor === 'PostgreSQL') && (
                 <Form.Item label='schema' name='schema'>
-                    <Input placeholder='请输入schema' />
+                    <Input placeholder={t('datasource.form.schema_placeholder')} />
                 </Form.Item>)
             }
             {vendor === 'SQLServer' && (
-                <Form.Item label='schema' name='schema' rules={[rules.required()]}>
-                    <Input placeholder='请输入schema' />
+                <Form.Item label='schema' name='schema' rules={[requiredRule(t, 'schema')]}>
+                    <Input placeholder={t('datasource.form.schema_placeholder')} />
                 </Form.Item>)
             }
-            <Form.Item label='表名' rules={[rules.required()]} name='table'>
-                <Input placeholder='请输入表名' />
+            <Form.Item
+                label={t('datasource.form.table')}
+                rules={[requiredRule(t, t('datasource.form.table'))]}
+                name='table'
+            >
+                <Input placeholder={t('datasource.form.table_placeholder')} />
             </Form.Item>
-            <Form.Item label='用户名' rules={[rules.required()]} name='username'>
-                <Input placeholder='请输入用户名' />
+            <Form.Item
+                label={t('datasource.form.username')}
+                rules={[requiredRule(t, t('datasource.form.username'))]}
+                name='username'
+            >
+                <Input placeholder={t('datasource.form.username_placeholder')} />
             </Form.Item>
-            <Form.Item label='密码' rules={[rules.required()]} name='password'>
-                <Input.Password placeholder='请输入密码' autoComplete='new-password' />
+            <Form.Item
+                label={t('datasource.form.password')}
+                rules={[requiredRule(t, t('datasource.form.password'))]}
+                name='password'
+            >
+                <Input.Password placeholder={t('datasource.form.password_placeholder')} autoComplete='new-password' />
             </Form.Item>
-            <Form.Item label='页大小' name='batch_size' wrapperCol={{span: 4}} hidden>
+            <Form.Item label={t('datasource.form.page_size')} name='batch_size' wrapperCol={{span: 4}} hidden>
                 <Input />
             </Form.Item>
             {vendor === 'HIVE'
             && (
                 <>
-                    <Form.Item label='where语句' name='where'>
-                        <Input placeholder='请输入where语句' />
+                    <Form.Item label={t('datasource.form.where')} name='where'>
+                        <Input placeholder={t('datasource.form.where_placeholder')} />
                     </Form.Item>
                     <CertForm isHive />
                 </>
             )}
             <Form.Item wrapperCol={{offset: 5}}>
                 <Space>
-                    <Button onClick={handleTest}>连接测试</Button>
-                    <Typography.Text type={status === 'success' ? status : 'danger'}>{status}</Typography.Text>
+                    <Button onClick={handleTest}>{t('datasource.form.test_connection')}</Button>
+                    <Typography.Text type={status.type === 'success' ? 'success' : 'danger'}>
+                        {status.message}
+                    </Typography.Text>
                 </Space>
             </Form.Item>
         </>
@@ -511,13 +631,14 @@ const JDBCForm = ({setField, form}) => {
 };
 
 const EditLayer = ({edit, visible, onCancel, refresh}) => {
+    const {t} = useTranslation();
     const [sourceType, setSourceType] = useState('');
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
 
     const sourceTypeOptions = [
         {label: 'HDFS', value: 'HDFS'},
-        {label: '本地上传', value: 'FILE'},
+        {label: t('datasource.form.local_upload'), value: 'FILE'},
         {label: 'Kafka', value: 'KAFKA'},
         {label: 'JDBC', value: 'JDBC'},
     ];
@@ -535,7 +656,7 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
                 setLoading(false);
 
                 if (res.status === 200) {
-                    message.success('添加成功');
+                    message.success(t('common.msg.create_success'));
                     onCancel();
                     refresh();
                     return;
@@ -544,7 +665,7 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
                 message.error(res.message);
             });
         });
-    }, [form, loading, onCancel, refresh]);
+    }, [form, loading, onCancel, refresh, t]);
 
     const handleClose = useCallback(() => setSourceType(''), []);
 
@@ -552,7 +673,7 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
 
     return (
         <Modal
-            title={edit ? '编辑数据源' : '新增数据源'}
+            title={edit ? t('datasource.form.title_edit') : t('datasource.form.title_create')}
             onCancel={onCancel}
             open={visible}
             width={600}
@@ -583,19 +704,27 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
                     format: 'CSV',
                 }}
             >
-                <Typography.Title level={5}>基础属性</Typography.Title>
+                <Typography.Title level={5}>{t('datasource.form.basic_info')}</Typography.Title>
                 <Form.Item
-                    label='数据源名称'
+                    label={t('datasource.form.name')}
                     name='datasource_name'
-                    rules={[rules.required(), {type: 'string', max: 50}, rules.isPropertyName()]}
+                    rules={[
+                        requiredRule(t, t('datasource.form.name')),
+                        {type: 'string', max: 50},
+                        rules.isPropertyName(t('datasource.form.name_rule')),
+                    ]}
                 >
-                    <Input showCount maxLength={50} placeholder='请输入数据源名称' />
+                    <Input showCount maxLength={50} placeholder={t('datasource.form.name_placeholder')} />
                 </Form.Item>
-                <Form.Item label='数据源类型' name='type' rules={[rules.required()]}>
+                <Form.Item
+                    label={t('datasource.form.type')}
+                    name='type'
+                    rules={[requiredRule(t, t('datasource.form.type'))]}
+                >
                     <Select
                         options={sourceTypeOptions}
                         onChange={handleType}
-                        placeholder='请选择数据源类型'
+                        placeholder={t('datasource.form.select_type')}
                     />
                 </Form.Item>
 

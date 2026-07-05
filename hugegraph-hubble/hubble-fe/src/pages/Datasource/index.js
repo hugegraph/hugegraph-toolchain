@@ -18,12 +18,14 @@
 
 import {Button, Row, Col, PageHeader, Input, Modal, Table, Space, message} from 'antd';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import EditLayer from './EditLayer';
 import TableHeader from '../../components/TableHeader';
 import {sourceTypeOptions} from './config';
 import * as api from '../../api';
 
 const Datasource = () => {
+    const {t} = useTranslation();
     const [data, setData] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
     const [editLayer, setEditLayer] = useState(false);
@@ -34,7 +36,7 @@ const Datasource = () => {
     const delDatasource = datasourceID => {
         api.manage.delDatasource(datasourceID).then(res => {
             if (res.status === 200) {
-                message.success('删除成功');
+                message.success(t('common.msg.delete_success'));
                 setRefresh(!refresh);
                 return;
             }
@@ -46,7 +48,7 @@ const Datasource = () => {
     const delBatchDatasource = useCallback(list => {
         api.manage.delBatchDatasource(list).then(res => {
             if (res.status === 200) {
-                message.success('删除成功');
+                message.success(t('common.msg.delete_success'));
                 setRefresh(!refresh);
 
                 return;
@@ -54,7 +56,7 @@ const Datasource = () => {
 
             message.error(res.message);
         });
-    }, [refresh]);
+    }, [refresh, t]);
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
@@ -72,30 +74,33 @@ const Datasource = () => {
 
     const columns = [
         {
-            title: '数据源名称',
+            title: t('datasource.col.name'),
             dataIndex: 'datasource_name',
         },
         {
-            title: '数据源类型',
+            title: t('datasource.col.type'),
             dataIndex: 'datasource_config',
             width: 200,
             align: 'center',
-            render: config => sourceTypeOptions.find(item => item.value === config.type).label,
+            render: config => {
+                const option = sourceTypeOptions.find(item => item.value === config.type);
+                return option?.labelKey ? t(option.labelKey) : option?.label;
+            },
         },
         {
-            title: '创建人',
+            title: t('datasource.col.creator'),
             dataIndex: 'creator',
             align: 'center',
             width: 200,
         },
         {
-            title: '创建时间',
+            title: t('datasource.col.create_time'),
             dataIndex: 'create_time',
             width: 240,
             align: 'center',
         },
         {
-            title: '操作',
+            title: t('datasource.col.operation'),
             dataIndex: 'datasource_id',
             align: 'center',
             width: 140,
@@ -103,13 +108,13 @@ const Datasource = () => {
                 return (
                     <Space>
                         <a onClick={() => Modal.confirm({
-                            title: '删除数据源',
-                            content: '删除后，该数据源将从系统中消失。您确定要删除这个数据源吗？',
+                            title: t('datasource.delete_title'),
+                            content: t('datasource.delete_content'),
                             onOk() {
                                 delDatasource(val);
                             },
                         })}
-                        >删除
+                        >{t('common.action.delete')}
                         </a>
                     </Space>
                 );
@@ -119,20 +124,20 @@ const Datasource = () => {
 
     const delBatch = useCallback(() => {
         if (selectedItems.length === 0) {
-            message.error('至少选择一项');
+            message.error(t('common.msg.select_one'));
             return;
         }
 
         Modal.confirm({
-            title: '删除数据源',
-            content: '删除后，该数据源将从系统中消失。您确定要删除这个数据源吗？',
+            title: t('datasource.delete_title'),
+            content: t('datasource.delete_content'),
             onOk() {
                 // delDatasource(val);
                 delBatchDatasource(selectedItems);
                 setSelectedItems([]);
             },
         });
-    }, [delBatchDatasource, selectedItems]);
+    }, [delBatchDatasource, selectedItems, t]);
 
     useEffect(() => {
         api.manage.getDatasourceList({
@@ -152,19 +157,23 @@ const Datasource = () => {
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title="数据源管理"
+                title={t('datasource.title')}
             >
                 <Row justify='end'>
-                    <Col><Input.Search placeholder='请输入数据源名称' onSearch={handleSearch} /></Col>
+                    <Col><Input.Search placeholder={t('datasource.search_placeholder')} onSearch={handleSearch} /></Col>
                 </Row>
             </PageHeader>
 
             <div className='container'>
                 <TableHeader>
                     <Space>
-                        <Button type='primary' onClick={handleShowLayer}>新增数据源</Button>
-                        <Button onClick={delBatch}>删除数据源</Button>
-                        <span>已选中{selectedItems.length}条/共{data.length}条</span>
+                        <Button type='primary' onClick={handleShowLayer}>{t('datasource.create')}</Button>
+                        <Button onClick={delBatch}>{t('datasource.delete')}</Button>
+                        <span>{t('datasource.selected_count', {
+                            selected: selectedItems.length,
+                            total: data.length,
+                        })}
+                        </span>
                     </Space>
                 </TableHeader>
                 <Table

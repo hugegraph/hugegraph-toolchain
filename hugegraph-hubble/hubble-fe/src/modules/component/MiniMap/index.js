@@ -18,7 +18,6 @@
 
 /**
  * @file  miniMap
- * @author
  */
 
 import {useContext, useEffect} from 'react';

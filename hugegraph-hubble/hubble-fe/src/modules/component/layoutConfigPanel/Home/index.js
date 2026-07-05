@@ -18,7 +18,6 @@
 
 /**
  * @file LayoutConfigPanel
- * @author
  */
 
 import React, {useCallback, useState, useEffect} from 'react';

@@ -18,12 +18,12 @@
 
 /**
  * @file ShortestPath
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, InputNumber} from 'antd';
 import {ApartmentOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import DirectionItem from '../../DirectionItem';
 import MaxDepthItem from '../../MaxDepthItem';
@@ -40,9 +40,8 @@ import CapacityItem from '../../CapacityItem';
 const {SHORTEST_PATH} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const algorithmDescription = '根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度，查找一条最短路径';
-
 const ShortestPath = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -114,7 +113,7 @@ const ShortestPath = props => {
                     icon={<ApartmentOutlined />}
                     name={SHORTEST_PATH}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.shortest_path.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -133,7 +132,7 @@ const ShortestPath = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip="起始顶点id"
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -141,11 +140,11 @@ const ShortestPath = props => {
                     label='target'
                     name='target'
                     rules={[{required: true}]}
-                    tooltip="目的点id"
+                    tooltip={t('analysis.algorithm.oltp.common.target_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
-                <DirectionItem desc='起始顶点向外发散的方向' />
+                <DirectionItem desc={t('analysis.algorithm.form.step.direction')} />
                 <LabelItem />
                 <MaxDegreeItem isRequired={false} validator={maxDegreeValidator} />
                 <MaxDepthItem validator={positiveIntegerValidator} />
@@ -155,9 +154,7 @@ const ShortestPath = props => {
                     name='skip_degree'
                     initialValue='0'
                     rules={[{validator: integerValidator}]}
-                    tooltip={`用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，完全舍弃该顶点。选填项，如果开启时，需满足
-                            skip_degree >= max_degree 约束，默认为0 (不启用)，表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的
-                            skip_degree 条边，而不仅仅是 max_degree 条边，这样有额外的遍历开销，对查询性能影响可能有较大影响，请确认理解后再开启)`}
+                    tooltip={t('analysis.algorithm.form.step.skip_degree')}
                 >
                     <InputNumber />
                 </Form.Item>

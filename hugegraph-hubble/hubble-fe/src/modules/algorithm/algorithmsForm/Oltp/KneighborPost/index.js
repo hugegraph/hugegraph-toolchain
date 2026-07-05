@@ -18,12 +18,12 @@
 
 /**
  * @file K-neighbor API(POST，高级版)
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, Tooltip, InputNumber} from 'antd';
 import {DownOutlined, RightOutlined, DeleteRowOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../../../api';
 import removeNilKeys from '../../../../../utils/removeNilKeys';
 import {GRAPH_STATUS, Algorithm_Url, ALGORITHM_NAME} from '../../../../../utils/constants';
@@ -37,35 +37,9 @@ import s from '../OltpItem/index.module.scss';
 
 const {KNEIGHBOR_POST} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const directionOptions = [
-    {label: '出', value: 'OUT'},
-    {label: '入', value: 'IN'},
-    {label: '双向', value: 'BOTH'},
-];
-
-const description = {
-    source: '起始顶点id',
-    max_depth: '步数',
-    limit: '返回的顶点的最大数目',
-    algorithm: '遍历方式,常情况下，deep_first（深度优先搜索）方式会具有更好的遍历性能。但当参数nearest为true时，可能会包含非最近邻的节点，尤其是数据量较大时',
-    steps: '从起始点出发的Step集合',
-    edge_steps: '边Step集合',
-    vertex_steps: '点Step集合',
-    stepsObj: {
-        direction: '起始顶点向外发散的方向',
-        max_degree: '查询过程中，单个顶点遍历的最大邻接边数目(注: 0.12版之前 step 内仅支持 degree 作为参数名, 0.12开始统一使用 max_degree, 并向下兼容 degree 写法)',
-        skip_degree: `用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，完全舍弃该顶点。选填项，如果开启时, 需满足 skip_degree >= 
-          max_degree 约束，默认为0 (不启用)，表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的 skip_degree 条边，而不仅仅是 max_degree 条边，这样有额外的遍历
-          开销，对查询性能影响可能有较大影响，请确认理解后再开启)`,
-        steps: {
-            label: '点边类型',
-            properties: '通过属性的值过滤点边',
-        },
-    },
-};
-const algorithmDescription = '根据起始顶点、步骤（包括方向、边类型和过滤属性）和深度depth，查找从起始顶点出发depth步内可达的所有顶点';
 
 const KneighborPost = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -78,6 +52,11 @@ const KneighborPost = props => {
     const [isRequiring, setRequiring] = useState(false);
     const [isEnableRun, setEnableRun] = useState(false);
     const [stepVisible, setStepVisible] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const stepContentClassName = classnames(
         s.stepContent,
@@ -202,7 +181,7 @@ const KneighborPost = props => {
                     <div className={s.tooltip}>
                         <Tooltip
                             placement="rightTop"
-                            title='从起始点出发的Step集合'
+                            title={t('analysis.algorithm.form.step.steps')}
                         >
                             <QuestionCircleOutlined />
                         </Tooltip>
@@ -213,7 +192,7 @@ const KneighborPost = props => {
                         name={['steps', 'direction']}
                         label="direction"
                         initialValue={'BOTH'}
-                        tooltip={description.stepsObj.direction}
+                        tooltip={t('analysis.algorithm.form.step.direction')}
                     >
                         <Select
                             allowClear
@@ -224,7 +203,7 @@ const KneighborPost = props => {
                         name={['steps', 'max_degree']}
                         label="max_degree"
                         initialValue={10000}
-                        tooltip={description.stepsObj.max_degree}
+                        tooltip={t('analysis.algorithm.form.step.max_degree_compatible')}
                         rules={[{validator: integerValidator}]}
                     >
                         <InputNumber />
@@ -233,13 +212,21 @@ const KneighborPost = props => {
                         name={['steps', 'skip_degree']}
                         label="skip_degree"
                         initialValue={0}
-                        tooltip={description.stepsObj.skip_degree}
+                        tooltip={t('analysis.algorithm.form.step.skip_degree')}
                         rules={[{validator: integerValidator}]}
                     >
                         <InputNumber />
                     </Form.Item>
-                    <StepsItems param={'steps'} type={'edge_steps'} desc={description.edge_steps} />
-                    <StepsItems param={'steps'} type={'vertex_steps'} desc={description.vertex_steps} />
+                    <StepsItems
+                        param={'steps'}
+                        type={'edge_steps'}
+                        desc={t('analysis.algorithm.form.step.edge_steps')}
+                    />
+                    <StepsItems
+                        param={'steps'}
+                        type={'vertex_steps'}
+                        desc={t('analysis.algorithm.form.step.vertex_steps')}
+                    />
                 </div>
             </>
         );
@@ -252,7 +239,7 @@ const KneighborPost = props => {
                     icon={<DeleteRowOutlined />}
                     name={KNEIGHBOR_POST}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.kneighbor_post.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -272,7 +259,7 @@ const KneighborPost = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip={description.source}
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -280,7 +267,7 @@ const KneighborPost = props => {
                     label='max_depth'
                     name='max_depth'
                     rules={[{required: true}, {validator: positiveIntegerValidator}]}
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
@@ -289,7 +276,7 @@ const KneighborPost = props => {
                     label="limit"
                     initialValue={10000000}
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.limit}
+                    tooltip={t('analysis.algorithm.oltp.common.limit_vertices')}
                 >
                     <InputNumber />
                 </Form.Item>

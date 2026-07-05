@@ -18,13 +18,17 @@
 
 /**
  * @file Oltp图算法表单列表
- * @author
  */
 
 import React from 'react';
 import {Collapse} from 'antd';
 import _ from 'lodash';
-import {ALGORITHM_NAME, useTranslatedConstants} from '../../../../utils/constants';
+import {useTranslation} from 'react-i18next';
+import {
+    ALGORITHM_NAME,
+    isAlgorithmNameMatched,
+    useTranslatedConstants,
+} from '../../../../utils/constants';
 import OltpItem from '../Oltp/OltpItem';
 import c from './index.module.scss';
 
@@ -96,10 +100,11 @@ const OltpFormHome = props => {
         currentAlgorithm,
         updateCurrentAlgorithm,
     } =  props;
+    const {t} = useTranslation();
     const {ALGORITHM_MODE} = useTranslatedConstants();
     const {OLTP} = ALGORITHM_MODE;
     const getSearchedList = (arr, value) => {
-        return arr.filter(item => item.includes(value));
+        return arr.filter(item => isAlgorithmNameMatched(item, value, t));
     };
 
     const basicOltpList = getSearchedList(oltpListRaw, search);

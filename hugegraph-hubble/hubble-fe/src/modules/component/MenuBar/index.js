@@ -18,7 +18,6 @@
 
 /**
  * @file  MenuBar
- * @author
  */
 
 import React from 'react';

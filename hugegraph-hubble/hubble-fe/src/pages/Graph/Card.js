@@ -20,6 +20,7 @@ import {useCallback} from 'react';
 import {Card, Dropdown, Menu, Typography, Tooltip} from 'antd';
 import {UnorderedListOutlined, EyeOutlined} from '@ant-design/icons';
 import {useNavigate} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 import GraphView from '../../components/GraphinView';
 import moment from 'moment';
 import _ from 'lodash';
@@ -29,6 +30,7 @@ import style from './index.module.scss';
 import {byteConvert} from '../../utils/format';
 
 const TitleField = ({item, onClick}) => {
+    const {t} = useTranslation();
     const pdMode = isPdEnabled();
     const displayName = pdMode
         ? `${_.truncate(item.graphspace_nickname, {length: 12})}-${_.truncate(item.nickname, {length: 12})}`
@@ -47,17 +49,19 @@ const TitleField = ({item, onClick}) => {
             >
                 {displayName}
             </Typography.Text>
-            {item.default && <span className={style.default}>默认</span>}
+            {item.default && <span className={style.default}>{t('common.label.default')}</span>}
             <div className={style.subtitle}>
-                存储空间：{item.storage >= 0 ? byteConvert(item.storage) : '--'}
+                {t('graph.card.storage')}: {item.storage >= 0 ? byteConvert(item.storage) : '--'}
             </div>
         </>
     );
 };
 
 const GraphCard = ({item, menus}) => {
+    const {t} = useTranslation();
     const navigate = useNavigate();
-    const graphinData = formatToGraphInData(item.schemaview, false);
+    const schemaView = item.schemaview || {vertices: [], edges: []};
+    const graphinData = formatToGraphInData(schemaView, false);
 
     const handleGotoAnalysis = useCallback(() => {
         navigate(`/gremlin/${item.graphspace || 'DEFAULT'}/${item.name}`);
@@ -86,10 +90,12 @@ const GraphCard = ({item, menus}) => {
             )}
             actions={[
                 <span key="setting" onClick={handleGotoAnalysis}>
-                    创建时间：{moment(item.create_time).format('YYYY-MM-DD')}
+                    {t('graph.col.create_time')}: {moment(item.create_time).format('YYYY-MM-DD')}
                 </span>,
                 <span key='statistic' onClick={handleGotoDetail}>
-                    <Tooltip title={'点击可以查看本图目前存储的点边的数量'}><EyeOutlined />详情</Tooltip>
+                    <Tooltip title={t('graph.card.detail_tooltip')}>
+                        <EyeOutlined />{t('graph.detail.title')}
+                    </Tooltip>
                 </span>,
             ]}
         >

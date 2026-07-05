@@ -385,11 +385,6 @@ public class GraphsController extends BaseController {
     public Object clone(@PathVariable("graphspace") String graphspace,
                         @PathVariable("graph") String graph,
                         @RequestBody GraphCloneEntity graphCloneEntity) {
-        // TODO X clean code at here
-        //HugeClient clientOfDefaultGs = this.authClient("DEFAULT", "");
-        // clone request must post to default server
-        //clientOfDefaultGs.assignGraph(graphspace, graph);
-        //return this.graphsService.clone(clientOfDefaultGs, graphCloneEntity.convertMap());
         return this.graphsService.clone(this.authClient(graphspace, graph),
                                         graphCloneEntity.convertMap(graphspace,
                                                                     graph));

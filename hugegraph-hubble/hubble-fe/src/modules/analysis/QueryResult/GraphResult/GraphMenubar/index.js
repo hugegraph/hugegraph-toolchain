@@ -18,10 +18,10 @@
 
 /**
  * @file  GraphMenuBar(图分析)
- * @author
  */
 
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import MenuBar from '../../../../component/MenuBar';
 import ImportData from '../../../../component/ImportData';
 import ExportData from '../../../../component/ExportData';
@@ -32,7 +32,7 @@ import SettingConfig from '../../../../component/SettingConfig';
 import NewConfig from '../../../../component/NewConfig';
 import Statistics from '../../../../component/Statistics';
 import RenderModeSwitcher from '../../../../component/GraphRenderModeSwitcher';
-import {PANEL_TYPE, GRAPH_RENDER_MODE, MENUBAR_TOOLTIPS_2D, MENUBAR_TOOLTIPS_3D} from '../../../../../utils/constants';
+import {PANEL_TYPE, GRAPH_RENDER_MODE} from '../../../../../utils/constants';
 import {formatToDownloadData} from '../../../../../utils/formatGraphResultData';
 import useDownloadJson from '../../../../../customHook/useDownloadJson';
 
@@ -40,6 +40,7 @@ const {LAYOUT, SETTING, STATISTICS} = PANEL_TYPE;
 const {CANVAS2D} = GRAPH_RENDER_MODE;
 
 const GraphMenuBar = props => {
+    const {t} = useTranslation();
     const {
         styleConfigData,
         graphData,
@@ -66,7 +67,7 @@ const GraphMenuBar = props => {
         fileName => {
             downloadJsonHandler(fileName, formatToDownloadData(graphData));
         },
-        [downloadJsonHandler]
+        [downloadJsonHandler, graphData]
     );
 
     const menubarContent = [
@@ -76,7 +77,9 @@ const GraphMenuBar = props => {
                 <ImportData
                     buttonEnable={buttonEnableForImport}
                     onUploadChange={handleImportData}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.IMPORT : MENUBAR_TOOLTIPS_3D.IMPORT}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.import_2d')
+                        : t('analysis.canvas.tooltip.import_3d')}
                 />),
         },
         {
@@ -86,7 +89,9 @@ const GraphMenuBar = props => {
                     buttonEnable={buttonEnableForCanvas2D}
                     onExportJsonChange={handleExportJson}
                     onExportPngChange={handleExportPng}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.EXPORT : MENUBAR_TOOLTIPS_3D.EXPORT}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.export_2d')
+                        : t('analysis.canvas.tooltip.export_3d')}
                 />),
         },
         {
@@ -97,7 +102,9 @@ const GraphMenuBar = props => {
                     onChange={handleGraphStyleChange}
                     buttonEnable={buttonEnableForCanvas2D}
                     refreshExcuteCount={refreshExcuteCount}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.STYLE : MENUBAR_TOOLTIPS_3D.STYLE}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.style_2d')
+                        : t('analysis.canvas.tooltip.style_3d')}
                 />),
         },
         {
@@ -107,7 +114,9 @@ const GraphMenuBar = props => {
                     graphData={graphData}
                     onChange={handleFilterChange}
                     buttonEnable={buttonEnableForCanvas2D}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.FILTER : MENUBAR_TOOLTIPS_3D.FILTER}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.filter_2d')
+                        : t('analysis.canvas.tooltip.filter_3d')}
                 />
             ),
         },
@@ -119,7 +128,9 @@ const GraphMenuBar = props => {
                     onClick={() => {
                         handleTogglePanel(LAYOUT);
                     }}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.LAYOUT : MENUBAR_TOOLTIPS_3D.LAYOUT}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.layout_2d')
+                        : t('analysis.canvas.tooltip.layout_3d')}
                 />
             ),
         },
@@ -131,7 +142,9 @@ const GraphMenuBar = props => {
                     onClick={() => {
                         handleTogglePanel(SETTING);
                     }}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.SETTING : MENUBAR_TOOLTIPS_3D.SETTING}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.setting_2d')
+                        : t('analysis.canvas.tooltip.setting_3d')}
                 />
             ),
         },
@@ -142,7 +155,9 @@ const GraphMenuBar = props => {
                     buttonEnable={buttonEnableForCanvas2D}
                     onClickAddNode={handleClickNewAddNode}
                     onClickAddEdge={handleClickNewAddEdge}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.NEW : MENUBAR_TOOLTIPS_3D.NEW}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.new_2d')
+                        : t('analysis.canvas.tooltip.new_3d')}
                 />),
         },
         {
@@ -153,7 +168,9 @@ const GraphMenuBar = props => {
                     onClick={() => {
                         handleTogglePanel(STATISTICS);
                     }}
-                    tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.STATISTICS : MENUBAR_TOOLTIPS_3D.STATISTICS}
+                    tooltip={isCanvas2D
+                        ? t('analysis.canvas.tooltip.statistics_2d')
+                        : t('analysis.canvas.tooltip.statistics_3d')}
                 />
             ),
         },
@@ -167,7 +184,7 @@ const GraphMenuBar = props => {
                     onClick={handleSwitchRenderMode}
                     buttonEnable={showCanvasInfo}
                     value={graphRenderMode}
-                    tooltip={MENUBAR_TOOLTIPS_2D.SWITCH}
+                    tooltip={t('analysis.canvas.tooltip.switch_2d')}
                 />
             ),
         },

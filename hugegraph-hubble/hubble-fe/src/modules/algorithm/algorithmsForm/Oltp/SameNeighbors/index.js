@@ -18,12 +18,12 @@
 
 /**
  * @file SameNeighbors算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse} from 'antd';
 import {ApartmentOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import DirectionItem from '../../DirectionItem';
 import LabelItem from '../../LabelItem';
@@ -39,9 +39,8 @@ import {integerValidator} from '../../utils';
 const {SAME_NEIGHBORS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const algorithmDescription = '查询两个点的共同邻居';
-
 const SameNeighbors = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -113,7 +112,7 @@ const SameNeighbors = props => {
                     icon={<ApartmentOutlined />}
                     name={SAME_NEIGHBORS}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.same_neighbors.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -132,7 +131,7 @@ const SameNeighbors = props => {
                     label='vertex'
                     name='vertex'
                     rules={[{required: true}]}
-                    tooltip="顶点id"
+                    tooltip={t('analysis.algorithm.oltp.common.vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -140,14 +139,17 @@ const SameNeighbors = props => {
                     label='other'
                     name='other'
                     rules={[{required: true}]}
-                    tooltip="另一个顶点id"
+                    tooltip={t('analysis.algorithm.oltp.common.other_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
-                <DirectionItem desc='起始顶点向外发散的方向' />
+                <DirectionItem desc={t('analysis.algorithm.form.step.direction')} />
                 <LabelItem />
                 <MaxDegreeItem isRequired={false} initialValue={10000} validator={integerValidator} />
-                <LimitItem initialValue={10000000} desc='返回的共同邻居的最大数目' />
+                <LimitItem
+                    initialValue={10000000}
+                    desc={t('analysis.algorithm.oltp.same_neighbors.limit')}
+                />
             </Form>
         </Collapse.Panel>
     );

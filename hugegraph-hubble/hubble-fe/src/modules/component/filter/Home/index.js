@@ -18,16 +18,17 @@
 
 /**
  * @file 筛选
- * @author
  */
 
 import React, {useCallback, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {FilterOutlined} from '@ant-design/icons';
 import Filter from '../FilterDrawer';
 import {formatToStyleData, formatToDownloadData} from '../../../../utils/formatGraphResultData';
 
 const FilterHome = props => {
+    const {t} = useTranslation();
     const {
         graphData,
         onChange,
@@ -70,7 +71,7 @@ const FilterHome = props => {
                     type={'text'}
                     disabled={!buttonEnable}
                 >
-                    筛选
+                    {t('analysis.canvas.filter')}
                 </Button>
             </Tooltip>
             <Filter

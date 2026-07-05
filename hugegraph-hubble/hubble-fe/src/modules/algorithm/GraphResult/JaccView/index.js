@@ -18,7 +18,6 @@
 
 /**
  * @file  JACCARD_SIMILARITY等算法展示
- * @author
  */
 
 import React from 'react';

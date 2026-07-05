@@ -18,12 +18,14 @@
 
 import {PageHeader, Button, Form, Input, Space, message, Spin} from 'antd';
 import {useEffect, useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import style from './index.module.scss';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
 
 const My = () => {
+    const {t} = useTranslation();
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [changePass, setChangePass] = useState(false);
     const [refresh, setRefresh] = useState(false);
@@ -38,7 +40,7 @@ const My = () => {
             const {old_password, user_password} = values;
             api.auth.updatePwd(data.user_name, old_password, user_password).then(res => {
                 if (res.status === 200) {
-                    message.success('更改成功');
+                    message.success(t('common.msg.update_success'));
                     setChangePass(false);
                     return;
                 }
@@ -46,7 +48,7 @@ const My = () => {
                 message.error(res.message);
             });
         });
-    }, [data.user_name, form]);
+    }, [data.user_name, form, t]);
 
     const handleChange = useCallback(() => {
         setChangePass(true);
@@ -86,10 +88,10 @@ const My = () => {
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title={'个人中心'}
+                title={t('my.title')}
                 extra={[
-                    <Button key='1' onClick={handleShowLayer}>编辑信息</Button>,
-                    <Button key='2' onClick={handleChange}>更改密码</Button>,
+                    <Button key='1' onClick={handleShowLayer}>{t('common.action.edit')}</Button>,
+                    <Button key='2' onClick={handleChange}>{t('my.edit.title')}</Button>,
                 ]}
             />
 
@@ -103,32 +105,43 @@ const My = () => {
                     {changePass === false
                         ? (
                             <Spin spinning={spinning}>
-                                <Form.Item label='账号ID' className={style.item}>{data.user_name}</Form.Item>
-                                <Form.Item label='账号名' className={style.item}>{data.user_nickname}</Form.Item>
-                                <Form.Item label='备注' className={style.item}>{data.user_description}</Form.Item>
-                                <Form.Item label='权限及角色' className={style.item}>
+                                <Form.Item label={t('my.col.id')} className={style.item}>
+                                    {data.user_name}
+                                </Form.Item>
+                                <Form.Item label={t('my.col.name')} className={style.item}>
+                                    {data.user_nickname}
+                                </Form.Item>
+                                <Form.Item label={t('my.col.remark')} className={style.item}>
+                                    {data.user_description}
+                                </Form.Item>
+                                <Form.Item label={t('my.col.permission_roles')} className={style.item}>
                                     {data.adminSpaces && data.adminSpaces.join(',')}
                                 </Form.Item>
-                                <Form.Item label='创建时间' className={style.item}>{data.user_create}</Form.Item>
+                                <Form.Item label={t('my.col.create_time')} className={style.item}>
+                                    {data.user_create}
+                                </Form.Item>
                             </Spin>
                         )
                         : (
                             <>
-                                <Form.Item label='账号名' name='user_name'>
+                                <Form.Item label={t('my.col.name')} name='user_name'>
                                     <Input disabled />
                                 </Form.Item>
-                                <Form.Item label='旧密码' name='old_password'>
-                                    <Input.Password autoComplete='new-password' placeholder='请输入旧密码' />
+                                <Form.Item label={t('my.edit.old_password')} name='old_password'>
+                                    <Input.Password
+                                        autoComplete='new-password'
+                                        placeholder={t('my.edit.old_password_placeholder')}
+                                    />
                                 </Form.Item>
                                 <Form.Item
-                                    label='新密码'
+                                    label={t('my.edit.new_password')}
                                     name='user_password'
                                     rules={[rules.required(), {type: 'string', min: 5, max: 16}]}
                                 >
-                                    <Input.Password placeholder='请输入新密码' />
+                                    <Input.Password placeholder={t('my.edit.new_password_placeholder')} />
                                 </Form.Item>
                                 <Form.Item
-                                    label='确认密码'
+                                    label={t('my.edit.confirm_password')}
                                     name='repeat_password'
                                     dependencies={['user_password']}
                                     hasFeedback
@@ -140,17 +153,19 @@ const My = () => {
                                                     return Promise.resolve();
                                                 }
 
-                                                return Promise.reject(new Error('两次密码不一致'));
+                                                return Promise.reject(new Error(t('my.edit.password_mismatch')));
                                             },
                                         }),
                                     ]}
                                 >
-                                    <Input.Password placeholder='请再次输入密码' />
+                                    <Input.Password placeholder={t('my.edit.confirm_password_placeholder')} />
                                 </Form.Item>
                                 <Form.Item wrapperCol={{offset: 6}}>
                                     <Space>
-                                        <Button onClick={handleShowAccount}>取消</Button>
-                                        <Button type='primary' onClick={handleForm} loading={loading}>确定</Button>
+                                        <Button onClick={handleShowAccount}>{t('common.action.cancel')}</Button>
+                                        <Button type='primary' onClick={handleForm} loading={loading}>
+                                            {t('common.action.confirm')}
+                                        </Button>
                                     </Space>
                                     {/* <div className={Style.desc}>上次更改密码时间：2022-06-24 10:44:22</div> */}
                                 </Form.Item>

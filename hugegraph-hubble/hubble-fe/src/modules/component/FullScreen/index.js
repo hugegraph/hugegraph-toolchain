@@ -18,7 +18,6 @@
 
 /**
  * @file  FullScreen 全屏
- * @author
  */
 
 import React, {useCallback, useContext, useEffect} from 'react';

@@ -18,7 +18,6 @@
 
 /**
  * @file 切换力导布局组件 force
- * @author
  */
 
 import React from 'react';

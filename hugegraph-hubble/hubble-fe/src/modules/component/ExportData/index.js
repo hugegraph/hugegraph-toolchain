@@ -18,14 +18,15 @@
 
 /**
  * @file  导出画布和数据
- * @author
  */
 
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip, Dropdown, Menu, Modal, Form, Input} from 'antd';
 import {DownloadOutlined} from '@ant-design/icons';
 
 const ExportData = props => {
+    const {t} = useTranslation();
     const {
         buttonEnable,
         onExportJsonChange,
@@ -109,11 +110,11 @@ const ExportData = props => {
             items={[
                 {
                     key: '1',
-                    label: (<a onClick={handleClickExportJson}>导出 JSON</a>),
+                    label: (<a onClick={handleClickExportJson}>{t('analysis.canvas.export_json')}</a>),
                 },
                 {
                     key: '2',
-                    label: (<a onClick={handleClickExportPng}>导出 PNG</a>),
+                    label: (<a onClick={handleClickExportPng}>{t('analysis.canvas.export_png')}</a>),
                 },
             ]}
         />
@@ -128,41 +129,41 @@ const ExportData = props => {
                         icon={<DownloadOutlined />}
                         disabled={!buttonEnable}
                     >
-                        导出
+                        {t('analysis.canvas.export')}
                     </Button>
                 </Tooltip>
             </Dropdown>
             <Modal
                 width={600}
-                title="导出JSON"
+                title={t('analysis.canvas.export_json_title')}
                 open={isExportJsonVisible}
                 onOk={handleExportJsonOk}
                 onCancel={handleExportJsonCancel}
             >
                 <Form name='fileConfig' form={exportJsonForm} onFinish={handleExportJsonFinish}>
                     <Form.Item
-                        label="文件名称"
+                        label={t('analysis.canvas.file_name')}
                         name="exportFileName"
-                        rules={[{required: true, message: '请输入不超过12个字的文件名称'}]}
+                        rules={[{required: true, message: t('analysis.canvas.file_name_required')}]}
                     >
-                        <Input placeholder="请输入文件名称" maxLength="12" showCount />
+                        <Input placeholder={t('analysis.canvas.file_name_placeholder')} maxLength="12" showCount />
                     </Form.Item>
                 </Form>
             </Modal>
             <Modal
                 width={600}
-                title="导出图片"
+                title={t('analysis.canvas.export_image_title')}
                 open={isExportPngVisible}
                 onOk={handleExportPngOk}
                 onCancel={handleExportPngCancel}
             >
                 <Form name='fileConfig' form={exportPngForm} onFinish={handleExportPngFinish}>
                     <Form.Item
-                        label="文件名称"
+                        label={t('analysis.canvas.file_name')}
                         name="filename"
-                        rules={[{required: true, message: '请输入不超过12个字的文件名称'}]}
+                        rules={[{required: true, message: t('analysis.canvas.file_name_required')}]}
                     >
-                        <Input placeholder="请输入文件名称" maxLength="12" showCount />
+                        <Input placeholder={t('analysis.canvas.file_name_placeholder')} maxLength="12" showCount />
                     </Form.Item>
                 </Form>
             </Modal>

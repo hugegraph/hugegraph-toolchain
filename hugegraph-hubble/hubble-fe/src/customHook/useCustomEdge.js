@@ -18,7 +18,6 @@
 
 /**
  * @file  自定义边
- * @author
  */
 
 import G6 from '@antv/g6';

@@ -123,7 +123,6 @@ public class LangChainController extends BaseController {
 
     private ResponseLangChain langChainQuery(String graphSpace, String graph,
                                              RequestLangChainParams requestLangChainParams) {
-        //uuapLoginController.tryLogin(graphSpace, graph, "admin", "S3#rd6(sg!"); //TODO C Deleted
         HugeClient client = this.authClient(graphSpace, graph);
         SchemaManager schemaManager = client.schema();
         List<VertexLabel> vertexLabels = schemaManager.getVertexLabels();
@@ -238,8 +237,6 @@ public class LangChainController extends BaseController {
             log.info("Attempting to login token exist, username:{}", username);
             return;
         }
-        //uuapLoginController.loginVerifyUser(graphSpace, graph, username, password, null);
-        // TODO C Deleted
         if (Objects.isNull(this.getToken())) {
             log.error("Attempting to login failed, username:{}", username);
             throw new IllegalStateException("login failed");

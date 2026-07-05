@@ -440,9 +440,6 @@ public class GraphService {
             try {
                 // DataTypeUtil.convert in loader need param InputSource
                 FileSource source = new FileSource();
-                List<String> extraDateFormats = new ArrayList<>();
-                extraDateFormats.add("yyyy-MM-dd HH:mm:ss.SSS");
-                //source.extraDateFormats(extraDateFormats);//TODO C Deleted
                 ListFormat listFormat = new ListFormat("", "", ",");
                 source.listFormat(listFormat);
                 value = DataTypeUtil.convert(rawValue, propertyKey, source);

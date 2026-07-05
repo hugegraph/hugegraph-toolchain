@@ -18,12 +18,12 @@
 
 /**
  * @file MultiNodesShortestPath
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, Tooltip, InputNumber} from 'antd';
 import {DownOutlined, RightOutlined, SubnodeOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import VerticesItems from '../../VerticesItems';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import GraphAnalysisContext from '../../../../Context';
@@ -39,24 +39,6 @@ import classnames from 'classnames';
 
 const {MULTINODESSHORTESTPATH} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const directionOptions = [
-    {label: '出边', value: 'OUT'},
-    {label: '入边', value: 'IN'},
-    {label: '双边', value: 'BOTH'},
-];
-
-const description = {
-    step: {
-        direction: '起始顶点向外发散的方向(出边，入边，双边)',
-        label: '边的类型, 默认代表所有edge label',
-        max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-        skip_degree: `用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，完全舍弃该顶点。选填项，如果开启时，需满足 skip_degree >= max_d
-         egree约束，默认为0 (不启用)，表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的 skip_degree 条边，而不仅仅是 max_degree 条边，这样有额外的遍历开销，对查询
-         性能影响可能有较大影响，请确认理解后再开启)`,
-    },
-    max_depth: '步数',
-    capacity: '遍历过程中最大的访问的顶点数目',
-};
 
 const initialValue = {
     step: {
@@ -66,9 +48,9 @@ const initialValue = {
     },
     capacity: 10000000,
 };
-const algorithmDescription = '查找指定顶点集两两之间的最短路径';
 
 const MultiNodesShortestPath = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -81,6 +63,11 @@ const MultiNodesShortestPath = props => {
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
     const [stepVisible, setStepVisible] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const stepContentClassName = classnames(
         s.stepContent,
@@ -159,7 +146,7 @@ const MultiNodesShortestPath = props => {
                 <Form.Item
                     name={['step', 'direction']}
                     label="direction"
-                    tooltip={description.step.direction}
+                    tooltip={t('analysis.algorithm.form.step.direction')}
                 >
                     <Select
                         allowClear
@@ -169,14 +156,14 @@ const MultiNodesShortestPath = props => {
                 <Form.Item
                     name={['step', 'label']}
                     label="label"
-                    tooltip={description.step.label}
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     name={['step', 'max_degree']}
                     label="max_degree"
-                    tooltip={description.step.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                     rules={[{validator: integerValidator}]}
                 >
                     <InputNumber />
@@ -185,7 +172,7 @@ const MultiNodesShortestPath = props => {
                     name={['step', 'skip_degree']}
                     label="skip_degree"
                     rules={[{validator: skipDegreeValidator}]}
-                    tooltip={description.step.skip_degree}
+                    tooltip={t('analysis.algorithm.form.step.skip_degree')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -204,7 +191,7 @@ const MultiNodesShortestPath = props => {
                     <div className={s.tooltip}>
                         <Tooltip
                             placement="rightTop"
-                            title='表示从起始顶点到终止顶点走过的路径'
+                            title={t('analysis.algorithm.oltp.common.source_target_path')}
                         >
                             <QuestionCircleOutlined />
                         </Tooltip>
@@ -224,7 +211,7 @@ const MultiNodesShortestPath = props => {
                     icon={<SubnodeOutlined />}
                     name={MULTINODESSHORTESTPATH}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.multi_nodes_shortest_path.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -241,12 +228,12 @@ const MultiNodesShortestPath = props => {
                 layout="vertical"
                 initialValues={initialValue}
             >
-                <VerticesItems name='vertices' desc='起始顶点' />
+                <VerticesItems name='vertices' desc={t('analysis.algorithm.oltp.multi_nodes_shortest_path.vertices')} />
                 {renderSteps()}
                 <Form.Item
                     name='max_depth'
                     label="max_depth"
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                     rules={[{required: true}, {validator: positiveIntegerValidator}]}
                 >
                     <InputNumber />
@@ -255,7 +242,7 @@ const MultiNodesShortestPath = props => {
                     name='capacity'
                     label="capacity"
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>

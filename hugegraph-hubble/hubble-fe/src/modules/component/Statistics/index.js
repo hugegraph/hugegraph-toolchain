@@ -18,14 +18,15 @@
 
 /**
  * @file Menubar统计按钮
- * @author gouzixing
  */
 
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {AreaChartOutlined} from '@ant-design/icons';
 
 const Statistics = props => {
+    const {t} = useTranslation();
 
     const {buttonEnable, onClick, tooltip} = props;
 
@@ -41,7 +42,7 @@ const Statistics = props => {
                 type={'text'}
                 disabled={!buttonEnable}
             >
-                统计
+                {t('analysis.canvas.statistics')}
             </Button>
         </Tooltip>
     );

@@ -18,10 +18,10 @@
 
 /**
  * @file 图算法表格 Home
- * @author
  */
 
 import React, {useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../../Context';
 import {Tabs, message} from 'antd';
 import ExecuteLog from '../ExecuteLog';
@@ -30,6 +30,7 @@ import * as api from '../../../../api/index';
 import c from './index.module.scss';
 
 const LogsDetail = props => {
+    const {t} = useTranslation();
     const {
         isLoading,
         pageExecute,
@@ -59,16 +60,16 @@ const LogsDetail = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('收藏成功');
+                        message.success(t('analysis.logs.favorite_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('收藏失败');
+                        !errMsg && message.error(t('analysis.logs.favorite_failed'));
                     }
                 }).catch(err => {
                     console.error(err);
                 });
-        }, [currentGraph, currentGraphSpace, onRefresh]);
+        }, [currentGraph, currentGraphSpace, onRefresh, t]);
 
     const onAddHandler = useCallback(
         (content, favoriteName) => {
@@ -83,16 +84,16 @@ const LogsDetail = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('删除成功');
+                        message.success(t('analysis.logs.delete_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('删除失败');
+                        !errMsg && message.error(t('analysis.logs.delete_failed'));
                     }
                 }).catch(err => {
                     console.error(err);
                 });
-        }, [currentGraph, currentGraphSpace, onRefresh]);
+        }, [currentGraph, currentGraphSpace, onRefresh, t]);
 
     const onDelHandler = useCallback(
         id => {
@@ -113,16 +114,16 @@ const LogsDetail = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('修改成功');
+                        message.success(t('analysis.logs.edit_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('修改失败');
+                        !errMsg && message.error(t('analysis.logs.edit_failed'));
                     }
                 }).catch(err => {
                     console.error(err);
                 });
-        }, [currentGraph, currentGraphSpace, onRefresh]);
+        }, [currentGraph, currentGraphSpace, onRefresh, t]);
 
     const onEditHandler = useCallback(
         (rowData, favoriteName) => {
@@ -133,7 +134,7 @@ const LogsDetail = props => {
 
     const tabItems = [
         {
-            label: '执行记录',
+            label: t('analysis.logs.execute_tab'),
             key: 'excutes',
             children: (
                 <ExecuteLog
@@ -148,7 +149,7 @@ const LogsDetail = props => {
             ),
         },
         {
-            label: '收藏',
+            label: t('analysis.logs.favorite_tab'),
             key: 'favorites',
             children: (
                 <Favorite

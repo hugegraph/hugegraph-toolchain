@@ -98,7 +98,7 @@
     </modules>
 
     <properties>
-        <revision>1.7.0</revision>
+        <revision>1.8.0</revision>
         <hugegraph.common.version>1.7.0</hugegraph.common.version>
         <release.name>${project.artifactId}</release.name>
         <final.name>apache-${release.name}-${project.version}</final.name>

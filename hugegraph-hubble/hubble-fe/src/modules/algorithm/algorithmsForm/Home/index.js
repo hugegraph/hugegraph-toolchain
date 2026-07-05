@@ -18,7 +18,6 @@
 
 /**
  * @file 算法表单目录Home
- * @author
  */
 
 import React, {useCallback, useState} from 'react';
@@ -26,9 +25,13 @@ import {Empty} from 'antd';
 import OlapFormHome from '../OlapHome';
 import OltpFormHome from '../OltpHome';
 import AlgorithmSearch from '../../AlgorithmSearch';
-import {useTranslatedConstants} from '../../../../utils/constants';
+import {
+    isAlgorithmNameMatched,
+    useTranslatedConstants,
+} from '../../../../utils/constants';
 import c from './index.module.scss';
 import _ from 'lodash';
+import {useTranslation} from 'react-i18next';
 
 const AlgorithmFormHome = props => {
     const {
@@ -37,6 +40,7 @@ const AlgorithmFormHome = props => {
         currentAlgorithm,
         updateCurrentAlgorithm,
     } =  props;
+    const {t} = useTranslation();
     const {ALGORITHM_NAME} = useTranslatedConstants();
     const [search, setSearch] = useState('');
 
@@ -44,7 +48,9 @@ const AlgorithmFormHome = props => {
         setSearch(value);
     }, []);
 
-    const isListEmpty = _.isEmpty(Object.values(ALGORITHM_NAME).filter(item => item.includes(search)));
+    const isListEmpty = _.isEmpty(
+        Object.values(ALGORITHM_NAME).filter(item => isAlgorithmNameMatched(item, search, t))
+    );
 
     return (
         <div className={c.algorithmSidebar}>

@@ -18,7 +18,6 @@
 
 /**
  * @file  ClearGraph 清空画布
- * @author
  */
 
 import React, {useCallback, useContext, useState} from 'react';

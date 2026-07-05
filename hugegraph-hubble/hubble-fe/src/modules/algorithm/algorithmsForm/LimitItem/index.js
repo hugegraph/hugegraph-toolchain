@@ -18,7 +18,6 @@
 
 /**
  * @file LimitItem
- * @author
  */
 
 import React from 'react';

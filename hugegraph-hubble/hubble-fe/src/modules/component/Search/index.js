@@ -18,7 +18,6 @@
 
 /**
  * @file  搜索
- * @author wuxutao
  */
 
 import {useState, useEffect, useCallback, useContext} from 'react';

@@ -18,7 +18,6 @@
 
 /**
  * @file NearestItem
- * @author gouzixing@
  */
 
 import React from 'react';

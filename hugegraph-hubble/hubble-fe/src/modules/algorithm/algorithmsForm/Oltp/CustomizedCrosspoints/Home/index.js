@@ -18,12 +18,12 @@
 
 /**
  * @file CustomizedCrosspoints算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Form, Collapse, InputNumber} from 'antd';
 import {NodeIndexOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import VerticesItems from '../../../VerticesItems';
 import AlgorithmNameHeader from '../../../AlgorithmNameHeader';
 import PathPatternsFormItems from '../PathPatternForm';
@@ -39,19 +39,8 @@ import s from '../../OltpItem/index.module.scss';
 const {CUSTOMIZED_CROSSPOINTS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const description = {
-    path_patterns: '表示从起始顶点走过的路径规则，是一组规则的列表',
-    capacity: '遍历过程中最大的访问的顶点数目',
-    limit: '返回的路径的最大数目',
-    direction: '边的方向(OUT,IN,BOTH)，默认是BOTH',
-    labels: '边的类型列表',
-    properties: '通过属性的值过滤边',
-    max_degree: `查询过程中，单个顶点遍历的最大邻接边数目，默认为 10000 
-    (注: 0.12版之前 step 内仅支持 degree 作为参数名, 0.12开始统一使用 max_degree, 并向下兼容 degree 写法)`,
-};
-const algorithmDescription = '根据一批起始顶点、多种边规则（包括方向、边的类型和属性过滤）和最大深度等条件查找符合条件的所有的路径终点的交集';
-
 const CustomizedCrosspoints = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -135,7 +124,7 @@ const CustomizedCrosspoints = props => {
                 <AlgorithmNameHeader
                     icon={<NodeIndexOutlined />}
                     name={CUSTOMIZED_CROSSPOINTS}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.customized_crosspoints.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -152,14 +141,14 @@ const CustomizedCrosspoints = props => {
                 layout="vertical"
                 className={s.oltpForms}
             >
-                <VerticesItems name="sources" desc='起始顶点' />
+                <VerticesItems name="sources" desc={t('analysis.algorithm.oltp.template_paths.sources')} />
                 <PathPatternsFormItems />
                 <Form.Item
                     label='capacity'
                     name='capacity'
                     initialValue='10000000'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -168,7 +157,7 @@ const CustomizedCrosspoints = props => {
                     name='limit'
                     initialValue='10'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.limit}
+                    tooltip={t('analysis.algorithm.oltp.customized_crosspoints.limit')}
                 >
                     <InputNumber />
                 </Form.Item>

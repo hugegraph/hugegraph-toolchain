@@ -18,7 +18,6 @@
 
 /**
  * @file 图分析 Home
- * @author
  */
 
 import React, {useState, useCallback, useEffect, useContext} from 'react';

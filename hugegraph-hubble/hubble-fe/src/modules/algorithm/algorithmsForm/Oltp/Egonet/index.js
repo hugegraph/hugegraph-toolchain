@@ -18,12 +18,12 @@
 
 /**
  * @file Egonet算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, Tooltip, InputNumber} from 'antd';
 import {GatewayOutlined, DownOutlined, RightOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import StepsItems from '../../StepsItems';
 import MaxDegreeItem from '../../MaxDegreeItem';
@@ -39,37 +39,9 @@ import s from '../OltpItem/index.module.scss';
 
 const {EGONET} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const directionOptions = [
-    {label: '出边', value: 'OUT'},
-    {label: '入边', value: 'IN'},
-    {label: '双边', value: 'BOTH'},
-];
-
-const description = {
-    sources: '起始顶点 id 集合，支持传入多个不同顶点',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    skip_degree: `用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，
-    完全舍弃该顶点。选填项，如果开启时，需满足 skip_degree >= max_degree 约束，默认为0 (不启用)，
-    表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的 skip_degree 条边，
-    而不仅仅是 max_degree 条边，这样有额外的遍历开销，对查询性能影响可能有较大影响，请确认理解后再开启)`,
-    max_depth: '步数',
-    limit: '返回的交点的最大数目',
-    steps: '从起始点出发的Step集合',
-};
-
-const steps = {
-    direction: '起始顶点向外发散的方向',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目(注: 0.12版之前 step 内仅支持 degree 作为参数名, 0.12开始统一使用 max_degree, 并向下兼容 degree 写法)',
-    skip_degree: `用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，
-    完全舍弃该顶点。选填项，如果开启时，需满足 skip_degree >= max_degree 约束，默认为0 (不启用)，
-    表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的 skip_degree 条边，
-    而不仅仅是 max_degree 条边，这样有额外的遍历开销，对查询性能影响可能有较大影响，请确认理解后再开启)`,
-    edge_steps: '边Step集合',
-    vertex_steps: '点Step集合',
-};
-const algorithmDescription = '查找一批顶点的 K 层邻居, 并支持针对不同点 / 边 Label 的过滤条件, 结果中会包含起始顶点';
 
 const Egonet = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -81,6 +53,11 @@ const Egonet = props => {
     const [isEnableRun, setEnableRun] = useState(false);
     const [stepVisible, setStepVisible] = useState(true);
     const [isRequiring, setRequiring] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const stepContentClassName = classnames(
         s.stepContent,
@@ -175,7 +152,7 @@ const Egonet = props => {
                     <div className={s.tooltip}>
                         <Tooltip
                             placement="rightTop"
-                            title={description.steps}
+                            title={t('analysis.algorithm.form.step.steps')}
                         >
                             <QuestionCircleOutlined />
                         </Tooltip>
@@ -186,10 +163,10 @@ const Egonet = props => {
                         name={[param, 'direction']}
                         label="direction"
                         initialValue='BOTH'
-                        tooltip={steps.direction}
+                        tooltip={t('analysis.algorithm.form.step.direction')}
                     >
                         <Select
-                            placeholder='起始顶点向外发散的方向'
+                            placeholder={t('analysis.algorithm.direction_item.tooltip')}
                             allowClear
                             options={directionOptions}
                         />
@@ -199,7 +176,7 @@ const Egonet = props => {
                         label="max_degree"
                         initialValue='10000'
                         rules={[{validator: integerValidator}]}
-                        tooltip={steps.max_degree}
+                        tooltip={t('analysis.algorithm.form.step.max_degree_compatible')}
                     >
                         <InputNumber />
                     </Form.Item>
@@ -207,13 +184,21 @@ const Egonet = props => {
                         name={[param, 'skip_degree']}
                         label="skip_degree"
                         initialValue={0}
-                        tooltip={steps.skip_degree}
+                        tooltip={t('analysis.algorithm.form.step.skip_degree')}
                         rules={[{validator: skipDegreeValidator}]}
                     >
                         <InputNumber />
                     </Form.Item>
-                    <StepsItems param={param} type='edge_steps' desc={steps.edge_steps} />
-                    <StepsItems param={param} type='vertex_steps' desc={steps.vertex_steps} />
+                    <StepsItems
+                        param={param}
+                        type='edge_steps'
+                        desc={t('analysis.algorithm.form.step.edge_steps')}
+                    />
+                    <StepsItems
+                        param={param}
+                        type='vertex_steps'
+                        desc={t('analysis.algorithm.form.step.vertex_steps')}
+                    />
                 </div>
             </div>
         );
@@ -225,7 +210,7 @@ const Egonet = props => {
                 <AlgorithmNameHeader
                     icon={<GatewayOutlined />}
                     name={EGONET}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.egonet.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -246,7 +231,7 @@ const Egonet = props => {
                     label='sources'
                     name='sources'
                     rules={[{required: true}]}
-                    tooltip={description.sources}
+                    tooltip={t('analysis.algorithm.oltp.egonet.sources')}
                 >
                     <Input />
                 </Form.Item>
@@ -261,7 +246,7 @@ const Egonet = props => {
                     name='skip_degree'
                     initialValue='0'
                     rules={[{validator: skipDegreeValidator}]}
-                    tooltip={description.skip_degree}
+                    tooltip={t('analysis.algorithm.form.step.skip_degree')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -269,13 +254,13 @@ const Egonet = props => {
                     label='max_depth'
                     name='max_depth'
                     rules={[{required: true}, {validator: positiveIntegerValidator}]}
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
                 <LimitItem
                     initialValue='10000000'
-                    desc={description.limit}
+                    desc={t('analysis.algorithm.oltp.common.limit_crosspoints')}
                 />
             </Form>
         </Collapse.Panel>

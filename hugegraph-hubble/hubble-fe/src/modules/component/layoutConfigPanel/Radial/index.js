@@ -18,7 +18,6 @@
 
 /**
  * @file  径向布局
- * @author
  */
 
 import React from 'react';
