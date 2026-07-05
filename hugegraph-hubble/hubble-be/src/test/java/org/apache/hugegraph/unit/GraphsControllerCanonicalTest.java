@@ -1,0 +1,128 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hugegraph.unit;
+
+import java.lang.reflect.Field;
+import java.util.Collections;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import org.apache.hugegraph.controller.graphs.GraphsController;
+import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.service.graphs.GraphsService;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+public class GraphsControllerCanonicalTest {
+
+    private MockMvc mvc;
+    private HugeClient client;
+    private GraphsService graphsService;
+    private RequestPostProcessor withClient;
+
+    @Before
+    public void setup() throws Exception {
+        GraphsController controller = new GraphsController();
+        this.graphsService = Mockito.mock(GraphsService.class);
+        this.setField(controller, "graphsService", this.graphsService);
+
+        this.client = Mockito.mock(HugeClient.class);
+        this.withClient = request -> {
+            request.setAttribute("hugeClient", this.client);
+            return request;
+        };
+        this.mvc = MockMvcBuilders.standaloneSetup(controller).build();
+    }
+
+    @Test
+    public void testCanonicalCreateGraphUsesPathNameAndJsonBody()
+           throws Exception {
+        Mockito.when(this.graphsService.create(Mockito.eq(this.client),
+                                               Mockito.eq("GraphNick"),
+                                               Mockito.eq("graph_a"),
+                                               Mockito.eq("template_a")))
+               .thenReturn(Collections.singletonMap("name", "graph_a"));
+
+        this.mvc.perform(post("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a")
+                         .with(this.withClient)
+                         .contentType(MediaType.APPLICATION_JSON)
+                         .content("{\"nickname\":\"GraphNick\"," +
+                                  "\"schema\":\"template_a\"}"))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.graphsService)
+               .create(this.client, "GraphNick", "graph_a", "template_a");
+    }
+
+    @Test
+    public void testLegacyFormCreateGraphStillUsesSameServiceCreate()
+           throws Exception {
+        Mockito.when(this.graphsService.create(Mockito.eq(this.client),
+                                               Mockito.eq("LegacyNick"),
+                                               Mockito.eq("graph_b"),
+                                               Mockito.eq("template_b")))
+               .thenReturn(Collections.singletonMap("name", "graph_b"));
+
+        this.mvc.perform(post("/api/v1.3/graphspaces/DEFAULT/graphs")
+                         .with(this.withClient)
+                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                         .param("graph", "graph_b")
+                         .param("nickname", "LegacyNick")
+                         .param("schema", "template_b"))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.graphsService)
+               .create(this.client, "LegacyNick", "graph_b", "template_b");
+    }
+
+    @Test
+    public void testCanonicalSetDefaultGraphUsesServiceDefault()
+           throws Exception {
+        this.mvc.perform(post("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/default")
+                         .with(this.withClient))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.graphsService).setDefault(this.client, "graph_a");
+    }
+
+    @Test
+    public void testCanonicalUnsetDefaultGraphUsesServiceDefault()
+           throws Exception {
+        this.mvc.perform(delete("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/default")
+                         .with(this.withClient))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.graphsService).unSetDefault(this.client, "graph_a");
+    }
+
+    private void setField(Object object, String name, Object value)
+                          throws Exception {
+        Field field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+}

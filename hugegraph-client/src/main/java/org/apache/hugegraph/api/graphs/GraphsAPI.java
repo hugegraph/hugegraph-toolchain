@@ -18,6 +18,7 @@
 package org.apache.hugegraph.api.graphs;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -111,13 +112,14 @@ public class GraphsAPI extends API {
 
     public Map<String, String> setDefault(String name) {
         String defaultPath = joinPath(this.path(), name, "default");
-        RestResult result = this.client.get(defaultPath);
+        RestResult result = this.client.post(defaultPath, Collections.emptyMap());
         return result.readObject(Map.class);
     }
 
     public Map<String, String> unSetDefault(String name) {
-        String unDefaultPath = joinPath(this.path(), name, "undefault");
-        RestResult result = this.client.get(unDefaultPath);
+        String unDefaultPath = joinPath(this.path(), name, "default");
+        RestResult result = this.client.delete(unDefaultPath,
+                                              Collections.emptyMap());
         return result.readObject(Map.class);
     }
 

@@ -30,6 +30,8 @@ import org.junit.runners.Suite;
     AuthzRouteRegistrationTest.class,
     FileUploadControllerTest.class,
     FileUtilTest.class,
+    GraphServiceImportTest.class,
+    GraphsControllerCanonicalTest.class,
     HubbleOptionsTest.class,
     IngestControllerTest.class,
     LangChainControllerSecurityTest.class,

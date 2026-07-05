@@ -23,7 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.entity.graphs.GraphCloneEntity;
+import org.apache.hugegraph.entity.graphs.GraphCreateEntity;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.entity.graphs.GraphStatisticsEntity;
@@ -254,8 +256,25 @@ public class GraphsController extends BaseController {
                          @RequestParam(value = "schema", required = false)
                                  String schemaTemplage) {
 
-        return this.graphsService.create(this.authClient(graphspace, null), 
-                                         nickname, graph, schemaTemplage);
+        return this.create(graphspace, graph,
+                           GraphCreateEntity.builder()
+                                            .nickname(nickname)
+                                            .schema(schemaTemplage)
+                                            .build());
+    }
+
+    @PostMapping("{graph}")
+    public Object create(@PathVariable("graphspace") String graphspace,
+                         @PathVariable("graph") String graph,
+                         @RequestBody(required = false)
+                                 GraphCreateEntity request) {
+        String nickname = request == null ? graph : request.getNickname();
+        String schema = request == null ? null : request.getSchema();
+        if (StringUtils.isEmpty(nickname)) {
+            nickname = graph;
+        }
+        return this.graphsService.create(this.authClient(graphspace, null),
+                                         nickname, graph, schema);
     }
 
     @GetMapping("{graph}/update")
@@ -315,11 +334,25 @@ public class GraphsController extends BaseController {
         this.graphsService.setDefault(this.authClient(graphspace, graph), graph);
     }
 
+    @PostMapping("{graph}/default")
+    public void setDefaultByCanonicalApi(
+            @PathVariable("graphspace") String graphspace,
+            @PathVariable("graph") String graph) {
+        this.setDefault(graphspace, graph);
+    }
+
     @GetMapping("{graph}/unsetdefault")
     public void unSetDefault(@PathVariable("graphspace") String graphspace,
                              @PathVariable("graph") String graph) {
         this.graphsService.unSetDefault(this.authClient(graphspace, graph),
                                         graph);
+    }
+
+    @DeleteMapping("{graph}/default")
+    public void unSetDefaultByCanonicalApi(
+            @PathVariable("graphspace") String graphspace,
+            @PathVariable("graph") String graph) {
+        this.unSetDefault(graphspace, graph);
     }
 
     @GetMapping("getdefault")
