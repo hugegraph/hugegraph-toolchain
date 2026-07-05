@@ -20,27 +20,35 @@
  * @file  设置表单
  */
 
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Form, Select, Switch, Cascader} from 'antd';
+import {useTranslation} from 'react-i18next';
 import SliderComponent from '../../../components/SlideComponent';
 import _ from 'lodash';
 import classnames from 'classnames';
 import c from './index.module.scss';
 
-const defaultDisplayFields = {
-    nodes: {label: '节点ID', value: '~id'},
-    edges: {label: '边类型', value: '~id'},
-};
-
-const labelPosition = [
-    {value: 'center', label: '节点中心'},
-    {value: 'bottom', label: '节点底部'},
-];
-
 const SettingConfigPanel = props => {
     const {onChange, data, open} = props;
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [labelForm, moduleForm] = useForm();
+
+    const defaultDisplayFields = useMemo(
+        () => ({
+            nodes: {label: t('analysis.canvas.setting_panel.node_id'), value: '~id'},
+            edges: {label: t('analysis.canvas.setting_panel.edge_type'), value: '~id'},
+        }),
+        [t]
+    );
+
+    const labelPosition = useMemo(
+        () => [
+            {value: 'center', label: t('analysis.canvas.setting_panel.node_center')},
+            {value: 'bottom', label: t('analysis.canvas.setting_panel.node_bottom')},
+        ],
+        [t]
+    );
 
     const settingClassName = classnames(
         c.canvasSetting,
@@ -118,7 +126,7 @@ const SettingConfigPanel = props => {
             );
             return options;
         },
-        []
+        [defaultDisplayFields]
     );
 
     const onModuleFormChange = useCallback(
@@ -332,10 +340,10 @@ const SettingConfigPanel = props => {
                 colon={false}
                 onValuesChange={onLabelFormChange}
             >
-                <div className={c.canvasSettingTitle}>设置</div>
+                <div className={c.canvasSettingTitle}>{t('analysis.canvas.setting_panel.title')}</div>
                 <Form.Item
                     name='enableNodeLabel'
-                    label='节点标签'
+                    label={t('analysis.canvas.setting_panel.node_label')}
                     valuePropName='checked'
                     labelCol={{span: 20}}
                     labelAlign='left'
@@ -345,7 +353,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='nodeLabelPropertyName'
-                    label='节点标签属性名'
+                    label={t('analysis.canvas.setting_panel.node_label_property')}
                     labelCol={{span: 24}}
                 >
                     <Cascader
@@ -359,7 +367,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='nodeLabelPos'
-                    label='节点标签位置'
+                    label={t('analysis.canvas.setting_panel.node_label_position')}
                     labelCol={{span: 24}}
                     initialValue='bottom'
                 >
@@ -367,7 +375,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='nodeLabelSize'
-                    label='节点标签字体大小'
+                    label={t('analysis.canvas.setting_panel.node_label_size')}
                     initialValue={12}
                     labelCol={{span: 24}}
                 >
@@ -375,7 +383,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='enableEdgeLabel'
-                    label='边标签'
+                    label={t('analysis.canvas.setting_panel.edge_label')}
                     valuePropName='checked'
                     labelCol={{span: 20}}
                     labelAlign='left'
@@ -385,7 +393,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='edgeLabelPropertyName'
-                    label='边标签属性名'
+                    label={t('analysis.canvas.setting_panel.edge_label_property')}
                     labelCol={{span: 24}}
                 >
                     <Cascader
@@ -399,7 +407,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='edgeLabelSize'
-                    label='边标签字体大小'
+                    label={t('analysis.canvas.setting_panel.edge_label_size')}
                     labelCol={{span: 24}}
                     initialValue={12}
                 >
@@ -411,10 +419,10 @@ const SettingConfigPanel = props => {
                 colon={false}
                 onValuesChange={onModuleFormChange}
             >
-                <div className={c.canvasSettingTitle}>组件</div>
+                <div className={c.canvasSettingTitle}>{t('analysis.canvas.setting_panel.components')}</div>
                 <Form.Item
                     name='enableMinimap'
-                    label='启用缩略图'
+                    label={t('analysis.canvas.setting_panel.enable_minimap')}
                     labelCol={{span: 20}}
                     labelAlign='left'
                     valuePropName='checked'
@@ -424,7 +432,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='enableGrid'
-                    label='启用网格背景'
+                    label={t('analysis.canvas.setting_panel.enable_grid')}
                     labelAlign='left'
                     labelCol={{span: 20}}
                     valuePropName='checked'
@@ -434,7 +442,7 @@ const SettingConfigPanel = props => {
                 </Form.Item>
                 <Form.Item
                     name='enableLegend'
-                    label='启用图例'
+                    label={t('analysis.canvas.setting_panel.enable_legend')}
                     labelCol={{span: 20}}
                     valuePropName='checked'
                     labelAlign='left'

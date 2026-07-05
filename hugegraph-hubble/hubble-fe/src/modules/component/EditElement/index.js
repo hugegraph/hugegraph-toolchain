@@ -23,6 +23,7 @@
 import React, {useState, useCallback, useContext} from 'react';
 import {Drawer, Input, Button, message, Form, Row, Col, Tag} from 'antd';
 import {UpOutlined, DownOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import {GraphContext} from '../Context';
 import GraphAnalysisContext from '../../Context';
 import {EDGE_TYPE, EDGELABEL_TYPE} from '../../../utils/constants';
@@ -31,7 +32,7 @@ import _ from 'lodash';
 import c from './index.module.scss';
 import classnames from 'classnames';
 
-const SELECTED_TYPE = {EDGE: '边', VERTEX: '顶点'};
+const SELECTED_TYPE = {EDGE: 'EDGE', VERTEX: 'VERTEX'};
 
 const EditElement = props => {
     const {
@@ -42,6 +43,7 @@ const EditElement = props => {
         onChange,
     } =  props;
 
+    const {t} = useTranslation();
     const {graph} = useContext(GraphContext);
     const {graphSpace: currentGraphSpace, graph: currentGraph} = useContext(GraphAnalysisContext);
     const {type, id, itemType, properties, metaConfig} = drawerInfo || {};
@@ -49,7 +51,10 @@ const EditElement = props => {
     const {children} = _.find(edgeMeta, {name: parent_label}) || {};
 
     const elementType = EDGE_TYPE.includes(type) ? SELECTED_TYPE.EDGE : SELECTED_TYPE.VERTEX;
-    const showEdgeLabelExpand =  itemType === SELECTED_TYPE.EDGE && !_.isEmpty(children);
+    const elementTypeLabel = elementType === SELECTED_TYPE.EDGE
+        ? t('analysis.canvas.edit_element.edge')
+        : t('analysis.canvas.edit_element.vertex');
+    const showEdgeLabelExpand =  elementType === SELECTED_TYPE.EDGE && !_.isEmpty(children);
 
     const [vertexNullableProps, setVertexNullableProps] = useState();
     const [vertexNonNullableProps, setVertexNonNullableProps] = useState();
@@ -86,17 +91,17 @@ const EditElement = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('保存成功');
+                        message.success(t('analysis.canvas.edit_element.save_success'));
                         const edgeItem  = graph.findById(id);
                         graph.updateItem(edgeItem, edgeParams, false);
                         onChange('edges', edgeItem, edgeParams);
                     }
                     else {
-                        !errMsg && message.error('保存失败');
+                        !errMsg && message.error(t('analysis.canvas.edit_element.save_failed'));
                     }
                 });
         },
-        [currentGraph, currentGraphSpace, drawerInfo?.source, drawerInfo?.target, graph, id, itemType, onChange]
+        [currentGraph, currentGraphSpace, drawerInfo?.source, drawerInfo?.target, graph, id, itemType, onChange, t]
     );
 
     const updateVertexPropertReq = useCallback(
@@ -110,7 +115,7 @@ const EditElement = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('保存成功');
+                        message.success(t('analysis.canvas.edit_element.save_success'));
                         const nodeItem  = graph.findById(id);
                         const vertexModel = Object.assign({}, vertexParams, {label: id});
                         graph.updateItem(nodeItem, vertexModel, false);
@@ -120,11 +125,11 @@ const EditElement = props => {
                         onChange('nodes', nodeItem, itemParams);
                     }
                     else {
-                        !errMsg && message.error('保存失败');
+                        !errMsg && message.error(t('analysis.canvas.edit_element.save_failed'));
                     }
                 });
         },
-        [currentGraph, currentGraphSpace, graph, id, itemType, onChange, properties, vertexPrimaryKeys]
+        [currentGraph, currentGraphSpace, graph, id, itemType, onChange, properties, t, vertexPrimaryKeys]
     );
 
     const onFormFinish = useCallback(
@@ -149,36 +154,45 @@ const EditElement = props => {
         return (
             <>
                 <div className={c.fields}>
-                    <div> {elementType}类型：</div>
+                    <div> {elementTypeLabel} {t('analysis.canvas.edit_element.type')}:</div>
                     <div>{itemType}</div>
                 </div>
                 {edgelabel_type === EDGELABEL_TYPE.SUB && (
                     <>
                         <div className={c.fields}>
-                            <div> 边类型关系：</div>
+                            <div> {t('analysis.canvas.edit_element.edge_relation')}:</div>
                             <div onClick={handleChangeVisible}>
                                 {showEdgeLabelExpand && (isExpandEdgeLabelType ? <UpOutlined /> : <DownOutlined />)}
-                                {parent_label}<Tag color='blue' style={{marginLeft: '10px'}}>父边</Tag>
+                                {parent_label}
+                                <Tag color='blue' style={{marginLeft: '10px'}}>
+                                    {t('analysis.canvas.edit_element.parent_edge')}
+                                </Tag>
                             </div>
                         </div>
                         <div className={c.fieldWithoutName}>
                             {isExpandEdgeLabelType && children?.map(item =>
-                                (<div key={item}>{item}<Tag color='gold' style={{marginLeft: '10px'}}>子边</Tag></div>))}
+                                (
+                                    <div key={item}>{item}
+                                        <Tag color='gold' style={{marginLeft: '10px'}}>
+                                            {t('analysis.canvas.edit_element.child_edge')}
+                                        </Tag>
+                                    </div>
+                                ))}
                         </div>
                     </>
                 )}
                 <div className={c.fields}>
-                    <div> {elementType}ID：</div>
+                    <div> {elementTypeLabel} {t('analysis.canvas.edit_element.id')}:</div>
                     <div>{id} </div>
                 </div>
                 {elementType === SELECTED_TYPE.EDGE && (
                     <>
                         <div className={c.fields}>
-                            <div>起点</div>
+                            <div>{t('analysis.canvas.edit_element.source')}</div>
                             <div>{drawerInfo.source} </div>
                         </div>
                         <div className={c.fields}>
-                            <div>终点</div>
+                            <div>{t('analysis.canvas.edit_element.target')}</div>
                             <div>{drawerInfo.target} </div>
                         </div>
                     </>
@@ -187,7 +201,9 @@ const EditElement = props => {
                     const [key, value] = item;
                     let labelText;
                     if (elementType === SELECTED_TYPE.VERTEX) {
-                        labelText = vertexPrimaryKeys?.includes(key) ? `${key}(主键)` : key;
+                        labelText = vertexPrimaryKeys?.includes(key)
+                            ? `${key}(${t('analysis.canvas.edit_element.primary_key')})`
+                            : key;
                     }
                     else {
                         labelText = key;
@@ -217,10 +233,10 @@ const EditElement = props => {
                 setEdgeNullableProps(NullableProps);
             }
             if (status !== 200 && !edgePropertiessMessage) {
-                message.error('获取边属性失败');
+                message.error(t('analysis.canvas.edit_element.get_edge_property_failed'));
             }
         },
-        [currentGraph, currentGraphSpace, itemType]
+        [currentGraph, currentGraphSpace, itemType, t]
     );
 
 
@@ -239,10 +255,10 @@ const EditElement = props => {
                 setVertexNonNullableProps(nonNullableProps);
             }
             if (status !== 200 && !vertexPropertiessMessage) {
-                message.error('获取点属性失败');
+                message.error(t('analysis.canvas.edit_element.get_vertex_property_failed'));
             }
         },
-        [currentGraph, currentGraphSpace, itemType]
+        [currentGraph, currentGraphSpace, itemType, t]
     );
 
     const getVertexorEdgeProperties = useCallback(
@@ -278,7 +294,7 @@ const EditElement = props => {
                     if (elementType === SELECTED_TYPE.VERTEX && vertexPrimaryKeys?.includes(key)) {
                         itemDom = (
                             <Row className={graphInfoItemClassName} key={key}>
-                                <Col span={9}>{key}(主键:)</Col>
+                                <Col span={9}>{key}({t('analysis.canvas.edit_element.primary_key')}):</Col>
                                 <Col>{value?.toString()}</Col>
                             </Row>
                         );
@@ -291,10 +307,13 @@ const EditElement = props => {
                                 label={key}
                                 colon
                                 name={key}
-                                rules={[{required: isRequired, message: '此项不能为空'}]}
+                                rules={[{required: isRequired, message: t('analysis.canvas.edit_element.required')}]}
                                 labelCol={{span: 9}}
                             >
-                                <Input placeholder='请输入属性值' maxLength={40} />
+                                <Input
+                                    placeholder={t('analysis.canvas.edit_element.property_placeholder')}
+                                    maxLength={40}
+                                />
                             </Form.Item>
                         );
                     }
@@ -311,7 +330,11 @@ const EditElement = props => {
         if (_.size(arr) > 0 && !_.isEmpty(getIntersection(properties, arr))) {
             return (
                 <>
-                    <div style={{margin: '8px 0'}}>{isAllowNull ? '可空属性' : '不可空属性'}:</div>
+                    <div style={{margin: '8px 0'}}>
+                        {isAllowNull
+                            ? t('analysis.canvas.edit_element.nullable_property')
+                            : t('analysis.canvas.edit_element.non_nullable_property')}:
+                    </div>
                     {renderItem(arr, !isAllowNull)}
                 </>
             );
@@ -339,7 +362,9 @@ const EditElement = props => {
 
     return (
         <Drawer
-            title={isEdit ? '编辑详情' : '数据详情'}
+            title={isEdit
+                ? t('analysis.canvas.edit_element.edit_details')
+                : t('analysis.canvas.edit_element.data_details')}
             placement="right"
             onClose={handleDrawerClose}
             open={show}
@@ -351,7 +376,9 @@ const EditElement = props => {
                     onClick={onSaveEdit}
                     key="save"
                 >
-                    {isEdit ? '保存' : '编辑'}
+                    {isEdit
+                        ? t('analysis.canvas.edit_element.save')
+                        : t('analysis.canvas.edit_element.edit')}
                 </Button>,
                 <Button
                     size="medium"
@@ -359,7 +386,7 @@ const EditElement = props => {
                     onClick={handleDrawerClose}
                     key="close"
                 >
-                    关闭
+                    {t('analysis.canvas.edit_element.close')}
                 </Button>,
             ]}
         >
@@ -370,16 +397,18 @@ const EditElement = props => {
                         {elementType === SELECTED_TYPE.EDGE ? (
                             <>
                                 <Row className={graphInfoItemClassName}>
-                                    <Col span={9}>边类型：</Col>
+                                    <Col span={9}>{t('analysis.canvas.edit_element.edge_type')}:</Col>
                                     <Col>{itemType}</Col>
                                 </Row>
                                 {edgelabel_type === EDGELABEL_TYPE.SUB && (
                                     <Row className={graphInfoItemClassName}>
-                                        <Col span={9}>边类型关系：</Col>
+                                        <Col span={9}>{t('analysis.canvas.edit_element.edge_relation')}:</Col>
                                         <Col>{showEdgeLabelExpand && <UpOutlined />}</Col>
                                         <Col>
                                             <span>{parent_label}
-                                                <Tag color='blue' style={{marginLeft: '10px'}}>父边</Tag>
+                                                <Tag color='blue' style={{marginLeft: '10px'}}>
+                                                    {t('analysis.canvas.edit_element.parent_edge')}
+                                                </Tag>
                                             </span>
                                         </Col>
                                     </Row>
@@ -388,31 +417,33 @@ const EditElement = props => {
                                 {children?.map(item => (
                                     <Row key={item} className={graphInfoItemClassName}>
                                         <Col offset={9}>{item}
-                                            <Tag color={'gold'} style={{marginLeft: '10px'}}>子边</Tag>
+                                            <Tag color={'gold'} style={{marginLeft: '10px'}}>
+                                                {t('analysis.canvas.edit_element.child_edge')}
+                                            </Tag>
                                         </Col>
                                     </Row>
                                 ))}
                                 <Row className={graphInfoItemClassName}>
-                                    <Col span={9}>边ID：</Col>
+                                    <Col span={9}>{t('analysis.canvas.edit_element.edge_id')}:</Col>
                                     <Col>{id}</Col>
                                 </Row>
                                 <Row className={graphInfoItemClassName}>
-                                    <Col span={9}>起点：</Col>
+                                    <Col span={9}>{t('analysis.canvas.edit_element.source')}:</Col>
                                     <Col>{drawerInfo.source}</Col>
                                 </Row>
                                 <Row className={graphInfoItemClassName}>
-                                    <Col span={9}>终点：</Col>
+                                    <Col span={9}>{t('analysis.canvas.edit_element.target')}:</Col>
                                     <Col>{drawerInfo.target}</Col>
                                 </Row>
                             </>
                         ) : (
                             <>
                                 <Row className={graphInfoItemClassName}>
-                                    <Col span={9}>顶点类型：</Col>
+                                    <Col span={9}>{t('analysis.canvas.edit_element.vertex_type')}:</Col>
                                     <Col>{itemType}</Col>
                                 </Row>
                                 <Row className={graphInfoItemClassName}>
-                                    <Col span={9}>顶点ID：</Col>
+                                    <Col span={9}>{t('analysis.canvas.edit_element.vertex_id')}:</Col>
                                     <Col>{id}</Col>
                                 </Row>
                             </>

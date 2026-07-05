@@ -22,20 +22,12 @@
 
 import React from 'react';
 import {Form, InputNumber, Input, Switch} from 'antd';
+import {useTranslation} from 'react-i18next';
 import _ from 'lodash';
-
-const description = {
-    unitRadius: '每一圈距离上一圈的距离。默认填充整个画布，即根据图的大小决定',
-    linkDistance: '边长度',
-    nodeSize: '节点大小（直径）。用于防止节点重叠时的碰撞检测',
-    focusNode: '辐射的中心点，默认为数据中第一个节点。可以传入节点 id 或节点本身',
-    nodeSpacing: 'preventOverlap 为 true 时生效, 防止重叠时节点边缘间距的最小值',
-    preventOverlap: '是否防止重叠，必须配合下面属性 nodeSize，只有设置了与当前图节点大小相同的 nodeSize 值，才能够进行节点重叠的碰撞检测',
-    strictRadial: '是否必须是严格的 radial 布局',
-};
 
 const RadialForm = props => {
     const {handleFormChange, initialValues} = props;
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [form] = useForm();
 
@@ -48,56 +40,56 @@ const RadialForm = props => {
         >
             <Form.Item
                 name='unitRadius'
-                label='层级距离'
-                tooltip={description.unitRadius}
+                label={t('analysis.canvas.layout_panel.unit_radius')}
+                tooltip={t('analysis.canvas.layout_panel.unit_radius_tooltip')}
             >
                 <InputNumber style={{width: '100%'}} min={1} />
             </Form.Item>
             <Form.Item
                 name='linkDistance'
-                label='边长'
-                tooltip={description.linkDistance}
+                label={t('analysis.canvas.layout_panel.link_distance_short')}
+                tooltip={t('analysis.canvas.layout_panel.link_distance')}
             >
                 <InputNumber style={{width: '100%'}} min={1} />
             </Form.Item>
             <Form.Item
                 name='nodeSize'
-                label='节点大小'
-                tooltip={description.nodeSize}
+                label={t('analysis.canvas.layout_panel.node_size')}
+                tooltip={t('analysis.canvas.layout_panel.node_size_tooltip')}
             >
                 <InputNumber style={{width: '100%'}} min={1} />
             </Form.Item>
             <Form.Item
                 name='focusNode'
-                label='中心节点'
-                tooltip={description.focusNode}
+                label={t('analysis.canvas.layout_panel.focus_node')}
+                tooltip={t('analysis.canvas.layout_panel.focus_node_tooltip')}
             >
                 <Input style={{width: '100%'}} />
             </Form.Item>
             <Form.Item
                 name='nodeSpacing'
-                label='节点间距'
-                tooltip={description.nodeSpacing}
+                label={t('analysis.canvas.layout_panel.node_spacing')}
+                tooltip={t('analysis.canvas.layout_panel.radial_node_spacing_tooltip')}
             >
                 <InputNumber style={{width: '100%'}} min={1} />
             </Form.Item>
             <Form.Item
                 name='preventOverlap'
-                label='防止重叠'
+                label={t('analysis.canvas.layout_panel.prevent_overlap')}
                 valuePropName='checked'
                 labelAlign='left'
                 labelCol={{span: 20}}
-                tooltip={description.preventOverlap}
+                tooltip={t('analysis.canvas.layout_panel.radial_prevent_overlap_tooltip')}
             >
                 <Switch />
             </Form.Item>
             <Form.Item
                 name='strictRadial'
-                label='严格辐射'
+                label={t('analysis.canvas.layout_panel.strict_radial')}
                 valuePropName='checked'
                 labelAlign='left'
                 labelCol={{span: 20}}
-                tooltip={description.strictRadial}
+                tooltip={t('analysis.canvas.layout_panel.strict_radial_tooltip')}
             >
                 <Switch />
             </Form.Item>

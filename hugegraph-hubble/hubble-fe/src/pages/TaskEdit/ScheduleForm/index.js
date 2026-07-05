@@ -18,19 +18,21 @@
 
 import {Typography, Form, Radio, Input, Space, Button, Select} from 'antd';
 import {useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
 
 const ScheduleForm = ({prev, visible, datasource, loading}) => {
+    const {t} = useTranslation();
     const [scheduleForm] = Form.useForm();
     const [syncType, setSyncType] = useState(0);
     // console.log(datasource);
     const datasourceType = datasource?.datasource_config?.type;
     const scheduleOptions = datasourceType === 'KAFKA'
-        ? [{label: '实时执行', value: 'REALTIME'}]
+        ? [{label: t('task.edit.schedule_realtime'), value: 'REALTIME'}]
         : [
-            {label: '执行一次', value: 'ONCE'},
-            {label: '实时执行', value: 'REALTIME', disabled: true},
-            {label: '周期执行', value: 'CRON'},
+            {label: t('task.edit.schedule_once'), value: 'ONCE'},
+            {label: t('task.edit.schedule_realtime'), value: 'REALTIME', disabled: true},
+            {label: t('task.edit.schedule_cron'), value: 'CRON'},
         ];
 
     return (
@@ -44,8 +46,8 @@ const ScheduleForm = ({prev, visible, datasource, loading}) => {
                     task_load_type: 'FULL',
                 }}
             >
-                <Typography.Title level={5}>同步方式</Typography.Title>
-                <Form.Item label='同步方式' required name='task_schedule_type'>
+                <Typography.Title level={5}>{t('task.edit.sync_type')}</Typography.Title>
+                <Form.Item label={t('task.edit.sync_type')} required name='task_schedule_type'>
                     <Radio.Group
                         options={scheduleOptions}
                         onChange={e => {
@@ -58,33 +60,36 @@ const ScheduleForm = ({prev, visible, datasource, loading}) => {
                     <>
                         <Form.Item
                             wrapperCol={{offset: 4, span: 14}}
-                            extra='quartz表达式：秒 分钟 小时 天 月 星期 年(选填)'
+                            extra={t('task.edit.cron_extra')}
                             name='task_schedule_extend'
-                            rules={[rules.required('请输入调度信息'), rules.isCron]}
+                            rules={[
+                                rules.required(t('task.edit.cron_required')),
+                                rules.isCron(t('task.edit.cron_rule')),
+                            ]}
                         >
-                            <Input placeholder='定时 * 5 * * * * (*)' />
+                            <Input placeholder={t('task.edit.cron_placeholder')} />
                         </Form.Item>
                     </>
                 )
                 }
-                {/* <Typography.Title level={5}>调度信息</Typography.Title> */}
-                {/* <Form.Item label='失败重试次数' name={['ingestion_option', 'max_read_errors']}>
-                    <InputNumber min={0} max={10} />
-                </Form.Item>
-                <Form.Item label='超时时间' name='timeout'>
-                    <InputNumber min={0} formatter={value => `${value}秒`} />
-                </Form.Item> */}
                 {(syncType === 'CRON' && ['KAFKA, JDBC'].includes(datasource?.datasource_config?.type)) ? (
-                    <Form.Item label='同步方式' name='task_load_type' wrapperCol={{span: 4}}>
-                        <Select options={[{label: '全量', value: 'FULL'}, {label: '增量', value: 'INCREMENTAL'}]} />
+                    <Form.Item label={t('task.edit.sync_type')} name='task_load_type' wrapperCol={{span: 4}}>
+                        <Select
+                            options={[
+                                {label: t('task.edit.load_full'), value: 'FULL'},
+                                {label: t('task.edit.load_incremental'), value: 'INCREMENTAL'},
+                            ]}
+                        />
                     </Form.Item>
                 ) : <Form.Item name='task_load_type' hidden />}
                 <Form.Item name='task_schedule_status' hidden />
 
                 <Form.Item wrapperCol={{offset: 4}}>
                     <Space>
-                        <Button onClick={prev}>上一步</Button>
-                        <Button type='primary' htmlType='submit' loading={loading}>确定</Button>
+                        <Button onClick={prev}>{t('common.action.back')}</Button>
+                        <Button type='primary' htmlType='submit' loading={loading}>
+                            {t('common.action.confirm')}
+                        </Button>
                     </Space>
                 </Form.Item>
             </Form>

@@ -22,6 +22,7 @@
 
 import React, {useState, useCallback, useEffect, useContext} from 'react';
 import {Drawer, Input, Button, message, Form, Select, Col, Row} from 'antd';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../Context';
 import * as api from '../../../api/index';
 import _ from 'lodash';
@@ -38,11 +39,12 @@ const AddEdgeDrawer = props => {
         isOutEdge,
     } =  props;
 
+    const {t} = useTranslation();
     const {graphSpace: currentGraphSpace, graph: currentGraph} = useContext(GraphAnalysisContext);
 
     const [relatedGraphEdges, setRelatedEdges] = useState([]);
     const [edgeProperties, setEdgeProperties] = useState([]);
-    const {vertices, edges} = graphData || {};
+    const {vertices} = graphData || {};
     const nodesDataArr = _.cloneDeep(vertices);
     const {vertexId, vertexLabel} = drawerInfo || {};
 
@@ -77,10 +79,10 @@ const AddEdgeDrawer = props => {
                         setRelatedEdges(data);
                     }
                     if (status !== 200) {
-                        !errMsg && message.error('获取边类型失败');
+                        !errMsg && message.error(t('analysis.canvas.dynamic_add.get_edge_type_failed'));
                     }
                 });
-        }, [currentGraph, currentGraphSpace]
+        }, [currentGraph, currentGraphSpace, t]
     );
 
     useEffect(
@@ -100,10 +102,10 @@ const AddEdgeDrawer = props => {
                         setEdgeProperties(properties);
                     }
                     else {
-                        !errMsg && message.error('获取边属性失败');
+                        !errMsg && message.error(t('analysis.canvas.dynamic_add.get_edge_property_failed'));
                     }
                 });
-        }, [currentGraph, currentGraphSpace]
+        }, [currentGraph, currentGraphSpace, t]
     );
 
     const onChangeEdgeLabel  = useCallback(
@@ -181,14 +183,14 @@ const AddEdgeDrawer = props => {
                 .then(res => {
                     const {data, status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('保存成功');
+                        message.success(t('analysis.canvas.dynamic_add.save_success'));
                         onOk(data);
                     }
                     else {
-                        !errMsg && message.error('保存失败');
+                        !errMsg && message.error(t('analysis.canvas.dynamic_add.save_failed'));
                     }
                 });
-        }, [currentGraph, currentGraphSpace, onOk, isClickNew, isOutEdge, vertexId]
+        }, [currentGraph, currentGraphSpace, onOk, isClickNew, isOutEdge, vertexId, t]
     );
 
     const onFormFinish = useCallback(
@@ -227,10 +229,13 @@ const AddEdgeDrawer = props => {
                         label={item.name}
                         colon
                         name={item.name}
-                        rules={[{required: isRequired, message: '此项不能为空'}]}
+                        rules={[{required: isRequired, message: t('analysis.canvas.dynamic_add.required')}]}
                         labelCol={{span: 9, offset: 6}}
                     >
-                        <Input placeholder='请输入属性值' maxLength={40} />
+                        <Input
+                            placeholder={t('analysis.canvas.dynamic_add.property_placeholder')}
+                            maxLength={40}
+                        />
                     </Form.Item>
                 </div>
             );
@@ -242,9 +247,13 @@ const AddEdgeDrawer = props => {
             return (
                 <>
                     <Row style={{marginBottom: '20px'}}>
-                        <Col span={6} justify='end'>{isAllowNull ? '可空属性:' : '不可空属性:'}</Col>
-                        <Col span={9} justify='end'>属性</Col>
-                        <Col span={9} justify='end'>属性值</Col>
+                        <Col span={6} justify='end'>
+                            {isAllowNull
+                                ? `${t('analysis.canvas.dynamic_add.nullable_property')}:`
+                                : `${t('analysis.canvas.dynamic_add.non_nullable_property')}:`}
+                        </Col>
+                        <Col span={9} justify='end'>{t('analysis.canvas.dynamic_add.property')}</Col>
+                        <Col span={9} justify='end'>{t('analysis.canvas.dynamic_add.property_value')}</Col>
                     </Row>
                     {renderItem(arr, !isAllowNull)}
                 </>
@@ -271,7 +280,9 @@ const AddEdgeDrawer = props => {
     return (
         <Drawer
             className={c.addEdgeDrawer}
-            title={`添加${isOutEdge ? '出边' : '入边' }`}
+            title={isOutEdge
+                ? t('analysis.canvas.dynamic_add.add_out_edge')
+                : t('analysis.canvas.dynamic_add.add_in_edge')}
             placement="right"
             onClose={onCloseDrawer}
             open={open}
@@ -284,7 +295,7 @@ const AddEdgeDrawer = props => {
                     key="save"
                     disabled={isAddDisabled}
                 >
-                    添加
+                    {t('analysis.canvas.dynamic_add.add')}
                 </Button>,
                 <Button
                     size="medium"
@@ -292,7 +303,7 @@ const AddEdgeDrawer = props => {
                     onClick={onCloseDrawer}
                     key="close"
                 >
-                    取消
+                    {t('analysis.canvas.dynamic_add.cancel')}
                 </Button>,
             ]}
         >
@@ -301,7 +312,11 @@ const AddEdgeDrawer = props => {
                     className={c.fields}
                     style={{marginBottom: 24}}
                 >
-                    <div>{isOutEdge ? '起点' : '终点'}:</div>
+                    <div>
+                        {isOutEdge
+                            ? t('analysis.canvas.dynamic_add.source')
+                            : t('analysis.canvas.dynamic_add.target')}:
+                    </div>
                     <div>{vertexId}</div>
                 </div>)
             }
@@ -316,13 +331,17 @@ const AddEdgeDrawer = props => {
             >
                 {isClickNew && (
                     <Form.Item
-                        label={isOutEdge ? '起点:' : '终点:'}
+                        label={isOutEdge
+                            ? `${t('analysis.canvas.dynamic_add.source')}:`
+                            : `${t('analysis.canvas.dynamic_add.target')}:`}
                         name={isOutEdge ? 'source' : 'target'}
-                        rules={[{required: true, message: '此项不能为空'}]}
+                        rules={[{required: true, message: t('analysis.canvas.dynamic_add.required')}]}
                     >
                         <Select
                             showSearch
-                            placeholder={`请选择${isOutEdge ? '起点' : '终点'}ID`}
+                            placeholder={isOutEdge
+                                ? t('analysis.canvas.dynamic_add.select_source')
+                                : t('analysis.canvas.dynamic_add.select_target')}
                             onChange={onChangeNode}
                         >
                             {getSelectNodeOptions()}
@@ -330,12 +349,12 @@ const AddEdgeDrawer = props => {
                     </Form.Item>)
                 }
                 <Form.Item
-                    label='边类型'
+                    label={t('analysis.canvas.dynamic_add.edge_type')}
                     name={'label'}
-                    rules={[{required: true, message: '请选择边类型'}]}
+                    rules={[{required: true, message: t('analysis.canvas.dynamic_add.select_edge_type')}]}
                 >
                     <Select
-                        placeholder="请选择边类型"
+                        placeholder={t('analysis.canvas.dynamic_add.select_edge_type')}
                         onChange={onChangeEdgeLabel}
                     >
                         {getSelectOptions()}
@@ -344,11 +363,17 @@ const AddEdgeDrawer = props => {
                 {(isShowMore && (
                     <>
                         <Form.Item
-                            label={isOutEdge ? '终点:' : '起点:'}
+                            label={isOutEdge
+                                ? `${t('analysis.canvas.dynamic_add.target')}:`
+                                : `${t('analysis.canvas.dynamic_add.source')}:`}
                             name={isOutEdge ? 'target' : 'source'}
-                            rules={[{required: true, message: '此项不能为空'}]}
+                            rules={[{required: true, message: t('analysis.canvas.dynamic_add.required')}]}
                         >
-                            <Input placeholder={`请输入${isOutEdge ? '终点' : '起点'}ID`} />
+                            <Input
+                                placeholder={isOutEdge
+                                    ? t('analysis.canvas.dynamic_add.select_target')
+                                    : t('analysis.canvas.dynamic_add.select_source')}
+                            />
                         </Form.Item>
                     </>
                 ))}

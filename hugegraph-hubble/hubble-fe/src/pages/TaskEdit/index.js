@@ -39,8 +39,7 @@ const TaskEdit = () => {
     const [current, setCurrent] = useState(0);
     const [targetField, setTargetField] = useState([]);
     // const [datasource, setDatasource] = useState({});
-    // header的意义为表头，因表头可自定义更改，因此这里的策略是 如果原header为null, 则无论如何自定义都为null
-    // 如果原header不为null, 则自定义header将覆盖原header
+    // Preserve a null source header; otherwise user-customized headers replace the original header.
     const [header, setHeader] = useState(null);
     const [form] = Form.useForm();
     const [graphspace, setGraphspace] = useState('');
@@ -232,7 +231,7 @@ const TaskEdit = () => {
     //         delete values.vertex_form;
     //         api.manage.addTask(JSONbig.stringify(values)).then(res => {
     //             if (res.status === 200) {
-    //                 message.success('创建成功');
+    //                 message.success(t('common.msg.create_success'));
     //                 navigate('/task');
     //                 return;
     //             }

@@ -19,6 +19,7 @@
 import {Form, Input, Transfer, Space, Button, Typography, message, Tree, Popconfirm} from 'antd';
 import {PlusOutlined, MinusSquareOutlined} from '@ant-design/icons';
 import {useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
 import style from '../index.module.scss';
@@ -34,6 +35,7 @@ import style from '../index.module.scss';
 // }
 
 const FieldForm = ({visible, prev, datasourceID}) => {
+    const {t} = useTranslation();
     const [targetKeys, setTargetKeys] = useState([]);
     const [data, setData] = useState([]);
     const [inputData, setInputData] = useState('');
@@ -89,10 +91,10 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                 <Space>
                     {props.key}
                     <Popconfirm
-                        title="确定要删除这个字段吗？"
+                        title={t('task.edit.delete_field_confirm')}
                         onConfirm={() => handleDelete(props.key)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText={t('common.action.confirm')}
+                        cancelText={t('common.action.cancel')}
                     >
                         <MinusSquareOutlined />
                     </Popconfirm>
@@ -109,7 +111,7 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                     <Input
                         value={inputData}
                         addonAfter={<PlusOutlined onClick={addField} />}
-                        placeholder='添加字段,仅允许字母、数字、-、_'
+                        placeholder={t('task.edit.add_field_placeholder')}
                         onChange={handleInputData}
                         status={status}
                     />
@@ -136,11 +138,17 @@ const FieldForm = ({visible, prev, datasourceID}) => {
     return (
         <div style={{display: visible ? '' : 'none'}} className={style.transfer}>
             <Form form={fieldForm} name='field_form'>
-                <Typography.Title level={5}>选择源端字段</Typography.Title>
-                <Form.Item name='target_keys' rules={[rules.required('请选择源端字段')]}>
+                <Typography.Title level={5}>{t('task.edit.step_source_fields')}</Typography.Title>
+                <Form.Item
+                    name='target_keys'
+                    rules={[rules.required(t('task.edit.select_source_fields'))]}
+                >
                     <Transfer
                         dataSource={data}
-                        titles={['源端可选字段', '已选字段']}
+                        titles={[
+                            t('task.edit.source_available_fields'),
+                            t('task.edit.selected_fields'),
+                        ]}
                         listStyle={{width: 400, height: 400}}
                         render={item => item.key}
                         targetKeys={targetKeys}
@@ -175,8 +183,8 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                 <Form.Item name='source_keys' hidden />
                 <Form.Item>
                     <Space>
-                        <Button onClick={prev}>上一步</Button>
-                        <Button type='primary' htmlType='submit'>下一步</Button>
+                        <Button onClick={prev}>{t('common.action.back')}</Button>
+                        <Button type='primary' htmlType='submit'>{t('common.action.next')}</Button>
                     </Space>
                 </Form.Item>
             </Form>

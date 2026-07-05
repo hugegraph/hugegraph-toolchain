@@ -329,15 +329,28 @@ export const getAlgorithmDisplayName = (name, t = key => key) => {
     return i18nKey ? t(i18nKey) : name;
 };
 
+const getAlgorithmSearchNames = (name, t = key => key) => {
+    const entry = Object.entries(ALGORITHM_NAME).find(([key, value]) => {
+        return value === name || t(`analysis.algorithm.olap.item.${key}`) === name;
+    });
+    if (!entry) {
+        return [name];
+    }
+    const [key, value] = entry;
+    return [
+        name,
+        value,
+        t(`analysis.algorithm.olap.item.${key}`),
+    ];
+};
+
 export const isAlgorithmNameMatched = (name, search, t = key => key) => {
     const keyword = `${search || ''}`.trim().toLowerCase();
     if (!keyword) {
         return true;
     }
-    return [
-        name,
-        getAlgorithmDisplayName(name, t),
-    ].some(text => `${text || ''}`.toLowerCase().includes(keyword));
+    return getAlgorithmSearchNames(name, t)
+        .some(text => `${text || ''}`.toLowerCase().includes(keyword));
 };
 
 export const Algorithm_Layout = {
@@ -414,9 +427,9 @@ export const useTranslatedConstants = () => {
         {label: t('common.verify.no'), value: 0},
     ];
     const directionOptions = [
-        {label: t('ERView.edge.out'), value: 'out'},
-        {label: t('ERView.edge.in'), value: 'in'},
-        {label: t('ERView.edge.both'), value: 'both'},
+        {label: t('analysis.algorithm.form.direction_options.out'), value: 'out'},
+        {label: t('analysis.algorithm.form.direction_options.in'), value: 'in'},
+        {label: t('analysis.algorithm.form.direction_options.both'), value: 'both'},
     ];
     // TODO Tranfer directionOptions to here
     const ALGO_NAME_BASE_PATH = 'analysis.algorithm.olap.item';

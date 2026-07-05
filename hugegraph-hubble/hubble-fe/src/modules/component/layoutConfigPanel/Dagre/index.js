@@ -20,39 +20,36 @@
  * @file 图分析组件 层次布局
  */
 
-import React from 'react';
+import React, {useMemo} from 'react';
 import {Form, Select} from 'antd';
+import {useTranslation} from 'react-i18next';
 import SliderComponent from '../../../../components/SlideComponent';
 import _ from 'lodash';
 
-const rankdirOptions = [
-    {value: 'TB', label: '从上至下'},
-    {value: 'BT', label: '从下至上'},
-    {value: 'LR', label: '从左至右'},
-    {value: 'RL', label: '从右至左'},
-];
-
-const alignOptions = [
-    {value: null, label: '中间对齐'},
-    {value: 'UL', label: '对齐到左上角'},
-    {value: 'UR', label: '对齐到右上角'},
-    {value: 'DL', label: '对齐到左下角'},
-    {value: 'DR', label: '对齐到右下角'},
-];
-
-const description = {
-    rankdir: '布局的方向',
-    align: '节点对齐方式',
-    ranksep: `层间距（px）。在rankdir 为 'TB' 或 'BT' 时是竖直方向相邻层间距；
-    在rankdir 为 'LR' 或 'RL' 时代表水平方向相邻层间距`,
-    nodesep: `节点间距（px）。在rankdir 为 'TB' 或 'BT' 时是节点的水平间距；在rankdir 
-    为 'LR' 或 'RL' 时代表节点的竖直方向间距`,
-};
-
 const DagreLayoutForm = props => {
     const {handleFormChange, initialValues} = props;
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [dagreLayoutForm] = useForm();
+    const rankdirOptions = useMemo(
+        () => [
+            {value: 'TB', label: t('analysis.canvas.layout_panel.top_bottom')},
+            {value: 'BT', label: t('analysis.canvas.layout_panel.bottom_top')},
+            {value: 'LR', label: t('analysis.canvas.layout_panel.left_right')},
+            {value: 'RL', label: t('analysis.canvas.layout_panel.right_left')},
+        ],
+        [t]
+    );
+    const alignOptions = useMemo(
+        () => [
+            {value: null, label: t('analysis.canvas.layout_panel.align_center')},
+            {value: 'UL', label: t('analysis.canvas.layout_panel.align_ul')},
+            {value: 'UR', label: t('analysis.canvas.layout_panel.align_ur')},
+            {value: 'DL', label: t('analysis.canvas.layout_panel.align_dl')},
+            {value: 'DR', label: t('analysis.canvas.layout_panel.align_dr')},
+        ],
+        [t]
+    );
 
     return (
         <Form
@@ -63,29 +60,29 @@ const DagreLayoutForm = props => {
         >
             <Form.Item
                 name='rankdir'
-                label='布局方向'
-                tooltip={description.rankdir}
+                label={t('analysis.canvas.layout_panel.rankdir')}
+                tooltip={t('analysis.canvas.layout_panel.rankdir_tooltip')}
             >
                 <Select options={rankdirOptions} />
             </Form.Item>
             <Form.Item
                 name='align'
-                label='对齐'
-                tooltip={description.align}
+                label={t('analysis.canvas.layout_panel.align')}
+                tooltip={t('analysis.canvas.layout_panel.align_tooltip')}
             >
                 <Select options={alignOptions} />
             </Form.Item>
             <Form.Item
                 name='ranksep'
-                label='层间距'
-                tooltip={description.ranksep}
+                label={t('analysis.canvas.layout_panel.ranksep')}
+                tooltip={t('analysis.canvas.layout_panel.ranksep_tooltip')}
             >
                 <SliderComponent max={1000} />
             </Form.Item>
             <Form.Item
                 name='nodesep'
-                label='点间距'
-                tooltip={description.nodesep}
+                label={t('analysis.canvas.layout_panel.nodesep')}
+                tooltip={t('analysis.canvas.layout_panel.nodesep_tooltip')}
             >
                 <SliderComponent max={1000} />
             </Form.Item>

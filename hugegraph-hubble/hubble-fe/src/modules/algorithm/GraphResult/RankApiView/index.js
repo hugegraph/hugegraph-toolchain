@@ -21,6 +21,7 @@
  */
 
 import React from 'react';
+import {useTranslation} from 'react-i18next';
 import {GRAPH_STATUS} from '../../../../utils/constants';
 import JaccRankView from '../../../component/JaccRankView';
 import GraphStatusView from '../../../component/GraphStatusView';
@@ -28,10 +29,14 @@ import _ from 'lodash';
 import c from './index.module.scss';
 
 const RankApiView = props => {
+    const {t} = useTranslation();
     const {rankObj} = props;
     if (_.isEmpty(rankObj)) {
         return (
-            <GraphStatusView status={GRAPH_STATUS.SUCCESS} message={'无图结果'} />
+            <GraphStatusView
+                status={GRAPH_STATUS.SUCCESS}
+                message={t('analysis.query_result.no_graph_result')}
+            />
         );
     }
     return (
@@ -47,7 +52,7 @@ const RankApiView = props => {
                                     color: '#42B3E5',
                                 }}
                                 key={key}
-                                title={'相似度的值'}
+                                title={t('analysis.algorithm.result.similarity_value')}
                                 value={value?.toString()}
                             />
                         );

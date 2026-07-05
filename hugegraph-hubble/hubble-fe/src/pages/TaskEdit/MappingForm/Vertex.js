@@ -18,9 +18,11 @@
 
 import {Space, Button, Form, Select, Input, Drawer} from 'antd';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
 
 const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index}) => {
+    const {t} = useTranslation();
     const [selectLabel, setSelectLabel] = useState({});
     const [errorList, setErrorList] = useState({});
     const [vertexForm] = Form.useForm();
@@ -52,7 +54,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                 }
 
                 if (existName.includes(item.key)) {
-                    return Promise.reject(new Error('属性不可重复'));
+                    return Promise.reject(new Error(t('task.edit.duplicate_property')));
                 }
 
                 existName.push(item.key);
@@ -72,7 +74,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                     >
                         <Select
                             options={targetField.map(item => ({label: item, value: item}))}
-                            placeholder='请选择schema字段'
+                            placeholder={t('task.edit.select_schema_field')}
                         />
                     </Form.Item>
                     <span className={'form_attr_split'}>-</span>
@@ -83,17 +85,23 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                         <Select
                             options={(selectLabel?.properties ?? []).map(item =>
                                 ({label: item.name, value: item.name}))}
-                            placeholder='请选择映射字段'
+                            placeholder={t('task.edit.select_mapping_field')}
                         />
                     </Form.Item>
                     <Space>
-                        <Button type='link' onClick={() => remove(index)}> 删除</Button>
+                        <Button type='link' onClick={() => remove(index)}>
+                            {t('common.action.delete')}
+                        </Button>
                     </Space>
                 </div>
             ))}
             <Form.ErrorList errors={errors} />
-            <Button onClick={() => autoSelect()} block style={{marginBottom: 8}}>自动匹配</Button>
-            <Button type='dashed' onClick={() => add()} block>+新增</Button>
+            <Button onClick={() => autoSelect()} block style={{marginBottom: 8}}>
+                {t('task.edit.auto_match')}
+            </Button>
+            <Button type='dashed' onClick={() => add()} block>
+                +{t('common.action.add')}
+            </Button>
         </>
     );
 
@@ -123,12 +131,14 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                     >
                         <Input />
                     </Form.Item>
-                    <a onClick={() => remove(index)}> 删除</a>
+                    <a onClick={() => remove(index)}>{t('common.action.delete')}</a>
                 </div>
             )
 
             )}
-            <div className={'form_attr_add'} onClick={() => add()}>+新增</div>
+            <div className={'form_attr_add'} onClick={() => add()}>
+                +{t('common.action.add')}
+            </div>
         </>
     );
 
@@ -173,14 +183,19 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
 
     return (
         <Drawer
-            title={index >= 0 ? '编辑顶点' : '创建顶点'}
+            title={index >= 0 ? t('task.edit.edit_vertex') : t('task.edit.create_vertex')}
             placement="right"
             onClose={onCancel}
             width={580}
             open={open}
         >
             <Form form={vertexForm} labelCol={{span: 4}} name='vertex_form'>
-                <Form.Item label='顶点类型' required name={'label'} rules={[rules.required()]}>
+                <Form.Item
+                    label={t('task.edit.vertex_type')}
+                    required
+                    name={'label'}
+                    rules={[rules.required()]}
+                >
                     <Select
                         options={sourceField.map(item => ({label: item.name, value: item.name, info: item}))}
                         onChange={handleLabel}
@@ -188,7 +203,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                 </Form.Item>
                 <Form.Item
                     // required={selectLabel.id_strategy !== 'PRIMARY_KEY'}
-                    label='ID列'
+                    label={t('task.edit.id_column')}
                     name={'id'}
                     rules={[!['PRIMARY_KEY', 'AUTOMATIC'].includes(selectLabel.id_strategy) ? rules.required() : null]}
                 >
@@ -200,12 +215,12 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                             ? null : value)}
                     />
                 </Form.Item>
-                <Form.Item label='属性映射'>
+                <Form.Item label={t('task.edit.property_mapping')}>
                     <Form.List name={'attr'} rules={[checkDuplicate]}>
                         {attrFormList}
                     </Form.List>
                 </Form.Item>
-                <Form.Item label='值映射'>
+                <Form.Item label={t('task.edit.value_mapping')}>
                     <Form.List name={'value'}>
                         {valueFormList}
                     </Form.List>
@@ -213,8 +228,10 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                 <Form.Item name='index' hidden />
                 <Form.Item wrapperCol={{offset: 4}}>
                     <Space>
-                        <Button type='primary' onClick={onFinish}>确定</Button>
-                        <Button onClick={handleCancel}>取消</Button>
+                        <Button type='primary' onClick={onFinish}>
+                            {t('common.action.confirm')}
+                        </Button>
+                        <Button onClick={handleCancel}>{t('common.action.cancel')}</Button>
                     </Space>
                 </Form.Item>
             </Form>

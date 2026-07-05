@@ -20,22 +20,27 @@
  * @file 切换环形布局组件 circular
  */
 
-import React from 'react';
+import React, {useMemo} from 'react';
 import {Form, Switch, Segmented} from 'antd';
+import {useTranslation} from 'react-i18next';
 import SliderComponent from '../../../../components/SlideComponent';
 import _ from 'lodash';
 import c from './index.module.scss';
 
-const orderingOptions = [
-    {value: null, label: '数据'},
-    {value: 'topology', label: '拓扑'},
-    {value: 'degree', label: '度数'},
-];
-
 const CircularLayoutForm = props => {
     const {handleFormChange, initialValues} = props;
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [circularLayoutForm] = useForm();
+    const orderingOptions = useMemo(
+        () => [
+            {value: null, label: t('analysis.canvas.layout_panel.ordering_data')},
+            {value: 'topology', label: t('analysis.canvas.layout_panel.ordering_topology')},
+            {value: 'degree', label: t('analysis.canvas.layout_panel.ordering_degree')},
+        ],
+        [t]
+    );
+
     return (
         <Form
             form={circularLayoutForm}
@@ -46,42 +51,42 @@ const CircularLayoutForm = props => {
         >
             <Form.Item
                 name='startRadius'
-                label='起始半径'
-                tooltip='螺旋状布局的起始半径'
+                label={t('analysis.canvas.layout_panel.start_radius')}
+                tooltip={t('analysis.canvas.layout_panel.start_radius_tooltip')}
             >
                 <SliderComponent min={30} max={1000} />
             </Form.Item>
             <Form.Item
                 name='endRadius'
-                label='结束半径'
-                tooltip='螺旋状布局的结束半径'
+                label={t('analysis.canvas.layout_panel.end_radius')}
+                tooltip={t('analysis.canvas.layout_panel.end_radius_tooltip')}
             >
                 <SliderComponent min={30} max={1000} />
             </Form.Item>
             <Form.Item
                 name='divisions'
-                label='分段数'
-                tooltip='节点在环上的分段数'
+                label={t('analysis.canvas.layout_panel.divisions')}
+                tooltip={t('analysis.canvas.layout_panel.divisions_tooltip')}
             >
                 <SliderComponent min={1} max={100} />
             </Form.Item>
             <Form.Item
                 name='angleRatio'
-                label='角度比'
-                tooltip='从第一个节点到最后一个节点相差多少个2 * PI'
+                label={t('analysis.canvas.layout_panel.angle_ratio')}
+                tooltip={t('analysis.canvas.layout_panel.angle_ratio_tooltip')}
             >
                 <SliderComponent min={1} max={100} />
             </Form.Item>
             <Form.Item
                 name='ordering'
-                label='排序依据'
-                tooltip='节点在环上排序的依据'
+                label={t('analysis.canvas.layout_panel.ordering')}
+                tooltip={t('analysis.canvas.layout_panel.ordering_tooltip')}
             >
                 <Segmented options={orderingOptions} />
             </Form.Item>
             <Form.Item
                 name='clockwise'
-                label='是否顺时针排列'
+                label={t('analysis.canvas.layout_panel.clockwise')}
                 valuePropName='checked'
                 labelCol={{span: 20}}
                 labelAlign='left'

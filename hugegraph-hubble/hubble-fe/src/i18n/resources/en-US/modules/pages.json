@@ -220,6 +220,7 @@
   },
   "my": {
     "title": "My Profile",
+    "edit_profile_title": "Edit Profile",
     "col": {
       "id": "Account ID",
       "name": "Account Name",
@@ -237,7 +238,8 @@
       "old_password_placeholder": "Enter old password",
       "new_password_placeholder": "Enter new password",
       "confirm_password_placeholder": "Enter new password again",
-      "password_mismatch": "Passwords do not match"
+      "password_mismatch": "Passwords do not match",
+      "account_name_rule": "Account name must be 1-16 characters and cannot start or end with an underscore"
     }
   },
   "role": {
@@ -346,6 +348,7 @@
       "cron_extra": "Quartz expression: seconds minutes hours day month week year (optional)",
       "cron_required": "Enter schedule information",
       "cron_placeholder": "Schedule * 5 * * * * (*)",
+      "cron_rule": "Enter a valid Quartz expression",
       "update_success": "Updated successfully",
       "graphspace": "Graph Space",
       "graph": "Graph",
@@ -361,10 +364,43 @@
       "graphspace_full": "Graph space {{graphspace}} has reached its storage limit and cannot accept more data.",
       "duplicate_check_failed": "Failed to check duplicate task name",
       "duplicate_name": "Task name already exists",
+      "name_rule": "Use Chinese characters, letters, numbers, or underscores, up to 20 characters",
       "select_graphspace": "Select graph space",
       "select_graph": "Select graph",
       "select_source": "Select data source",
-      "select_source_type": "Select source type"
+      "select_source_type": "Select source type",
+      "select_source_fields": "Select source fields",
+      "source_available_fields": "Available Source Fields",
+      "selected_fields": "Selected Fields",
+      "delete_field_confirm": "Delete this field?",
+      "add_field_placeholder": "Add field: letters, numbers, hyphen, and underscore only",
+      "add_vertex_mapping": "Add Vertex Mapping",
+      "add_edge_mapping": "Add Edge Mapping",
+      "type": "Type",
+      "vertex": "Vertex",
+      "edge": "Edge",
+      "mapping_name": "Name",
+      "mapping_required_tip": "Create at least one vertex or edge mapping",
+      "create_vertex": "Create Vertex",
+      "edit_vertex": "Edit Vertex",
+      "create_edge": "Create Edge",
+      "edit_edge": "Edit Edge",
+      "vertex_type": "Vertex Type",
+      "edge_type": "Edge Type",
+      "id_column": "ID Column",
+      "source_id": "Source ID",
+      "target_id": "Target ID",
+      "property_mapping": "Property Mapping",
+      "value_mapping": "Value Mapping",
+      "select_schema_field": "Select schema field",
+      "select_mapping_field": "Select mapping field",
+      "duplicate_property": "Properties cannot be duplicated",
+      "auto_match": "Auto Match",
+      "schedule_once": "Run Once",
+      "schedule_realtime": "Realtime",
+      "schedule_cron": "Scheduled",
+      "load_full": "Full",
+      "load_incremental": "Incremental"
     }
   },
   "datasource": {

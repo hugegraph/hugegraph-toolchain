@@ -18,9 +18,11 @@
 
 import {Space, Button, Form, Select, Input, Drawer} from 'antd';
 import {useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
 
 const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) => {
+    const {t} = useTranslation();
     const [selectLabel, setSelectLabel] = useState({});
     const [errorList, setErrorList] = useState({});
     const [edgeForm] = Form.useForm();
@@ -58,7 +60,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                 }
 
                 if (existName.includes(item.key)) {
-                    return Promise.reject(new Error('属性不可重复'));
+                    return Promise.reject(new Error(t('task.edit.duplicate_property')));
                 }
 
                 existName.push(item.key);
@@ -75,9 +77,11 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                     <Form.Item
                         className={'form_attr_select'}
                         name={[field.name, 'key']}
-                        placeholder='请选择schema字段'
                     >
-                        <Select options={targetField.map(item => ({label: item, value: item}))} />
+                        <Select
+                            options={targetField.map(item => ({label: item, value: item}))}
+                            placeholder={t('task.edit.select_schema_field')}
+                        />
                     </Form.Item>
                     <span className={'form_attr_split'}>-</span>
                     <Form.Item
@@ -87,15 +91,21 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                         <Select
                             options={(selectLabel?.properties ?? []).map(item =>
                                 ({label: item.name, value: item.name}))}
-                            placeholder='请选择映射字段'
+                            placeholder={t('task.edit.select_mapping_field')}
                         />
                     </Form.Item>
-                    <Button type='link' onClick={() => remove(index)}> 删除</Button>
+                    <Button type='link' onClick={() => remove(index)}>
+                        {t('common.action.delete')}
+                    </Button>
                 </div>
             ))}
             <Form.ErrorList errors={errors} />
-            <Button onClick={() => autoSelect()} block style={{marginBottom: 8}}>自动匹配</Button>
-            <Button type='dashed' onClick={() => add()} block>+新增</Button>
+            <Button onClick={() => autoSelect()} block style={{marginBottom: 8}}>
+                {t('task.edit.auto_match')}
+            </Button>
+            <Button type='dashed' onClick={() => add()} block>
+                +{t('common.action.add')}
+            </Button>
         </>
     );
 
@@ -123,12 +133,14 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                     >
                         <Input />
                     </Form.Item>
-                    <a onClick={() => remove(index)}> 删除</a>
+                    <a onClick={() => remove(index)}>{t('common.action.delete')}</a>
                 </div>
             )
 
             )}
-            <div className={'form_attr_add'} onClick={() => add()}>+新增</div>
+            <div className={'form_attr_add'} onClick={() => add()}>
+                +{t('common.action.add')}
+            </div>
         </>
     );
 
@@ -222,7 +234,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
 
     return (
         <Drawer
-            title={index >= 0 ? '编辑边' : '创建边'}
+            title={index >= 0 ? t('task.edit.edit_edge') : t('task.edit.create_edge')}
             placement="right"
             onClose={onCancel}
             width={580}
@@ -231,7 +243,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
             <Form form={edgeForm} name='edge_form' labelCol={{span: 4}}>
                 <Form.Item
                     required
-                    label='边类型'
+                    label={t('task.edit.edge_type')}
                     name={['label']}
                     rules={[rules.required()]}
                 >
@@ -242,7 +254,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                 </Form.Item>
                 <Form.Item
                     required
-                    label='起点ID'
+                    label={t('task.edit.source_id')}
                     name='source'
                     rules={[rules.required()]}
                 >
@@ -253,7 +265,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                 </Form.Item>
                 <Form.Item
                     required
-                    label='终点ID'
+                    label={t('task.edit.target_id')}
                     name='target'
                     rules={[rules.required()]}
                 >
@@ -262,12 +274,12 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                         onChange={handleTarget}
                     />
                 </Form.Item>
-                <Form.Item label='属性映射'>
+                <Form.Item label={t('task.edit.property_mapping')}>
                     <Form.List name='attr' rules={[checkDuplicate]}>
                         {attrFormList}
                     </Form.List>
                 </Form.Item>
-                <Form.Item label='值映射'>
+                <Form.Item label={t('task.edit.value_mapping')}>
                     <Form.List name='value'>
                         {valueFormList}
                     </Form.List>
@@ -275,8 +287,10 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                 <Form.Item name='index' hidden />
                 <Form.Item wrapperCol={{offset: 4}}>
                     <Space>
-                        <Button type='primary' onClick={addEdge}>确定</Button>
-                        <Button onClick={handleCancel}>取消</Button>
+                        <Button type='primary' onClick={addEdge}>
+                            {t('common.action.confirm')}
+                        </Button>
+                        <Button onClick={handleCancel}>{t('common.action.cancel')}</Button>
                     </Space>
                 </Form.Item>
             </Form>

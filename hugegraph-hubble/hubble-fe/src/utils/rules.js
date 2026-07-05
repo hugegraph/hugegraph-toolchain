@@ -53,12 +53,14 @@ const isPort = () => ({
 });
 
 // cron 验证
-const isCron = () => ({
+const isCron = msg => ({
     validator(_, value) {
         if (cronValidator.isValidCronExpression(value)) {
             return Promise.resolve();
         }
-        return Promise.reject(new Error('不是合法的quartz格式'));
+        return Promise.reject(new Error(
+            typeof msg === 'string' ? msg : '不是合法的quartz格式'
+        ));
     },
 });
 
@@ -101,11 +103,13 @@ const isPropertyName = msg => ({
 });
 
 // 中文，字母，数字，_
-const isNoramlName = () => ({
+const isNoramlName = msg => ({
     validator(_, value) {
         let res = /^[\u4E00-\u9FA5\uFE30-\uFFA0\_a-zA-Z0-9_]{1,20}$/.test(value);
         if (!res) {
-            return Promise.reject('只能包含中文、字母、数字、_, 不能超过20个字符');
+            return Promise.reject(
+                typeof msg === 'string' ? msg : '只能包含中文、字母、数字、_, 不能超过20个字符'
+            );
         }
 
         return Promise.resolve();
@@ -131,14 +135,16 @@ const isJDBC = msg => ({
 });
 
 // account name
-const isAccountName = () => ({
+const isAccountName = msg => ({
     validator(_, value) {
         let res = /^[\u4E00-\u9FA5\uFE30-\uFFA0\_a-zA-Z0-9_]{1,16}$/.test(value);
         let res1 = /^_.*/.test(value);
         let res2 = /.*_$/.test(value);
 
         if (!res || res1 || res2) {
-            return Promise.reject('账号名不超过16个字符，且不能以下划线开始和结尾');
+            return Promise.reject(
+                typeof msg === 'string' ? msg : '账号名不超过16个字符，且不能以下划线开始和结尾'
+            );
         }
 
         return Promise.resolve();

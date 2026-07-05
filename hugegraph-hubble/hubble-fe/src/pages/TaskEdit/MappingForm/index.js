@@ -16,12 +16,12 @@
  * under the License.
  */
 
-import {Space, Button, Form, Collapse, Typography, message, List} from 'antd';
+import {Space, Button, Form, Typography, message, List} from 'antd';
 import {useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import VertexForm from './Vertex';
 import EdgeForm from './Edge';
-import * as rules from '../../../utils/rules';
 
 const fieldMapping = list => {
     const obj = {};
@@ -70,6 +70,7 @@ const MappingForm = ({prev,
     edgeList,
     changeEdgeList,
 }) => {
+    const {t} = useTranslation();
     const [mappingForm] = Form.useForm();
     const [type, setType] = useState('');
     const [vertex, setVertex] = useState([]);
@@ -178,13 +179,13 @@ const MappingForm = ({prev,
 
     return (
         <div style={{display: visible ? '' : 'none'}}>
-            <Typography.Title level={5}>映射字段</Typography.Title>
+            <Typography.Title level={5}>{t('task.edit.step_mapping_fields')}</Typography.Title>
             <Space className={'form_attr_button'}>
                 <Button onClick={() => editVertex(-1)}>
-                    新增顶点映射
+                    {t('task.edit.add_vertex_mapping')}
                 </Button>
                 <Button onClick={() => editEdge(-1)}>
-                    新增边映射
+                    {t('task.edit.add_edge_mapping')}
                 </Button>
             </Space>
 
@@ -216,11 +217,18 @@ const MappingForm = ({prev,
                     renderItem={(item, index) => (
                         <List.Item
                             actions={[
-                                <a key={'1'} onClick={() => editVertex(index)}>编辑</a>,
-                                <a key={'2'} onClick={() => removeVertex(index)}>删除</a>,
+                                <a key={'1'} onClick={() => editVertex(index)}>
+                                    {t('common.action.edit')}
+                                </a>,
+                                <a key={'2'} onClick={() => removeVertex(index)}>
+                                    {t('common.action.delete')}
+                                </a>,
                             ]}
                         >
-                            <Space><span>类型：顶点</span><span>名称：{item.label}</span></Space>
+                            <Space>
+                                <span>{t('task.edit.type')}: {t('task.edit.vertex')}</span>
+                                <span>{t('task.edit.mapping_name')}: {item.label}</span>
+                            </Space>
                         </List.Item>
                     )}
                 />
@@ -236,11 +244,18 @@ const MappingForm = ({prev,
                     renderItem={(item, index) => (
                         <List.Item
                             actions={[
-                                <a key={'1'} onClick={() => editEdge(index)}>编辑</a>,
-                                <a key={'2'} onClick={() => removeEdge(index)}>删除</a>,
+                                <a key={'1'} onClick={() => editEdge(index)}>
+                                    {t('common.action.edit')}
+                                </a>,
+                                <a key={'2'} onClick={() => removeEdge(index)}>
+                                    {t('common.action.delete')}
+                                </a>,
                             ]}
                         >
-                            <Space><span>类型：边</span><span>名称：{item.label}</span></Space>
+                            <Space>
+                                <span>{t('task.edit.type')}: {t('task.edit.edge')}</span>
+                                <span>{t('task.edit.mapping_name')}: {item.label}</span>
+                            </Space>
                         </List.Item>
                     )}
                 />
@@ -250,10 +265,12 @@ const MappingForm = ({prev,
                 <Form.Item name='vertices' hidden />
                 <Form.Item name='edges' hidden />
 
-                <Form.Item extra='请至少创建一个顶点或边映射'>
+                <Form.Item extra={t('task.edit.mapping_required_tip')}>
                     <Space>
-                        <Button onClick={prev}>上一步</Button>
-                        <Button type='primary' onClick={onFinish} disabled={!submitEnable}>下一步</Button>
+                        <Button onClick={prev}>{t('common.action.back')}</Button>
+                        <Button type='primary' onClick={onFinish} disabled={!submitEnable}>
+                            {t('common.action.next')}
+                        </Button>
                     </Space>
                 </Form.Item>
             </Form>

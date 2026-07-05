@@ -22,19 +22,12 @@
 
 import React, {useCallback, useEffect, useState, useContext} from 'react';
 import {Drawer, Select, Input, Button, message, Form, Row, Col} from 'antd';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../Context';
 import * as rules from '../../../utils/rules';
 import _ from 'lodash';
 import c from './index.module.scss';
 import * as api from '../../../api';
-
-const IDStrategyMappings = {
-    PRIMARY_KEY: '主键ID',
-    AUTOMATIC: '自动生成',
-    CUSTOMIZE_STRING: '自定义字符串',
-    CUSTOMIZE_NUMBER: '自定义数字',
-    CUSTOMIZE_UUID: '自定义UUID',
-};
 
 const DynamicAddNode = props => {
     const {
@@ -44,8 +37,16 @@ const DynamicAddNode = props => {
         drawerInfo: vertexLists,
     } = props;
 
+    const {t} = useTranslation();
     const {graphSpace: currentGraphSpace, graph: currentGraph} = useContext(GraphAnalysisContext);
     const [form] = Form.useForm();
+    const idStrategyMappings = {
+        PRIMARY_KEY: t('analysis.canvas.dynamic_add.primary_key_id'),
+        AUTOMATIC: t('analysis.canvas.dynamic_add.automatic'),
+        CUSTOMIZE_STRING: t('analysis.canvas.dynamic_add.customize_string'),
+        CUSTOMIZE_NUMBER: t('analysis.canvas.dynamic_add.customize_number'),
+        CUSTOMIZE_UUID: 'UUID',
+    };
 
     const [selectedVertexLabel, setSelectedVertexLabel] = useState();
     const [nonNullableProperties, setNonNullableProperties] = useState();
@@ -96,7 +97,7 @@ const DynamicAddNode = props => {
                 api.analysis.addGraphNode(currentGraphSpace, currentGraph, params).then(res => {
                     const {status, data} = res;
                     if (status === 200) {
-                        message.success('添加成功');
+                        message.success(t('analysis.canvas.dynamic_add.add_success'));
                         onOK(data);
                     }
                 });
@@ -105,7 +106,7 @@ const DynamicAddNode = props => {
                 onCancel();
             }).catch(e => {});
         },
-        [currentGraph, currentGraphSpace, form, onCancel, onOK]
+        [currentGraph, currentGraphSpace, form, onCancel, onOK, t]
     );
 
     const onVertexTypeChange = useCallback(
@@ -125,18 +126,18 @@ const DynamicAddNode = props => {
             let idRules;
             switch (idStrategy) {
                 case 'CUSTOMIZE_NUMBER':
-                    idRules = [rules.required(), rules.isInt()];
+                    idRules = [rules.required(t('analysis.canvas.dynamic_add.required')), rules.isInt()];
                     break;
                 case 'CUSTOMIZE_UUID':
-                    idRules = [rules.required(), rules.isUUID()];
+                    idRules = [rules.required(t('analysis.canvas.dynamic_add.required')), rules.isUUID()];
                     break;
                 case 'CUSTOMIZE_STRING':
-                    idRules = [rules.required()];
+                    idRules = [rules.required(t('analysis.canvas.dynamic_add.required'))];
                     break;
             }
             return idRules;
         },
-        []
+        [t]
     );
 
     const renderForm = (formArr, isAllowNull) => {
@@ -144,9 +145,13 @@ const DynamicAddNode = props => {
             <>
                 <Form.Item>
                     <Row>
-                        <Col span={6} justify='end'>{isAllowNull ? '可空属性:' : '不可空属性:'}</Col>
-                        <Col span={9} justify='end'>属性</Col>
-                        <Col span={9} justify='end'>属性值</Col>
+                        <Col span={6} justify='end'>
+                            {isAllowNull
+                                ? `${t('analysis.canvas.dynamic_add.nullable_property')}:`
+                                : `${t('analysis.canvas.dynamic_add.non_nullable_property')}:`}
+                        </Col>
+                        <Col span={9} justify='end'>{t('analysis.canvas.dynamic_add.property')}</Col>
+                        <Col span={9} justify='end'>{t('analysis.canvas.dynamic_add.property_value')}</Col>
                     </Row>
                 </Form.Item>
                 {
@@ -157,9 +162,14 @@ const DynamicAddNode = props => {
                                 name={['properties', item]}
                                 label={item}
                                 labelCol={{span: 9, offset: 6}}
-                                rules={!isAllowNull ? [rules.required()] : ''}
+                                rules={!isAllowNull
+                                    ? [rules.required(t('analysis.canvas.dynamic_add.required'))]
+                                    : ''}
                             >
-                                <Input placeholder='请输入属性值' maxLength={40} />
+                                <Input
+                                    placeholder={t('analysis.canvas.dynamic_add.property_placeholder')}
+                                    maxLength={40}
+                                />
                             </Form.Item>
                         );
                     })
@@ -171,7 +181,7 @@ const DynamicAddNode = props => {
     return (
         <Drawer
             className={c.addNodeDrawer}
-            title="添加顶点"
+            title={t('analysis.canvas.dynamic_add.add_vertex')}
             onClose={onDrawerClose}
             open={open}
             footer={[
@@ -181,14 +191,14 @@ const DynamicAddNode = props => {
                     onClick={onAddNode}
                     key="add"
                 >
-                    添加
+                    {t('analysis.canvas.dynamic_add.add')}
                 </Button>,
                 <Button
                     size="medium"
                     onClick={onDrawerClose}
                     key="close"
                 >
-                    取消
+                    {t('analysis.canvas.dynamic_add.cancel')}
                 </Button>,
             ]}
         >
@@ -201,13 +211,13 @@ const DynamicAddNode = props => {
             >
                 <Form.Item
                     name='label'
-                    label='顶点类型:'
-                    rules={[rules.required()]}
+                    label={`${t('analysis.canvas.dynamic_add.vertex_type')}:`}
+                    rules={[rules.required(t('analysis.canvas.dynamic_add.required'))]}
                 >
                     <Select
                         size="medium"
                         trigger="click"
-                        placeholder='请选择顶点类型'
+                        placeholder={t('analysis.canvas.dynamic_add.select_vertex_type')}
                         options={vertexLists.map(
                             ({name}) => {
                                 return {
@@ -223,21 +233,22 @@ const DynamicAddNode = props => {
                     <>
                         <Form.Item>
                             <Row>
-                                <Col span={6}>ID策略：</Col>
+                                <Col span={6}>{t('analysis.canvas.dynamic_add.id_strategy')}:</Col>
                                 <Col>  {selectedVertexLabel.id_strategy === 'PRIMARY_KEY'
-                                    ? `主键属性-${selectedVertexLabel.primary_keys.join('，')}`
-                                    : IDStrategyMappings[selectedVertexLabel.id_strategy]}
+                                    ? `${t('analysis.canvas.dynamic_add.primary_key')}-${
+                                        selectedVertexLabel.primary_keys.join(',')
+                                    }`
+                                    : idStrategyMappings[selectedVertexLabel.id_strategy]}
                                 </Col>
                             </Row>
                         </Form.Item>
                         {shouldRevealId && (
                             <Form.Item
-                                label='ID值:'
-                                placeholder="请输入ID值"
+                                label={`${t('analysis.canvas.dynamic_add.id_value')}:`}
                                 name='id'
                                 rules={validateIdField(selectedVertexLabel.id_strategy)}
                             >
-                                <Input />
+                                <Input placeholder={t('analysis.canvas.dynamic_add.id_placeholder')} />
                             </Form.Item>
                         )}
                         {!_.isEmpty(nullableProperties) && renderForm(nullableProperties, true)}

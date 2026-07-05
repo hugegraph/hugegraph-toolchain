@@ -23,22 +23,23 @@
 import React, {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import ForceGraph3D from '3d-force-graph';
-import {EDGELABEL_TYPE, EDGELABEL_TYPE_NAME} from '../../../utils/constants';
+import {useTranslation} from 'react-i18next';
+import {EDGELABEL_TYPE} from '../../../utils/constants';
 import _ from 'lodash';
 import c from './index.module.scss';
 
-const formatLabelString = (type, label, id, propertiesStr, edgeLabelType) => {
+const formatLabelString = (labels, type, label, id, propertiesStr, edgeLabelType) => {
     let tagStr = '';
     if (edgeLabelType && edgeLabelType !== EDGELABEL_TYPE.NORMAL) {
         const classname = edgeLabelType === EDGELABEL_TYPE.PARENT ? c.tagGlod : c.tagBlue;
-        tagStr = `<span class=${classname}>${EDGELABEL_TYPE_NAME[edgeLabelType]}</span>`;
+        tagStr = `<span class=${classname}>${labels.edgeLabelType[edgeLabelType]}</span>`;
     }
     return `<div class=${c.tooltip}>
                 <div>
-                    <span>${type}类型: ${label}</span>
+                    <span>${type} ${labels.type}: ${label}</span>
                     ${tagStr}
                 </div>
-                <div>${type}ID: ${id}</div>
+                <div>${type} ${labels.id}: ${id}</div>
                 ${propertiesStr}
             </div>`;
 };
@@ -46,7 +47,22 @@ const formatLabelString = (type, label, id, propertiesStr, edgeLabelType) => {
 const Canvas3D = props => {
 
     const {data} = props;
+    const {t} = useTranslation();
     const graphRef = useRef(null);
+
+    const labels = useMemo(
+        () => ({
+            node: t('analysis.canvas.canvas_3d.node'),
+            edge: t('analysis.canvas.canvas_3d.edge'),
+            type: t('analysis.canvas.canvas_3d.type'),
+            id: t('analysis.canvas.canvas_3d.id'),
+            edgeLabelType: {
+                [EDGELABEL_TYPE.PARENT]: t('analysis.canvas.canvas_3d.edge_label_type.parent'),
+                [EDGELABEL_TYPE.SUB]: t('analysis.canvas.canvas_3d.edge_label_type.sub'),
+            },
+        }),
+        [t]
+    );
 
     const graphData = useMemo(
         () => ({
@@ -87,9 +103,9 @@ const Canvas3D = props => {
                     const {itemType, id, properties} = node;
                     let propertiesStr = '';
                     for (const [key, value] of Object.entries(properties)) {
-                        propertiesStr += `<div>${key}：${value}</div>`;
+                        propertiesStr += `<div>${key}: ${value}</div>`;
                     }
-                    return formatLabelString('节点', itemType, id, propertiesStr);
+                    return formatLabelString(labels, labels.node, itemType, id, propertiesStr);
                 })
                 .nodeThreeObject(node => {
                     const {itemType} = node;
@@ -115,9 +131,9 @@ const Canvas3D = props => {
                     const {label, id, properties, edgeLabelType} = link;
                     let propertiesStr = '';
                     for (const [key, value] of Object.entries(properties)) {
-                        propertiesStr += `<div>${key}：${value}</div>`;
+                        propertiesStr += `<div>${key}: ${value}</div>`;
                     }
-                    return formatLabelString('边', label, id, propertiesStr, edgeLabelType);
+                    return formatLabelString(labels, labels.edge, label, id, propertiesStr, edgeLabelType);
                 })
                 .linkColor(links => links.style.stroke)
                 .linkOpacity(0.4)
@@ -146,17 +162,19 @@ const Canvas3D = props => {
                 }
             };
         },
-        [graphData]
+        [graphData, labels]
     );
 
     return (
         <div className={c.canvas3d}>
             <div className={c.graph} id='3d-graph'></div>
             <span className={c.useGuide}>
-                提示：
-                <span className={c.emphasis}>鼠标左键 </span>旋转
+                {t('analysis.canvas.canvas_3d.tip')}
+                <span className={c.emphasis}>{t('analysis.canvas.canvas_3d.left_mouse')} </span>
+                {t('analysis.canvas.canvas_3d.rotate')}
                 ｜
-                <span className={c.emphasis}>鼠标右键 </span>移动
+                <span className={c.emphasis}>{t('analysis.canvas.canvas_3d.right_mouse')} </span>
+                {t('analysis.canvas.canvas_3d.move')}
             </span>
         </div>
     );

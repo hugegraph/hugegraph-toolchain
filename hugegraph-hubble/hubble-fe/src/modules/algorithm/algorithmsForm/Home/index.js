@@ -55,7 +55,12 @@ const AlgorithmFormHome = props => {
     return (
         <div className={c.algorithmSidebar}>
             <AlgorithmSearch onSearch={handleSearch} />
-            {isListEmpty && (<Empty className={c.listEmpty} />)}
+            {isListEmpty && (
+                <Empty
+                    className={c.listEmpty}
+                    description={t('query_result.empty')}
+                />
+            )}
             <OltpFormHome
                 onOltpFormSubmit={handleOltpFormSubmit}
                 search={search}
