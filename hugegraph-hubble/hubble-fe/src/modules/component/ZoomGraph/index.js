@@ -18,7 +18,6 @@
 
 /**
  * @file  ZoomGraph 放大缩小
- * @author
  */
 
 import React, {useCallback, useContext} from 'react';

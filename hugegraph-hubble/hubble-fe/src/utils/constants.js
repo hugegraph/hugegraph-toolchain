@@ -319,6 +319,27 @@ export const ALGORITHM_NAME = {
     SSSP: 'SSSP（单元最短路径）',
 };
 
+export const getAlgorithmNameI18nKey = name => {
+    const entry = Object.entries(ALGORITHM_NAME).find(([, value]) => value === name);
+    return entry ? `analysis.algorithm.olap.item.${entry[0]}` : undefined;
+};
+
+export const getAlgorithmDisplayName = (name, t = key => key) => {
+    const i18nKey = getAlgorithmNameI18nKey(name);
+    return i18nKey ? t(i18nKey) : name;
+};
+
+export const isAlgorithmNameMatched = (name, search, t = key => key) => {
+    const keyword = `${search || ''}`.trim().toLowerCase();
+    if (!keyword) {
+        return true;
+    }
+    return [
+        name,
+        getAlgorithmDisplayName(name, t),
+    ].some(text => `${text || ''}`.toLowerCase().includes(keyword));
+};
+
 export const Algorithm_Layout = {
     [ALGORITHM_NAME.K_OUT]: 'radial',
     [ALGORITHM_NAME.K_NEIGHBOR]: 'radial',

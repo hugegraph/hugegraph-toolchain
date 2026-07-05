@@ -18,13 +18,13 @@
 
 /**
  * @file Crosspoints算法
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, InputNumber} from 'antd';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import {ProjectOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import _ from 'lodash';
 import * as api from '../../../../../api';
 import removeNilKeys from '../../../../../utils/removeNilKeys';
@@ -32,28 +32,11 @@ import {GRAPH_STATUS, Algorithm_Url, ALGORITHM_NAME} from '../../../../../utils/
 import {maxDegreeValidator, maxDepthValidator, maxDegreeValidatorForCrossPoint} from '../../utils';
 import GraphAnalysisContext from '../../../../Context';
 
-const directionOptions = [
-    {label: '出边', value: 'OUT'},
-    {label: '入边', value: 'IN'},
-    {label: '双边', value: 'BOTH'},
-];
 const {CROSSPOINTS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const description = {
-    source: '起始顶点id',
-    target: '目的顶点id',
-    direction: '起始顶点到目的顶点的方向，目的地到起始点是反方向，BOTH时不考虑方向',
-    label: '边的类型, 默认代表所有edge label',
-    max_depth: '步数',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    capacity: '遍历过程中最大的访问的顶点数目',
-    limit: '返回的交点的最大数目',
-};
-
-const algorithmDescription = '根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度等条件查找相交点';
-
 const Crosspoints = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -66,6 +49,11 @@ const Crosspoints = props => {
     const [isRequiring, setRequiring] = useState(false);
 
     const [crosspointsForm] = Form.useForm();
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const handleSubmit = useCallback(
         async algorithmParams => {
@@ -123,7 +111,7 @@ const Crosspoints = props => {
                     icon={<ProjectOutlined />}
                     name={CROSSPOINTS}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.crosspoints.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -142,7 +130,7 @@ const Crosspoints = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip={description.source}
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -150,7 +138,7 @@ const Crosspoints = props => {
                     label='target'
                     name='target'
                     rules={[{required: true}]}
-                    tooltip={description.target}
+                    tooltip={t('analysis.algorithm.oltp.common.target_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -158,10 +146,10 @@ const Crosspoints = props => {
                     label='direction'
                     name='direction'
                     initialValue='BOTH'
-                    tooltip={description.direction}
+                    tooltip={t('analysis.algorithm.oltp.common.direction_source_target')}
                 >
                     <Select
-                        placeholder="顶点向外发散的方向"
+                        placeholder={t('analysis.algorithm.direction_item.tooltip')}
                         allowClear
                         options={directionOptions}
                     />
@@ -169,7 +157,7 @@ const Crosspoints = props => {
                 <Form.Item
                     name='label'
                     label="label"
-                    tooltip={description.label}
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
@@ -177,7 +165,7 @@ const Crosspoints = props => {
                     label='max_depth'
                     name='max_depth'
                     rules={[{required: true}, {validator: maxDepthValidator}]}
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -186,7 +174,7 @@ const Crosspoints = props => {
                     name='max_degree'
                     initialValue='10000'
                     rules={[{validator: maxDegreeValidatorForCrossPoint}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -195,7 +183,7 @@ const Crosspoints = props => {
                     name='capacity'
                     initialValue='10000000'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -204,7 +192,7 @@ const Crosspoints = props => {
                     name='limit'
                     initialValue='10'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.limit}
+                    tooltip={t('analysis.algorithm.oltp.common.limit_crosspoints')}
                 >
                     <InputNumber />
                 </Form.Item>

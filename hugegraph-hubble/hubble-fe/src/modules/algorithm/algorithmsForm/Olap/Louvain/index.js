@@ -18,7 +18,6 @@
 
 /**
  * @file Louvain算法
- * @author zhanghao14@
  */
 
 import React, {useState, useCallback, useContext} from 'react';

@@ -18,15 +18,41 @@
 
 /**
  * @file 图算法 执行记录
- * @author
  */
 
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Table, Space, Tag, Input, Popconfirm} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
 import c from './index.module.scss';
 
+const EXECUTE_TYPE_KEY = {
+    GREMLIN: 'GREMLIN',
+    GREMLIN_ASYNC: 'GREMLIN_ASYNC',
+    ALGORITHM: 'ALGORITHM',
+    CYPHER: 'CYPHER',
+};
+
+const EXECUTE_STATUS_KEY = {
+    SUCCESS: 'SUCCESS',
+    ASYNC_TASK_SUCCESS: 'ASYNC_TASK_SUCCESS',
+    ASYNC_TASK_RUNNING: 'ASYNC_TASK_RUNNING',
+    RUNNING: 'RUNNING',
+    FAILED: 'FAILED',
+    ASYNC_TASK_FAILED: 'ASYNC_TASK_FAILED',
+};
+
+const statusColor =  {
+    SUCCESS: 'green',
+    ASYNC_TASK_SUCCESS: 'green',
+    ASYNC_TASK_RUNNING: 'geekblue',
+    RUNNING: 'geekblue',
+    FAILED: 'volcano',
+    ASYNC_TASK_FAILED: 'volcano',
+};
+
 const ExecuteLog = props => {
+    const {t} = useTranslation();
     const {
         isLoading,
         pageExecute,
@@ -65,10 +91,12 @@ const ExecuteLog = props => {
 
     const favoriteContent = rowData => (
         <>
-            <div style={{marginBottom: '16px'}}>收藏语句</div>
+            <div style={{marginBottom: '16px'}}>
+                {t('analysis.logs.favorite_statement')}
+            </div>
             <Input
                 style={{marginBottom: '18px'}}
-                placeholder="请输入收藏名称"
+                placeholder={t('analysis.logs.favorite_name_placeholder')}
                 showCount
                 maxLength={48}
                 value={favoriteName}
@@ -77,44 +105,30 @@ const ExecuteLog = props => {
         </>
     );
 
-    const typeDesc =  {
-        GREMLIN: 'GREMLIN查询',
-        GREMLIN_ASYNC: 'GREMLIN任务',
-        ALGORITHM: '算法任务',
-        CYPHER: 'CYPHER查询',
+    const typeDesc = type => {
+        const typeKey = EXECUTE_TYPE_KEY[type];
+        return typeKey ? t(`analysis.logs.type.${typeKey}`) : type;
     };
 
-    const statusDesc =  {
-        SUCCESS: '成功',
-        ASYNC_TASK_SUCCESS: '提交成功',
-        ASYNC_TASK_RUNNING: '提交运行中',
-        RUNNING: '运行中',
-        FAILED: '失败',
-        ASYNC_TASK_FAILED: '提交失败',
-    };
-
-    const statusColor =  {
-        SUCCESS: 'green',
-        ASYNC_TASK_SUCCESS: 'green',
-        RUNNING: 'geekblue',
-        FAILED: 'volcano',
-        ASYNC_TASK_FAILED: 'volcano',
+    const statusDesc = status => {
+        const statusKey = EXECUTE_STATUS_KEY[status];
+        return statusKey ? t(`analysis.logs.status.${statusKey}`) : status;
     };
 
     const executeLogColumns = [
         {
-            title: '时间',
+            title: t('analysis.logs.column.time'),
             dataIndex: 'create_time',
             width: '20%',
         },
         {
-            title: '执行类型',
+            title: t('analysis.logs.column.type'),
             dataIndex: 'type',
             width: '15%',
-            render: type => typeDesc[type] || type,
+            render: type => typeDesc(type),
         },
         {
-            title: '执行内容',
+            title: t('analysis.logs.column.content'),
             dataIndex: 'content',
             width: '30%',
             render: (text, rowData, index) => {
@@ -123,26 +137,26 @@ const ExecuteLog = props => {
             },
         },
         {
-            title: '状态',
+            title: t('analysis.logs.column.status'),
             dataIndex: 'status',
             width: '10%',
             render: status => {
                 return (
                     <Space>
                         <Tag color={statusColor[status]} key={status}>
-                            {statusDesc[status] || status}
+                            {statusDesc(status)}
                         </Tag>
                     </Space>
                 );
             },
         },
         {
-            title: '耗时',
+            title: t('analysis.logs.column.duration'),
             dataIndex: 'duration',
             width: '10%',
         },
         {
-            title: '操作',
+            title: t('analysis.logs.column.action'),
             dataIndex: 'manipulation',
             width: '15%',
             render: (text, rowData, index) => {
@@ -153,10 +167,12 @@ const ExecuteLog = props => {
                             title={favoriteContent(rowData)}
                             onConfirm={() => onAddFavorite(rowData.content)}
                             okButtonProps={{disabled: disabledFavorite}}
-                            okText="收藏"
-                            cancelText="取消"
+                            okText={t('analysis.logs.action.favorite')}
+                            cancelText={t('common.action.cancel')}
                         >
-                            <a onClick={onFavoriteCard}>收藏</a>
+                            <a onClick={onFavoriteCard}>
+                                {t('analysis.logs.action.favorite')}
+                            </a>
                         </Popconfirm>
                     </div>
                 );

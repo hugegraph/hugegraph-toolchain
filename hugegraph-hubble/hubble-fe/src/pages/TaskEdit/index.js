@@ -24,6 +24,7 @@ import {
     Modal,
 } from 'antd';
 import {useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import Style from './index.module.scss';
 import BaseForm from './BaseForm/index';
 import FieldForm from './FieldForm/index';
@@ -34,6 +35,7 @@ import * as api from '../../api';
 import JSONbig from 'json-bigint';
 
 const TaskEdit = () => {
+    const {t} = useTranslation();
     const [current, setCurrent] = useState(0);
     const [targetField, setTargetField] = useState([]);
     // const [datasource, setDatasource] = useState({});
@@ -85,14 +87,16 @@ const TaskEdit = () => {
 
         api.manage.getGraphSpace(ingestion_option.graphspace).then(res => {
             if (res.status !== 200) {
-                message.error('图不存在');
+                message.error(t('task.edit.graph_not_exist'));
                 return;
             }
 
             if (res.data.storage_percent >= 1) {
                 Modal.error({
-                    title: '警告',
-                    content: `${ingestion_option.graphspace}图空间已达到最大存储容量，无法继续写入`,
+                    title: t('common.label.warning'),
+                    content: t('task.edit.graphspace_full', {
+                        graphspace: ingestion_option.graphspace,
+                    }),
                 });
                 return;
             }
@@ -169,7 +173,7 @@ const TaskEdit = () => {
         api.manage.addTask(JSONbig.stringify(values)).then(res => {
             setLoading(false);
             if (res.status === 200) {
-                message.success('创建成功');
+                message.success(t('common.msg.create_success'));
                 navigate('/task');
                 return;
             }
@@ -243,15 +247,15 @@ const TaskEdit = () => {
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title="数据导入"
+                title={t('task.title')}
             />
 
             <div className='container'>
                 <Steps labelPlacement='vertical' current={current}>
-                    <Steps.Step key="1" title="输入基础信息" />
-                    <Steps.Step key="2" title="选择源端字段" />
-                    <Steps.Step key="3" title="选择映射字段" />
-                    <Steps.Step key="4" title="输入调度信息" />
+                    <Steps.Step key="1" title={t('task.edit.step_basic')} />
+                    <Steps.Step key="2" title={t('task.edit.step_source_fields')} />
+                    <Steps.Step key="3" title={t('task.edit.step_mapping_fields')} />
+                    <Steps.Step key="4" title={t('task.edit.step_schedule')} />
                 </Steps>
                 <br />
 

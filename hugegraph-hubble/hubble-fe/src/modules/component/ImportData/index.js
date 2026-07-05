@@ -18,10 +18,10 @@
 
 /**
  * @file  导入数据
- * @author
  */
 
 import React, {useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip, Upload, message} from 'antd';
 import {UploadOutlined} from '@ant-design/icons';
 import GraphAnalysisContext from '../../Context';
@@ -35,6 +35,7 @@ const {
 } = GRAPH_STATUS;
 
 const ImportData = props => {
+    const {t} = useTranslation();
     const {
         buttonEnable,
         onUploadChange,
@@ -51,14 +52,14 @@ const ImportData = props => {
             if (info.file.status === 'done') {
                 const {response} = info.fileList[0];
                 if (response.status === 200) {
-                    onUploadChange(SUCCESS, '导入成功', response.data);
-                    message.success('导入成功');
+                    onUploadChange(SUCCESS, t('analysis.canvas.import_success'), response.data);
+                    message.success(t('analysis.canvas.import_success'));
                     return;
                 }
                 onUploadChange(UPLOAD_FAILED, response.message);
             }
         },
-        [onUploadChange]
+        [onUploadChange, t]
     );
 
     return (
@@ -77,7 +78,7 @@ const ImportData = props => {
                         type={'text'}
                         disabled={!buttonEnable}
                     >
-                        导入
+                        {t('analysis.canvas.import')}
                     </Button>
                 </Tooltip>
             </Upload>

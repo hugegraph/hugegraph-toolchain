@@ -18,7 +18,6 @@
 
 /**
  * @file  Legend
- * @author
  */
 
 import {useContext, useEffect, useRef, useCallback} from 'react';

@@ -18,10 +18,10 @@
 
 /**
  * @file 导航首页
- * @author
  */
 
 import {PageHeader} from 'antd';
+import {useTranslation} from 'react-i18next';
 import ManageItem from '../ManageItem';
 import AnalyseItem from '../AnalyseItem';
 import AdminItem from '../AdminItem';
@@ -35,6 +35,7 @@ import style from './index.module.scss';
 
 
 const NavigationHome = () => {
+    const {t} = useTranslation();
     const userInfo = user.getUser();
     const pdMode = isPdEnabled();
 
@@ -42,7 +43,7 @@ const NavigationHome = () => {
         <>
             <PageHeader
                 ghost={false}
-                title="导航"
+                title={t('home.navigation')}
             />
 
             <div className={style.navigation}>

@@ -18,7 +18,6 @@
 
 /**
  * @file  点边属性编辑
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';

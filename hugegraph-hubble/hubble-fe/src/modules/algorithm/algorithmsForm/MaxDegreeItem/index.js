@@ -18,7 +18,6 @@
 
 /**
  * @file MaxDegreeItem
- * @author
  */
 
 import React from 'react';

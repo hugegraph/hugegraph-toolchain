@@ -18,10 +18,10 @@
 
 /**
  * @file 图分析画布 Home
- * @author
  */
 
 import React, {useCallback, useEffect, useState, useContext, useRef} from 'react';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../../../Context';
 import Graph from '../../../../component/Graph';
 import Legend from '../../../../component/Legend';
@@ -58,6 +58,7 @@ const {CANVAS2D} = GRAPH_RENDER_MODE;
 const layoutInfo = mapLayoutNameToLayoutDetails('force');
 
 const GraphResult = props => {
+    const {t} = useTranslation();
     const {
         data = {vertexs: [], edges: []},
         metaData,
@@ -507,31 +508,45 @@ const GraphResult = props => {
         switch (queryStatus) {
             case STANDBY:
                 return (
-                    <GraphStatusView status={STANDBY} message={'暂无数据结果'} />
+                    <GraphStatusView status={STANDBY} message={t('analysis.query_result.no_data')} />
                 );
             case LOADING:
                 return (
-                    <GraphStatusView status={LOADING} message={isQueryMode ? '数据加载中...' : '提交异步任务中...'} />
+                    <GraphStatusView
+                        status={LOADING}
+                        message={isQueryMode
+                            ? t('analysis.query_result.loading')
+                            : t('analysis.query_result.submitting_task')}
+                    />
                 );
             case FAILED:
                 return (
-                    <GraphStatusView status={FAILED} message={queryMessage || '提交失败'} />
+                    <GraphStatusView
+                        status={FAILED}
+                        message={queryMessage || t('analysis.query_result.submit_failed')}
+                    />
                 );
             case UPLOAD_FAILED:
                 return (
-                    <GraphStatusView status={UPLOAD_FAILED} message={queryMessage || '导入失败'} />
+                    <GraphStatusView
+                        status={UPLOAD_FAILED}
+                        message={queryMessage || t('analysis.query_result.import_failed')}
+                    />
                 );
             case SUCCESS:
                 if (isQueryMode) {
                     if (!showCanvasInfo) {
                         return (
-                            <GraphStatusView status={SUCCESS} message={'无图结果，请查看表格或Json数据'} />
+                            <GraphStatusView
+                                status={SUCCESS}
+                                message={t('analysis.query_result.no_graph_result')}
+                            />
                         );
                     }
                     return graphRenderMode === CANVAS2D ? renderCanvas2D() : renderCanvas3D();
                 }
                 return (
-                    <TaskNavigateView message={'提交成功'} taskId={asyncTaskId} />
+                    <TaskNavigateView message={t('analysis.query_result.submit_success')} taskId={asyncTaskId} />
                 );
         }
     };

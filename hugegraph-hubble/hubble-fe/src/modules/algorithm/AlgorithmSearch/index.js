@@ -18,7 +18,6 @@
 
 /**
  * @file 图算法 搜索
- * @author
  */
 
 import React, {useMemo} from 'react';

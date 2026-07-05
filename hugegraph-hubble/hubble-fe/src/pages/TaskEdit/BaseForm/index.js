@@ -18,10 +18,18 @@
 
 import {Form, Input, Typography, Select, Space, Button, message} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
+import {isPdEnabled} from '../../../utils/config';
+import {
+    DEFAULT_GRAPHSPACE,
+    getTaskGraphspaceOptions,
+} from '../../../utils/productMode';
 
 const BaseForm = ({cancel, visible}) => {
+    const {t} = useTranslation();
+    const pdMode = isPdEnabled();
     const [datasourceOptions, setDatasourceOptions] = useState([]);
     const [graphspaceOptions, setGraphsapceOptions] = useState([]);
     const [graphOptions, setGraphOptions] = useState([]);
@@ -32,11 +40,11 @@ const BaseForm = ({cancel, visible}) => {
         validator: async (_, value) => {
             const res = await api.manage.getTaskList({query: value}).then(res => {
                 if (res.status !== 200) {
-                    return '重名检查失败';
+                    return t('task.edit.duplicate_check_failed');
                 }
 
                 if (res.data.total > 0) {
-                    return '任务名重复';
+                    return t('task.edit.duplicate_name');
                 }
 
                 return '';
@@ -92,18 +100,33 @@ const BaseForm = ({cancel, visible}) => {
             message.error(res.message);
         });
 
+        if (!pdMode) {
+            return;
+        }
+
         api.manage.getGraphSpaceList({page_size: -1}).then(res => {
             if (res.status === 200) {
-                setGraphsapceOptions(res.data.records.map(item => ({
-                    label: item.nickname,
-                    value: item.name,
-                })));
+                setGraphsapceOptions(getTaskGraphspaceOptions(pdMode, res.data.records));
 
                 return;
             }
             message.error(res.message);
         });
-    }, []);
+    }, [pdMode, t]);
+
+    useEffect(() => {
+        if (pdMode) {
+            return;
+        }
+
+        setGraphsapceOptions(getTaskGraphspaceOptions(false));
+        setSelectGraphspace(DEFAULT_GRAPHSPACE);
+        baseForm.setFieldsValue({
+            ingestion_option: {
+                graphspace: DEFAULT_GRAPHSPACE,
+            },
+        });
+    }, [baseForm, pdMode]);
 
     return (
         <div style={{display: visible ? '' : 'none'}}>
@@ -112,39 +135,46 @@ const BaseForm = ({cancel, visible}) => {
                 name='base_form'
                 labelCol={{span: 3}}
             >
-                <Typography.Title level={5}>基本信息</Typography.Title>
+                <Typography.Title level={5}>{t('task.edit.basic_info')}</Typography.Title>
                 <Form.Item
-                    label='任务名称'
+                    label={t('task.edit.name')}
                     name='task_name'
                     validateTrigger={['onBlur', 'onChange']}
                     rules={[rules.required(), rules.isNoramlName, checkExistName]}
                 >
-                    <Input placeholder='请输入任务名称' showCount maxLength={20} />
+                    <Input placeholder={t('task.edit.name_placeholder')} showCount maxLength={20} />
                 </Form.Item>
                 <Form.Item
-                    label='数据源'
+                    label={t('task.edit.source')}
                     wrapperCol={{span: 6}}
                     name='datasource_id'
                     rules={[rules.required()]}
                 >
                     <Select
                         options={datasourceOptions}
-                        placeholder='请选择数据源'
+                        placeholder={t('task.edit.select_source')}
                     />
                 </Form.Item>
-                <Form.Item label='目标' required>
+                <Form.Item label={t('task.edit.target')} required>
                     <Space>
-                        <Form.Item name={['ingestion_option', 'graphspace']} rules={[rules.required('请选择图空间')]}>
+                        <Form.Item
+                            name={['ingestion_option', 'graphspace']}
+                            rules={[rules.required(t('task.edit.select_graphspace'))]}
+                        >
                             <Select
-                                placeholder='请选择图空间'
+                                placeholder={t('task.edit.select_graphspace')}
                                 options={graphspaceOptions}
                                 style={{width: 200}}
                                 onChange={handleChange}
+                                disabled={!pdMode}
                             />
                         </Form.Item>
-                        <Form.Item name={['ingestion_option', 'graph']} rules={[rules.required('请选择图')]}>
+                        <Form.Item
+                            name={['ingestion_option', 'graph']}
+                            rules={[rules.required(t('task.edit.select_graph'))]}
+                        >
                             <Select
-                                placeholder='请选择图'
+                                placeholder={t('task.edit.select_graph')}
                                 options={graphOptions}
                                 style={{width: 200}}
                             />
@@ -153,8 +183,10 @@ const BaseForm = ({cancel, visible}) => {
                 </Form.Item>
                 <Form.Item wrapperCol={{offset: 3}}>
                     <Space>
-                        <Button onClick={cancel}>取消</Button>
-                        <Button type='primary' htmlType='submit'>下一步</Button>
+                        <Button onClick={cancel}>{t('common.action.cancel')}</Button>
+                        <Button type='primary' htmlType='submit'>
+                            {t('common.action.next')}
+                        </Button>
                     </Space>
                 </Form.Item>
             </Form>

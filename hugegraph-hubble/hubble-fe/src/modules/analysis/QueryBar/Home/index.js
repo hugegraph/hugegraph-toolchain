@@ -18,10 +18,10 @@
 
 /**
  * @file Gremlin语法分析 Header
- * @author huangqiuyu
  */
 
 import React, {useCallback, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Tabs} from 'antd';
 import CodeEditor from '../../../../components/CodeEditor';
 import {ANALYSIS_TYPE} from '../../../../utils/constants';
@@ -31,6 +31,7 @@ import c from './index.module.scss';
 const {GREMLIN, CYPHER} = ANALYSIS_TYPE;
 
 const QueryBar = props => {
+    const {t} = useTranslation();
     const {...args} = props;
 
     const {codeEditorContent, setCodeEditorContent, activeTab, onTabsChange} = args;
@@ -52,7 +53,7 @@ const QueryBar = props => {
 
     const tabItems = [
         {
-            label: 'Gremlin分析',
+            label: t('analysis.query.gremlin_tab'),
             key: GREMLIN,
             children: (
                 <ContentCommon
@@ -70,7 +71,7 @@ const QueryBar = props => {
             ),
         },
         {
-            label: 'Cypher分析',
+            label: t('analysis.query.cypher_tab'),
             key: CYPHER,
             children: (
                 <ContentCommon

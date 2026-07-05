@@ -18,7 +18,6 @@
 
 /**
  * @file 图分析部分Context
- * @author gouzixing@
  */
 
 

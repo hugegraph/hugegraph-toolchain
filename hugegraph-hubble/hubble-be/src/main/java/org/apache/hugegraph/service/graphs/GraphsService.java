@@ -222,10 +222,10 @@ public class GraphsService {
         Map<String, String> conf = new HashMap<>();
         if (isAuth) {
             conf.put("gremlin.graph",
-                     "com.baidu.hugegraph.auth.HugeFactoryAuthProxy");
+                     "org.apache.hugegraph.auth.HugeFactoryAuthProxy");
 
         } else {
-            conf.put("gremlin.graph", "com.baidu.hugegraph.HugeFactory");
+            conf.put("gremlin.graph", "org.apache.hugegraph.HugeFactory");
         }
         if (!StringUtils.isEmpty(schemaTemplate)) {
             conf.put("schema.init_template", schemaTemplate);

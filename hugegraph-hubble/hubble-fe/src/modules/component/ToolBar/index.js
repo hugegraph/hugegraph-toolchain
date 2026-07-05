@@ -18,7 +18,6 @@
 
 /**
  * @file  ToolBar
- * @author gouzixing
  */
 
 import React, {useContext, useState, useEffect} from 'react';

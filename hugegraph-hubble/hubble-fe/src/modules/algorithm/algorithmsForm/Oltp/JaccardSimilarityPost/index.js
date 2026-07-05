@@ -18,12 +18,12 @@
 
 /**
  * @file JaccardSimilarityPost
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, Tooltip, InputNumber} from 'antd';
 import {CrownOutlined, DownOutlined, RightOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../../../api';
 import removeNilKeys from '../../../../../utils/removeNilKeys';
 import {GRAPH_STATUS, Algorithm_Url, ALGORITHM_NAME} from '../../../../../utils/constants';
@@ -36,26 +36,6 @@ import s from '../OltpItem/index.module.scss';
 
 const {JACCARD_SIMILARITY_POST} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const directionOptions = [
-    {label: '出', value: 'OUT'},
-    {label: '入', value: 'IN'},
-    {label: '双向', value: 'BOTH'},
-];
-const description = {
-    vertex: '顶点id',
-    top: '返回一个起点的jaccard similarity中最大的top个',
-    capacity: '遍历过程中最大的访问的顶点数目',
-    steps: '从起始点出发的Step集合',
-    stepsObj: {
-        direction: '起始顶点向外发散的方向',
-        max_degree: '查询过程中，单个顶点遍历的最大邻接边数目(注: 0.12版之前 step 内仅支持 degree 作为参数名, 0.12开始统一使用 max_degree, 并向下兼容 degree 写法)',
-        skip_degree: `用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，完全舍弃该顶点。选填项，如果开启时, 需满足 skip_
-        degree >= max_degree 约束，默认为0 (不启用)，表示不跳过任何点 (注意: 开启此配置后，遍历时会尝试访问一个顶点的 skip_degree 条边，'而不仅仅是 max_degree 条边，这
-        样有额外的遍历开销，对查询性能影响可能有较大影响，请确认理解后再开启)`,
-        label: '边类型',
-        properties: '通过属性的值过滤边',
-    },
-};
 
 const initialValue = {
     top: 100,
@@ -66,9 +46,9 @@ const initialValue = {
         skip_degree: 0,
     },
 };
-const algorithmDescription = '计算与指定顶点的jaccard similarity最大的N个点';
 
 const JaccardSimilarityPost = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -81,6 +61,11 @@ const JaccardSimilarityPost = props => {
     const [stepVisible, setStepVisible] = useState(false);
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const stepContentClassName = classnames(
         s.stepContent,
@@ -183,7 +168,7 @@ const JaccardSimilarityPost = props => {
                 <div className={s.tooltip}>
                     <Tooltip
                         placement="rightTop"
-                        title={description.steps}
+                        title={t('analysis.algorithm.form.step.steps')}
                     >
                         <QuestionCircleOutlined />
                     </Tooltip>
@@ -193,7 +178,7 @@ const JaccardSimilarityPost = props => {
                 <Form.Item
                     name={['step', 'direction']}
                     label="direction"
-                    tooltip={description.stepsObj.direction}
+                    tooltip={t('analysis.algorithm.form.step.direction')}
                 >
                     <Select
                         allowClear
@@ -204,7 +189,7 @@ const JaccardSimilarityPost = props => {
                     name={['step', 'max_degree']}
                     label="max_degree"
                     rules={[{validator: integerValidator}]}
-                    tooltip={description.stepsObj.max_degree}
+                    tooltip={t('analysis.algorithm.form.step.max_degree_compatible')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -212,21 +197,21 @@ const JaccardSimilarityPost = props => {
                     name={['step', 'skip_degree']}
                     label="skip_degree"
                     rules={[{validator: integerValidator}]}
-                    tooltip={description.stepsObj.skip_degree}
+                    tooltip={t('analysis.algorithm.form.step.skip_degree')}
                 >
                     <InputNumber />
                 </Form.Item>
                 <Form.Item
                     label="label"
                     name={['step', 'label']}
-                    tooltip={description.stepsObj.label}
+                    tooltip={t('analysis.algorithm.form.edge_steps.label')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     label="properties"
                     name={['step', 'properties']}
-                    tooltip={description.stepsObj.properties}
+                    tooltip={t('analysis.algorithm.form.edge_steps.properties')}
                     rules={[{validator: propertiesValidator}]}
                 >
                     <Input.TextArea />
@@ -242,7 +227,7 @@ const JaccardSimilarityPost = props => {
                     icon={<CrownOutlined />}
                     name={JACCARD_SIMILARITY_POST}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.jaccard_similarity_post.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -263,7 +248,7 @@ const JaccardSimilarityPost = props => {
                     label='vertex'
                     name='vertex'
                     rules={[{required: true}]}
-                    tooltip={description.vertex}
+                    tooltip={t('analysis.algorithm.oltp.common.vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -271,7 +256,7 @@ const JaccardSimilarityPost = props => {
                     name='top'
                     label="top"
                     rules={[{required: true}, {validator: positiveIntegerValidator}]}
-                    tooltip={description.top}
+                    tooltip={t('analysis.algorithm.oltp.jaccard_similarity_post.top')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -279,7 +264,7 @@ const JaccardSimilarityPost = props => {
                     name='capacity'
                     label="capacity"
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>

@@ -18,7 +18,6 @@
 
 /**
  * @file  孤立点检测
- * @author
  */
 
 import React, {useCallback, useContext, useState} from 'react';

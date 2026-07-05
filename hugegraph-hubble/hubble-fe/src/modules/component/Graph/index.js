@@ -18,7 +18,6 @@
 
 /**
  * @file 画布公共组件
- * @author gouzixing@
  */
 
 import React, {useCallback, useEffect, useState, useRef, useMemo} from 'react';

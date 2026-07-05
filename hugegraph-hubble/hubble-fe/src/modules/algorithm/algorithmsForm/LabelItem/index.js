@@ -18,7 +18,6 @@
 
 /**
  * @file LabelItem
- * @author gouzixing@
  */
 
 import React from 'react';

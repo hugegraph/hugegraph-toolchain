@@ -18,7 +18,6 @@
 
 /**
  * @file  FitCenter 自适应
- * @author
  */
 
 import React, {useCallback, useContext} from 'react';

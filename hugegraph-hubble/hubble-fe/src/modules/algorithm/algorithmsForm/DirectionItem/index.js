@@ -18,7 +18,6 @@
 
 /**
  * @file DirectionItem
- * @author gouzixing@
  */
 
 import React from 'react';

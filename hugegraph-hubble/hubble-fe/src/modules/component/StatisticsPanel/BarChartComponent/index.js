@@ -18,7 +18,6 @@
 
 /**
  * @file  Echart 占比柱状图
- * @author gouzixing
  */
 
 import React, {useEffect, useMemo, useRef} from 'react';

@@ -181,7 +181,6 @@ const getVermeer = () => {
 
 export {getDashboard, getVermeer};
 
-// saas TODO REMOVED
 const getUUapList = params => {
     return request.get('/uic/list', {params});
 };

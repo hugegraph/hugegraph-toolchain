@@ -1,5 +1,6 @@
 {
   "home": {
+    "navigation": "Navigation",
     "name":"System Management" ,
     "my": "My Profile",
     "account": "Account Management",

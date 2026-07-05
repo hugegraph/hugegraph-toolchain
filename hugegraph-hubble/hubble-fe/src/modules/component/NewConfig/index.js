@@ -18,14 +18,15 @@
 
 /**
  * @file 新建按钮
- * @author
  */
 
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip, Dropdown, Menu} from 'antd';
 import {PlusSquareOutlined} from '@ant-design/icons';
 
 const NewConfig = props => {
+    const {t} = useTranslation();
     const {
         buttonEnable,
         onClickAddNode,
@@ -52,15 +53,15 @@ const NewConfig = props => {
             items={[
                 {
                     key: '1',
-                    label: (<a onClick={handleClickNewNode}>添加顶点</a>),
+                    label: (<a onClick={handleClickNewNode}>{t('analysis.canvas.add_vertex')}</a>),
                 },
                 {
                     key: '2',
-                    label: (<a onClick={() => handleClickNewEdge(false)}>添加入边</a>),
+                    label: (<a onClick={() => handleClickNewEdge(false)}>{t('analysis.canvas.add_in_edge')}</a>),
                 },
                 {
                     key: '3',
-                    label: (<a onClick={() => handleClickNewEdge(true)}>添加出边</a>),
+                    label: (<a onClick={() => handleClickNewEdge(true)}>{t('analysis.canvas.add_out_edge')}</a>),
                 },
             ]}
         />
@@ -74,7 +75,7 @@ const NewConfig = props => {
                     icon={<PlusSquareOutlined />}
                     disabled={!buttonEnable}
                 >
-                    新建
+                    {t('analysis.canvas.new')}
                 </Button>
             </Tooltip>
         </Dropdown>

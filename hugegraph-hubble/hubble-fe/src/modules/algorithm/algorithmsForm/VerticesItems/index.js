@@ -18,10 +18,10 @@
 
 /**
  * @file VerticesItem封装
- * @author gouzixing@
  */
 
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Form, Input, Tooltip} from 'antd';
 import {RightOutlined, DownOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {propertiesValidator} from '../utils';
@@ -29,6 +29,7 @@ import classnames from 'classnames';
 import c from './index.module.scss';
 
 const VerticesItems = props => {
+    const {t} = useTranslation();
     const {name, desc} = props;
 
     const [itemVisible, setItemVisible] = useState(false);
@@ -74,26 +75,27 @@ const VerticesItems = props => {
                                 else if (label && properties) {
                                     return Promise.resolve();
                                 }
-                                return Promise.reject(new Error('未指定ids或label和properties的联合查询'));
+                                return Promise.reject(new Error(
+                                    t('analysis.algorithm.form.vertices_required')
+                                ));
                             },
                         }),
                     ]}
-                    tooltip="通过顶点id列表提供起始(或终止)顶点，如果没有指定ids，则使用label和properties的联合条件查询起始(或终止)顶点"
+                    tooltip={t('analysis.algorithm.form.vertices_ids_tooltip')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     label="label"
                     name={[name, 'label']}
-                    tooltip="顶点的类型，ids参数为空，label和properties参数才会生效"
+                    tooltip={t('analysis.algorithm.form.vertices_label_tooltip')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     label="properties"
                     name={[name, 'properties']}
-                    tooltip={'属性Map，key为属性名(String类型)，value为属性值(类型由schema定义决定)。注意：properties中的属性值可以是列表，表'
-                    + '示只要key对应的value在列表中就可以'}
+                    tooltip={t('analysis.algorithm.form.vertices_properties_tooltip')}
                     rules={[{validator: propertiesValidator}]}
                 >
                     <Input.TextArea />

@@ -18,7 +18,6 @@
 
 /**
  * @file 切换环形布局组件 circular
- * @author
  */
 
 import React from 'react';

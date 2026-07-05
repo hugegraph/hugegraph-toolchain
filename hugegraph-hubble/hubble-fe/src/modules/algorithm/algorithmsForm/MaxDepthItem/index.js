@@ -18,7 +18,6 @@
 
 /**
  * @file MaxDepthItem
- * @author
  */
 
 import React from 'react';

@@ -18,7 +18,6 @@
 
 /**
  * @file OLTP算法item
- * @author gouzixing@
  */
 
 import React from 'react';

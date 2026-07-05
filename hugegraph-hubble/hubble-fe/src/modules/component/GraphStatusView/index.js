@@ -18,10 +18,10 @@
 
 /**
  * @file GraphStatusView
- * @author
  */
 
-import React, {useCallback} from 'react';
+import React from 'react';
+import {useTranslation} from 'react-i18next';
 import {GRAPH_STATUS} from '../../../utils/constants';
 import EmptyIcon from '../../../assets/ic_sousuo_empty.svg';
 import LoadingBackIcon from '../../../assets/ic_loading_back.svg';
@@ -38,13 +38,14 @@ const {
 } = GRAPH_STATUS;
 
 const GraphStatusView = props => {
+    const {t} = useTranslation();
     const {
         status,
         message,
     } = props;
 
     const emptyContent = message => {
-        const displayMessage = message || '暂无数据结果';
+        const displayMessage = message || t('analysis.query_result.no_data');
         return (
             <div className={c.noneGraphStatus}>
                 <img
@@ -57,7 +58,7 @@ const GraphStatusView = props => {
     };
 
     const loadingContent = message => {
-        const displayMessage = message || '程序运行中，请稍候';
+        const displayMessage = message || t('analysis.query_result.loading');
         return (
             <div className={c.noneGraphStatus}>
                 <div className={c.loadingContent}>
@@ -80,12 +81,12 @@ const GraphStatusView = props => {
     };
 
     const failedContent = message => {
-        const displayMessage = message || '运行失败';
+        const displayMessage = message || t('analysis.query_result.run_failed');
         return (
             <div className={c.noneGraphStatus}>
                 <img
                     src={FailedIcon}
-                    alt={'运行或提交失败'}
+                    alt={displayMessage}
                 />
                 <span>{displayMessage}</span>
             </div>
@@ -93,12 +94,12 @@ const GraphStatusView = props => {
     };
 
     const uploadFailedContent = message => {
-        const displayMessage = message || '导入失败';
+        const displayMessage = message || t('analysis.query_result.import_failed');
         return (
             <div className={c.noneGraphStatus}>
                 <img
                     src={FailedIcon}
-                    alt={'导入失败'}
+                    alt={displayMessage}
                 />
                 <span>{displayMessage}</span>
             </div>
@@ -106,7 +107,7 @@ const GraphStatusView = props => {
     };
 
     const succesEmptyContent = message => {
-        const displayMessage = message || '无图结果';
+        const displayMessage = message || t('analysis.query_result.no_graph_result');
         return (
             <div className={c.noneGraphStatus}>
                 <img
@@ -118,33 +119,30 @@ const GraphStatusView = props => {
         );
     };
 
-    const renderContent = useCallback(
-        (status, message) => {
-            let res;
-            switch (status) {
-                case STANDBY:
-                    res = emptyContent(message);
-                    break;
-                case LOADING:
-                    res = loadingContent(message);
-                    break;
-                case FAILED:
-                    res = failedContent(message);
-                    break;
-                case UPLOAD_FAILED:
-                    res = uploadFailedContent(message);
-                    break;
-                case SUCCESS:
-                    res = succesEmptyContent(message);
-                    break;
-                default:
-                    res = emptyContent(message);
-                    break;
-            }
-            return res;
-        },
-        []
-    );
+    const renderContent = (status, message) => {
+        let res;
+        switch (status) {
+            case STANDBY:
+                res = emptyContent(message);
+                break;
+            case LOADING:
+                res = loadingContent(message);
+                break;
+            case FAILED:
+                res = failedContent(message);
+                break;
+            case UPLOAD_FAILED:
+                res = uploadFailedContent(message);
+                break;
+            case SUCCESS:
+                res = succesEmptyContent(message);
+                break;
+            default:
+                res = emptyContent(message);
+                break;
+        }
+        return res;
+    };
 
     return (
         <>

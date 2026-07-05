@@ -18,7 +18,6 @@
 
 /**
  * @file  自定义网格布局
- * @author
  */
 
 import _ from 'lodash';

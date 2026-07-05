@@ -18,6 +18,7 @@
 
 import * as api from '../../../../../api/index';
 import {message} from 'antd';
+import i18n from '../../../../../i18n';
 import {formatToDownloadData, formatToGraphData} from '../../../../../utils/formatGraphResultData';
 import {processParallelEdges} from '../../../../../utils/graph';
 import {clearSelectedStates} from '../../../../../utils/handleGraphState';
@@ -27,12 +28,12 @@ const fetchExpandInfo = async (params, graphInstance, graphSpaceInfo) => {
     const {graphSpace, graph} = graphSpaceInfo;
     const response = await api.analysis.putExecutionQuery(graphSpace, graph, params);
     if (response.status !== 200) {
-        message.error('展开失败');
+        message.error(i18n.t('analysis.query_result.expand_failed'));
         return;
     }
     const {vertices, edges} = response.data.graph_view;
     if (vertices.length === 0) {
-        message.warning('不存在更多邻接点');
+        message.warning(i18n.t('analysis.query_result.no_more_neighbors'));
         return;
     }
     const tmp = {vertices: [], edges: []};
@@ -50,7 +51,7 @@ const fetchExpandInfo = async (params, graphInstance, graphSpaceInfo) => {
         }
     }
     if (tmp.vertices.length === 0) {
-        message.warning('不存在更多邻接点');
+        message.warning(i18n.t('analysis.query_result.no_more_neighbors'));
         return;
     }
     return tmp;

@@ -18,7 +18,6 @@
 
 /**
  * @file 图分析组件 slide组件
- * @author
  */
 
 import React from 'react';

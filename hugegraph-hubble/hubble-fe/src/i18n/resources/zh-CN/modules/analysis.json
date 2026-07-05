@@ -3,12 +3,130 @@
     "name": "业务分析",
     "query": {
       "name": "图语言分析",
-      "placeholder": "请输入查询语句"
+      "placeholder": "请输入查询语句",
+      "gremlin_tab": "Gremlin 分析",
+      "cypher_tab": "Cypher 分析",
+      "execute_query": "执行查询",
+      "execute_task": "执行任务",
+      "execute_mode_desc": "查询模式适合 30 秒内可返回结果的小规模分析，任务模式适合较长时间返回结果的大规模分析，任务详情可在任务管理中查看",
+      "empty_query": "查询语句不能为空",
+      "collapse": "收起",
+      "expand": "展开",
+      "favorite": "收藏",
+      "favorite_statement": "收藏语句",
+      "favorite_name_placeholder": "请输入收藏名称",
+      "favorite_success": "收藏成功",
+      "favorite_failed": "收藏失败"
+    },
+    "query_result": {
+      "graph": "图",
+      "table": "表格",
+      "no_data": "暂无数据结果",
+      "loading": "数据加载中...",
+      "run_failed": "运行失败",
+      "submitting_task": "提交异步任务中...",
+      "submit_failed": "提交失败",
+      "import_failed": "导入失败",
+      "submit_success": "提交成功",
+      "no_graph_result": "无图结果，请查看表格或 Json 数据",
+      "no_table_result": "无表格结果，请查看图或 Json 数据",
+      "no_json_result": "无 Json 结果，请查看图或表格数据",
+      "expand_failed": "展开失败",
+      "no_more_neighbors": "不存在更多邻接点"
+    },
+    "canvas": {
+      "import": "导入",
+      "export": "导出",
+      "style": "外观设置",
+      "filter": "筛选",
+      "layout": "布局方式",
+      "setting": "设置",
+      "new": "新建",
+      "statistics": "统计",
+      "mode_2d": "2D 模式",
+      "mode_3d": "3D 模式",
+      "import_success": "导入成功",
+      "export_json": "导出 Json",
+      "export_png": "导出图片",
+      "export_json_title": "导出 Json",
+      "export_image_title": "导出图片",
+      "file_name": "文件名称",
+      "file_name_required": "请输入文件名称",
+      "file_name_placeholder": "请输入文件名称",
+      "add_vertex": "新增顶点",
+      "add_in_edge": "新增入边",
+      "add_out_edge": "新增出边",
+      "tooltip": {
+        "import_2d": "当前图已有数据，请清空后再导入",
+        "import_3d": "3D 模式不支持导入",
+        "export_2d": "暂无可导出的图数据",
+        "export_3d": "3D 模式不支持导出",
+        "style_2d": "暂无可设置样式的图数据",
+        "style_3d": "3D 模式不支持外观设置",
+        "filter_2d": "暂无可筛选的图数据",
+        "filter_3d": "3D 模式不支持筛选",
+        "layout_2d": "暂无可布局的图数据",
+        "layout_3d": "3D 模式不支持布局方式",
+        "setting_2d": "暂无可配置的图数据",
+        "setting_3d": "3D 模式不支持设置",
+        "new_2d": "暂无可编辑的图数据",
+        "new_3d": "3D 模式不支持新建图元素",
+        "statistics_2d": "暂无可统计的图数据",
+        "statistics_3d": "3D 模式不支持统计",
+        "switch_2d": "暂无可切换的图数据"
+      }
+    },
+    "logs": {
+      "execute_tab": "执行记录",
+      "favorite_tab": "收藏的查询",
+      "favorite_success": "收藏成功",
+      "favorite_failed": "收藏失败",
+      "delete_success": "删除成功",
+      "delete_failed": "删除失败",
+      "edit_success": "修改成功",
+      "edit_failed": "修改失败",
+      "favorite_statement": "收藏语句",
+      "favorite_name_placeholder": "请输入收藏名称",
+      "edit_name": "修改名称",
+      "confirm_delete": "确认删除",
+      "delete_favorite_confirm": "是否确认删除该条收藏语句？",
+      "search_placeholder": "搜索收藏名称或语句",
+      "column": {
+        "time": "时间",
+        "type": "执行类型",
+        "content": "执行内容",
+        "status": "状态",
+        "duration": "耗时",
+        "action": "操作",
+        "name": "名称",
+        "favorite_statement": "收藏语句"
+      },
+      "type": {
+        "GREMLIN": "GREMLIN 查询",
+        "GREMLIN_ASYNC": "GREMLIN 任务",
+        "ALGORITHM": "算法任务",
+        "CYPHER": "CYPHER 查询"
+      },
+      "status": {
+        "SUCCESS": "成功",
+        "ASYNC_TASK_SUCCESS": "提交成功",
+        "ASYNC_TASK_RUNNING": "提交运行中",
+        "RUNNING": "运行中",
+        "FAILED": "失败",
+        "ASYNC_TASK_FAILED": "提交失败"
+      },
+      "action": {
+        "favorite": "收藏",
+        "load_statement": "加载语句",
+        "edit_name": "修改名称",
+        "save": "保存"
+      }
     },
     "algorithm": {
       "name": "图算法",
       "placeholder": "算法查询",
       "run": "运行",
+      "task_submit_success": "{{name}} 算法任务提交成功",
       "common": {
         "instance_num": "实例数",
         "input_limit_edges_per_vertex": "最大出边限制",
@@ -24,6 +142,55 @@
         "JVM_memory": "jvm环境内存大小，默认为32g",
         "source": "起始点ID",
         "query_tooltip": "仅当选择的图数据加载完成后，才可以使用OLAP算法。"
+      },
+      "form": {
+        "vertices_required": "未指定 ids 或 label 和 properties 的联合查询",
+        "vertices_ids_tooltip": "通过顶点 id 列表提供起始或终止顶点，如果没有指定 ids，则使用 label 和 properties 的联合条件查询起始或终止顶点",
+        "vertices_label_tooltip": "顶点的类型，ids 参数为空时 label 和 properties 参数才会生效",
+        "vertices_properties_tooltip": "属性 Map，key 为属性名，value 为属性值，类型由 schema 定义决定。properties 中的属性值可以是列表，表示只要 key 对应的 value 在列表中就可以",
+        "edge_steps": {
+          "label": "边类型",
+          "properties": "通过属性的值过滤边"
+        },
+        "vertex_steps": {
+          "label": "点类型",
+          "properties": "通过属性的值过滤点"
+        },
+        "step": {
+          "steps": "从起始顶点出发的 Step 集合",
+          "direction": "起始顶点向外发散的方向",
+          "labels": "边的类型列表",
+          "edge_properties": "属性 Map，通过属性的值过滤边，key 为属性名，value 为属性值，类型由 schema 定义决定。properties 中的属性值可以是列表，表示只要 key 对应的 value 在列表中就可以",
+          "max_depth": "步数",
+          "max_times": "当前 step 可以重复的次数，当为 N 时，表示从起始顶点可以经过当前 step 1-N 次",
+          "max_degree": "查询过程中，单个顶点遍历的最大邻接边数目",
+          "max_degree_compatible": "查询过程中，单个顶点遍历的最大邻接边数目。0.12 版之前 step 内仅支持 degree 作为参数名，0.12 开始统一使用 max_degree，并向下兼容 degree 写法",
+          "skip_degree": "用于设置查询过程中舍弃超级顶点的最小边数，即当某个顶点的邻接边数目大于 skip_degree 时，完全舍弃该顶点。选填项，开启时需满足 skip_degree >= max_degree，默认为 0 表示不跳过任何点。开启后会有额外遍历开销，请确认理解后再开启",
+          "edge_steps": "边 Step 集合",
+          "vertex_steps": "点 Step 集合"
+        }
+      },
+      "validation": {
+        "integer": "请输入整数",
+        "range_or_minus_one": "请输入 -1 或大于 0 的整数",
+        "max_depth_range": "请输入 (0, 5000] 范围的整数",
+        "max_limit_range": "请输入 (0, 800000) 范围的整数",
+        "non_negative_integer": "请输入大于等于 0 的整数",
+        "positive_integer": "请输入大于 0 的整数",
+        "skip_degree_range": "请输入 [0, 10000000] 的整数",
+        "group_property_range": "请输入大于 2 的整数",
+        "alpha_range": "请输入 (0, 1] 的数",
+        "top_range": "请输入 (0, 1000) 范围的数",
+        "open_unit_range": "请输入 (0, 1) 范围的数",
+        "depth_2_50": "请输入 [2, 50] 的整数",
+        "properties_format": "请按照 key=value 的格式换行输入",
+        "string_value_quote": "字符串 value 请用单引号 '' 包围",
+        "open_unit_value": "请输入 (0, 1) 范围的值",
+        "closed_unit_value": "请输入 [0, 1] 范围的值",
+        "integer_1_2000": "请输入 1 到 2000 范围的整数",
+        "value_1_100000": "请输入 1 到 100000 范围的值",
+        "integer_0_100000": "请输入 [0, 100000] 范围的整数",
+        "integer_1_10000": "请输入 1 到 10000 之间的整数值"
       },
       "mode": {
         "OLTP": "OLTP算法",
@@ -123,7 +290,7 @@
           "FILTER_SUBGRAPH_MATCHING": "Filter SubGraph Matching",
           "K_CORE": "K-Core",
           "PERSONAL_PAGE_RANK": "PersonalPageRank",
-          "KOUT_POST": "K-out API(POST, 高级版)",
+          "KOUT_POST": "K-out API（POST，高级版）",
           "KNEIGHBOR_POST": "K-neighbor API（POST，高级版）",
           "JACCARD_SIMILARITY_POST": "Jaccard Similarity（POST）",
           "RANK_API": "rank API",
@@ -175,6 +342,142 @@
         }
       },
       "oltp": {
+        "common": {
+          "source_vertex_id": "起始顶点 id",
+          "target_vertex_id": "目的顶点 id",
+          "vertex_id": "顶点 id",
+          "other_vertex_id": "另一个顶点 id",
+          "direction_source_target": "起始顶点到目的顶点的方向，目的点到起始点是反方向，BOTH 时不考虑方向",
+          "limit_crosspoints": "返回的交点的最大数目",
+          "max_steps": "最大步数",
+          "weight_property": "边的权重属性，属性类型必须为数字类型；如果不填，或边没有该属性，则权重为 1.0",
+          "alpha": "每轮迭代时从某个点往外走的概率，与 PageRank 算法中的 alpha 类似",
+          "iterations": "迭代次数",
+          "limit_vertices": "返回顶点的最大数目",
+          "source_target_path": "表示从起始顶点到终止顶点走过的路径"
+        },
+        "template_paths": {
+          "desc": "根据一批起始顶点、边规则（包括方向、边的类型和属性过滤）和最大深度等条件查找符合条件的所有路径",
+          "sources": "起始顶点",
+          "targets": "终止顶点",
+          "with_ring": "true 表示包含环路；false 表示不包含环路",
+          "capacity": "遍历过程中最大的访问的顶点数目",
+          "limit": "返回的路径的最大条数"
+        },
+        "kout_get": {
+          "desc": "根据起始顶点、方向、边的类型（可选）和深度 depth，查找从起始顶点出发恰好 depth 步可达的顶点"
+        },
+        "kneighbor_get": {
+          "desc": "根据起始顶点、方向、边的类型（可选）和深度 depth，查找包括起始顶点在内、depth 步之内可达的所有顶点"
+        },
+        "kout_post": {
+          "desc": "根据起始顶点、方向、边的类型（可选）和深度 depth，查找从起始顶点出发恰好 depth 步可达的顶点",
+          "source": "起始顶点 id",
+          "capacity": "遍历过程中最大的访问的顶点数目",
+          "limit": "返回的顶点的最大数目",
+          "algorithm": "遍历方式。通常 deep_first（深度优先搜索）方式会有更好的遍历性能。但当 nearest 为 true 时，可能会包含非最近邻节点，尤其在数据量较大时",
+          "algorithm_placeholder": "选择遍历方式",
+          "breadth_first": "广度优先",
+          "deep_first": "深度优先"
+        },
+        "same_neighbors": {
+          "desc": "查询两个点的共同邻居",
+          "limit": "返回的共同邻居的最大数目"
+        },
+        "rings": {
+          "desc": "根据起始顶点、方向、边的类型（可选）和最大深度等条件查找可达的环路",
+          "source_in_ring": "环路是否包含起点"
+        },
+        "shortest_path": {
+          "desc": "根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度，查找一条最短路径"
+        },
+        "jaccard_similarity_get": {
+          "desc": "计算两个顶点的 Jaccard similarity，即两个顶点邻居的交集比上两个顶点邻居的并集"
+        },
+        "crosspoints": {
+          "desc": "根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度等条件查找相交点"
+        },
+        "find_shortest_path": {
+          "desc": "根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度，查找两点间所有的最短路径"
+        },
+        "find_shortest_path_with_weight": {
+          "desc": "根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度，查找一条带权最短路径"
+        },
+        "paths": {
+          "desc": "根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度等条件查找所有路径",
+          "limit": "查询到的目标顶点个数，也是返回的最短路径的条数"
+        },
+        "rays": {
+          "desc": "根据起始顶点、方向、边的类型（可选）和最大深度等条件查找发散到边界顶点的路径"
+        },
+        "rank_api": {
+          "desc": "根据某个点现有的出边，推荐具有相近或相同关系的其他点",
+          "label": "源点出发的某类边 label，须连接两类不同顶点",
+          "max_diff": "提前收敛的精度差",
+          "sorted": "返回的结果是否根据 rank 排序",
+          "with_label": "筛选结果中保留哪些结果，可从 SAME_LABEL、OTHER_LABEL、BOTH_LABEL 中选择",
+          "same_label": "仅保留与源顶点相同类别的顶点",
+          "other_label": "仅保留与源顶点不同类别（二分图的另一端）的顶点",
+          "both_label": "同时保留与源顶点相同和相反类别的顶点"
+        },
+        "neighbor_rank_api": {
+          "desc": "在一般图结构中，找出每一层与给定起点相关性最高的前 N 个顶点及其相关度",
+          "top": "在结果中每一层只保留权重最高的前 N 个结果"
+        },
+        "jaccard_similarity_post": {
+          "desc": "计算与指定顶点的 Jaccard similarity 最大的 N 个点",
+          "top": "返回一个起点的 Jaccard similarity 中最大的 top 个"
+        },
+        "kneighbor_post": {
+          "desc": "根据起始顶点、步骤（包括方向、边类型和过滤属性）和 depth，查找从起始顶点出发 depth 步内可达的所有顶点"
+        },
+        "single_source_shortest_path": {
+          "desc": "从一个顶点出发，查找该点到图中其他顶点的最短路径（可选是否带权重）"
+        },
+        "multi_nodes_shortest_path": {
+          "desc": "查找指定顶点集两两之间的最短路径",
+          "vertices": "起始顶点"
+        },
+        "all_paths": {
+          "desc": "根据起始顶点、目的顶点、步骤（step）和最大深度等条件查找所有路径"
+        },
+        "fusiform_similarity": {
+          "desc": "按照条件查询一批顶点对应的“梭形相似点”",
+          "min_neighbors": "最少邻居数目。邻居数目少于这个阈值时，认为起点不具备“梭形相似点”。",
+          "alpha": "相似度，代表起点与梭形相似点的共同邻居数目占起点全部邻居数目的比例",
+          "min_similars": "“梭形相似点”的最少个数。只有当起点的“梭形相似点”数目大于或等于该值时，才会返回起点及其“梭形相似点”",
+          "top": "返回一个起点的“梭形相似点”中相似度最高的 top 个，0 表示全部",
+          "group_property": "与 min_groups 一起使用。当起点跟其所有“梭形相似点”的某个属性值有至少 min_groups 个不同值时，才会返回该起点及其“梭形相似点”；不填代表不根据属性过滤",
+          "min_groups": "与 group_property 一起使用，只有设置 group_property 时才有意义",
+          "limit": "返回的结果数目上限。一个起点及其“梭形相似点”算一个结果",
+          "with_intermediary": "是否返回起点及其“梭形相似点”共同关联的中间点"
+        },
+        "resource_allocation": {
+          "desc": "主要用于社交网络中判断两点紧密度的算法，用来求两点间共同邻居密集度的一个系数"
+        },
+        "same_neighbors_batch": {
+          "desc": "批量查询两个点的共同邻居",
+          "vertex_list": "点 ID 对列表，如：[[\"0000000001\",\"0000376440\"],[\"0000000001\",\"0001822679\"]]"
+        },
+        "egonet": {
+          "desc": "查找一批顶点的 K 层邻居，并支持针对不同点 / 边 Label 的过滤条件，结果中会包含起始顶点",
+          "sources": "起始顶点 id 集合，支持传入多个不同顶点"
+        },
+        "customized_paths": {
+          "desc": "根据一批起始顶点、边规则（包括方向、边的类型和属性过滤）和最大深度等条件查找符合条件的所有路径",
+          "sort_by": "根据路径的权重排序：NONE 表示不排序，INCR 表示按照路径权重升序排序，DECR 表示按照路径权重降序排序",
+          "sort_none": "不排序",
+          "sort_incr": "按照路径权重升序",
+          "sort_decr": "按照路径权重降序",
+          "weight_by": "根据指定的属性计算边的权重，sort_by 不为 NONE 时有效，与 default_weight 互斥",
+          "default_weight": "当边没有属性作为权重计算值时采取的默认权重，sort_by 不为 NONE 时有效，与 weight_by 互斥",
+          "sample": "当需要对某个 step 的符合条件的边进行采样时设置，-1 表示不采样"
+        },
+        "customized_crosspoints": {
+          "desc": "根据一批起始顶点、多种边规则（包括方向、边的类型和属性过滤）和最大深度等条件查找符合条件的所有路径终点的交集",
+          "path_patterns": "表示从起始顶点走过的路径规则，是一组规则的列表",
+          "limit": "返回的路径的最大数目"
+        },
         "adamic_adar": {
           "desc": "主要用于社交网络中判断两点紧密度的算法, 用来求两点间共同邻居密集度的一个系数",
           "vertex": "起始顶点",

@@ -18,12 +18,12 @@
 
 /**
  * @file CustomizedPaths
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Form, Collapse, Select, InputNumber} from 'antd';
 import {ProfileOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../../../../api';
 import getNodesFromParams from '../../../../../../utils/getNodesFromParams';
 import removeNilKeys from '../../../../../../utils/removeNilKeys';
@@ -39,20 +39,8 @@ import s from '../../OltpItem/index.module.scss';
 const {CUSTOMIZEDPATHS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const sortByOptions = [
-    {label: '不排序', value: 'NONE'},
-    {label: '按照路径权重的升序', value: 'INCR'},
-    {label: '按照路径权重的降序', value: 'DECR'},
-];
-const description = {
-    max_depth: '步数',
-    sort_by: '根据路径的权重排序：NONE表示不排序，INCR表示按照路径权重的升序排序，DECR表示按照路径权重的降序排序',
-    capacity: '遍历过程中最大的访问的顶点数目',
-    limit: '返回的路径的最大条数',
-};
-const algorithmDescription = '根据一批起始顶点、边规则（包括方向、边的类型和属性过滤）和最大深度等条件查找符合条件的所有的路径';
-
 const CustomizedPaths = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -64,6 +52,11 @@ const CustomizedPaths = props => {
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
     const [form] = Form.useForm();
+    const sortByOptions = [
+        {label: t('analysis.algorithm.oltp.customized_paths.sort_none'), value: 'NONE'},
+        {label: t('analysis.algorithm.oltp.customized_paths.sort_incr'), value: 'INCR'},
+        {label: t('analysis.algorithm.oltp.customized_paths.sort_decr'), value: 'DECR'},
+    ];
 
     const handleRunning = useCallback(
         e => {
@@ -139,7 +132,7 @@ const CustomizedPaths = props => {
                 <AlgorithmNameHeader
                     icon={<ProfileOutlined />}
                     name={CUSTOMIZEDPATHS}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.customized_paths.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -156,13 +149,13 @@ const CustomizedPaths = props => {
                 onValuesChange={_.debounce(onFormValuesChange, 300)}
                 layout="vertical"
             >
-                <VerticesItems name="sources" desc='起始顶点' />
+                <VerticesItems name="sources" desc={t('analysis.algorithm.oltp.template_paths.sources')} />
                 <StepItem />
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
                     rules={[{required: true}, {validator: integerValidator}]}
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -170,7 +163,7 @@ const CustomizedPaths = props => {
                     label='sort_by'
                     name='sort_by'
                     initialValue={'NONE'}
-                    tooltip={description.sort_by}
+                    tooltip={t('analysis.algorithm.oltp.customized_paths.sort_by')}
                 >
                     <Select options={sortByOptions} allowClear />
                 </Form.Item>
@@ -179,7 +172,7 @@ const CustomizedPaths = props => {
                     name='capacity'
                     initialValue={10000000}
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -188,7 +181,7 @@ const CustomizedPaths = props => {
                     name='limit'
                     initialValue={10}
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.limit}
+                    tooltip={t('analysis.algorithm.oltp.template_paths.limit')}
                 >
                     <InputNumber />
                 </Form.Item>

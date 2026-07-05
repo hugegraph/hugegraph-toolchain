@@ -18,7 +18,6 @@
 
 /**
  * @file 图分析模块Header，用于初始化、选择图空间和图，以及OLAP开关
- * @author gouzixing@
  */
 
 import React, {useCallback, useEffect, useState, useContext} from 'react';

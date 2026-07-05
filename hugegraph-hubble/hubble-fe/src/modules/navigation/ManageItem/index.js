@@ -18,28 +18,25 @@
 
 /**
  * @file 管理子项块
- * @author
  */
 
 import Item from '../Item';
+import {useTranslation} from 'react-i18next';
 import {isPdEnabled} from '../../../utils/config';
+import {getManageNavItems} from '../../../utils/productMode';
 
 const ManageItem = () => {
+    const {t} = useTranslation();
     const pdMode = isPdEnabled();
-    const listData = pdMode
-        ? [
-            {title: '图管理', url: '/graphspace'},
-            {title: '数据管理', url: '/source'},
-            {title: '数据导入', url: '/task'},
-        ]
-        : [
-            {title: '图管理', url: '/graphspace/DEFAULT'},
-        ];
+    const listData = getManageNavItems(pdMode).map(item => ({
+        title: t(`manage.${item.key}`),
+        url: item.url,
+    }));
 
     return (
         <Item
             btnIndex={1}
-            btnTitle={'数据管理'}
+            btnTitle={t('manage.name')}
             listData={listData}
         />
     );

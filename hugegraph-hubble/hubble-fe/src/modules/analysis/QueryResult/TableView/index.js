@@ -18,10 +18,10 @@
 
 /**
  * @file Gremlin语法分析 TabelView
- * @author anxiaojie@
  */
 
 import React, {useCallback, useMemo} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Table} from 'antd';
 import GraphStatusView from '../../../component/GraphStatusView';
 import TaskNavigateView from '../../../component/TaskNavigateView';
@@ -38,6 +38,7 @@ const {
 } = GRAPH_STATUS;
 
 const TableView = props => {
+    const {t} = useTranslation();
     const {
         queryResultTable,
         queryStatus,
@@ -56,12 +57,14 @@ const TableView = props => {
 
     const statusMessage = useMemo(
         () => ({
-            [STANDBY]: '暂无数据结果',
-            [LOADING]: isQueryMode ? '数据加载中...' : '提交异步任务中...',
-            [FAILED]: queryMessage || '提交失败',
-            [UPLOAD_FAILED]: queryMessage || '导入失败',
+            [STANDBY]: t('analysis.query_result.no_data'),
+            [LOADING]: isQueryMode
+                ? t('analysis.query_result.loading')
+                : t('analysis.query_result.submitting_task'),
+            [FAILED]: queryMessage || t('analysis.query_result.submit_failed'),
+            [UPLOAD_FAILED]: queryMessage || t('analysis.query_result.import_failed'),
         }),
-        [isQueryMode, queryMessage]
+        [isQueryMode, queryMessage, t]
     );
 
     const renderSuccessView = useCallback(
@@ -69,7 +72,7 @@ const TableView = props => {
             if (isQueryMode) {
                 if (_.isNull(queryResultTable?.rows)) {
                     return (
-                        <GraphStatusView status={SUCCESS} message={'无表格结果，请查看图或Json数据'} />
+                        <GraphStatusView status={SUCCESS} message={t('analysis.query_result.no_table_result')} />
                     );
                 }
                 return (
@@ -84,9 +87,9 @@ const TableView = props => {
                 );
 
             }
-            return <TaskNavigateView message={'提交成功'} taskId={asyncTaskId} />;
+            return <TaskNavigateView message={t('analysis.query_result.submit_success')} taskId={asyncTaskId} />;
         },
-        [asyncTaskId, isQueryMode, queryResultTable?.rows, tableColums]
+        [asyncTaskId, isQueryMode, queryResultTable?.rows, tableColums, t]
     );
 
     const renderJsonView = () => {

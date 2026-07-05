@@ -18,7 +18,6 @@
 
 /**
  * @file 图分析组件 层次布局
- * @author
  */
 
 import React from 'react';

@@ -18,7 +18,6 @@
 
 /**
  * @file 3D ForceGraph
- * @author
  */
 
 import React, {useEffect, useMemo, useRef} from 'react';

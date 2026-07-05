@@ -18,7 +18,6 @@
 
 /**
  * @file 绿色标题块
- * @author
  */
 
 import style from './index.module.scss';

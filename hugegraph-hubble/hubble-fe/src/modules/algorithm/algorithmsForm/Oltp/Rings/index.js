@@ -18,12 +18,12 @@
 
 /**
  * @file Rings
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse} from 'antd';
 import {BlockOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import DirectionItem from '../../DirectionItem';
 import LabelItem from '../../LabelItem';
@@ -42,9 +42,8 @@ import {positiveIntegerValidator, maxDegreeValidator} from '../../utils';
 const {RINGS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const algorithmDescription = '根据起始顶点、方向、边的类型（可选）和最大深度等条件查找可达的环路';
-
 const Rings = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -114,7 +113,7 @@ const Rings = props => {
                     icon={<BlockOutlined />}
                     name={RINGS}
                     searchValue={searchValue}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.rings.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -133,17 +132,21 @@ const Rings = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip="起始顶点id"
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
-                <DirectionItem desc='起始顶点到目的顶点的方向，目的点到起始点是反方向，BOTH时不考虑方向' />
+                <DirectionItem desc={t('analysis.algorithm.oltp.common.direction_source_target')} />
                 <LabelItem />
                 <MaxDepthItem validator={positiveIntegerValidator} />
-                <BoolSelectItem name='source_in_ring' initialValue desc='环路是否包含起点' />
+                <BoolSelectItem
+                    name='source_in_ring'
+                    initialValue
+                    desc={t('analysis.algorithm.oltp.rings.source_in_ring')}
+                />
                 <MaxDegreeItem isRequired={false} initialValue={10000} validator={maxDegreeValidator} />
                 <CapacityItem />
-                <LimitItem initialValue={10} desc='返回的交点的最大数目' />
+                <LimitItem initialValue={10} desc={t('analysis.algorithm.oltp.common.limit_crosspoints')} />
             </Form>
         </Collapse.Panel>
     );

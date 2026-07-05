@@ -18,7 +18,6 @@
 
 /**
  * @file  图统计
- * @author gouzixing
  */
 
 import React, {useCallback, useContext, useEffect, useMemo, useState} from 'react';

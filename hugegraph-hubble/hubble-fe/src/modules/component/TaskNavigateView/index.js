@@ -18,7 +18,6 @@
 
 /**
  * @file TaskNavigateView
- * @author
  */
 
 import React, {useCallback} from 'react';

@@ -18,15 +18,16 @@
 
 /**
  * @file 外观设置
- * @author
  */
 
 import React, {useCallback, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import ConfigModal from '../ConfigModal';
 import {ExperimentOutlined} from '@ant-design/icons';
 
 const StyleConfig = props => {
+    const {t} = useTranslation();
     const {
         styleConfig,
         onChange,
@@ -69,7 +70,7 @@ const StyleConfig = props => {
                     type={'text'}
                     disabled={!buttonEnable}
                 >
-                    外观设置
+                    {t('analysis.canvas.style')}
                 </Button>
             </Tooltip>
             <ConfigModal

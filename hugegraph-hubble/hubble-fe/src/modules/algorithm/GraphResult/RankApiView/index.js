@@ -18,7 +18,6 @@
 
 /**
  * @file  RankApi算法展示
- * @author
  */
 
 import React from 'react';

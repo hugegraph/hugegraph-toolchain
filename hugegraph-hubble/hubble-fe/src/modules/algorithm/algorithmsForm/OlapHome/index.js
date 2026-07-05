@@ -18,7 +18,6 @@
 
 /**
  * @file Olap图算法表单列表
- * @author
  */
 
 import React, {useContext} from 'react';
@@ -27,6 +26,7 @@ import GraphAnalysisContext from '../../../Context';
 import _ from 'lodash';
 import {
     GRAPH_LOAD_STATUS,
+    isAlgorithmNameMatched,
     useTranslatedConstants,
     TEXT_PATH,
 } from '../../../../utils/constants';
@@ -100,7 +100,7 @@ const OlapFormHome = props => {
     const {isVermeer, graphStatus} = useContext(GraphAnalysisContext);
 
     const getSearchedList = (arr, value) => {
-        return arr.filter(item => item.includes(value));
+        return arr.filter(item => isAlgorithmNameMatched(item, value, t));
     };
 
     const olapList = isVermeer ? olapVermeerList : olapComputeList;

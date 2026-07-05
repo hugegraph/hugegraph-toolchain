@@ -18,10 +18,10 @@
 
 /**
  * @file Gremlin语法分析 Header
- * @author huangqiuyu
  */
 
 import React, {useCallback, useState, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Menu, Tooltip, Dropdown, Input, Popover, message, Space} from 'antd';
 import {UpOutlined, DownOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {GREMLIN_EXECUTES_MODE} from '../../../../utils/constants';
@@ -39,6 +39,7 @@ const FAVORITE_TYPE  = {
 const {QUERY, TASK} = GREMLIN_EXECUTES_MODE;
 
 const ContentCommon = props => {
+    const {t} = useTranslation();
     const {
         codeEditorContent,
         setCodeEditorContent,
@@ -59,8 +60,8 @@ const ContentCommon = props => {
     const [favoriteName, setFavoriteName] = useState();
     const [disabledFavorite, setDisabledFavorite]  = useState(true);
 
-    const queryDesc = '查询模式适合30秒内可返回结果的小规模分析，任务模式适合较长时间返回结果的大规模分析，任务详情可在任务管理中查看';
-    const emptyDesc = '查询语句不能为空';
+    const queryDesc = t('analysis.query.execute_mode_desc');
+    const emptyDesc = t('analysis.query.empty_query');
 
     const onToggleCollapse = useCallback(
         () => {
@@ -71,7 +72,9 @@ const ContentCommon = props => {
 
     const renderCollapseHeader = () => {
         const icon = isShowMore ? <UpOutlined /> : <DownOutlined />;
-        const iconName = isShowMore ? <span>收起</span> : <span>展开</span>;
+        const iconName = isShowMore
+            ? <span>{t('analysis.query.collapse')}</span>
+            : <span>{t('analysis.query.expand')}</span>;
         return (
             <div>{icon}{iconName}</div>
         );
@@ -105,15 +108,15 @@ const ContentCommon = props => {
                 .then(res => {
                     const {status, message: errMsg} = res;
                     if (status === 200) {
-                        message.success('收藏成功');
+                        message.success(t('analysis.query.favorite_success'));
                         onRefresh();
                     }
                     else {
-                        !errMsg && message.error('收藏失败');
+                        !errMsg && message.error(t('analysis.query.favorite_failed'));
                     }
                 });
         },
-        [activeTab, codeEditorContent, context, favoriteName, onRefresh]
+        [activeTab, codeEditorContent, context, favoriteName, onRefresh, t]
     );
 
     const onOkFavorite = useCallback(
@@ -143,15 +146,17 @@ const ContentCommon = props => {
     const favoriteContent = (
         <>
             <Input
-                placeholder="请输入收藏名称"
+                placeholder={t('analysis.query.favorite_name_placeholder')}
                 showCount
                 maxLength={48}
                 value={favoriteName}
                 onChange={onChangeFavoraiteName}
             />
             <Space style={{marginTop: '24px'}}>
-                <Button type='primary' onClick={onOkFavorite} disabled={disabledFavorite}>收藏</Button>
-                <Button onClick={onHideFavorite}>取消</Button>
+                <Button type='primary' onClick={onOkFavorite} disabled={disabledFavorite}>
+                    {t('analysis.query.favorite')}
+                </Button>
+                <Button onClick={onHideFavorite}>{t('common.action.cancel')}</Button>
             </Space>
         </>
     );
@@ -184,8 +189,8 @@ const ContentCommon = props => {
         <Menu
             onClick={onSwitchExecuteMenu}
             items={[
-                {label: '执行查询', key: QUERY},
-                {label: '执行任务', key: TASK},
+                {label: t('analysis.query.execute_query'), key: QUERY},
+                {label: t('analysis.query.execute_task'), key: TASK},
             ]}
         />
     );
@@ -202,7 +207,7 @@ const ContentCommon = props => {
                             onClick={onExecution}
                             size='small'
                         >
-                            {isQueryMode ? '执行查询' : '执行任务'}
+                            {isQueryMode ? t('analysis.query.execute_query') : t('analysis.query.execute_task')}
                         </Dropdown.Button>
                     </Tooltip>
                     <Tooltip placement="bottom" title={queryDesc} className={c.questionCircleIcon}>
@@ -212,7 +217,7 @@ const ContentCommon = props => {
                         placement="bottom"
                         trigger='click'
                         overlayClassName={c.favoriteModel}
-                        title={'收藏语句'}
+                        title={t('analysis.query.favorite_statement')}
                         content={favoriteContent}
                         open={favoriteCardVisible}
                     >
@@ -223,11 +228,13 @@ const ContentCommon = props => {
                                 onClick={onFavoriteCard}
                                 size='small'
                             >
-                                收藏
+                                {t('analysis.query.favorite')}
                             </Button>
                         </Tooltip>
                     </Popover>
-                    <Button className={c.btn} onClick={onClear} size='small'>清空</Button>
+                    <Button className={c.btn} onClick={onClear} size='small'>
+                        {t('common.action.clear')}
+                    </Button>
                 </div>
             </div>
             <div className={c.showMoreButton} onClick={onToggleCollapse}>

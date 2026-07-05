@@ -18,10 +18,10 @@
 
 /**
  * @file Gremlin语法分析 JsonView
- * @author anxiaojie@
  */
 
 import React, {useCallback, useMemo} from 'react';
+import {useTranslation} from 'react-i18next';
 import ReactJsonView from 'react-json-view';
 import GraphStatusView from '../../../component/GraphStatusView';
 import TaskNavigateView from '../../../component/TaskNavigateView';
@@ -39,6 +39,7 @@ const {
 
 
 const JsonView = props => {
+    const {t} = useTranslation();
     const {
         jsonViewContent,
         queryStatus,
@@ -52,7 +53,7 @@ const JsonView = props => {
             if (isQueryMode) {
                 if (_.isEmpty(jsonViewContent)) {
                     return (
-                        <GraphStatusView status={SUCCESS} message={'无Json结果，请查看图或表格数据'} />
+                        <GraphStatusView status={SUCCESS} message={t('analysis.query_result.no_json_result')} />
                     );
                 }
                 return (
@@ -67,19 +68,21 @@ const JsonView = props => {
                     </div>
                 );
             }
-            return <TaskNavigateView message={'提交成功'} taskId={asyncTaskId} />;
+            return <TaskNavigateView message={t('analysis.query_result.submit_success')} taskId={asyncTaskId} />;
         },
-        [asyncTaskId, isQueryMode, jsonViewContent]
+        [asyncTaskId, isQueryMode, jsonViewContent, t]
     );
 
     const statusMessage = useMemo(
         () => ({
-            [STANDBY]: '暂无数据结果',
-            [LOADING]: isQueryMode ? '数据加载中...' : '提交异步任务中...',
-            [FAILED]: queryMessage || '提交失败',
-            [UPLOAD_FAILED]: queryMessage || '导入失败',
+            [STANDBY]: t('analysis.query_result.no_data'),
+            [LOADING]: isQueryMode
+                ? t('analysis.query_result.loading')
+                : t('analysis.query_result.submitting_task'),
+            [FAILED]: queryMessage || t('analysis.query_result.submit_failed'),
+            [UPLOAD_FAILED]: queryMessage || t('analysis.query_result.import_failed'),
         }),
-        [isQueryMode, queryMessage]
+        [isQueryMode, queryMessage, t]
     );
 
     const renderJsonView = () => {

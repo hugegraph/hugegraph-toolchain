@@ -18,7 +18,6 @@
 
 /**
  * @file  自定义节点
- * @author
  */
 
 import icons from '../utils/graph';

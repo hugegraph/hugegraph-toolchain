@@ -18,37 +18,26 @@
 
 /**
  * @file CustomizedCrosspoints PathPatter
- * @author
  */
 
 import React, {useState, useCallback} from 'react';
 import {Input, Form, Button, Select, Tooltip, InputNumber} from 'antd';
 import {DownOutlined, RightOutlined, PlusOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import {propertiesValidator, maxDegreeValidator} from '../../../utils';
 import classnames from 'classnames';
 import s from '../../OltpItem/index.module.scss';
 
-const directionOptions = [
-    {label: '出边', value: 'OUT'},
-    {label: '入边', value: 'IN'},
-    {label: '双边', value: 'BOTH'},
-];
-
-const description = {
-    path_patterns: '表示从起始顶点走过的路径规则，是一组规则的列表',
-    capacity: '遍历过程中最大的访问的顶点数目',
-    limit: '返回的路径的最大数目',
-    direction: '边的方向(OUT,IN,BOTH)，默认是BOTH',
-    labels: '边的类型列表',
-    properties: '通过属性的值过滤边',
-    max_degree: `查询过程中，单个顶点遍历的最大邻接边数目，默认为 10000 
-    (注: 0.12版之前 step 内仅支持 degree 作为参数名, 0.12开始统一使用 max_degree, 并向下兼容 degree 写法)`,
-};
-
 const PathPatternsFormItems = () => {
+    const {t} = useTranslation();
 
     const [patternVisible, setPatternVisible] = useState(false);
     const patternContentClassName = classnames({[s.contentHidden]: !patternVisible});
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const changePatternsVisible = useCallback(() => {
         setPatternVisible(pre => !pre);
@@ -61,10 +50,10 @@ const PathPatternsFormItems = () => {
                     name={[item.name, 'direction']}
                     label="direction"
                     initialValue='BOTH'
-                    tooltip={description.direction}
+                    tooltip={t('analysis.algorithm.form.step.direction')}
                 >
                     <Select
-                        placeholder={description.direction}
+                        placeholder={t('analysis.algorithm.direction_item.tooltip')}
                         allowClear
                         options={directionOptions}
                     />
@@ -72,14 +61,14 @@ const PathPatternsFormItems = () => {
                 <Form.Item
                     name={[item.name, 'labels']}
                     label="labels"
-                    tooltip={description.labels}
+                    tooltip={t('analysis.algorithm.form.step.labels')}
                 >
                     <Input />
                 </Form.Item>
                 <Form.Item
                     name={[item.name, 'properties']}
                     label="properties"
-                    tooltip={description.properties}
+                    tooltip={t('analysis.algorithm.form.step.edge_properties')}
                     rules={[{validator: propertiesValidator}]}
                 >
                     <Input.TextArea />
@@ -89,7 +78,7 @@ const PathPatternsFormItems = () => {
                     label='max_degree'
                     initialValue='10000'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.form.step.max_degree_compatible')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -146,7 +135,7 @@ const PathPatternsFormItems = () => {
                 <div className={s.tooltip}>
                     <Tooltip
                         placement="rightTop"
-                        title={description.path_patterns}
+                        title={t('analysis.algorithm.oltp.customized_crosspoints.path_patterns')}
                     >
                         <QuestionCircleOutlined />
                     </Tooltip>

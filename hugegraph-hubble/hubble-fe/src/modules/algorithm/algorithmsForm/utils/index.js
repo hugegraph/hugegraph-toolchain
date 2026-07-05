@@ -17,28 +17,17 @@
  */
 
 import _ from 'lodash';
-const intergeMessage = '请输入整数';
-const rangeVanlidatorMessage = '请输入-1或大于0的整数';
-const maxDepthMessage = '请输入(0, 5000]范围的整数';
-const maxLimitValidatorMessage = '请输入(0, 800000）范围的整数';
-const positiveIntegerValidatorMessage = '请输入大于等于0的整数';
-const integerValidatorMessage = '请输入整数';
-const positiveNumberMessage = '请输入大于0的整数';
-const skipDegreeRangeMessage = '请输入[0,10000000]的整数';
-const groupPropertyRangeMessage = '请输入大于2的整数';
-const numberMessage = '请输入大于等于0的整数';
-const alphaRangeMessage = '请输入(0,1]的数';
-const topValidatorMessage = '请输入(0,1000)范围的数';
-const maxDiffVanlidatorMessage = '请输入(0,1)范围的数';
-const maxDepthValidatorMessage = '请输入[2,50]的整数';
+import i18n from '../../../../i18n';
+
+const validationMessage = key => i18n.t(`analysis.algorithm.validation.${key}`);
 
 export const maxDegreeValidator = (rule, value) => {
     if (_.isNumber(value)) {
         if (value <= 0 && value !== -1) {
-            return Promise.reject(new Error(rangeVanlidatorMessage));
+            return Promise.reject(new Error(validationMessage('range_or_minus_one')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -47,10 +36,10 @@ export const maxDegreeValidator = (rule, value) => {
 export const maxDepthValidator = (rule, value) => {
     if (!_.isNull(value) && !_.isUndefined(value)) {
         if (value <= 0 || value > 5000) {
-            return Promise.reject(new Error(maxDepthMessage));
+            return Promise.reject(new Error(validationMessage('max_depth_range')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -59,10 +48,10 @@ export const maxDepthValidator = (rule, value) => {
 export const maxDegreeValidatorForCrossPoint = (rule, value) => {
     if (!_.isNull(value)) {
         if (value <= 0 || value >= 800000) {
-            return Promise.reject(new Error(maxLimitValidatorMessage));
+            return Promise.reject(new Error(validationMessage('max_limit_range')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(maxLimitValidatorMessage));
+            return Promise.reject(new Error(validationMessage('max_limit_range')));
         }
     }
     return Promise.resolve();
@@ -76,13 +65,13 @@ export const propertiesValidator = (rule, value) => {
     for (const item of propertiesArr) {
         const [key, value] = item?.split('=');
         if (!key || !value) {
-            return Promise.reject(new Error('请按照key=value的格式换行输入'));
+            return Promise.reject(new Error(validationMessage('properties_format')));
         }
         const valueLength = value.length;
         if (!(valueLength > 2 && value[0] === '\'' && value[valueLength - 1] === '\'')
             && isNaN(+value)
         ) {
-            return Promise.reject(new Error('字符串value请用单括号\'\'包围'));
+            return Promise.reject(new Error(validationMessage('string_value_quote')));
         }
     }
     return Promise.resolve();
@@ -91,10 +80,10 @@ export const propertiesValidator = (rule, value) => {
 export const integerValidator = (rule, value) => {
     if (!_.isNull(value) && !_.isUndefined(value)) {
         if (value < 0) {
-            return Promise.reject(new Error(positiveIntegerValidatorMessage));
+            return Promise.reject(new Error(validationMessage('non_negative_integer')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(integerValidatorMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -103,10 +92,10 @@ export const integerValidator = (rule, value) => {
 export const positiveIntegerValidator = (rule, value) => {
     if (!_.isNull(value) && !_.isUndefined(value)) {
         if (value <= 0) {
-            return Promise.reject(new Error(positiveNumberMessage));
+            return Promise.reject(new Error(validationMessage('positive_integer')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -116,10 +105,10 @@ export const positiveIntegerValidator = (rule, value) => {
 export const skipDegreeValidator = (_, value) => {
     if (value !== null) {
         if (value < 0 || value > 10000000) {
-            return Promise.reject(new Error(skipDegreeRangeMessage));
+            return Promise.reject(new Error(validationMessage('skip_degree_range')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -128,10 +117,10 @@ export const skipDegreeValidator = (_, value) => {
 export const groupPropertyValidator = (rule, value) => {
     if (!_.isNull(value) && !_.isUndefined(value)) {
         if (value <= 2) {
-            return Promise.reject(new Error(groupPropertyRangeMessage));
+            return Promise.reject(new Error(validationMessage('group_property_range')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -140,10 +129,10 @@ export const groupPropertyValidator = (rule, value) => {
 export const includeZeroNumberValidator = (rule, value) => {
     if (!_.isNull(value)) {
         if (value < 0) {
-            return Promise.reject(new Error(numberMessage));
+            return Promise.reject(new Error(validationMessage('non_negative_integer')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();
@@ -152,7 +141,7 @@ export const includeZeroNumberValidator = (rule, value) => {
 export const alphaValidator =  (rule, value) => {
     if (!_.isNull(value)) {
         if (value <= 0 || value > 1) {
-            return Promise.reject(new Error(alphaRangeMessage));
+            return Promise.reject(new Error(validationMessage('alpha_range')));
         }
     }
     return Promise.resolve();
@@ -162,10 +151,10 @@ export const alphaValidator =  (rule, value) => {
 export const topValidator = (_, value) => {
     if (value !== null) {
         if (value <= 0 || value >= 1000) {
-            return Promise.reject(new Error(topValidatorMessage));
+            return Promise.reject(new Error(validationMessage('top_range')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(topValidatorMessage));
+            return Promise.reject(new Error(validationMessage('top_range')));
         }
     }
     return Promise.resolve();
@@ -174,7 +163,7 @@ export const topValidator = (_, value) => {
 
 export const maxDiffValidator = (rule, value) => {
     if (_.isNumber(value) && (value <= 0 || value >= 1)) {
-        return Promise.reject(new Error(maxDiffVanlidatorMessage));
+        return Promise.reject(new Error(validationMessage('open_unit_range')));
     }
     return Promise.resolve();
 };
@@ -182,10 +171,10 @@ export const maxDiffValidator = (rule, value) => {
 export const maxDepthForRankValidator = (rule, value) => {
     if (value !== null) {
         if (value < 2 || value > 50) {
-            return Promise.reject(new Error(maxDepthValidatorMessage));
+            return Promise.reject(new Error(validationMessage('depth_2_50')));
         }
         if (value % 1 !== 0) {
-            return Promise.reject(new Error(maxDepthValidatorMessage));
+            return Promise.reject(new Error(validationMessage('depth_2_50')));
         }
     }
     return Promise.resolve();
@@ -194,7 +183,7 @@ export const maxDepthForRankValidator = (rule, value) => {
 export const greaterThanZeroAndLowerThanOneValidator = (rule, value) => {
     if (value !== null) {
         if (value <= 0 || value >= 1) {
-            return Promise.reject(new Error('请输入(0,1)范围的值'));
+            return Promise.reject(new Error(validationMessage('open_unit_value')));
         }
     }
     return Promise.resolve();
@@ -203,7 +192,7 @@ export const greaterThanZeroAndLowerThanOneValidator = (rule, value) => {
 export const greaterThanZeroAndLowerThanOneContainsValidator = (rule, value) => {
     if (value !== null) {
         if (value < 0 || value > 1) {
-            return Promise.reject(new Error('请输入[0,1]范围的值'));
+            return Promise.reject(new Error(validationMessage('closed_unit_value')));
         }
     }
     return Promise.resolve();
@@ -213,7 +202,7 @@ export const greaterThanZeroAndLowerThanOneContainsValidator = (rule, value) => 
 export const greaterThanZeroAndLowerThanTwoThousandAndOneIntegerValidator = (rule, value) => {
     if (value !== null) {
         if (value > 2000 || value < 1 || value % 1 !== 0) {
-            return Promise.reject(new Error('请输入1到2000范围的整数'));
+            return Promise.reject(new Error(validationMessage('integer_1_2000')));
         }
     }
     return Promise.resolve();
@@ -222,7 +211,7 @@ export const greaterThanZeroAndLowerThanTwoThousandAndOneIntegerValidator = (rul
 export const greaterThanOneAndLowerThanOneHundredThousandIntegerValidator = (rule, value) => {
     if (value !== null) {
         if (value > 100000 || value < 1 || value % 1 !== 0) {
-            return Promise.reject(new Error('请输入1到100000范围的值'));
+            return Promise.reject(new Error(validationMessage('value_1_100000')));
         }
     }
     return Promise.resolve();
@@ -231,7 +220,7 @@ export const greaterThanOneAndLowerThanOneHundredThousandIntegerValidator = (rul
 export const greaterThanZeroAndLowerThanOneHundredThousandIntegerValidator = (rule, value) => {
     if (value !== null) {
         if (value > 100000 || value < 0 || value % 1 !== 0) {
-            return Promise.reject(new Error('请输入[0, 100000]范围的整数'));
+            return Promise.reject(new Error(validationMessage('integer_0_100000')));
         }
     }
     return Promise.resolve();
@@ -240,7 +229,7 @@ export const greaterThanZeroAndLowerThanOneHundredThousandIntegerValidator = (ru
 export const greaterThanOneAndLowerThanTenThousandIntegerValidator = (rule, value) => {
     if (value !== null) {
         if (value > 100000 || value < 1 && value % 1 !== 0) {
-            return Promise.reject(new Error('请输入1-10000之间的整数值'));
+            return Promise.reject(new Error(validationMessage('integer_1_10000')));
         }
     }
     return Promise.resolve();
@@ -249,10 +238,10 @@ export const greaterThanOneAndLowerThanTenThousandIntegerValidator = (rule, valu
 export const limitValidator = (rule, value) => {
     if (value !== null) {
         if (value <= 0 && value !== -1) {
-            return Promise.reject(new Error(rangeVanlidatorMessage));
+            return Promise.reject(new Error(validationMessage('range_or_minus_one')));
         }
         else if (value % 1 !== 0) {
-            return Promise.reject(new Error(intergeMessage));
+            return Promise.reject(new Error(validationMessage('integer')));
         }
     }
     return Promise.resolve();

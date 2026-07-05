@@ -18,7 +18,6 @@
 
 /**
  * @file CapacityItem
- * @author gouzixing@
  */
 
 import React from 'react';

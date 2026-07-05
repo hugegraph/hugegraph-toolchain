@@ -39,16 +39,13 @@ public final class Constant {
     public static final String CONFIG_FILE = "hugegraph-hubble.properties";
 
     public static final String CONTROLLER_PACKAGE =
-                               "com.baidu.hugegraph.controller";
+                               "org.apache.hugegraph.controller";
 
     public static final String COOKIE_USER = "user";
     public static final String API_V1_1 = "/api/v1.1/";
     public static final String API_V1_2 = "/api/v1.2/";
     public static final String API_V1_3 = "/api/v1.3/";
     public static final String API_VERSION = API_V1_3;
-
-    public static final String EDITION_COMMUNITY = "community";
-    public static final String EDITION_COMMERCIAL = "commercial";
 
     public static final String MAPPING_FILE_NAME = "mapping.json";
 

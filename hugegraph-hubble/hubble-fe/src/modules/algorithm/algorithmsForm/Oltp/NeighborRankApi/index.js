@@ -18,12 +18,12 @@
 
 /**
  * @file NeighborRankApi
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, Select, InputNumber, Button, Tooltip} from 'antd';
 import {ScheduleOutlined, DownOutlined, RightOutlined, PlusOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import _ from 'lodash';
 import GraphAnalysisContext from '../../../../Context';
@@ -37,26 +37,8 @@ import s from '../OltpItem/index.module.scss';
 const {NEIGHBOR_RANK_API} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
-const directionOptions = [
-    {label: '出', value: 'OUT'},
-    {label: '入', value: 'IN'},
-    {label: '双向', value: 'BOTH'},
-];
-
-const description = {
-    source: '源顶点id',
-    alpha: '每轮迭代时从某个点往外走的概率，与 PageRank 算法中的 alpha 类似',
-    capacity: '遍历过程中最大的访问定点数目',
-    stepsObj: {
-        direction: '表示边的方向（OUT, IN, BOTH）',
-        labels: '边的类型列表，多个边类型取并集',
-        max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-        top: '在结果中每一层只保留权重最高的前 N 个结果',
-    },
-};
-const algorithmDescription = '在一般图结构中，找出每一层与给定起点相关性最高的前 N 个顶点及其相关度，用图的语义理解就是：从起点往外走， 走到各层各个顶点的概率';
-
 const NeighborRankApi = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -69,6 +51,11 @@ const NeighborRankApi = props => {
     const [isEnableRun, setEnableRun] = useState(false);
     const [isRequiring, setRequiring] = useState(false);
     const [stepVisible, setStepVisible] = useState(false);
+    const directionOptions = [
+        {label: t('ERView.edge.out'), value: 'OUT'},
+        {label: t('ERView.edge.in'), value: 'IN'},
+        {label: t('ERView.edge.both'), value: 'BOTH'},
+    ];
 
     const stepContentClassName = classnames(
         s.stepContent,
@@ -153,7 +140,7 @@ const NeighborRankApi = props => {
                     name={[item.name, 'direction']}
                     label="direction"
                     initialValue='BOTH'
-                    tooltip={description.stepsObj.direction}
+                    tooltip={t('analysis.algorithm.form.step.direction')}
                 >
                     <Select options={directionOptions} allowClear />
                 </Form.Item>
@@ -161,7 +148,7 @@ const NeighborRankApi = props => {
                     name={[item.name, 'labels']}
                     label="labels"
                     rules={[{required: true}]}
-                    tooltip={description.stepsObj.labels}
+                    tooltip={t('analysis.algorithm.form.step.labels')}
                 >
                     <Input />
                 </Form.Item>
@@ -169,7 +156,7 @@ const NeighborRankApi = props => {
                     name={[item.name, 'max_degree']}
                     label="max_degree"
                     rules={[{validator: integerValidator}]}
-                    tooltip={description.stepsObj.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                     initialValue={10000}
                 >
                     <InputNumber />
@@ -177,7 +164,7 @@ const NeighborRankApi = props => {
                 <Form.Item
                     name={[item.name, 'top']}
                     label="top"
-                    tooltip={description.stepsObj.top}
+                    tooltip={t('analysis.algorithm.oltp.neighbor_rank_api.top')}
                     rules={[{validator: topValidator}]}
                     initialValue={100}
                 >
@@ -203,7 +190,7 @@ const NeighborRankApi = props => {
                                         {lists.length > 1 ? (
                                             <Form.Item>
                                                 <Button block danger onClick={() => remove(item.name)}>
-                                                    删除
+                                                    {t('common.action.delete')}
                                                 </Button>
                                             </Form.Item>
                                         ) : null}
@@ -237,7 +224,7 @@ const NeighborRankApi = props => {
                     <div className={s.tooltip}>
                         <Tooltip
                             placement="rightTop"
-                            title='表示从起始顶点走过的路径规则'
+                            title={t('analysis.algorithm.form.step.steps')}
                         >
                             <QuestionCircleOutlined />
                         </Tooltip>
@@ -256,7 +243,7 @@ const NeighborRankApi = props => {
                 <AlgorithmNameHeader
                     icon={<ScheduleOutlined />}
                     name={NEIGHBOR_RANK_API}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.neighbor_rank_api.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -277,7 +264,7 @@ const NeighborRankApi = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip={description.source}
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -286,7 +273,7 @@ const NeighborRankApi = props => {
                     label="alpha"
                     initialValue={0.85}
                     rules={[{validator: alphaValidator}]}
-                    tooltip={description.alpha}
+                    tooltip={t('analysis.algorithm.oltp.common.alpha')}
                 >
                     <InputNumber style={{width: '100%'}} step={0.01} />
                 </Form.Item>
@@ -295,7 +282,7 @@ const NeighborRankApi = props => {
                     label="capacity"
                     initialValue={10000000}
                     rules={[{validator: positiveIntegerValidator}]}
-                    tooltip={description.interge}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>

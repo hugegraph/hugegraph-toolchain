@@ -18,7 +18,6 @@
 
 /**
  * @file 切换层次布局组件 Concentric
- * @author
  */
 
 import React from 'react';

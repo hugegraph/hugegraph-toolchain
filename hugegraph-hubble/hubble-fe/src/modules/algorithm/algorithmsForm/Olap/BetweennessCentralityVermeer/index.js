@@ -18,7 +18,6 @@
 
 /**
  * @file BetweennessCentralityVermeer算法
- * @author gouzixing@
  */
 
 import React, {useState, useCallback, useContext, useEffect} from 'react';

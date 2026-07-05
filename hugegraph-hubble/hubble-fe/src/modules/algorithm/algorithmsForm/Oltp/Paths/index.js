@@ -18,12 +18,12 @@
 
 /**
  * @file 查找所有路径（GET）
- * @author
  */
 
 import React, {useState, useCallback, useContext} from 'react';
 import {Input, Form, Collapse, InputNumber} from 'antd';
 import {PullRequestOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import LimitItem from '../../LimitItem';
 import DirectionItem from '../../DirectionItem';
@@ -34,21 +34,11 @@ import {GRAPH_STATUS, Algorithm_Url, ALGORITHM_NAME} from '../../../../../utils/
 import {maxDepthValidator, maxDegreeValidator, maxDegreeValidatorForCrossPoint} from '../../utils';
 import _ from 'lodash';
 
-const algorithmDescription = '根据起始顶点、目的顶点、方向、边的类型（可选）和最大深度等条件查找所有路径';
 const {PATHS} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
-const description = {
-    source: '起始顶点id',
-    target: '目的顶点id',
-    direction: '起始顶点向外发散的方向(出边，入边，双边)',
-    max_depth: '最大步数',
-    label: '边的类型，默认代表所有edge label',
-    max_degree: '查询过程中，单个顶点遍历的最大邻接边数目',
-    limit: '查询到的目标顶点个数，也是返回的最短路径的条数',
-    capacity: '遍历过程中最大的访问的顶点数目',
-};
 
 const Paths = props => {
+    const {t} = useTranslation();
     const {
         handleFormSubmit,
         searchValue,
@@ -117,7 +107,7 @@ const Paths = props => {
                 <AlgorithmNameHeader
                     icon={<PullRequestOutlined />}
                     name={PATHS}
-                    description={algorithmDescription}
+                    description={t('analysis.algorithm.oltp.paths.desc')}
                     isRunning={isRequiring}
                     isDisabled={!isEnableRun}
                     handleRunning={handleRunning}
@@ -137,7 +127,7 @@ const Paths = props => {
                     label='source'
                     name='source'
                     rules={[{required: true}]}
-                    tooltip={description.source}
+                    tooltip={t('analysis.algorithm.oltp.common.source_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
@@ -145,25 +135,25 @@ const Paths = props => {
                     label='target'
                     name='target'
                     rules={[{required: true}]}
-                    tooltip={description.target}
+                    tooltip={t('analysis.algorithm.oltp.common.target_vertex_id')}
                 >
                     <Input />
                 </Form.Item>
                 <DirectionItem
-                    desc={description.direction}
+                    desc={t('analysis.algorithm.form.step.direction')}
                 />
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
                     rules={[{required: true}, {validator: maxDepthValidator}]}
-                    tooltip={description.max_depth}
+                    tooltip={t('analysis.algorithm.oltp.common.max_steps')}
                 >
                     <InputNumber />
                 </Form.Item>
                 <Form.Item
                     name='label'
                     label="label"
-                    tooltip={description.label}
+                    tooltip={t('analysis.algorithm.label_item.tooltip')}
                 >
                     <Input />
                 </Form.Item>
@@ -172,7 +162,7 @@ const Paths = props => {
                     name='max_degree'
                     initialValue='10000'
                     rules={[{validator: maxDegreeValidatorForCrossPoint}]}
-                    tooltip={description.max_degree}
+                    tooltip={t('analysis.algorithm.max_degree_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
@@ -181,13 +171,13 @@ const Paths = props => {
                     name='capacity'
                     initialValue='10000000'
                     rules={[{validator: maxDegreeValidator}]}
-                    tooltip={description.capacity}
+                    tooltip={t('analysis.algorithm.capacity_item.tooltip')}
                 >
                     <InputNumber />
                 </Form.Item>
                 <LimitItem
                     initialValue='10'
-                    desc={description.limit}
+                    desc={t('analysis.algorithm.oltp.paths.limit')}
                 />
             </Form>
         </Collapse.Panel>

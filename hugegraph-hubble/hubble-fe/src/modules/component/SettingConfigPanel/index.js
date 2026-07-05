@@ -18,7 +18,6 @@
 
 /**
  * @file  设置表单
- * @author
  */
 
 import React, {useCallback, useEffect, useState} from 'react';

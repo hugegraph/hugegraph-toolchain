@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Routes, Route} from 'react-router-dom';
+import {Navigate, Routes, Route, useParams} from 'react-router-dom';
 import Datasource from '../pages/Datasource';
 import Task from '../pages/Task';
 import TaskEdit from '../pages/TaskEdit/index';
@@ -30,9 +30,7 @@ import GraphDetail from '../pages/GraphDetail';
 import My from '../pages/My';
 // import Super from '../pages/Super';
 import Account from '../pages/Account';
-import Role from '../pages/Role';
 import RoleAuth from '../pages/Role/Auth';
-import Resource from '../pages/Resource';
 import Navigation from '../pages/Navigation';
 import Error404 from '../pages/Error404';
 import Test from '../pages/Test';
@@ -40,6 +38,42 @@ import Test from '../pages/Test';
 // 图分析的路由
 import GraphAnalysis from '../pages/GraphAnalysis';
 import AsyncTaskResultPage from '../pages/AsyncTaskResult';
+import {isPdEnabled} from '../utils/config';
+import {
+    DEFAULT_GRAPHSPACE,
+    shouldUseNonPdDefaultGraphspace,
+} from '../utils/productMode';
+
+const PdOnlyRoute = ({children, fallback = '/navigation'}) => {
+    return isPdEnabled() ? children : <Navigate to={fallback} replace />;
+};
+
+const GraphSpaceListRoute = () => {
+    return isPdEnabled()
+        ? <GraphSpace />
+        : <Navigate to={`/graphspace/${DEFAULT_GRAPHSPACE}`} replace />;
+};
+
+const GraphRoute = () => {
+    const {graphspace} = useParams();
+
+    if (shouldUseNonPdDefaultGraphspace(isPdEnabled(), graphspace)) {
+        return <Navigate to={`/graphspace/${DEFAULT_GRAPHSPACE}`} replace />;
+    }
+
+    return <Graph />;
+};
+
+const GraphspaceParamRoute = ({children, fallback}) => {
+    const {graphspace, graphSpace} = useParams();
+    const currentGraphspace = graphspace ?? graphSpace;
+
+    if (shouldUseNonPdDefaultGraphspace(isPdEnabled(), currentGraphspace)) {
+        return <Navigate to={fallback ?? `/graphspace/${DEFAULT_GRAPHSPACE}`} replace />;
+    }
+
+    return children;
+};
 
 const RouteList = ({element}) => {
     return (
@@ -49,20 +83,47 @@ const RouteList = ({element}) => {
                 <Route index element={<Navigation />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/source" element={<Datasource />} />
-                <Route path="/graphspace/:graphspace/schema" element={<Schema />} />
-                <Route path="/graphspace/:graphspace" element={<Graph />} />
-                <Route path='/graphspace' element={<GraphSpace />} />
-                <Route path='/graphspace/:graphspace/graph/:graph/meta' element={<Meta />} />
-                <Route path='/graphspace/:graphspace/graph/:graph/detail' element={<GraphDetail />} />
+                <Route
+                    path="/graphspace/:graphspace/schema"
+                    element={(
+                        <PdOnlyRoute fallback={`/graphspace/${DEFAULT_GRAPHSPACE}`}>
+                            <Schema />
+                        </PdOnlyRoute>
+                    )}
+                />
+                <Route path="/graphspace/:graphspace" element={<GraphRoute />} />
+                <Route path='/graphspace' element={<GraphSpaceListRoute />} />
+                <Route
+                    path='/graphspace/:graphspace/graph/:graph/meta'
+                    element={(
+                        <GraphspaceParamRoute>
+                            <Meta />
+                        </GraphspaceParamRoute>
+                    )}
+                />
+                <Route
+                    path='/graphspace/:graphspace/graph/:graph/detail'
+                    element={(
+                        <GraphspaceParamRoute>
+                            <GraphDetail />
+                        </GraphspaceParamRoute>
+                    )}
+                />
 
                 <Route path="/task" element={<Task />} />
                 <Route path="/task/edit" element={<TaskEdit />} />
                 <Route path="/task/detail/:taskid" element={<TaskDetail />} />
 
                 <Route path='/my' element={<My />} />
-                <Route path='/account' element={<Account />} />
+                <Route
+                    path='/account'
+                    element={<PdOnlyRoute fallback='/my'><Account /></PdOnlyRoute>}
+                />
                 {/* <Route path='/role' element={<Role />} /> */}
-                <Route path='/role/graphspace/:graphspace/:role' element={<RoleAuth />} />
+                <Route
+                    path='/role/graphspace/:graphspace/:role'
+                    element={<PdOnlyRoute><RoleAuth /></PdOnlyRoute>}
+                />
                 {/* <Route path='/resource' element={<Resource />} /> */}
                 {/* <Route path="/:moduleName" element={<GraphAnalysis />} /> */}
                 <Route path="/gremlin" element={<GraphAnalysis moduleName={'gremlin'} />} />
@@ -71,13 +132,41 @@ const RouteList = ({element}) => {
                 {/* 从数据管理带图空间和图信息跳转到图分析平台的路由 */}
                 {/* <Route path="/:moduleName/:graphSpace/:graph" element={<GraphAnalysis />} />
                 <Route path="/:moduleName/:taskId" element={<GraphAnalysis />} /> */}
-                <Route path="/gremlin/:graphSpace/:graph" element={<GraphAnalysis moduleName={'gremlin'} />} />
+                <Route
+                    path="/gremlin/:graphSpace/:graph"
+                    element={(
+                        <GraphspaceParamRoute fallback='/gremlin'>
+                            <GraphAnalysis moduleName={'gremlin'} />
+                        </GraphspaceParamRoute>
+                    )}
+                />
                 <Route path="/gremlin/:taskId" element={<GraphAnalysis moduleName={'gremlin'} />} />
-                <Route path="/algorithms/:graphSpace/:graph" element={<GraphAnalysis moduleName={'algorithms'} />} />
+                <Route
+                    path="/algorithms/:graphSpace/:graph"
+                    element={(
+                        <GraphspaceParamRoute fallback='/algorithms'>
+                            <GraphAnalysis moduleName={'algorithms'} />
+                        </GraphspaceParamRoute>
+                    )}
+                />
                 <Route path="/algorithms/:taskId" element={<GraphAnalysis moduleName={'algorithms'} />} />
-                <Route path="/asyncTasks/:graphSpace/:graph" element={<GraphAnalysis moduleName={'asyncTasks'} />} />
+                <Route
+                    path="/asyncTasks/:graphSpace/:graph"
+                    element={(
+                        <GraphspaceParamRoute fallback='/asyncTasks'>
+                            <GraphAnalysis moduleName={'asyncTasks'} />
+                        </GraphspaceParamRoute>
+                    )}
+                />
                 <Route path="/asyncTasks/:taskId" element={<GraphAnalysis moduleName={'asyncTasks'} />} />
-                <Route path="/asyncTasks/result/:graphspace/:graph/:taskId" element={<AsyncTaskResultPage />} />
+                <Route
+                    path="/asyncTasks/result/:graphspace/:graph/:taskId"
+                    element={(
+                        <GraphspaceParamRoute fallback='/asyncTasks'>
+                            <AsyncTaskResultPage />
+                        </GraphspaceParamRoute>
+                    )}
+                />
 
                 <Route path="/navigation" element={<Navigation />} />
                 <Route path="*" element={<Error404 />} />

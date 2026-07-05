@@ -18,7 +18,6 @@
 
 /**
  * @file  画布数据统计
- * @author
  */
 
 import React from 'react';

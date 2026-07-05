@@ -79,9 +79,6 @@ public class SaasGraphViewController extends GremlinController {
         this.historyService.save(history);
         StopWatch timer = StopWatch.createStarted();
 
-        //uuapLoginController.tryLogin(graphSpace, graph,
-        //                             query.userName, query.password);
-        // TODO X Deleted
         try {
             HugeClient client = this.authClient(graphSpace, graph);
             GremlinResult result =
@@ -121,10 +118,6 @@ public class SaasGraphViewController extends GremlinController {
         StopWatch timer = StopWatch.createStarted();
         long asyncId = 0L;
         Map<String, Object> result = new HashMap<>(3);
-
-        //uuapLoginController.tryLogin(graphSpace, graph,
-        //                             query.userName, query.password);
-        // TODO C Deleted
 
         try {
             HugeClient client = this.authClient(graphSpace, graph);
@@ -173,4 +166,3 @@ public class SaasGraphViewController extends GremlinController {
         }
     }
 }
-

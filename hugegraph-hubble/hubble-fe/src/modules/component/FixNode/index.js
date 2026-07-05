@@ -18,7 +18,6 @@
 
 /**
  * @file  FixNode 固定节点
- * @author
  */
 
 import React, {useCallback, useContext, useState, useEffect} from 'react';

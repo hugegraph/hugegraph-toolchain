@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @author chengxin05
  * @date 2024/3/20
  * @desc PrometheusService.class 作用为请求prometheus上存储的指标数据
  */

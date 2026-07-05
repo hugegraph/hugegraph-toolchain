@@ -18,16 +18,17 @@
 
 /**
  * @file 图算法 收藏
- * @author
  */
 
 import React, {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import Highlighter from 'react-highlight-words';
 import {Table, Input, Popconfirm, Modal} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
 import c from './index.module.scss';
 
 const Favorite = props => {
+    const {t} = useTranslation();
     const {
         isLoading,
         pageFavorite,
@@ -73,20 +74,22 @@ const Favorite = props => {
 
     const onConfirm = id => {
         Modal.confirm({
-            title: '确认删除',
-            content: '是否确认删除该条收藏语句？',
-            okText: '确定',
-            cancelText: '取消',
+            title: t('analysis.logs.confirm_delete'),
+            content: t('analysis.logs.delete_favorite_confirm'),
+            okText: t('common.action.confirm'),
+            cancelText: t('common.action.cancel'),
             onOk: () => onDel(id),
         });
     };
 
     const editFavoriteForm = (
         <>
-            <div style={{marginBottom: '16px'}}>修改名称</div>
+            <div style={{marginBottom: '16px'}}>
+                {t('analysis.logs.edit_name')}
+            </div>
             <Input
                 style={{marginBottom: '18px'}}
-                placeholder="请输入收藏名称"
+                placeholder={t('analysis.logs.favorite_name_placeholder')}
                 showCount
                 maxLength={48}
                 value={favoriteName}
@@ -97,13 +100,13 @@ const Favorite = props => {
 
     const queryFavoriteColumns = [
         {
-            title: '时间',
+            title: t('analysis.logs.column.time'),
             dataIndex: 'create_time',
             width: '25%',
             sorter: true,
         },
         {
-            title: '名称',
+            title: t('analysis.logs.column.name'),
             dataIndex: 'name',
             width: '15%',
             sorter: true,
@@ -119,7 +122,7 @@ const Favorite = props => {
             },
         },
         {
-            title: '收藏语句',
+            title: t('analysis.logs.column.favorite_statement'),
             dataIndex: 'content',
             width: '40%',
             render(text, rowData) {
@@ -141,7 +144,7 @@ const Favorite = props => {
             },
         },
         {
-            title: '操作',
+            title: t('analysis.logs.column.action'),
             dataIndex: 'manipulation',
             width: '20%',
             render(_, rowData, index) {
@@ -152,18 +155,20 @@ const Favorite = props => {
                             className={c.favoriteModel}
                             title={editFavoriteForm}
                             onConfirm={() => onSaveEditFavorite(rowData)}
-                            okText="保存"
+                            okText={t('analysis.logs.action.save')}
                             okButtonProps={{disabled: isDisabledName}}
-                            cancelText="取消"
+                            cancelText={t('common.action.cancel')}
                         >
                             <a
                                 style={{marginLeft: '8px'}}
                                 onClick={() => onEditFavorite(rowData)}
                             >
-                                修改名称
+                                {t('analysis.logs.action.edit_name')}
                             </a>
                         </Popconfirm>
-                        <a style={{marginLeft: '8px'}} onClick={() => onConfirm(rowData.id)}>删除</a>
+                        <a style={{marginLeft: '8px'}} onClick={() => onConfirm(rowData.id)}>
+                            {t('common.action.delete')}
+                        </a>
                     </div>
                 );
             },
@@ -199,7 +204,7 @@ const Favorite = props => {
                     value={searchCache}
                     onChange={onSearchChange}
                     onSearch={onSearch}
-                    placeholder='搜索收藏名称或语句'
+                    placeholder={t('analysis.logs.search_placeholder')}
                     allowClear
                     style={{width: '215px'}}
                 />

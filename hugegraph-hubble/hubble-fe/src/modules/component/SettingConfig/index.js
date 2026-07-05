@@ -18,14 +18,15 @@
 
 /**
  * @file SettingConfig
- * @author
  */
 
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {SettingOutlined} from '@ant-design/icons';
 
 const SettingConfig = props => {
+    const {t} = useTranslation();
     const {
         buttonEnable,
         onClick,
@@ -47,7 +48,7 @@ const SettingConfig = props => {
                 type={'text'}
                 disabled={!buttonEnable}
             >
-                设置
+                {t('analysis.canvas.setting')}
             </Button>
         </Tooltip>
     );

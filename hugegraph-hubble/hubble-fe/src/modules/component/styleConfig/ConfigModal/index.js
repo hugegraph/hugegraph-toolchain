@@ -18,11 +18,11 @@
 
 /**
  * @file 图分析组件 外观设置弹窗
- * @author
  */
 
 import React, {useCallback, useEffect, useState} from 'react';
 import {Modal, Form, Select, Divider, Switch} from 'antd';
+import {useTranslation} from 'react-i18next';
 import '@antv/graphin-icons/dist/index.css';
 import _ from 'lodash';
 
@@ -38,17 +38,6 @@ const FORM_TYPE = {
     EDGES: 'edges',
 };
 
-const formTypeOptions = [
-    {value: FORM_TYPE.NODES, label: '点外观'},
-    {value: FORM_TYPE.EDGES, label: '边外观'},
-];
-const shapesOptions = [
-    {value: 'circle', label: '圆型'},
-    {value: 'diamond', label: '菱形'},
-    {value: 'triangle', label: '三角形'},
-    {value: 'star', label: '五角星'},
-    {value: 'ellipse', label: '椭圆'},
-];
 const sizeOptions = [
     {value: 20, label: '20'},
     {value: 25, label: '25'},
@@ -82,10 +71,6 @@ const fontSizeOptions = [
     {value: 24, label: '24'},
     {value: 26, label: '26'},
 ];
-const lineTypeOptions = [
-    {value: 'line', label: '直线'},
-    {value: 'dashed', label: '虚线'},
-];
 const opacityOptions = [
     {value: 0.2, label: '0.2'},
     {value: 0.4, label: '0.4'},
@@ -113,6 +98,7 @@ const offsetMap = {
 };
 
 const ConfigModal = props => {
+    const {t} = useTranslation();
     const {
         style,
         visible,
@@ -129,6 +115,22 @@ const ConfigModal = props => {
     const [edgeType, setEdgeType] = useState();
     const isNodeForm = formType === FORM_TYPE.NODES;
     const isFormDisabled = isNodeForm ? !nodeType : !edgeType;
+    const placeholder = t('style_config.select_placeholder');
+    const formTypeOptions = [
+        {value: FORM_TYPE.NODES, label: t('style_config.vertex_appearance')},
+        {value: FORM_TYPE.EDGES, label: t('style_config.edge_appearance')},
+    ];
+    const shapesOptions = [
+        {value: 'circle', label: t('style_config.shape_circle')},
+        {value: 'diamond', label: t('style_config.shape_diamond')},
+        {value: 'triangle', label: t('style_config.shape_triangle')},
+        {value: 'star', label: t('style_config.shape_star')},
+        {value: 'ellipse', label: t('style_config.shape_ellipse')},
+    ];
+    const lineTypeOptions = [
+        {value: 'line', label: t('style_config.line_solid')},
+        {value: 'dashed', label: t('style_config.line_dashed')},
+    ];
 
     useEffect(
         () => {
@@ -456,54 +458,54 @@ const ConfigModal = props => {
                 wrapperCol={{span: 18}}
                 onValuesChange={handleNodesStyleChange}
             >
-                <Form.Item name="shape" label="形状" required>
+                <Form.Item name="shape" label={t('style_config.shape')} required>
                     <Select
                         options={shapesOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="size" label="大小" required>
+                <Form.Item name="size" label={t('style_config.size')} required>
                     <Select
                         options={sizeOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="strokeColor" label="边框色" required>
+                <Form.Item name="strokeColor" label={t('style_config.border_color')} required>
                     <InputColorSelect disable={isFormDisabled} />
                 </Form.Item>
-                <Form.Item name="lineWidth" label="边框粗细" required>
+                <Form.Item name="lineWidth" label={t('style_config.border_width')} required>
                     <Select
                         options={strokeWidthOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="fillColor" label="填充色" required>
+                <Form.Item name="fillColor" label={t('style_config.fill_color')} required>
                     <InputColorSelect disable={isFormDisabled} />
                 </Form.Item>
-                <Form.Item name="iconType" label="图标样式">
+                <Form.Item name="iconType" label={t('style_config.icon_style')}>
                     <IconSelect disabled={isFormDisabled} />
                 </Form.Item>
-                <Form.Item name="iconColor" label="图标颜色">
+                <Form.Item name="iconColor" label={t('style_config.icon_color')}>
                     <InputColorSelect disable={isFormDisabled} />
                 </Form.Item>
-                <Form.Item name="labelSize" label="标签大小" required>
+                <Form.Item name="labelSize" label={t('style_config.label_size')} required>
                     <Select
                         options={fontSizeOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="labelColor" label="标签颜色" required>
+                <Form.Item name="labelColor" label={t('style_config.label_color')} required>
                     <InputColorSelect disable={isFormDisabled} />
                 </Form.Item>
-                <Form.Item name="opacity" label="节点透明度" required>
+                <Form.Item name="opacity" label={t('style_config.node_opacity')} required>
                     <Select
                         options={opacityOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
             </Form>
@@ -518,36 +520,36 @@ const ConfigModal = props => {
                 wrapperCol={{span: 18}}
                 onValuesChange={handleEdgesStyleChange}
             >
-                <Form.Item name="type" label="类别" required>
+                <Form.Item name="type" label={t('style_config.type')} required>
                     <Select
                         options={lineTypeOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="width" label="边的粗细" required>
+                <Form.Item name="width" label={t('style_config.edge_width')} required>
                     <Select
                         options={lineWidthOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="color" label="边的颜色" required>
+                <Form.Item name="color" label={t('style_config.edge_color')} required>
                     <InputColorSelect disable={isFormDisabled} />
                 </Form.Item>
-                <Form.Item name="labelSize" label="标签大小" required>
+                <Form.Item name="labelSize" label={t('style_config.label_size')} required>
                     <Select
                         options={fontSizeOptions}
                         disabled={isFormDisabled}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
-                <Form.Item name="labelColor" label="标签颜色" required>
+                <Form.Item name="labelColor" label={t('style_config.label_color')} required>
                     <InputColorSelect disable={isFormDisabled} />
                 </Form.Item>
                 <Form.Item
                     name="edgeAnimation"
-                    label="边动画"
+                    label={t('style_config.edge_animation')}
                     valuePropName="checked"
                 >
                     <Switch
@@ -565,7 +567,7 @@ const ConfigModal = props => {
 
     return (
         <Modal
-            title="外观设置"
+            title={t('style_config.title')}
             open={visible}
             onOk={handleModalOk}
             onCancel={handleCancel}
@@ -573,29 +575,29 @@ const ConfigModal = props => {
             className={c.styleConfigModal}
             forceRender
         >
-            <div className={c.title}>基础属性</div>
+            <div className={c.title}>{t('style_config.basic_properties')}</div>
             <Form
                 labelCol={{span: 6}}
                 wrapperCol={{span: 18}}
             >
-                <Form.Item label="点外观/边外观" required>
+                <Form.Item label={t('style_config.appearance_type')} required>
                     <Select
                         options={formTypeOptions}
                         value={formType}
                         onChange={hanleFormTypeChange}
                     />
                 </Form.Item>
-                <Form.Item label="类型" required>
+                <Form.Item label={t('style_config.type')} required>
                     <Select
                         options={typeOptions}
                         value={isNodeForm ? nodeType : edgeType}
                         onChange={handleItemTypeChange}
-                        placeholder="请选择"
+                        placeholder={placeholder}
                     />
                 </Form.Item>
             </Form>
             <Divider />
-            <div className={c.title}>外观配置</div>
+            <div className={c.title}>{t('style_config.appearance_config')}</div>
             {isNodeForm ? renderNodesConfigForm() : renderEdgesConfigForm()}
         </Modal>
     );

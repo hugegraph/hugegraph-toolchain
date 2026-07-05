@@ -29,6 +29,7 @@ import {
 import {Link, useLocation} from 'react-router-dom';
 import * as user from '../../utils/user';
 import {isPdEnabled} from '../../utils/config';
+import {getManageNavItems} from '../../utils/productMode';
 import {useTranslation} from 'react-i18next';
 
 const items = t => {
@@ -36,12 +37,13 @@ const items = t => {
     const pdMode = isPdEnabled();
     const MY = {label: <Link to='/my'>{t('home.my')}</Link>, key: 'my'};
     const ACCOUNT = {label: <Link to='/account'>{t('home.account')}</Link>, key: 'account'};
-    const RESOURCE = {label: <Link to='/resource'>{t('home.resource')}</Link>, key: 'resource'};
-    const ROLE = {label: <Link to='/role'>{t('home.role')}</Link>, key: 'role'};
 
     // TODO temporary hided the resource and role modules
     let systemList = [MY];
-    if (userInfo.is_superadmin) {
+    if (!pdMode) {
+        systemList = [MY];
+    }
+    else if (userInfo.is_superadmin) {
         // systemList = [MY, ACCOUNT, RESOURCE, ROLE];
         systemList = [MY, ACCOUNT];
     }
@@ -51,21 +53,10 @@ const items = t => {
     }
 
     // Dynamic manage menu based on deployment mode
-    const manageChildren = pdMode
-        ? [
-            {
-                label: <Link to='/graphspace'>{t('manage.graphspace')}</Link>,
-                key: 'graphspace',
-            },
-            {label: <Link to='/source'>{t('manage.source')}</Link>, key: 'source'},
-            {label: <Link to='/task'>{t('manage.task')}</Link>, key: 'task'},
-        ]
-        : [
-            {
-                label: <Link to='/graphspace/DEFAULT'>{t('manage.graphspace')}</Link>,
-                key: 'graph',
-            },
-        ];
+    const manageChildren = getManageNavItems(pdMode).map(item => ({
+        label: <Link to={item.url}>{t(`manage.${item.key}`)}</Link>,
+        key: item.key,
+    }));
 
     const menu = [
         {
@@ -119,7 +110,7 @@ const Sidebar = () => {
         <Layout.Sider
             collapsible
             collapsed={collapsed}
-            onCollapse={value => setCollapsed(value)}
+            onCollapse={setCollapsed}
             theme='light'
             trigger={
                 collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />

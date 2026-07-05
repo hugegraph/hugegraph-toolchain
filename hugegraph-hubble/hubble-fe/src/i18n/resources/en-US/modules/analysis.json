@@ -3,12 +3,130 @@
     "name": "Business Analysis",
     "query": {
       "name": "Graph Query",
-      "placeholder": "Enter a query statement"
+      "placeholder": "Enter a query statement",
+      "gremlin_tab": "Gremlin",
+      "cypher_tab": "Cypher",
+      "execute_query": "Run Query",
+      "execute_task": "Run Task",
+      "execute_mode_desc": "Query mode is for small analyses that return within 30 seconds. Task mode is for larger analyses that take longer; task details are available in Task Management.",
+      "empty_query": "Query statement cannot be empty",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "favorite": "Favorite",
+      "favorite_statement": "Favorite Statement",
+      "favorite_name_placeholder": "Enter favorite name",
+      "favorite_success": "Favorited successfully",
+      "favorite_failed": "Failed to favorite"
+    },
+    "query_result": {
+      "graph": "Graph",
+      "table": "Table",
+      "no_data": "No data",
+      "loading": "Loading data...",
+      "run_failed": "Run failed",
+      "submitting_task": "Submitting async task...",
+      "submit_failed": "Submit failed",
+      "import_failed": "Import failed",
+      "submit_success": "Submitted successfully",
+      "no_graph_result": "No graph result. Check Table or Json data.",
+      "no_table_result": "No table result. Check Graph or Json data.",
+      "no_json_result": "No Json result. Check Graph or Table data.",
+      "expand_failed": "Failed to expand",
+      "no_more_neighbors": "No more adjacent vertices"
+    },
+    "canvas": {
+      "import": "Import",
+      "export": "Export",
+      "style": "Style",
+      "filter": "Filter",
+      "layout": "Layout",
+      "setting": "Settings",
+      "new": "New",
+      "statistics": "Statistics",
+      "mode_2d": "2D Mode",
+      "mode_3d": "3D Mode",
+      "import_success": "Imported successfully",
+      "export_json": "Export Json",
+      "export_png": "Export image",
+      "export_json_title": "Export Json",
+      "export_image_title": "Export image",
+      "file_name": "File Name",
+      "file_name_required": "Enter a file name",
+      "file_name_placeholder": "Enter a file name",
+      "add_vertex": "Add Vertex",
+      "add_in_edge": "Add In Edge",
+      "add_out_edge": "Add Out Edge",
+      "tooltip": {
+        "import_2d": "The current graph already has data. Clear it before importing.",
+        "import_3d": "Import is not supported in 3D mode.",
+        "export_2d": "No graph data to export.",
+        "export_3d": "Export is not supported in 3D mode.",
+        "style_2d": "No graph data to style.",
+        "style_3d": "Style settings are not supported in 3D mode.",
+        "filter_2d": "No graph data to filter.",
+        "filter_3d": "Filter is not supported in 3D mode.",
+        "layout_2d": "No graph data to lay out.",
+        "layout_3d": "Layout settings are not supported in 3D mode.",
+        "setting_2d": "No graph data to configure.",
+        "setting_3d": "Settings are not supported in 3D mode.",
+        "new_2d": "No graph data to edit.",
+        "new_3d": "New graph elements are not supported in 3D mode.",
+        "statistics_2d": "No graph data to analyze.",
+        "statistics_3d": "Statistics are not supported in 3D mode.",
+        "switch_2d": "No graph data to switch."
+      }
+    },
+    "logs": {
+      "execute_tab": "Execution Records",
+      "favorite_tab": "Favorite Queries",
+      "favorite_success": "Favorited successfully",
+      "favorite_failed": "Failed to favorite",
+      "delete_success": "Deleted successfully",
+      "delete_failed": "Delete failed",
+      "edit_success": "Updated successfully",
+      "edit_failed": "Update failed",
+      "favorite_statement": "Favorite Statement",
+      "favorite_name_placeholder": "Enter favorite name",
+      "edit_name": "Edit Name",
+      "confirm_delete": "Confirm Delete",
+      "delete_favorite_confirm": "Delete this favorite statement?",
+      "search_placeholder": "Search favorite names or statements",
+      "column": {
+        "time": "Time",
+        "type": "Execution Type",
+        "content": "Execution Content",
+        "status": "Status",
+        "duration": "Duration",
+        "action": "Actions",
+        "name": "Name",
+        "favorite_statement": "Favorite Statement"
+      },
+      "type": {
+        "GREMLIN": "GREMLIN Query",
+        "GREMLIN_ASYNC": "GREMLIN Task",
+        "ALGORITHM": "Algorithm Task",
+        "CYPHER": "CYPHER Query"
+      },
+      "status": {
+        "SUCCESS": "Success",
+        "ASYNC_TASK_SUCCESS": "Submitted",
+        "ASYNC_TASK_RUNNING": "Submitting",
+        "RUNNING": "Running",
+        "FAILED": "Failed",
+        "ASYNC_TASK_FAILED": "Submit Failed"
+      },
+      "action": {
+        "favorite": "Favorite",
+        "load_statement": "Load Statement",
+        "edit_name": "Edit Name",
+        "save": "Save"
+      }
     },
     "algorithm": {
       "name": "Graph Algorithm",
       "placeholder": "Algorithm Query",
       "run": "Run",
+      "task_submit_success": "{{name}} task submitted successfully",
       "common": {
         "instance_num": "Instance Count",
         "input_limit_edges_per_vertex": "Max Outgoing Edges",
@@ -24,6 +142,55 @@
         "JVM_memory": "JVM memory size, 32 GB by default",
         "source": "Source Vertex ID",
         "query_tooltip": "OLAP algorithms can be used only after the selected graph data is loaded."
+      },
+      "form": {
+        "vertices_required": "Specify ids, or specify both label and properties",
+        "vertices_ids_tooltip": "Provide source or target vertices by vertex ID list. If ids is empty, label and properties are used together to query vertices.",
+        "vertices_label_tooltip": "Vertex label. label and properties take effect only when ids is empty.",
+        "vertices_properties_tooltip": "Property map. Keys are property names and values are property values defined by schema. Values can be lists; a property matches when its value is in the list.",
+        "edge_steps": {
+          "label": "Edge label",
+          "properties": "Filter edges by property values"
+        },
+        "vertex_steps": {
+          "label": "Vertex label",
+          "properties": "Filter vertices by property values"
+        },
+        "step": {
+          "steps": "Step list from the source vertex",
+          "direction": "Traversal direction from the source vertex",
+          "labels": "Edge label list",
+          "edge_properties": "Property map used to filter edges. Keys are property names and values are property values defined by schema. Values can be lists; a property matches when its value is in the list.",
+          "max_depth": "Number of steps",
+          "max_times": "Repeat count for the current step. N means this step can be repeated 1 to N times from the source vertex.",
+          "max_degree": "Maximum adjacent edges traversed from a single vertex during the query",
+          "max_degree_compatible": "Maximum adjacent edges traversed from a single vertex. Before 0.12, step only supported degree; since 0.12 it uses max_degree and remains backward compatible with degree.",
+          "skip_degree": "Minimum edge count for skipping super vertices. When a vertex has more adjacent edges than skip_degree, the vertex is skipped. Optional; when enabled, skip_degree must be >= max_degree. Default 0 disables skipping. Enabling it may add traversal overhead.",
+          "edge_steps": "Edge step list",
+          "vertex_steps": "Vertex step list"
+        }
+      },
+      "validation": {
+        "integer": "Enter an integer",
+        "range_or_minus_one": "Enter -1 or an integer greater than 0",
+        "max_depth_range": "Enter an integer in the range (0, 5000]",
+        "max_limit_range": "Enter an integer in the range (0, 800000)",
+        "non_negative_integer": "Enter an integer greater than or equal to 0",
+        "positive_integer": "Enter an integer greater than 0",
+        "skip_degree_range": "Enter an integer in the range [0, 10000000]",
+        "group_property_range": "Enter an integer greater than 2",
+        "alpha_range": "Enter a number in the range (0, 1]",
+        "top_range": "Enter a number in the range (0, 1000)",
+        "open_unit_range": "Enter a number in the range (0, 1)",
+        "depth_2_50": "Enter an integer in the range [2, 50]",
+        "properties_format": "Enter one key=value pair per line",
+        "string_value_quote": "Wrap string values in single quotes",
+        "open_unit_value": "Enter a value in the range (0, 1)",
+        "closed_unit_value": "Enter a value in the range [0, 1]",
+        "integer_1_2000": "Enter an integer from 1 to 2000",
+        "value_1_100000": "Enter a value from 1 to 100000",
+        "integer_0_100000": "Enter an integer in the range [0, 100000]",
+        "integer_1_10000": "Enter an integer from 1 to 10000"
       },
       "mode": {
         "OLTP": "OLTP Algorithm",
@@ -175,6 +342,142 @@
         }
       },
       "oltp": {
+        "common": {
+          "source_vertex_id": "Source vertex ID",
+          "target_vertex_id": "Target vertex ID",
+          "vertex_id": "Vertex ID",
+          "other_vertex_id": "Other vertex ID",
+          "direction_source_target": "Direction from the source vertex to the target vertex. The reverse direction is target to source. BOTH ignores direction.",
+          "limit_crosspoints": "Maximum number of returned crosspoints",
+          "max_steps": "Maximum number of steps",
+          "weight_property": "Edge weight property. The property type must be numeric. If it is empty or an edge does not have the property, the weight is 1.0.",
+          "alpha": "Probability of walking outward from a vertex in each iteration, similar to alpha in PageRank.",
+          "iterations": "Number of iterations",
+          "limit_vertices": "Maximum number of returned vertices",
+          "source_target_path": "Path traversed from the source vertex to the target vertex"
+        },
+        "template_paths": {
+          "desc": "Find all paths that match a set of source vertices, edge rules including direction, labels, and property filters, and max depth.",
+          "sources": "Source Vertices",
+          "targets": "Target Vertices",
+          "with_ring": "true includes rings; false excludes rings",
+          "capacity": "Maximum number of vertices visited during traversal",
+          "limit": "Maximum number of returned paths"
+        },
+        "kout_get": {
+          "desc": "Find vertices reachable from the source vertex in exactly depth steps, using optional direction and edge label filters."
+        },
+        "kneighbor_get": {
+          "desc": "Find all vertices reachable within depth steps from the source vertex, including the source vertex, using optional direction and edge label filters."
+        },
+        "kout_post": {
+          "desc": "Find vertices reachable from the source vertex in exactly depth steps using step rules.",
+          "source": "Source Vertex ID",
+          "capacity": "Maximum number of vertices visited during traversal",
+          "limit": "Maximum number of returned vertices",
+          "algorithm": "Traversal strategy. deep_first usually performs better, but when nearest is true it may include non-nearest vertices, especially on large datasets.",
+          "algorithm_placeholder": "Select traversal strategy",
+          "breadth_first": "Breadth First",
+          "deep_first": "Depth First"
+        },
+        "same_neighbors": {
+          "desc": "Find common neighbors of two vertices.",
+          "limit": "Maximum number of returned common neighbors"
+        },
+        "rings": {
+          "desc": "Find reachable rings from the source vertex using optional direction, edge label, and max depth filters.",
+          "source_in_ring": "Whether the ring must contain the source vertex"
+        },
+        "shortest_path": {
+          "desc": "Find one shortest path using source vertex, target vertex, direction, optional edge label, and max depth."
+        },
+        "jaccard_similarity_get": {
+          "desc": "Compute the Jaccard similarity of two vertices: the intersection of their neighbors divided by the union of their neighbors."
+        },
+        "crosspoints": {
+          "desc": "Find crosspoints using source vertex, target vertex, direction, optional edge label, and max depth."
+        },
+        "find_shortest_path": {
+          "desc": "Find all shortest paths between two vertices using source vertex, target vertex, direction, optional edge label, and max depth."
+        },
+        "find_shortest_path_with_weight": {
+          "desc": "Find one weighted shortest path using source vertex, target vertex, direction, optional edge label, and max depth."
+        },
+        "paths": {
+          "desc": "Find all paths using source vertex, target vertex, direction, optional edge label, and max depth.",
+          "limit": "Number of target vertices to query and number of returned shortest paths"
+        },
+        "rays": {
+          "desc": "Find paths that radiate from the source vertex to boundary vertices using optional direction, edge label, and max depth filters."
+        },
+        "rank_api": {
+          "desc": "Recommend other vertices with similar or related connections based on a source vertex's existing outgoing edges.",
+          "label": "Edge label starting from the source vertex. It must connect two different vertex categories.",
+          "max_diff": "Convergence precision for early stop",
+          "sorted": "Whether to sort returned results by rank",
+          "with_label": "Choose which result categories to keep: SAME_LABEL, OTHER_LABEL, or BOTH_LABEL.",
+          "same_label": "Keep only vertices with the same category as the source vertex",
+          "other_label": "Keep only vertices with a different category from the source vertex, usually the other side of a bipartite graph",
+          "both_label": "Keep vertices from both the same and opposite categories as the source vertex"
+        },
+        "neighbor_rank_api": {
+          "desc": "Find the top N vertices most related to the source vertex at each layer in a general graph structure, along with their relevance scores.",
+          "top": "Keep only the top N weighted results at each layer"
+        },
+        "jaccard_similarity_post": {
+          "desc": "Find the top N vertices with the highest Jaccard similarity to the specified vertex.",
+          "top": "Return the top vertices with the highest Jaccard similarity to a source vertex"
+        },
+        "kneighbor_post": {
+          "desc": "Find all vertices reachable within depth steps from the source vertex using step rules, including direction, edge labels, and property filters."
+        },
+        "single_source_shortest_path": {
+          "desc": "Starting from one vertex, find shortest paths from that vertex to other vertices in the graph, optionally with edge weights."
+        },
+        "multi_nodes_shortest_path": {
+          "desc": "Find shortest paths between every pair in a specified vertex set.",
+          "vertices": "Source Vertices"
+        },
+        "all_paths": {
+          "desc": "Find all paths using source vertices, target vertices, step rules, and max depth."
+        },
+        "fusiform_similarity": {
+          "desc": "Find fusiform-similar vertices for a set of source vertices under the specified conditions.",
+          "min_neighbors": "Minimum neighbor count. If a source vertex has fewer neighbors than this threshold, it is not considered to have fusiform-similar vertices.",
+          "alpha": "Similarity threshold: the ratio of common neighbors shared by the source vertex and the fusiform-similar vertex to all neighbors of the source vertex.",
+          "min_similars": "Minimum number of fusiform-similar vertices. The source vertex and its similar vertices are returned only when the count is greater than or equal to this value.",
+          "top": "Return the top N fusiform-similar vertices with the highest similarity for each source vertex. 0 means all.",
+          "group_property": "Used with min_groups. When the source vertex and its fusiform-similar vertices have at least min_groups different values for this property, the source vertex and its similar vertices are returned. Leave empty to skip this property filter.",
+          "min_groups": "Used with group_property; meaningful only when group_property is set.",
+          "limit": "Maximum number of returned result groups. One source vertex and its fusiform-similar vertices count as one result.",
+          "with_intermediary": "Whether to return intermediate vertices shared by the source vertex and its fusiform-similar vertices."
+        },
+        "resource_allocation": {
+          "desc": "Resource Allocation is commonly used in social networks to estimate how closely two vertices are related based on their common neighbors."
+        },
+        "same_neighbors_batch": {
+          "desc": "Batch query common neighbors for pairs of vertices.",
+          "vertex_list": "List of vertex ID pairs, for example: [[\"0000000001\",\"0000376440\"],[\"0000000001\",\"0001822679\"]]"
+        },
+        "egonet": {
+          "desc": "Find K-hop neighbors of multiple source vertices, with optional filters for different vertex and edge labels. Results include the source vertices.",
+          "sources": "Source vertex ID list. Multiple vertices are supported."
+        },
+        "customized_paths": {
+          "desc": "Find all paths that match a set of source vertices, edge rules including direction, labels, and property filters, and max depth.",
+          "sort_by": "Sort by path weight: NONE means no sorting, INCR sorts by ascending path weight, and DECR sorts by descending path weight.",
+          "sort_none": "No sorting",
+          "sort_incr": "Sort by path weight ascending",
+          "sort_decr": "Sort by path weight descending",
+          "weight_by": "Use the specified property to calculate edge weight. It is effective when sort_by is not NONE and is mutually exclusive with default_weight.",
+          "default_weight": "Default edge weight used when an edge does not have the weight property. It is effective when sort_by is not NONE and is mutually exclusive with weight_by.",
+          "sample": "Sample matching edges for the current step. -1 means no sampling."
+        },
+        "customized_crosspoints": {
+          "desc": "Find the intersection of path endpoints that match multiple path rules, including direction, edge labels, property filters, and max depth.",
+          "path_patterns": "Path rule list traversed from the source vertex",
+          "limit": "Maximum number of returned paths"
+        },
         "adamic_adar": {
           "desc": "Adamic-Adar is commonly used in social networks to estimate how closely two vertices are related based on the density of their common neighbors.",
           "vertex": "Source Vertex",
