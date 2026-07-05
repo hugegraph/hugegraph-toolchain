@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.GraphManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.graph.EdgeEntity;
@@ -37,6 +38,7 @@ import org.apache.hugegraph.loader.source.file.FileSource;
 import org.apache.hugegraph.loader.source.file.ListFormat;
 import org.apache.hugegraph.loader.util.DataTypeUtil;
 import org.apache.hugegraph.loader.util.JsonUtil;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.schema.EdgeLabelService;
 import org.apache.hugegraph.service.schema.PropertyKeyService;
@@ -48,6 +50,7 @@ import org.apache.hugegraph.structure.graph.Vertex;
 import org.apache.hugegraph.structure.schema.PropertyKey;
 import org.apache.hugegraph.util.Ex;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,6 +58,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Log4j2
@@ -70,6 +74,9 @@ public class GraphService {
 
     @Autowired
     private UserService userService;
+    @Autowired
+    private HugeConfig config;
+
     public GraphView addVertex(HugeClient client, VertexEntity entity) {
         this.checkParamsValid(client, entity, true);
         Vertex vertex = this.buildVertex(client, entity);
@@ -172,38 +179,134 @@ public class GraphService {
     }
 
     public GraphView importJson(HugeClient client, MultipartFile jsonFile) throws IOException {
+        this.checkImportFile(jsonFile);
         File file = userService.multipartFileToFile(jsonFile);
-        String content= FileUtils.readFileToString(file, "UTF-8");
-        JSONObject jsonObject=new JSONObject(content);
-        Map<String, Edge> edges = new HashMap<>();
-        Map<Object, Vertex> vertices = new HashMap<>();
-        if (jsonObject.has("vertices")) {
-            JSONArray verticesArray = jsonObject.getJSONArray("vertices");
-            List<VertexEntity> vertexEntities = JsonUtil.convertList(verticesArray.toString(), VertexEntity.class);
-            for (VertexEntity entity : vertexEntities) {
-                this.checkParamsValid(client, entity, true);
-                Vertex vertex = this.buildVertex(client, entity);
-                vertex = client.graph().addVertex(vertex);
-                vertices.put(vertex.id(), vertex);
-            }
+        String content = FileUtils.readFileToString(file,
+                                                    StandardCharsets.UTF_8);
+        JSONObject jsonObject;
+        try {
+            jsonObject = new JSONObject(content);
+        } catch (JSONException e) {
+            throw new ExternalException("graph.import.invalid-json", e);
         }
-        if (jsonObject.has("edges")) {
-            JSONArray edgesArray = jsonObject.getJSONArray("edges");
-            List<EdgeEntity> edgeEntities = JsonUtil.convertList(edgesArray.toString(), EdgeEntity.class);
+        JSONArray verticesArray = this.getImportArray(jsonObject, "vertices");
+        JSONArray edgesArray = this.getImportArray(jsonObject, "edges");
+        List<VertexEntity> vertexEntities =
+                JsonUtil.convertList(verticesArray.toString(),
+                                     VertexEntity.class);
+        List<EdgeEntity> edgeEntities =
+                JsonUtil.convertList(edgesArray.toString(), EdgeEntity.class);
+
+        List<Vertex> vertices = new ArrayList<>(vertexEntities.size());
+        List<Object> vertexImportIds = new ArrayList<>(vertexEntities.size());
+        Map<Object, Vertex> pendingVertices = new HashMap<>();
+        for (VertexEntity entity : vertexEntities) {
+            this.checkParamsValid(client, entity, true);
+            Vertex vertex = this.buildVertex(client, entity);
+            Object importId = this.importVertexId(client, entity, vertex);
+            if (importId != null) {
+                Ex.check(!pendingVertices.containsKey(importId),
+                         "graph.import.vertex.duplicate-id", importId);
+                pendingVertices.put(importId, vertex);
+            }
+            vertices.add(vertex);
+            vertexImportIds.add(importId);
+        }
+
+        Map<String, Edge> edges = new HashMap<>();
+        for (EdgeEntity entity : edgeEntities) {
+            entity.setId(null);
+            this.checkParamsValid(client, entity, true);
+            this.buildEdge(client, entity, pendingVertices);
+        }
+
+        List<Object> addedVertexIds = new ArrayList<>(vertices.size());
+        List<String> addedEdgeIds = new ArrayList<>(edgeEntities.size());
+        GraphManager graph = client.graph();
+        Map<Object, Vertex> createdVertices = new HashMap<>(pendingVertices);
+        List<Vertex> createdVertexList = new ArrayList<>(vertices.size());
+        try {
+            for (int i = 0; i < vertices.size(); i++) {
+                Vertex vertex = vertices.get(i);
+                Vertex created = graph.addVertex(vertex);
+                addedVertexIds.add(created.id());
+                createdVertices.put(created.id(), created);
+                Object importId = vertexImportIds.get(i);
+                if (importId != null) {
+                    createdVertices.put(importId, created);
+                }
+                createdVertexList.add(created);
+            }
             for (EdgeEntity entity : edgeEntities) {
-                this.checkParamsValid(client, entity, false);
-                GraphManager graph = client.graph();
-                EdgeHolder edgeHolder = this.buildEdge(client, entity);
+                EdgeHolder edgeHolder = this.buildEdge(client, entity,
+                                                       createdVertices);
                 Edge edge = graph.addEdge(edgeHolder.edge);
-                Vertex source = edgeHolder.source;
-                Vertex target = edgeHolder.target;
+                addedEdgeIds.add(edge.id());
                 edges.put(edge.id(), edge);
             }
+        } catch (RuntimeException e) {
+            this.rollbackImport(graph, addedVertexIds, addedEdgeIds);
+            throw e;
         }
         return GraphView.builder()
-                .vertices(VertexQueryEntity.fromVertices(vertices.values()))
+                .vertices(VertexQueryEntity.fromVertices(createdVertexList))
                 .edges(edges.values())
                 .build();
+    }
+
+    private Object importVertexId(HugeClient client, VertexEntity entity,
+                                  Vertex vertex) {
+        if (vertex.id() != null) {
+            return vertex.id();
+        }
+        VertexLabelEntity vl = this.vlService.get(entity.getLabel(), client);
+        if (vl.getIdStrategy().isPrimaryKey() && entity.getId() != null) {
+            return this.convertVertexId(vl.getIdStrategy(), entity.getId());
+        }
+        return null;
+    }
+
+    private void checkImportFile(MultipartFile jsonFile) {
+        Ex.check(jsonFile != null && !jsonFile.isEmpty(),
+                 "common.param.cannot-be-null-or-empty", "file");
+        long limit = this.importFileSizeLimit();
+        Ex.check(jsonFile.getSize() <= limit,
+                 "graph.import.file.exceed-limit", jsonFile.getSize(), limit);
+    }
+
+    private long importFileSizeLimit() {
+        if (this.config == null) {
+            return HubbleOptions.UPLOAD_SINGLE_FILE_SIZE_LIMIT.defaultValue();
+        }
+        return this.config.get(HubbleOptions.UPLOAD_SINGLE_FILE_SIZE_LIMIT);
+    }
+
+    private JSONArray getImportArray(JSONObject jsonObject, String name) {
+        Ex.check(jsonObject.has(name), "graph.import.missing-field", name);
+        Object value = jsonObject.get(name);
+        Ex.check(value instanceof JSONArray, "graph.import.field-should-array",
+                 name);
+        return (JSONArray) value;
+    }
+
+    private void rollbackImport(GraphManager graph, List<Object> vertexIds,
+                                List<String> edgeIds) {
+        Collections.reverse(edgeIds);
+        for (String edgeId : edgeIds) {
+            try {
+                graph.deleteEdge(edgeId);
+            } catch (RuntimeException e) {
+                log.warn("Failed to rollback imported edge {}", edgeId, e);
+            }
+        }
+        Collections.reverse(vertexIds);
+        for (Object vertexId : vertexIds) {
+            try {
+                graph.deleteVertex(vertexId);
+            } catch (RuntimeException e) {
+                log.warn("Failed to rollback imported vertex {}", vertexId, e);
+            }
+        }
     }
 
     private void checkParamsValid(HugeClient client, VertexEntity entity,
@@ -224,6 +327,10 @@ public class GraphService {
 
         Set<String> nonNullableProps = vlEntity.getNonNullableProps();
         Map<String, Object> properties = entity.getProperties();
+        if (properties == null) {
+            properties = Collections.emptyMap();
+            entity.setProperties(properties);
+        }
         if (create) {
             Ex.check(properties.keySet().containsAll(nonNullableProps),
                     "graph.vertex.all-nonnullable-prop.should-be-setted");
@@ -244,12 +351,16 @@ public class GraphService {
                     "common.param.cannot-be-null", "id");
         }
         Ex.check(entity.getSourceId() != null,
-                "common.param.must-be-null", "source_id");
+                "common.param.cannot-be-null", "source_id");
         Ex.check(entity.getTargetId() != null,
-                "common.param.must-be-null", "target_id");
+                "common.param.cannot-be-null", "target_id");
 
         Set<String> nonNullableProps = elEntity.getNonNullableProps();
         Map<String, Object> properties = entity.getProperties();
+        if (properties == null) {
+            properties = Collections.emptyMap();
+            entity.setProperties(properties);
+        }
         if (create) {
             Ex.check(properties.keySet().containsAll(nonNullableProps),
                     "graph.edge.all-nonnullable-prop.should-be-setted");
@@ -257,6 +368,11 @@ public class GraphService {
     }
 
     private EdgeHolder buildEdge(HugeClient client, EdgeEntity entity) {
+        return this.buildEdge(client, entity, Collections.emptyMap());
+    }
+
+    private EdgeHolder buildEdge(HugeClient client, EdgeEntity entity,
+                                 Map<Object, Vertex> pendingVertices) {
         GraphManager graph = client.graph();
         EdgeLabelEntity el = this.elService.get(entity.getLabel(), client);
         VertexLabelEntity sourceVl = this.vlService.get(el.getSourceLabel(),
@@ -267,8 +383,17 @@ public class GraphService {
                                                    entity.getSourceId());
         Object realTargetId = this.convertVertexId(targetVl.getIdStrategy(),
                                                    entity.getTargetId());
-        Vertex sourceVertex = graph.getVertex(realSourceId);
-        Vertex targetVertex = graph.getVertex(realTargetId);
+        Vertex sourceVertex = pendingVertices.get(realSourceId);
+        if (sourceVertex == null) {
+            sourceVertex = graph.getVertex(realSourceId);
+        }
+        Vertex targetVertex = pendingVertices.get(realTargetId);
+        if (targetVertex == null) {
+            targetVertex = graph.getVertex(realTargetId);
+        }
+
+        Ex.check(sourceVertex != null && targetVertex != null,
+                 "gremlin.edges.linked-vertex.not-exist");
 
         Ex.check(el.getSourceLabel().equals(sourceVertex.label()) &&
                  el.getTargetLabel().equals(targetVertex.label()),

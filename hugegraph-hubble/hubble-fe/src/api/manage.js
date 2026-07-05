@@ -17,7 +17,6 @@
  */
 
 import request from './request';
-import qs from 'qs';
 
 // 图空间
 const getGraphSpaceList = params => {
@@ -92,10 +91,11 @@ const getGraphList = (graphspace, params) => {
 };
 
 const addGraph = (graphspace, data) => {
-    return request.post(`/graphspaces/${graphspace}/graphs`,
-        qs.stringify(data),
-        {headers: {'Content-Type': 'application/x-www-form-urlencoded'}}
-    );
+    const {graph, nickname, schema} = data;
+    return request.post(`/graphspaces/${graphspace}/graphs/${graph}`, {
+        nickname,
+        schema,
+    });
 };
 
 const updateGraph = (graphspace, graph, params) => {
@@ -115,7 +115,7 @@ const getGraphView = (graphspace, graph) => {
 };
 
 const setDefaultGraph = (graphspace, graph) => {
-    return request.get(`graphspaces/${graphspace}/graphs/${graph}/setdefault`);
+    return request.post(`graphspaces/${graphspace}/graphs/${graph}/default`);
 };
 
 const getDefaultGraph = graphspace => {

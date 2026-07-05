@@ -107,4 +107,49 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertEquals("source-graph",
                             capturedParams.get("clone_graph_name"));
     }
+
+    @Test
+    public void testSetDefaultGraphUsesCanonicalPost() {
+        RestResult mockResult = Mockito.mock(RestResult.class);
+        Mockito.when(mockResult.readObject(Map.class))
+               .thenReturn(null);
+
+        ArgumentCaptor<String> pathCaptor =
+                ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object> bodyCaptor =
+                ArgumentCaptor.forClass(Object.class);
+
+        Mockito.when(this.mockClient.post(pathCaptor.capture(),
+                                          bodyCaptor.capture()))
+               .thenReturn(mockResult);
+
+        this.graphsAPI.setDefault("test-graph");
+
+        Assert.assertEquals("graphspaces/DEFAULT/graphs/test-graph/default",
+                            pathCaptor.getValue());
+        Assert.assertTrue(((Map<?, ?>) bodyCaptor.getValue()).isEmpty());
+    }
+
+    @Test
+    public void testUnsetDefaultGraphUsesCanonicalDelete() {
+        RestResult mockResult = Mockito.mock(RestResult.class);
+        Mockito.when(mockResult.readObject(Map.class))
+               .thenReturn(null);
+
+        ArgumentCaptor<String> pathCaptor =
+                ArgumentCaptor.forClass(String.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> paramsCaptor =
+                ArgumentCaptor.forClass(Map.class);
+
+        Mockito.when(this.mockClient.delete(pathCaptor.capture(),
+                                            paramsCaptor.capture()))
+               .thenReturn(mockResult);
+
+        this.graphsAPI.unSetDefault("test-graph");
+
+        Assert.assertEquals("graphspaces/DEFAULT/graphs/test-graph/default",
+                            pathCaptor.getValue());
+        Assert.assertTrue(paramsCaptor.getValue().isEmpty());
+    }
 }
