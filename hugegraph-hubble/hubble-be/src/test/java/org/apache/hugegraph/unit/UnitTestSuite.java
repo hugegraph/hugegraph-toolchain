@@ -27,7 +27,9 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     AuthSecurityTest.class,
+    AppTypeTest.class,
     AuthzRouteRegistrationTest.class,
+    FileMappingSchemaTest.class,
     FileUploadControllerTest.class,
     FileUtilTest.class,
     GraphServiceImportTest.class,
@@ -40,7 +42,8 @@ import org.junit.runners.Suite;
     JobManagerServiceTest.class,
     OltpAlgoControllerTest.class,
     OltpAlgoServiceTest.class,
-    QueryServiceTest.class
+    QueryServiceTest.class,
+    UrlUtilTest.class
 })
 public class UnitTestSuite {
 }
