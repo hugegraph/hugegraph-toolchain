@@ -18,46 +18,99 @@
 
 package org.apache.hugegraph.util;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Locale;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 public class UrlUtil {
+
     public static Host parseHost(String url) {
-        Host host = new Host();
-
-        String text = url;
-        String scheme = null;
-        int schemeIdx = url.indexOf("://");
-        if (schemeIdx > 0) {
-            scheme = url.substring(0, schemeIdx);
-            text = url.substring(schemeIdx + 3);
+        if (url == null || url.trim().isEmpty()) {
+            throw new IllegalArgumentException("Invalid HTTP host: " + url);
         }
 
-        int port = -1;
-        int portIdx = text.lastIndexOf(":");
-        if (portIdx > 0) {
-            String portStr = null;
-            int pathIdx = text.indexOf("/");
-            if (pathIdx > 0) {
-                portStr = text.substring(portIdx + 1, pathIdx);
-            } else {
-                portStr = text.substring(portIdx + 1);
-            }
-            try {
-                port = Integer.parseInt(portStr);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid HTTP host: " + text,
-                                                   e);
+        String text = url.trim();
+        try {
+            URI uri = parseUri(text);
+            String host = normalizeHost(uri.getHost());
+            int port = uri.getPort();
+            String scheme = uri.getScheme();
+
+            if (host == null || host.isEmpty()) {
+                throw new IllegalArgumentException("Invalid HTTP host: " + text);
             }
 
-            text = text.substring(0, portIdx);
+            if (port < 0 && hasEmptyExplicitPort(uri)) {
+                throw new IllegalArgumentException("Invalid HTTP host: " + text);
+            }
+            if (port < 0) {
+                port = defaultPort(scheme);
+            }
+            if (port < 0 || port > 65535) {
+                throw new IllegalArgumentException("Invalid HTTP host: " + text);
+            }
 
-            host.setScheme(scheme);
-            host.setHost(text);
-            host.setPort(port);
+            return new Host(host, port, scheme);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid HTTP host: " + text, e);
+        }
+    }
+
+    private static URI parseUri(String text) throws URISyntaxException {
+        if (hasScheme(text) || text.startsWith("//")) {
+            return new URI(text);
+        }
+        return new URI("//" + text);
+    }
+
+    private static boolean hasScheme(String text) {
+        int schemeIdx = text.indexOf("://");
+        if (schemeIdx <= 0 || !Character.isLetter(text.charAt(0))) {
+            return false;
         }
 
+        for (int i = 1; i < schemeIdx; i++) {
+            char c = text.charAt(i);
+            if (!Character.isLetterOrDigit(c) && c != '+' && c != '-' &&
+                c != '.') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int defaultPort(String scheme) {
+        if (scheme == null) {
+            return -1;
+        }
+        switch (scheme.toLowerCase(Locale.ROOT)) {
+            case "http":
+                return 80;
+            case "https":
+                return 443;
+            default:
+                return -1;
+        }
+    }
+
+    private static boolean hasEmptyExplicitPort(URI uri) {
+        String authority = uri.getRawAuthority();
+        if (authority == null) {
+            return false;
+        }
+        int userInfoIdx = authority.lastIndexOf('@');
+        String hostPort = authority.substring(userInfoIdx + 1);
+        return hostPort.endsWith(":");
+    }
+
+    private static String normalizeHost(String host) {
+        if (host != null && host.startsWith("[") && host.endsWith("]")) {
+            return host.substring(1, host.length() - 1);
+        }
         return host;
     }
 
@@ -70,5 +123,3 @@ public class UrlUtil {
         protected String scheme;
     }
 }
-
-

@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS `file_mapping` (
     `graph` VARCHAR(48) NOT NULL,
     `job_id` INT NOT NULL DEFAULT 0,
     `name` VARCHAR(128) NOT NULL,
-    `path` VARCHAR(256) NOT NULL,
+    `path` VARCHAR(2048) NOT NULL,
     `total_lines` LONG NOT NULL,
     `total_size` LONG NOT NULL,
     `file_status` TINYINT NOT NULL DEFAULT 0,

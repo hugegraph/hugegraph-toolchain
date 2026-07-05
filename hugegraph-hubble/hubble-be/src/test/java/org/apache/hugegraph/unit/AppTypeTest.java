@@ -16,40 +16,23 @@
  * under the License.
  */
 
-package org.apache.hugegraph.common;
+package org.apache.hugegraph.unit;
 
+import org.junit.Test;
 
+import org.apache.hugegraph.common.AppType;
+import org.apache.hugegraph.testutil.Assert;
 import org.apache.hugegraph.type.define.SerialEnum;
 
-public enum AppType implements SerialEnum {
-    // 通用功能
-    GENERAL(1, "GENERAL"),
+public class AppTypeTest {
 
-    // 定制功能
-    CUSTOMIZED(2, "CUSTOMIZED"),
-
-    ;
-
-    private final byte code;
-    private final String name;
-
-    static {
-        SerialEnum.register(AppType.class);
+    @Test
+    public void testAppTypeRegistersItselfAsSerialEnum() {
+        Assert.assertEquals(AppType.GENERAL,
+                            SerialEnum.fromCode(AppType.class,
+                                                AppType.GENERAL.code()));
+        Assert.assertEquals(AppType.CUSTOMIZED,
+                            SerialEnum.fromCode(AppType.class,
+                                                AppType.CUSTOMIZED.code()));
     }
-
-    AppType(int code, String name) {
-        assert code < 256;
-        this.code = (byte) code;
-        this.name = name;
-    }
-
-    @Override
-    public byte code() {
-        return this.code;
-    }
-
-    public String string() {
-        return this.name;
-    }
-
 }
