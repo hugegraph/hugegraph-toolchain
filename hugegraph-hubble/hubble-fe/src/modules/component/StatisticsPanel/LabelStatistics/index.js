@@ -23,19 +23,16 @@
 import React, {useMemo} from 'react';
 import {Tooltip, Collapse} from 'antd';
 import {QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import c from './index.module.scss';
 import BarChartComponent from '../BarChartComponent';
 import _ from 'lodash';
 
 const {Panel} = Collapse;
 
-const headerInfo = {
-    type: {name: '点边数量统计', description: '当前画布中所有类型的点边和对应的点边数量'},
-    degree: {name: '节点权重Top10', description: '当前画布中一度边数量最多的十个节点。'},
-};
-
 const LabelStatistics = props => {
 
+    const {t} = useTranslation();
     const {graphDataNums, statistics} = props;
 
     const {edge_label = [], vertex_label = [], highest_degree_vertices = []} = statistics || {};
@@ -80,11 +77,23 @@ const LabelStatistics = props => {
     return (
         <div className={c.labelStatistics}>
             <Collapse defaultActiveKey={['type', 'highestDegree']} ghost>
-                <Panel header={renderHeader(headerInfo.type)} key="type">
+                <Panel
+                    header={renderHeader({
+                        name: t('analysis.canvas.statistics_panel.type_count'),
+                        description: t('analysis.canvas.statistics_panel.type_count_desc'),
+                    })}
+                    key="type"
+                >
                     <BarChartComponent data={convertedVertexTypeData} totalData={graphDataNums?.nodesNum} />
                     <BarChartComponent data={convertedEdgeTypeData} totalData={graphDataNums?.edgesNum} />
                 </Panel>
-                <Panel header={renderHeader(headerInfo.degree)} key="highestDegree">
+                <Panel
+                    header={renderHeader({
+                        name: t('analysis.canvas.statistics_panel.degree_top10'),
+                        description: t('analysis.canvas.statistics_panel.degree_top10_desc'),
+                    })}
+                    key="highestDegree"
+                >
                     <BarChartComponent data={convertedHighestDegreeVerticesData} totalData={graphDataNums?.edgesNum} />
                 </Panel>
             </Collapse>

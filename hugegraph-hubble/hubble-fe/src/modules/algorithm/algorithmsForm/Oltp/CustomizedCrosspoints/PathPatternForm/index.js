@@ -34,9 +34,9 @@ const PathPatternsFormItems = () => {
     const [patternVisible, setPatternVisible] = useState(false);
     const patternContentClassName = classnames({[s.contentHidden]: !patternVisible});
     const directionOptions = [
-        {label: t('ERView.edge.out'), value: 'OUT'},
-        {label: t('ERView.edge.in'), value: 'IN'},
-        {label: t('ERView.edge.both'), value: 'BOTH'},
+        {label: t('analysis.algorithm.form.direction_options.out'), value: 'OUT'},
+        {label: t('analysis.algorithm.form.direction_options.in'), value: 'IN'},
+        {label: t('analysis.algorithm.form.direction_options.both'), value: 'BOTH'},
     ];
 
     const changePatternsVisible = useCallback(() => {

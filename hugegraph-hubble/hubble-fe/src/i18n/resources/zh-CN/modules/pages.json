@@ -220,6 +220,7 @@
   },
   "my": {
     "title": "个人中心",
+    "edit_profile_title": "编辑信息",
     "col": {
       "id": "账号ID",
       "name": "账号名",
@@ -237,7 +238,8 @@
       "old_password_placeholder": "请输入旧密码",
       "new_password_placeholder": "请输入新密码",
       "confirm_password_placeholder": "请再次输入密码",
-      "password_mismatch": "两次密码不一致"
+      "password_mismatch": "两次密码不一致",
+      "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾"
     }
   },
   "role": {
@@ -346,6 +348,7 @@
       "cron_extra": "quartz表达式：秒 分钟 小时 天 月 星期 年(选填)",
       "cron_required": "请输入调度信息",
       "cron_placeholder": "定时 * 5 * * * * (*)",
+      "cron_rule": "请输入合法的quartz格式",
       "update_success": "修改成功",
       "graphspace": "图空间",
       "graph": "图",
@@ -361,10 +364,43 @@
       "graphspace_full": "{{graphspace}}图空间已达到最大存储容量，无法继续写入",
       "duplicate_check_failed": "重名检查失败",
       "duplicate_name": "任务名重复",
+      "name_rule": "只能包含中文、字母、数字、_, 不能超过20个字符",
       "select_graphspace": "请选择图空间",
       "select_graph": "请选择图",
       "select_source": "请选择数据源",
-      "select_source_type": "请选择源数据类型"
+      "select_source_type": "请选择源数据类型",
+      "select_source_fields": "请选择源端字段",
+      "source_available_fields": "源端可选字段",
+      "selected_fields": "已选字段",
+      "delete_field_confirm": "确定要删除这个字段吗？",
+      "add_field_placeholder": "添加字段,仅允许字母、数字、-、_",
+      "add_vertex_mapping": "新增顶点映射",
+      "add_edge_mapping": "新增边映射",
+      "type": "类型",
+      "vertex": "顶点",
+      "edge": "边",
+      "mapping_name": "名称",
+      "mapping_required_tip": "请至少创建一个顶点或边映射",
+      "create_vertex": "创建顶点",
+      "edit_vertex": "编辑顶点",
+      "create_edge": "创建边",
+      "edit_edge": "编辑边",
+      "vertex_type": "顶点类型",
+      "edge_type": "边类型",
+      "id_column": "ID列",
+      "source_id": "起点ID",
+      "target_id": "终点ID",
+      "property_mapping": "属性映射",
+      "value_mapping": "值映射",
+      "select_schema_field": "请选择schema字段",
+      "select_mapping_field": "请选择映射字段",
+      "duplicate_property": "属性不可重复",
+      "auto_match": "自动匹配",
+      "schedule_once": "执行一次",
+      "schedule_realtime": "实时执行",
+      "schedule_cron": "周期执行",
+      "load_full": "全量",
+      "load_incremental": "增量"
     }
   },
   "datasource": {

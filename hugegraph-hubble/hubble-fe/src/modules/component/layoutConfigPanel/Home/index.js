@@ -20,8 +20,9 @@
  * @file LayoutConfigPanel
  */
 
-import React, {useCallback, useState, useEffect} from 'react';
+import React, {useCallback, useState, useEffect, useMemo} from 'react';
 import {Form, Select, Switch} from 'antd';
+import {useTranslation} from 'react-i18next';
 import ForceLayoutForm from '../Force';
 import CircularLayoutForm from '../Circular';
 import ConcentricLayoutForm from '../Concentric';
@@ -52,15 +53,6 @@ const layoutTypeLabel = (icon, name) => {
 
 const {FORCE, CIRCULAR, CONCENTRIC, DAGRE, CUSTOMGRID, RADIAL} = SUPPORTED_LAYOUT_TYPE;
 const SUPPORTED_LAYOUT_TYPE_ARR = [FORCE, CIRCULAR, CONCENTRIC, DAGRE, CUSTOMGRID, RADIAL];
-
-const layoutTypeOptions = [
-    {value: FORCE, label: layoutTypeLabel(ForceLayoutIcon, '力导布局')},
-    {value: CIRCULAR, label: layoutTypeLabel(CircularLayoutIcon, '环形布局')},
-    {value: CONCENTRIC, label: layoutTypeLabel(ConcentricLayoutIcon, '同心圆布局')},
-    {value: DAGRE, label: layoutTypeLabel(DagreLayoutIcon, '层次布局')},
-    {value: CUSTOMGRID, label: layoutTypeLabel(GridLayoutIcon, '网格布局')},
-    {value: RADIAL, label: layoutTypeLabel(RadialLayoutIcon, '径向布局')},
-];
 
 const initialLayoutValue = {
     [FORCE]: {
@@ -119,6 +111,7 @@ const LayoutConfigPanel = props => {
         open,
     } = props;
 
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [basicInfoForm] = useForm();
     const [defaultLayout, setDefaultLayout] = useState();
@@ -129,6 +122,21 @@ const LayoutConfigPanel = props => {
     const changeLayoutClassName = classnames(
         c.changeLayout,
         {[c.changeLayoutHidden]: !open}
+    );
+
+    const layoutTypeOptions = useMemo(
+        () => [
+            {value: FORCE, label: layoutTypeLabel(ForceLayoutIcon, t('analysis.canvas.layout_panel.force'))},
+            {value: CIRCULAR, label: layoutTypeLabel(CircularLayoutIcon, t('analysis.canvas.layout_panel.circular'))},
+            {
+                value: CONCENTRIC,
+                label: layoutTypeLabel(ConcentricLayoutIcon, t('analysis.canvas.layout_panel.concentric')),
+            },
+            {value: DAGRE, label: layoutTypeLabel(DagreLayoutIcon, t('analysis.canvas.layout_panel.dagre'))},
+            {value: CUSTOMGRID, label: layoutTypeLabel(GridLayoutIcon, t('analysis.canvas.layout_panel.grid'))},
+            {value: RADIAL, label: layoutTypeLabel(RadialLayoutIcon, t('analysis.canvas.layout_panel.radial'))},
+        ],
+        [t]
     );
 
     const updateProps = (startRadius, endRadius) => {
@@ -146,7 +154,7 @@ const LayoutConfigPanel = props => {
 
     useEffect(
         () => {
-            const {edges, nodes} = data;
+            const {nodes} = data;
             const verticesNum = _.size(nodes);
             let newInitialProps;
             if (verticesNum <= 20) {
@@ -272,24 +280,24 @@ const LayoutConfigPanel = props => {
 
     return (
         <div className={changeLayoutClassName}>
-            <div className={c.changeLayoutTitle}>布局</div>
+            <div className={c.changeLayoutTitle}>{t('analysis.canvas.layout_panel.title')}</div>
             <Form
                 form={basicInfoForm}
                 colon={false}
             >
                 <Form.Item
                     name='enableLayout'
-                    label='启用布局'
+                    label={t('analysis.canvas.layout_panel.enable_layout')}
                     valuePropName='checked'
                     labelCol={{span: 20}}
                     labelAlign='left'
-                    tooltip='是否启用布局，关闭后布局将切换为默认布局'
+                    tooltip={t('analysis.canvas.layout_panel.enable_layout_tooltip')}
                 >
                     <Switch onChange={handleEnableLayout} />
                 </Form.Item>
                 <Form.Item
                     name='type'
-                    label='布局方式'
+                    label={t('analysis.canvas.layout_panel.layout_type')}
                     labelCol={{span: 24}}
                     className={c.layoutTypeForm}
                 >

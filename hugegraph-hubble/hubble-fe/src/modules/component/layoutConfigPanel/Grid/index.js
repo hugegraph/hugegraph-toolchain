@@ -22,10 +22,12 @@
 
 import React, {useCallback} from 'react';
 import {Form, InputNumber} from 'antd';
+import {useTranslation} from 'react-i18next';
 import _ from 'lodash';
 
 const GridForm = props => {
     const {handleFormChange, initialValues} = props;
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [form] = useForm();
 
@@ -52,15 +54,15 @@ const GridForm = props => {
         >
             <Form.Item
                 name='rows'
-                label='网格行数'
-                tooltip='网格的行数，为 undefined 时算法会根据节点数量、布局空间、cols（若指定）自动计算'
+                label={t('analysis.canvas.layout_panel.rows')}
+                tooltip={t('analysis.canvas.layout_panel.rows_tooltip')}
             >
                 <InputNumber onChange={onRowsChange} min={1} style={{width: '100%'}} />
             </Form.Item>
             <Form.Item
                 name='cols'
-                label='网格列数'
-                tooltip='网格的列数，为 undefined 时算法根据节点数量、布局空间、rows（若指定）自动计算'
+                label={t('analysis.canvas.layout_panel.cols')}
+                tooltip={t('analysis.canvas.layout_panel.cols_tooltip')}
             >
                 <InputNumber onChange={onColsChange} min={1} style={{width: '100%'}} />
             </Form.Item>

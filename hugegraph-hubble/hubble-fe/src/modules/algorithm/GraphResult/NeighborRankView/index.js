@@ -21,12 +21,14 @@
  */
 
 import React from 'react';
+import {useTranslation} from 'react-i18next';
 import {colors} from '../../../../utils/constants';
 import JaccRankView from '../../../component/JaccRankView';
 import _ from 'lodash';
 import c from './index.module.scss';
 
 const NeighborRankApiView = props => {
+    const {t} = useTranslation();
     const {rankArray} = props;
     const colorsNum = colors.length;
     return (
@@ -34,9 +36,15 @@ const NeighborRankApiView = props => {
             {rankArray.map((item, index) => {
                 return (
                     <div key={_.uniqueId()}>
-                        <div className={c.noneGraphContentTitle}>分类{index + 1}</div>
+                        <div className={c.noneGraphContentTitle}>
+                            {t('analysis.algorithm.result.category', {index: index + 1})}
+                        </div>
                         {_.isEmpty(item) ? (
-                            <div className={c.emptyDesc}>本场景下没有第{index + 1}度邻居</div>
+                            <div className={c.emptyDesc}>
+                                {t('analysis.algorithm.result.no_neighbor_at_degree', {
+                                    index: index + 1,
+                                })}
+                            </div>
                         ) : (Object.entries(item)?.map(item2 => {
                             const [key, value] = item2;
                             return (
@@ -46,7 +54,7 @@ const NeighborRankApiView = props => {
                                         color: colors[index % colorsNum],
                                     }}
                                     key={key}
-                                    title={'排名得分:'}
+                                    title={t('analysis.algorithm.result.rank_score')}
                                     value={value?.toString()}
                                 />
                             );

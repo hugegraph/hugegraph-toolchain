@@ -140,7 +140,11 @@ const BaseForm = ({cancel, visible}) => {
                     label={t('task.edit.name')}
                     name='task_name'
                     validateTrigger={['onBlur', 'onChange']}
-                    rules={[rules.required(), rules.isNoramlName, checkExistName]}
+                    rules={[
+                        rules.required(),
+                        rules.isNoramlName(t('task.edit.name_rule')),
+                        checkExistName,
+                    ]}
                 >
                     <Input placeholder={t('task.edit.name_placeholder')} showCount maxLength={20} />
                 </Form.Item>

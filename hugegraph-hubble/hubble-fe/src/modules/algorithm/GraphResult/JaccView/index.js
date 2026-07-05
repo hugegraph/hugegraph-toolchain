@@ -21,15 +21,17 @@
  */
 
 import React from 'react';
+import {useTranslation} from 'react-i18next';
 import JaccRankView from '../../../component/JaccRankView';
 import c from './index.module.scss';
 
 const JaccView = props => {
+    const {t} = useTranslation();
     const {jaccardsimilarity} = props;
     return (
         <div className={c.noneGraphContent}>
             <JaccRankView
-                title={'相似度的值'}
+                title={t('analysis.algorithm.result.similarity_value')}
                 value={jaccardsimilarity?.toString()}
             />
         </div>

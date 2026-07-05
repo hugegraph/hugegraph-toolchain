@@ -22,11 +22,13 @@
 
 import React from 'react';
 import {Form, Switch} from 'antd';
+import {useTranslation} from 'react-i18next';
 import SliderComponent from '../../../../components/SlideComponent';
 import _ from 'lodash';
 
 const ConcentricLayoutForm = props => {
     const {handleFormChange, initialValues} = props;
+    const {t} = useTranslation();
     const {useForm} = Form;
     const [concentricLayoutForm] = useForm();
 
@@ -39,28 +41,28 @@ const ConcentricLayoutForm = props => {
         >
             <Form.Item
                 name='nodeSize'
-                label='节点大小'
-                tooltip='节点大小（直径），用于防止节点重叠时的碰撞检测'
+                label={t('analysis.canvas.layout_panel.node_size')}
+                tooltip={t('analysis.canvas.layout_panel.node_size_tooltip')}
             >
                 <SliderComponent min={1} max={100} />
             </Form.Item>
             <Form.Item
                 name='sweep'
-                label='弧度差'
-                tooltip='第一个节点与最后一个节点之间的弧度差。'
+                label={t('analysis.canvas.layout_panel.sweep')}
+                tooltip={t('analysis.canvas.layout_panel.sweep_tooltip')}
             >
                 <SliderComponent />
             </Form.Item>
             <Form.Item
                 name='startAngle'
-                label='起始弧度'
-                tooltip='开始方式节点的弧度'
+                label={t('analysis.canvas.layout_panel.start_angle')}
+                tooltip={t('analysis.canvas.layout_panel.start_angle_tooltip')}
             >
                 <SliderComponent />
             </Form.Item>
             <Form.Item
                 name='preventOverlap'
-                label='是否防止重叠'
+                label={t('analysis.canvas.layout_panel.prevent_overlap')}
                 valuePropName="checked"
                 labelCol={{span: 20}}
                 labelAlign='left'
@@ -69,14 +71,14 @@ const ConcentricLayoutForm = props => {
             </Form.Item>
             <Form.Item
                 name='nodeSpacing'
-                label='节点间距'
-                tooltip='Prevent Overlap为true时生效，节点边缘间距的最小值，以防止重叠'
+                label={t('analysis.canvas.layout_panel.node_spacing')}
+                tooltip={t('analysis.canvas.layout_panel.node_spacing_tooltip')}
             >
                 <SliderComponent min={0} max={1000} />
             </Form.Item>
             <Form.Item
                 name='equidistant'
-                label='环与环距离是否相等'
+                label={t('analysis.canvas.layout_panel.equidistant')}
                 valuePropName="checked"
                 labelCol={{span: 20}}
                 labelAlign='left'
@@ -85,7 +87,7 @@ const ConcentricLayoutForm = props => {
             </Form.Item>
             <Form.Item
                 name='clockwise'
-                label='是否按照顺时针排列'
+                label={t('analysis.canvas.layout_panel.clockwise')}
                 valuePropName="checked"
                 labelCol={{span: 20}}
                 labelAlign='left'

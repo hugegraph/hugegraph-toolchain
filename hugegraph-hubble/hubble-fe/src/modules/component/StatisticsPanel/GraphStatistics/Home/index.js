@@ -21,6 +21,7 @@
  */
 
 import React, {useCallback, useContext, useEffect, useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {GraphContext} from '../../../Context';
 import GraphStatisticsHeader from '../Header';
 import BarChartComponent from '../../BarChartComponent';
@@ -28,14 +29,9 @@ import {clearSelectedStates} from '../../../../../utils/handleGraphState';
 import c from './index.module.scss';
 import _ from 'lodash';
 
-const description = {
-    zeroDegreeNodes: '孤立点是指和其余点没有关联，在画布中独立存在的点。',
-    zeroDegreeEdges: '只有一度关联的点的边。',
-    incidenceNodes: '只有选中图上的一个点，才能显示相应的关联点的数量。',
-};
-
 const GraphStatistics = props => {
 
+    const {t} = useTranslation();
     const {graphDataNums, statistics} =  props;
     const {isolated_vertices = [], isolated_edges = []} = statistics;
 
@@ -178,19 +174,19 @@ const GraphStatistics = props => {
             const {incidence_vertices = []} = statistics || {};
             return [
                 {
-                    name: id || '请选择节点',
+                    name: id || t('analysis.canvas.statistics_panel.select_node'),
                     count: incidence_vertices.length,
                 },
             ];
         },
-        [selectedNode]
+        [selectedNode, t]
     );
 
     return (
         <div className={c.graphStatistics}>
             <GraphStatisticsHeader
-                name='孤立点'
-                description={description.zeroDegreeNodes}
+                name={t('analysis.canvas.statistics_panel.zero_degree_nodes')}
+                description={t('analysis.canvas.statistics_panel.zero_degree_nodes_desc')}
                 highlightFunc={highlightZeroDegreeNodes}
                 hideFunc={hideZeroDegreeNodes}
                 highlightFuncDisable={isHideZeroDegreeNodes || isIsolatedVerticesEmpty}
@@ -198,8 +194,8 @@ const GraphStatistics = props => {
             />
             <BarChartComponent data={zeroDegreeNodesData} totalData={graphDataNums?.nodesNum} />
             <GraphStatisticsHeader
-                name='孤立边'
-                description={description.zeroDegreeEdges}
+                name={t('analysis.canvas.statistics_panel.zero_degree_edges')}
+                description={t('analysis.canvas.statistics_panel.zero_degree_edges_desc')}
                 highlightFunc={highlightZeroDegreeEdges}
                 hideFunc={hideZeroDegreeEdges}
                 highlightFuncDisable={isHideZeroDegreeEdeges || isIsolatedEdgesEmpty}
@@ -207,8 +203,8 @@ const GraphStatistics = props => {
             />
             <BarChartComponent data={zeroDegreeEdgesData} totalData={graphDataNums?.edgesNum} />
             <GraphStatisticsHeader
-                name='关联点'
-                description={description.incidenceNodes}
+                name={t('analysis.canvas.statistics_panel.incidence_nodes')}
+                description={t('analysis.canvas.statistics_panel.incidence_nodes_desc')}
                 highlightFunc={highlightIncidenceNodes}
                 hideFunc={hideIncidenceNodes}
                 highlightFuncDisable={!selectedNode || isHideIncidenceNodes || isIncidenceNodesEmpty}

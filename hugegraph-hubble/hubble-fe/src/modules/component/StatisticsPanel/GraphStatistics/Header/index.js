@@ -23,10 +23,12 @@
 import React from 'react';
 import {Button, Tooltip} from 'antd';
 import {QuestionCircleOutlined} from '@ant-design/icons';
+import {useTranslation} from 'react-i18next';
 import c from './index.module.scss';
 
 const GraphStatisticsHeader = props => {
 
+    const {t} = useTranslation();
     const {name, description, highlightFunc, hideFunc, highlightFuncDisable, hideFuncDisable} = props;
 
     return (
@@ -36,8 +38,12 @@ const GraphStatisticsHeader = props => {
                 <Tooltip placement="right" title={description}><QuestionCircleOutlined /></Tooltip>
             </div>
             <div className={c.buttom}>
-                <Button type="text" size='small' onClick={highlightFunc} disabled={highlightFuncDisable}>高亮</Button>
-                <Button type="text" size='small' onClick={hideFunc} disabled={hideFuncDisable}>隐藏</Button>
+                <Button type="text" size='small' onClick={highlightFunc} disabled={highlightFuncDisable}>
+                    {t('analysis.canvas.statistics_panel.highlight')}
+                </Button>
+                <Button type="text" size='small' onClick={hideFunc} disabled={hideFuncDisable}>
+                    {t('analysis.canvas.statistics_panel.hide')}
+                </Button>
             </div>
         </div>
     );

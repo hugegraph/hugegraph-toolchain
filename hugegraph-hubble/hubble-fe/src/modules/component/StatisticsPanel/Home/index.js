@@ -22,6 +22,7 @@
 
 import React, {useCallback, useState} from 'react';
 import {Radio} from 'antd';
+import {useTranslation} from 'react-i18next';
 import LabelStatistics from '../LabelStatistics';
 import GraphStatistics from '../GraphStatistics/Home';
 import classnames from 'classnames';
@@ -36,6 +37,7 @@ const {LABEL, GRAPH} = StaticsTab;
 
 const StatisticPanel = props => {
     const {open, ...args} = props;
+    const {t} = useTranslation();
 
     const [activePanel, setActivePanel] = useState(LABEL);
 
@@ -54,8 +56,8 @@ const StatisticPanel = props => {
     return (
         <div className={settingClassName}>
             <Radio.Group defaultValue={LABEL} onChange={handleRadioChange} size="middle" buttonStyle="solid">
-                <Radio.Button value={LABEL}>标签统计</Radio.Button>
-                <Radio.Button value={GRAPH}>图统计</Radio.Button>
+                <Radio.Button value={LABEL}>{t('analysis.canvas.statistics_panel.label_statistics')}</Radio.Button>
+                <Radio.Button value={GRAPH}>{t('analysis.canvas.statistics_panel.graph_statistics')}</Radio.Button>
             </Radio.Group>
             {open && (activePanel === LABEL ? <LabelStatistics {...args} /> : <GraphStatistics {...args} />)}
         </div>

@@ -20,8 +20,10 @@ import {Modal, Input, Form, message} from 'antd';
 import * as rules from '../../utils/rules';
 import * as api from '../../api';
 import {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 
 const EditLayer = ({visible, onCancel, data, refresh}) => {
+    const {t} = useTranslation();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
@@ -47,7 +49,7 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
 
     return (
         <Modal
-            title='编辑信息'
+            title={t('my.edit_profile_title')}
             onCancel={onCancel}
             open={visible}
             onOk={onFinish}
@@ -59,15 +61,15 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 initialValues={data}
                 form={form}
             >
-                <Form.Item label='账号ID' name='user_name'><Input disabled /></Form.Item>
+                <Form.Item label={t('my.col.id')} name='user_name'><Input disabled /></Form.Item>
                 <Form.Item
-                    label='账号名'
+                    label={t('my.col.name')}
                     name='user_nickname'
-                    rules={[rules.required(), rules.isAccountName]}
+                    rules={[rules.required(), rules.isAccountName(t('my.edit.account_name_rule'))]}
                 >
                     <Input />
                 </Form.Item>
-                <Form.Item label='备注' name='user_description'><Input /></Form.Item>
+                <Form.Item label={t('my.col.remark')} name='user_description'><Input /></Form.Item>
             </Form>
         </Modal>
     );

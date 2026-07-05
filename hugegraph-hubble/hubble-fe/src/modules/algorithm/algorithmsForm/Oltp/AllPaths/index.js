@@ -59,9 +59,9 @@ const AllPaths = props => {
     const [isRequiring, setRequiring] = useState(false);
     const [stepVisible, setStepVisible] = useState(false);
     const directionOptions = [
-        {label: t('ERView.edge.out'), value: 'OUT'},
-        {label: t('ERView.edge.in'), value: 'IN'},
-        {label: t('ERView.edge.both'), value: 'BOTH'},
+        {label: t('analysis.algorithm.form.direction_options.out'), value: 'OUT'},
+        {label: t('analysis.algorithm.form.direction_options.in'), value: 'IN'},
+        {label: t('analysis.algorithm.form.direction_options.both'), value: 'BOTH'},
     ];
 
 
