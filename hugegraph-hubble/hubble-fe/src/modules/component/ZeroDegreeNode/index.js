@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback, useContext, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {UngroupOutlined} from '@ant-design/icons';
 import {GraphContext} from '../Context';
 
 const ZeroDegreeNodeSearch = props => {
+    const {t} = useTranslation();
     const {graph} = useContext(GraphContext);
 
     const [isolatedNodesMode, setIsolatedNodesMode] = useState(false);
@@ -50,7 +52,7 @@ const ZeroDegreeNodeSearch = props => {
     );
 
     return (
-        <Tooltip title="孤立点" placement='bottom'>
+        <Tooltip title={t('analysis.canvas.toolbar.isolated_nodes')} placement='bottom'>
             <Button type="text" onClick={handleSearchZeroDegreeNodes} icon={<UngroupOutlined />} />
         </Tooltip>
     );

@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback, useContext, useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {ArrowLeftOutlined, ArrowRightOutlined} from '@ant-design/icons';
 import {GraphContext, ToolBarContext} from '../Context';
 
 const RedoUndo = props => {
+    const {t} = useTranslation();
     const {onChange} = props;
     const {graph} = useContext(GraphContext);
     const toolBar = useContext(ToolBarContext);
@@ -159,10 +161,10 @@ const RedoUndo = props => {
 
     return (
         <>
-            <Tooltip title="后退" placement='bottom'>
+            <Tooltip title={t('analysis.canvas.toolbar.undo')} placement='bottom'>
                 <Button disabled={!undoState} type="text" onClick={handleUndo} icon={<ArrowLeftOutlined />} />
             </Tooltip>
-            <Tooltip title="前进" placement='bottom'>
+            <Tooltip title={t('analysis.canvas.toolbar.redo')} placement='bottom'>
                 <Button disabled={!redoState} type="text" onClick={handleRedo} icon={<ArrowRightOutlined />} />
             </Tooltip>
         </>

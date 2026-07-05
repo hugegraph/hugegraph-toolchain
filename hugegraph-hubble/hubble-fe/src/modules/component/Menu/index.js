@@ -17,10 +17,12 @@
  */
 
 import {useContext, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {GraphContext} from '../Context';
 import G6 from '@antv/g6';
 
 const Menu = props => {
+    const {t} = useTranslation();
     const {
         onClickAddNode,
         onClickAddEdge,
@@ -79,18 +81,20 @@ const Menu = props => {
                 getContent(evt) {
                     const {item} = evt;
                     if (item) {
-                        const hasLocked = item.hasLocked() ? '取消固定' : '固定';
+                        const hasLocked = item.hasLocked()
+                            ? t('analysis.canvas.context_menu.unfix')
+                            : t('analysis.canvas.context_menu.fix');
                         return `<ul>
-                            <li data-type='expand'>展开</li>
-                            <li data-type='search'>查询</li>
+                            <li data-type='expand'>${t('analysis.canvas.context_menu.expand')}</li>
+                            <li data-type='search'>${t('analysis.canvas.context_menu.search')}</li>
                             <li data-type='fixed'>${hasLocked}</li>
-                            <li data-type='hide'>隐藏</li>
-                            <li data-type='addOutEdge'>添加出边</li>
-                            <li data-type='addInEdge'>添加入边</li>              
+                            <li data-type='hide'>${t('analysis.canvas.context_menu.hide')}</li>
+                            <li data-type='addOutEdge'>${t('analysis.canvas.context_menu.add_out_edge')}</li>
+                            <li data-type='addInEdge'>${t('analysis.canvas.context_menu.add_in_edge')}</li>
                         </ul>`;
                     }
                     return `<ul>
-                        <li data-type='add'>添加顶点</li>
+                        <li data-type='add'>${t('analysis.canvas.context_menu.add_vertex')}</li>
                     </ul>`;
                 },
                 handleMenuClick(target, item) {
@@ -141,7 +145,7 @@ const Menu = props => {
                 }
             };
         },
-        [graph, handleAddEdge, onClickAddNode, handleFixNode, onExecuteQuery, handleClickSearch]
+        [graph, handleAddEdge, onClickAddNode, handleFixNode, onExecuteQuery, handleClickSearch, t]
     );
     return null;
 };

@@ -21,12 +21,14 @@
  */
 
 import React, {useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {OneToOneOutlined} from '@ant-design/icons';
 import {GraphContext} from '../Context';
 import {fitView} from '../../../utils/graph';
 
 const FitCenter = () => {
+    const {t} = useTranslation();
     const {graph} = useContext(GraphContext);
 
     const handleFitCenter = useCallback(
@@ -40,7 +42,7 @@ const FitCenter = () => {
     );
 
     return (
-        <Tooltip title="自适应" placement='bottom'>
+        <Tooltip title={t('analysis.canvas.toolbar.fit_center')} placement='bottom'>
             <Button type="text" onClick={handleFitCenter} icon={<OneToOneOutlined />} />
         </Tooltip>
     );

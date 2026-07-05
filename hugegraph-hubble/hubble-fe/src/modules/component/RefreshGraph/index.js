@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {SyncOutlined} from '@ant-design/icons';
 import {GraphContext} from '../Context';
 
 const RefreshGraph = () => {
+    const {t} = useTranslation();
     const {graph} = useContext(GraphContext);
 
     const handleRefreshGraph = useCallback(
@@ -40,7 +42,7 @@ const RefreshGraph = () => {
     );
 
     return (
-        <Tooltip title="刷新布局" placement='bottom'>
+        <Tooltip title={t('analysis.canvas.toolbar.refresh_layout')} placement='bottom'>
             <Button type="text" onClick={handleRefreshGraph} icon={<SyncOutlined />} />
         </Tooltip>
     );

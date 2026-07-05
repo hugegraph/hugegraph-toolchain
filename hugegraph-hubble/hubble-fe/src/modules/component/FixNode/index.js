@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback, useContext, useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {PushpinOutlined} from '@ant-design/icons';
 import {GraphContext} from '../Context';
 
 const FixNode = () => {
+    const {t} = useTranslation();
     const {graph} = useContext(GraphContext);
     const [fixState, setFixState] = useState(false);
     const [selectedNode, setSelectedNode] = useState();
@@ -70,7 +72,7 @@ const FixNode = () => {
     );
 
     return (
-        <Tooltip title="固定" placement='bottom'>
+        <Tooltip title={t('analysis.canvas.toolbar.fix_node')} placement='bottom'>
             <Button disabled={!fixState} type="text" onClick={handleFixNode} icon={<PushpinOutlined />} />
         </Tooltip>
     );

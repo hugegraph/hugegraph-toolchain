@@ -20,6 +20,7 @@ package org.apache.hugegraph.handler;
 
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.LocaleUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.entity.UserInfo;
 import org.apache.hugegraph.service.UserInfoService;
@@ -64,6 +65,10 @@ public class MessageSourceHandler {
             RequestContextHolder.currentRequestAttributes();
         } catch (IllegalStateException e) {
             return DEFAULT_LOCALE;
+        }
+
+        if (StringUtils.isNotBlank(this.request.getHeader("Accept-Language"))) {
+            return this.request.getLocale();
         }
 
         UserInfo userInfo = this.getUserInfo();

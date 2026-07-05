@@ -56,6 +56,34 @@
       "add_vertex": "新增顶点",
       "add_in_edge": "新增入边",
       "add_out_edge": "新增出边",
+      "toolbar": {
+        "clear_canvas": "清空画布",
+        "fit_center": "自适应",
+        "full_screen": "全屏",
+        "undo": "后退",
+        "redo": "前进",
+        "refresh_layout": "刷新布局",
+        "zoom_out": "缩小",
+        "zoom_in": "放大",
+        "fix_node": "固定",
+        "isolated_nodes": "孤立点"
+      },
+      "clear_graph": {
+        "title": "是否清除当前画布",
+        "description": "清除当前画布，此次清除操作后不可以恢复",
+        "ok": "确认",
+        "cancel": "取消"
+      },
+      "context_menu": {
+        "expand": "展开",
+        "search": "查询",
+        "fix": "固定",
+        "unfix": "取消固定",
+        "hide": "隐藏",
+        "add_out_edge": "添加出边",
+        "add_in_edge": "添加入边",
+        "add_vertex": "添加顶点"
+      },
       "tooltip": {
         "import_2d": "当前图已有数据，请清空后再导入",
         "import_3d": "3D 模式不支持导入",
@@ -93,11 +121,23 @@
       "filter_drawer": {
         "title": "查询",
         "filter": "筛选",
+        "logic": "逻辑表达式",
+        "filter_type": "筛选类型",
+        "operation_type": "操作类型",
+        "vertex": "点",
+        "edge": "边",
+        "vertex_property": "点属性",
+        "vertex_id": "点ID",
+        "vertex_label": "点类型",
+        "edge_property": "边属性",
+        "edge_id": "边ID",
         "edge_label": "边类型",
         "edge_direction": "边方向",
         "property": "属性",
         "rule": "规则",
         "value": "值",
+        "add_expression": "添加表达式",
+        "delete_expression": "删除表达式",
         "add_property": "添加属性",
         "delete": "删除",
         "duplicate_property": "属性不可重复",
@@ -115,6 +155,19 @@
           "true": "True",
           "false": "False"
         }
+      },
+      "legend": {
+        "title": "图例"
+      },
+      "element_tooltip": {
+        "node": "节点",
+        "edge": "边",
+        "type": "类型"
+      },
+      "task_navigation": {
+        "success_alt": "提交成功",
+        "task_id": "任务ID",
+        "view": "查看"
       },
       "setting_panel": {
         "title": "设置",

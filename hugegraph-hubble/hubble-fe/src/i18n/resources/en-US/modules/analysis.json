@@ -56,6 +56,34 @@
       "add_vertex": "Add Vertex",
       "add_in_edge": "Add In Edge",
       "add_out_edge": "Add Out Edge",
+      "toolbar": {
+        "clear_canvas": "Clear Canvas",
+        "fit_center": "Fit Center",
+        "full_screen": "Full Screen",
+        "undo": "Undo",
+        "redo": "Redo",
+        "refresh_layout": "Refresh Layout",
+        "zoom_out": "Zoom Out",
+        "zoom_in": "Zoom In",
+        "fix_node": "Fix Node",
+        "isolated_nodes": "Isolated Nodes"
+      },
+      "clear_graph": {
+        "title": "Clear the current canvas?",
+        "description": "Clear the current canvas. This action cannot be undone.",
+        "ok": "OK",
+        "cancel": "Cancel"
+      },
+      "context_menu": {
+        "expand": "Expand",
+        "search": "Search",
+        "fix": "Fix",
+        "unfix": "Unfix",
+        "hide": "Hide",
+        "add_out_edge": "Add Out Edge",
+        "add_in_edge": "Add In Edge",
+        "add_vertex": "Add Vertex"
+      },
       "tooltip": {
         "import_2d": "The current graph already has data. Clear it before importing.",
         "import_3d": "Import is not supported in 3D mode.",
@@ -93,11 +121,23 @@
       "filter_drawer": {
         "title": "Query",
         "filter": "Filter",
+        "logic": "Logic",
+        "filter_type": "Filter Type",
+        "operation_type": "Operation Type",
+        "vertex": "Vertex",
+        "edge": "Edge",
+        "vertex_property": "Vertex Property",
+        "vertex_id": "Vertex ID",
+        "vertex_label": "Vertex Label",
+        "edge_property": "Edge Property",
+        "edge_id": "Edge ID",
         "edge_label": "Edge Type",
         "edge_direction": "Edge Direction",
         "property": "Property",
         "rule": "Rule",
         "value": "Value",
+        "add_expression": "Add Expression",
+        "delete_expression": "Delete Expression",
         "add_property": "Add Property",
         "delete": "Delete",
         "duplicate_property": "Property cannot be duplicated",
@@ -115,6 +155,19 @@
           "true": "True",
           "false": "False"
         }
+      },
+      "legend": {
+        "title": "Legend"
+      },
+      "element_tooltip": {
+        "node": "Node",
+        "edge": "Edge",
+        "type": "Type"
+      },
+      "task_navigation": {
+        "success_alt": "Submitted successfully",
+        "task_id": "Task ID",
+        "view": "View"
       },
       "setting_panel": {
         "title": "Settings",

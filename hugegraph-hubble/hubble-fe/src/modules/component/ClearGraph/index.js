@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback, useContext, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip, Modal} from 'antd';
 import {CopyrightOutlined} from '@ant-design/icons';
 import {GraphContext} from '../Context';
 
 const ClearGraph = props => {
+    const {t} = useTranslation();
     const {enable, onChange} = props;
     const {graph} = useContext(GraphContext);
     const [clearModalVisible, setClearModalVisible] = useState(false);
@@ -55,19 +57,19 @@ const ClearGraph = props => {
 
     return (
         <>
-            <Tooltip title="清空画布" placement='bottom'>
+            <Tooltip title={t('analysis.canvas.toolbar.clear_canvas')} placement='bottom'>
                 <Button disabled={!enable} type="text" onClick={handleClear} icon={<CopyrightOutlined />} />
             </Tooltip>
             <Modal
                 width={600}
-                title="是否清除当前画布"
+                title={t('analysis.canvas.clear_graph.title')}
                 open={clearModalVisible}
                 onOk={handleClearModalOk}
                 onCancel={handleClearModalCancel}
-                okText="确认"
-                cancelText="取消"
+                okText={t('analysis.canvas.clear_graph.ok')}
+                cancelText={t('analysis.canvas.clear_graph.cancel')}
             >
-                <div>清除当前画布，此次清除操作后不可以恢复</div>
+                <div>{t('analysis.canvas.clear_graph.description')}</div>
             </Modal>
         </>
     );

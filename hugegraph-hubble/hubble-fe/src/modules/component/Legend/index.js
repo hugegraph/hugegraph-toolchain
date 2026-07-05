@@ -21,11 +21,13 @@
  */
 
 import {useContext, useEffect, useRef, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 
 import {GraphContext} from '../Context';
 import CustomLegend from './customLegend';
 
 const Legend = props => {
+    const {t} = useTranslation();
     const context = useContext(GraphContext);
     const legendRef = useRef(null);
     const {graph} = context;
@@ -52,7 +54,7 @@ const Legend = props => {
         const legendOptions = {
             data: data,
             layout: 'vertical',
-            title: '图例',
+            title: t('analysis.canvas.legend.title'),
             width: 1000,
             align: 'left',
             containerStyle: {
@@ -89,7 +91,7 @@ const Legend = props => {
             }
         };
     },
-    [data, filterFunctions, graph]);
+    [data, filterFunctions, graph, t]);
 
 };
 
