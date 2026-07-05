@@ -22,6 +22,7 @@ import JSONbig from 'json-bigint';
 import _ from 'lodash';
 import i18n from '../i18n';
 import * as user from '../utils/user';
+import {withLanguageHeader} from './languageHeader';
 
 const isJsonResponse = headers => {
     const contentType = headers?.['content-type'] || headers?.['Content-Type'] || '';
@@ -67,6 +68,7 @@ const instance = axios.create({
 
 instance.interceptors.request.use(
     config => {
+        config.headers = withLanguageHeader(config.headers);
         if (!config.headers['Content-Type']) {
             if (config.data !== undefined) {
                 config.data = JSON.stringify(config.data);

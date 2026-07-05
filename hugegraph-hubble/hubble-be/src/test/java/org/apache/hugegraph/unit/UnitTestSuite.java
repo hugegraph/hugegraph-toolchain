@@ -35,6 +35,7 @@ import org.junit.runners.Suite;
     HubbleOptionsTest.class,
     IngestControllerTest.class,
     LangChainControllerSecurityTest.class,
+    MessageSourceHandlerTest.class,
     SchemaControllerSecurityTest.class,
     JobManagerServiceTest.class,
     OltpAlgoControllerTest.class,

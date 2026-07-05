@@ -21,12 +21,14 @@
  */
 
 import React, {useCallback, useContext, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {CompressOutlined} from '@ant-design/icons';
 import screenfull from 'screenfull';
 import {GraphContext} from '../Context';
 
 const FullScreen = props => {
+    const {t} = useTranslation();
     const {onChange} = props;
     const {graph} = useContext(GraphContext);
     const handleFullScreenState = useCallback(
@@ -62,7 +64,7 @@ const FullScreen = props => {
     );
 
     return (
-        <Tooltip title="全屏" placement='bottom'>
+        <Tooltip title={t('analysis.canvas.toolbar.full_screen')} placement='bottom'>
             <Button type="text" onClick={handleFullScreen} icon={<CompressOutlined />} />
         </Tooltip>
     );

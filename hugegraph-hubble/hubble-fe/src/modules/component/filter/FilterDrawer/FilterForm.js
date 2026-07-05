@@ -18,21 +18,10 @@
 
 import {Button, Form, Input, Select, Segmented, DatePicker} from 'antd';
 import {useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {ruleOptions, typeToOption} from './config';
 import style from './index.module.scss';
 import * as rules from '../../../../utils/rules';
-
-const VertexTypeOptions = [
-    {label: '点属性', value: 'property'},
-    {label: '点ID', value: 'id'},
-    {label: '点类型', value: 'label'},
-];
-
-const EdgeTypeOptions = [
-    {label: '边属性', value: 'property'},
-    {label: '边ID', value: 'id'},
-    {label: '边类型', value: 'label'},
-];
 
 const DateRangeForm = ({name}) => {
 
@@ -68,18 +57,19 @@ const DateRangeForm = ({name}) => {
     );
 };
 
-const InputRangeForm = ({name}) => (
+const InputRangeForm = ({name, placeholder}) => (
     <>
         <Form.Item name={[name, 0]} rules={[rules.required()]}>
-            <Input placeholder='值' />
+            <Input placeholder={placeholder} />
         </Form.Item>
         <Form.Item name={[name, 1]} rules={[rules.required()]}>
-            <Input placeholder='值' />
+            <Input placeholder={placeholder} />
         </Form.Item>
     </>
 );
 
 const FilterForm = ({index, remove, propertyList}) => {
+    const {t} = useTranslation();
     const [form] = Form.useForm();
     const [type, setType] = useState('vertex');
     const [opType, setOpType] = useState('property');
@@ -119,6 +109,20 @@ const FilterForm = ({index, remove, propertyList}) => {
         form.resetFields(['value']);
     }, [form]);
 
+    const vertexTypeOptions = [
+        {label: t('analysis.canvas.filter_drawer.vertex_property'), value: 'property'},
+        {label: t('analysis.canvas.filter_drawer.vertex_id'), value: 'id'},
+        {label: t('analysis.canvas.filter_drawer.vertex_label'), value: 'label'},
+    ];
+
+    const edgeTypeOptions = [
+        {label: t('analysis.canvas.filter_drawer.edge_property'), value: 'property'},
+        {label: t('analysis.canvas.filter_drawer.edge_id'), value: 'id'},
+        {label: t('analysis.canvas.filter_drawer.edge_label'), value: 'label'},
+    ];
+
+    const valuePlaceholder = t('analysis.canvas.filter_drawer.value');
+
     // const getFromEvent = useCallback(value => moment(value).format('YYYY-MM-DD'), []);
     // const getFromProps = useCallback(value => ({value: value ? moment(value) : ''}), []);
 
@@ -133,51 +137,58 @@ const FilterForm = ({index, remove, propertyList}) => {
                 type,
             }}
         >
-            <Form.Item label='筛选类型'>
+            <Form.Item label={t('analysis.canvas.filter_drawer.filter_type')}>
                 <Segmented
                     block
-                    options={[{label: '点', value: 'vertex'}, {label: '边', value: 'edge'}]}
+                    options={[
+                        {label: t('analysis.canvas.filter_drawer.vertex'), value: 'vertex'},
+                        {label: t('analysis.canvas.filter_drawer.edge'), value: 'edge'},
+                    ]}
                     onChange={handleType}
                 />
             </Form.Item>
             <Form.Item name='type' hidden><Input /></Form.Item>
-            <Form.Item label='操作类型' name='op_type'>
+            <Form.Item label={t('analysis.canvas.filter_drawer.operation_type')} name='op_type'>
                 <Select
-                    options={type === 'vertex' ? VertexTypeOptions : EdgeTypeOptions}
-                    placeholder='操作类型'
+                    options={type === 'vertex' ? vertexTypeOptions : edgeTypeOptions}
+                    placeholder={t('analysis.canvas.filter_drawer.operation_type')}
                     onChange={handleOpType}
                 />
             </Form.Item>
             {opType === 'property' && (
-                <Form.Item label='属性' name='property' rules={[rules.required()]}>
+                <Form.Item
+                    label={t('analysis.canvas.filter_drawer.property')}
+                    name='property'
+                    rules={[rules.required()]}
+                >
                     <Select
                         options={propertyList.map(item => ({
                             label: item.name,
                             value: item.name,
                             disabled: !typeToOption[item.data_type],
                         }))}
-                        placeholder='属性'
+                        placeholder={t('analysis.canvas.filter_drawer.property')}
                         onChange={handleProperty}
                     />
                 </Form.Item>
             )}
-            <Form.Item label='规则' name='rule' rules={[rules.required()]}>
+            <Form.Item label={t('analysis.canvas.filter_drawer.rule')} name='rule' rules={[rules.required()]}>
                 <Select
                     options={ruleOptions.filter(item => (
                         ruleType
                         && typeToOption[ruleType]
                         && typeToOption[ruleType].includes(item.value)
                     ))}
-                    placeholder='规则'
+                    placeholder={t('analysis.canvas.filter_drawer.rule')}
                     onChange={handleRule}
                 />
             </Form.Item>
-            <Form.Item label='值'>
+            <Form.Item label={t('analysis.canvas.filter_drawer.value')}>
                 {['ltlt', 'ltlte', 'ltelt', 'ltelte'].includes(rule)
                     ? (
                         ruleType === 'DATE'
                             ? <DateRangeForm name='value' />
-                            : <InputRangeForm name='value' />
+                            : <InputRangeForm name='value' placeholder={valuePlaceholder} />
                     )
                     : (
                         ruleType === 'BOOLEN'
@@ -206,7 +217,7 @@ const FilterForm = ({index, remove, propertyList}) => {
                                 </Form.Item>
                             ) : (
                                 <Form.Item noStyle name='value' rules={[rules.required()]}>
-                                    <Input placeholder='值' />
+                                    <Input placeholder={valuePlaceholder} />
                                 </Form.Item>
                             ))
                     )}
@@ -214,13 +225,10 @@ const FilterForm = ({index, remove, propertyList}) => {
             <Form.Item name='data_type'>
                 <Input hidden />
             </Form.Item>
-            {/* <Select
-                options={(edgeList).map(item =>
-                    ({label: item.name, value: item.name}))}
-                placeholder='值'
-            /> */}
             <Form.Item>
-                <Button block danger onClick={handleRemove}>删除表达式</Button>
+                <Button block danger onClick={handleRemove}>
+                    {t('analysis.canvas.filter_drawer.delete_expression')}
+                </Button>
             </Form.Item>
         </Form>
     );

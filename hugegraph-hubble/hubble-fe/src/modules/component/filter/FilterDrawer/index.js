@@ -17,6 +17,7 @@
  */
 
 import {useState, useEffect, useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Drawer, Radio, Card, Form, Button} from 'antd';
 import FilterForm from './FilterForm';
 import GraphAnalysisContext from '../../../Context';
@@ -118,6 +119,7 @@ const filterData = (dataList, rules, logic) => {
 
 const Filter = ({open, onCancel, dataSource, onChange}) => {
 
+    const {t} = useTranslation();
     const {graphSpace: currentGraphSpace, graph: currentGraph} = useContext(GraphAnalysisContext);
     const [list, setList] = useState([]);
     // const [autoID, setAutoID] = useState(1);
@@ -195,7 +197,7 @@ const Filter = ({open, onCancel, dataSource, onChange}) => {
 
     return (
         <Drawer
-            title='筛选'
+            title={t('analysis.canvas.filter_drawer.filter')}
             open={open}
             onClose={onCancel}
         >
@@ -203,7 +205,7 @@ const Filter = ({open, onCancel, dataSource, onChange}) => {
                 onFormFinish={onFinish}
             >
                 <Form>
-                    <Form.Item label='逻辑表达式' name='logic' initialValue={'and'}>
+                    <Form.Item label={t('analysis.canvas.filter_drawer.logic')} name='logic' initialValue={'and'}>
                         <Radio.Group
                             options={[{label: 'and', value: 'and'}, {label: 'or', value: 'or'}]}
                             onChange={handleLogic}
@@ -224,9 +226,13 @@ const Filter = ({open, onCancel, dataSource, onChange}) => {
                     );
                 })}
 
-                <Button type='dashed' block onClick={addForm} className={style.add}>添加表达式</Button>
+                <Button type='dashed' block onClick={addForm} className={style.add}>
+                    {t('analysis.canvas.filter_drawer.add_expression')}
+                </Button>
                 <Form>
-                    <Button type='primary' block htmlType='submit'>筛选</Button>
+                    <Button type='primary' block htmlType='submit'>
+                        {t('analysis.canvas.filter_drawer.filter')}
+                    </Button>
                 </Form>
             </Form.Provider>
         </Drawer>

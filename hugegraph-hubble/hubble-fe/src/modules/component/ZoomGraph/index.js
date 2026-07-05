@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button, Tooltip} from 'antd';
 import {ZoomOutOutlined, ZoomInOutlined} from '@ant-design/icons';
 import {ToolBarContext} from '../Context';
 
 const ZoomGraph = () => {
+    const {t} = useTranslation();
     const toolBarInstance = useContext(ToolBarContext);
 
     const handleZoomIn = useCallback(
@@ -44,10 +46,10 @@ const ZoomGraph = () => {
 
     return (
         <>
-            <Tooltip title="缩小" placement='bottom'>
+            <Tooltip title={t('analysis.canvas.toolbar.zoom_out')} placement='bottom'>
                 <Button type="text" onClick={handleZoomIn} icon={<ZoomOutOutlined />} />
             </Tooltip>
-            <Tooltip title="放大" placement='bottom'>
+            <Tooltip title={t('analysis.canvas.toolbar.zoom_in')} placement='bottom'>
                 <Button type="text" onClick={handleZoomOut} icon={<ZoomInOutlined />} />
             </Tooltip>
         </>

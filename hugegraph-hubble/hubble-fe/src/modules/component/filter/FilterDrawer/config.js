@@ -32,13 +32,6 @@ const ruleOptions = [
     {value: 'notcontains', label: 'not contains'},
 ];
 
-const propertyDateOption = [
-    {value: 'eq', label: '所选当天'},
-    {value: 'lt', label: '之前（不包含所选日期）'},
-    {value: 'gt', label: '之后（不包含所选日期）'},
-    {value: 'ltelte', label: '时间段'},
-];
-
 const typeToOption = {
     'TEXT': ['eq', 'neq', 'contains', 'notcontains'],
     'DATE': ['gt', 'gte', 'lt', 'lte', 'ltlt', 'ltlte', 'ltelt', 'ltelte', 'eq', 'neq'],
@@ -47,5 +40,5 @@ const typeToOption = {
 };
 
 export {
-    ruleOptions, propertyDateOption, typeToOption,
+    ruleOptions, typeToOption,
 };

@@ -21,11 +21,13 @@
  */
 
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import FinishedIcon from '../../../assets/ic_done_144.svg';
 import {useNavigate} from 'react-router-dom';
 import c from './index.module.scss';
 
 const TaskNavigateView = props => {
+    const {t} = useTranslation();
     const {
         message,
         taskId,
@@ -45,13 +47,13 @@ const TaskNavigateView = props => {
         <div className={c.graphView}>
             <img
                 src={FinishedIcon}
-                alt="提交成功"
+                alt={t('analysis.canvas.task_navigation.success_alt')}
             />
             <span>{message}</span>
-            <span>任务ID: {taskId}</span>
+            <span>{t('analysis.canvas.task_navigation.task_id')}: {taskId}</span>
             <span>
                 <a onClick={onClickDetail}>
-                    查看
+                    {t('analysis.canvas.task_navigation.view')}
                 </a>
             </span>
         </div>
