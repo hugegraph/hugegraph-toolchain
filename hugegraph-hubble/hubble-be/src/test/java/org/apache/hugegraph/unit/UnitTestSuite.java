@@ -29,6 +29,7 @@ import org.junit.runners.Suite;
     AuthSecurityTest.class,
     AppTypeTest.class,
     AuthzRouteRegistrationTest.class,
+    ConsolePrintTest.class,
     FileMappingSchemaTest.class,
     FileUploadControllerTest.class,
     FileUtilTest.class,

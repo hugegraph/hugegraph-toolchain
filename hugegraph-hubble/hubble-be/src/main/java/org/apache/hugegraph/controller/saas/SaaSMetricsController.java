@@ -339,10 +339,4 @@ public class SaaSMetricsController extends BaseController {
         @JsonProperty("distribution_during24h")
         private List<List<Object>> distributionDuring24h;
     }
-
-    public static void main(String[] args) {
-        System.out.println("gremlin应用" + defaultGremlinApp("bddwd", "astrolabegs", "indexpro_online"));
-        System.out.println("边更新应用" + defaultEdgeUpdateApp("bddwd", "astrolabegs", "indexpro_online"));
-        System.out.println("顶点更新应用" + defaultVertexUpdateApp("bddwd", "astrolabegs", "indexpro_online"));
-    }
 }

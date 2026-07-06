@@ -21,6 +21,8 @@ package org.apache.hugegraph;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.util.Ex;
 import org.mybatis.spring.annotation.MapperScan;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -38,8 +40,10 @@ import java.util.TimeZone;
 @MapperScan("org.apache.hugegraph.mapper")
 public class HugeGraphHubble extends SpringBootServletInitializer {
 
+    private static final Logger LOG = LoggerFactory.getLogger(HugeGraphHubble.class);
+
     public static void main(String[] args) {
-        System.out.println("user.dir ==> " + System.getProperty("user.dir"));
+        LOG.info("user.dir ==> {}", System.getProperty("user.dir"));
         initEnv();
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.of("+8")));
         SpringApplication.run(HugeGraphHubble.class, args);
