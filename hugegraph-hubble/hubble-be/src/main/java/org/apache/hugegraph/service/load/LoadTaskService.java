@@ -343,14 +343,36 @@ public class LoadTaskService {
         LoadOptions options = new LoadOptions();
         // Connection params
         options.file = fileMapping.getPath();
-        options.graph = connection.getGraph();
-        options.host = connection.getHost();
-        options.port = connection.getPort();
+        boolean directServer = StringUtils.isNotEmpty(connection.getHost()) ||
+                               connection.getPort() != null;
+        if (StringUtils.isNotEmpty(connection.getGraphSpace())) {
+            options.graphSpace = connection.getGraphSpace();
+        }
+        if (StringUtils.isNotEmpty(connection.getGraph())) {
+            options.graph = connection.getGraph();
+        }
+        if (!directServer && StringUtils.isNotEmpty(connection.getPdPeers())) {
+            options.pdPeers = connection.getPdPeers();
+        }
+        if (StringUtils.isNotEmpty(connection.getCluster())) {
+            options.cluster = connection.getCluster();
+        }
+        if (StringUtils.isNotEmpty(connection.getRouteType())) {
+            options.routeType = connection.getRouteType();
+        }
+        if (StringUtils.isNotEmpty(connection.getHost())) {
+            options.host = connection.getHost();
+        }
+        if (connection.getPort() != null) {
+            options.port = connection.getPort();
+        }
         options.username = connection.getUsername();
-        // hugegraph-loader 1.3.0 passes token as the Basic auth password.
-        options.token = StringUtils.isNotEmpty(connection.getPassword()) ?
-                        connection.getPassword() : connection.getToken();
-        options.protocol = connection.getProtocol() != null ?
+        if (StringUtils.isNotEmpty(connection.getPassword())) {
+            options.password = connection.getPassword();
+        } else {
+            options.token = connection.getToken();
+        }
+        options.protocol = StringUtils.isNotEmpty(connection.getProtocol()) ?
                            connection.getProtocol() : "http";
         // Load parameters
         LoadParameter parameter = fileMapping.getLoadParameter();
