@@ -19,82 +19,89 @@
 import validator from 'validator';
 import cronValidator from 'cron-expression-validator';
 
-// 必填项
+import i18n from '../i18n';
+
+const validationMessage = (key, options) => i18n.t(`common.validation.${key}`, options);
+const customMessage = (msg, key, options) => (
+    typeof msg === 'string' ? msg : validationMessage(key, options)
+);
+
+// Required field
 const required = msg => ({
     required: true,
-    message: msg ?? undefined,
+    message: customMessage(msg, 'required'),
 });
 
-const max = max => ({
-    max,
-    message: `最大长度为${max}个字符!`,
+const max = value => ({
+    max: value,
+    message: validationMessage('max', {max: value}),
 });
 
-// ip验证
+// IP validation
 const isIP = () => ({
     validator(_, value) {
         if (validator.isIP(value)) {
             return Promise.resolve();
         }
 
-        return Promise.reject(new Error('不是合法的IP'));
+        return Promise.reject(new Error(validationMessage('invalid_ip')));
     },
 });
 
-// 端口验证
+// Port validation
 const isPort = () => ({
     validator(_, value) {
         if (validator.isPort(value)) {
             return Promise.resolve();
         }
 
-        return Promise.reject(new Error('不是合法的端口'));
+        return Promise.reject(new Error(validationMessage('invalid_port')));
     },
 });
 
-// cron 验证
+// Cron validation
 const isCron = msg => ({
     validator(_, value) {
         if (cronValidator.isValidCronExpression(value)) {
             return Promise.resolve();
         }
         return Promise.reject(new Error(
-            typeof msg === 'string' ? msg : '不是合法的quartz格式'
+            typeof msg === 'string' ? msg : validationMessage('invalid_cron')
         ));
     },
 });
 
-// 名称 验证
+// Name validation
 const isName = () => ({
     validator(_, value) {
         let res = /^[a-z][a-z0-9_]*$/.test(value);
         if (!res) {
-            return Promise.reject('以字母开头,只能包含小写字母、数字、_');
+            return Promise.reject(validationMessage('name_rule'));
         }
 
         return Promise.resolve();
     },
 });
 
-// 中文，字母，_
+// Chinese characters, letters, underscore
 const isCNName = () => ({
     validator(_, value) {
         let res = /[^\u4E00-\u9FA5\uFE30-\uFFA0\_a-zA-Z]+/.test(value);
         if (res) {
-            return Promise.reject('只能包含中文、字母、_');
+            return Promise.reject(validationMessage('cn_name_rule'));
         }
 
         return Promise.resolve();
     },
 });
 
-// 中文，字母，数字，_
+// Chinese characters, letters, numbers, underscore
 const isPropertyName = msg => ({
     validator(_, value) {
         let res = /[^\u4E00-\u9FA5\uFE30-\uFFA0\_a-zA-Z0-9]+/.test(value);
         if (res) {
             return Promise.reject(
-                typeof msg === 'string' ? msg : '只能包含中文、字母、数字、_'
+                typeof msg === 'string' ? msg : validationMessage('property_name_rule')
             );
         }
 
@@ -102,13 +109,13 @@ const isPropertyName = msg => ({
     },
 });
 
-// 中文，字母，数字，_
+// Chinese characters, letters, numbers, underscore
 const isNoramlName = msg => ({
     validator(_, value) {
         let res = /^[\u4E00-\u9FA5\uFE30-\uFFA0\_a-zA-Z0-9_]{1,20}$/.test(value);
         if (!res) {
             return Promise.reject(
-                typeof msg === 'string' ? msg : '只能包含中文、字母、数字、_, 不能超过20个字符'
+                typeof msg === 'string' ? msg : validationMessage('normal_name_rule')
             );
         }
 
@@ -126,7 +133,7 @@ const isJDBC = msg => ({
             return Promise.reject(
                 typeof msg === 'string'
                     ? msg
-                    : '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name'
+                    : validationMessage('jdbc_rule')
             );
         }
 
@@ -143,7 +150,7 @@ const isAccountName = msg => ({
 
         if (!res || res1 || res2) {
             return Promise.reject(
-                typeof msg === 'string' ? msg : '账号名不超过16个字符，且不能以下划线开始和结尾'
+                typeof msg === 'string' ? msg : validationMessage('account_name_rule')
             );
         }
 
@@ -151,25 +158,25 @@ const isAccountName = msg => ({
     },
 });
 
-// uuid验证
+// UUID validation
 const isUUID = () => ({
     validator(_, value) {
         if (!value || validator.isUUID(value)) {
             return Promise.resolve();
         }
 
-        return Promise.reject('非法的数据格式');
+        return Promise.reject(validationMessage('invalid_data_format'));
     },
 });
 
-// int验证
+// Integer validation
 const isInt = () => ({
     validator(_, value) {
         if (!value || validator.isInt(value)) {
             return Promise.resolve();
         }
 
-        return Promise.reject('非法的数据格式');
+        return Promise.reject(validationMessage('invalid_data_format'));
     },
 });
 

@@ -41,6 +41,7 @@ import org.junit.runners.Suite;
     MessageSourceHandlerTest.class,
     SchemaControllerSecurityTest.class,
     JobManagerServiceTest.class,
+    LoadTaskServiceTest.class,
     OltpAlgoControllerTest.class,
     OltpAlgoServiceTest.class,
     QueryServiceTest.class,

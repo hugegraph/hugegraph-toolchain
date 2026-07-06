@@ -14,6 +14,20 @@
       "cancelled": "Stopped",
       "failed": "Failed",
       "undefined": "Unknown"
+    },
+    "validation": {
+      "required": "This field is required",
+      "max": "Maximum length is {{max}} characters",
+      "invalid_ip": "Invalid IP address",
+      "invalid_port": "Invalid port",
+      "invalid_cron": "Invalid Quartz expression",
+      "name_rule": "Start with a letter, and use lowercase letters, numbers, or underscores only",
+      "cn_name_rule": "Use Chinese characters, letters, or underscores only",
+      "property_name_rule": "Use Chinese characters, letters, numbers, or underscores only",
+      "normal_name_rule": "Use Chinese characters, letters, numbers, or underscores only, up to 20 characters",
+      "jdbc_rule": "Enter a valid JDBC URL, for example: jdbc:mysql://127.0.0.1:3306/db_name",
+      "account_name_rule": "Account name must be within 16 characters and cannot start or end with an underscore",
+      "invalid_data_format": "Invalid data format"
     }
   },
   "request": {

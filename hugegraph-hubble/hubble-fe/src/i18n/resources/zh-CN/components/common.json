@@ -14,6 +14,20 @@
       "cancelled": "停止",
       "failed": "失败",
       "undefined": "未知"
+    },
+    "validation": {
+      "required": "必填项",
+      "max": "最大长度为{{max}}个字符!",
+      "invalid_ip": "不是合法的IP",
+      "invalid_port": "不是合法的端口",
+      "invalid_cron": "不是合法的quartz格式",
+      "name_rule": "以字母开头,只能包含小写字母、数字、_",
+      "cn_name_rule": "只能包含中文、字母、_",
+      "property_name_rule": "只能包含中文、字母、数字、_",
+      "normal_name_rule": "只能包含中文、字母、数字、_, 不能超过20个字符",
+      "jdbc_rule": "请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name",
+      "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾",
+      "invalid_data_format": "非法的数据格式"
     }
   },
   "request": {
