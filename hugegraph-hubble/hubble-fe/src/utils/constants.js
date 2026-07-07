@@ -128,9 +128,9 @@ export const EDGELABEL_TYPE = {
 };
 
 export const EDGELABEL_TYPE_NAME = {
-    PARENT: '父边',
-    SUB: '子边',
-    NORMAL: '普通边',
+    PARENT: 'analysis.canvas.element_tooltip.edge_label_type.parent',
+    SUB: 'analysis.canvas.element_tooltip.edge_label_type.sub',
+    NORMAL: 'analysis.canvas.element_tooltip.edge_label_type.normal',
 };
 
 export const Async_Task_Type = {
