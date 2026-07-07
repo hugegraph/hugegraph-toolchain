@@ -139,6 +139,8 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
     replaced_port = False
     replaced_server_address = False
     replaced_server_port = False
+    replaced_pd_enabled = False
+    replaced_direct_url = False
     for line in text.splitlines():
         if host and line.startswith("hubble.host="):
             lines.append(f"hubble.host={host}")
@@ -152,6 +154,12 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
         elif port and line.startswith("server.port="):
             lines.append(f"server.port={port}")
             replaced_server_port = True
+        elif line.startswith("pd.enabled="):
+            lines.append("pd.enabled=false")
+            replaced_pd_enabled = True
+        elif line.startswith("server.direct_url="):
+            lines.append(f"server.direct_url={server_url}")
+            replaced_direct_url = True
         else:
             lines.append(line)
     if host and not replaced_host:
@@ -162,8 +170,10 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
         lines.append(f"hubble.port={port}")
     if port and not replaced_server_port:
         lines.append(f"server.port={port}")
-    lines.append("pd.enabled=false")
-    lines.append(f"server.direct_url={server_url}")
+    if not replaced_pd_enabled:
+        lines.append("pd.enabled=false")
+    if not replaced_direct_url:
+        lines.append(f"server.direct_url={server_url}")
     conf.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

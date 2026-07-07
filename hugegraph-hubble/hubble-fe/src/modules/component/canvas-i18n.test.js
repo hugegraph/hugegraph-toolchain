@@ -17,6 +17,9 @@
  */
 
 import enAnalysis from '../../i18n/resources/en-US/modules/analysis.json';
+import {
+    EDGELABEL_TYPE_NAME,
+} from '../../utils/constants';
 
 const get = path => path.split('.').reduce((value, key) => value && value[key], enAnalysis);
 const hasChinese = value => /[\u4e00-\u9fff]/.test(value);
@@ -66,6 +69,9 @@ describe('canvas i18n coverage', () => {
             'analysis.canvas.element_tooltip.node',
             'analysis.canvas.element_tooltip.edge',
             'analysis.canvas.element_tooltip.type',
+            'analysis.canvas.element_tooltip.edge_label_type.parent',
+            'analysis.canvas.element_tooltip.edge_label_type.sub',
+            'analysis.canvas.element_tooltip.edge_label_type.normal',
             'analysis.canvas.task_navigation.success_alt',
             'analysis.canvas.task_navigation.task_id',
             'analysis.canvas.task_navigation.view',
@@ -87,6 +93,15 @@ describe('canvas i18n coverage', () => {
             expect(typeof value).toBe('string');
             expect(value.length).toBeGreaterThan(0);
             expect(hasChinese(value)).toBe(false);
+        });
+    });
+
+    it('keeps edge label type display constants as i18n keys', () => {
+        Object.values(EDGELABEL_TYPE_NAME).forEach(value => {
+            expect(value).toMatch(/^analysis\.canvas\.element_tooltip\.edge_label_type\./);
+            expect(hasChinese(value)).toBe(false);
+            expect(get(value)).toBeTruthy();
+            expect(hasChinese(get(value))).toBe(false);
         });
     });
 });

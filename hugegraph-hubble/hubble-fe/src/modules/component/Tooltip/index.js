@@ -50,7 +50,7 @@ const Tooltip = () => {
         if (EDGE_TYPE.includes(type) && edgelabel_type !== 'NORMAL') {
             const tagSpan = document.createElement('span');
             tagSpan.className = edgelabel_type === EDGELABEL_TYPE.PARENT ? c.tagGlod : c.tagBlue;
-            tagSpan.innerText = EDGELABEL_TYPE_NAME[edgelabel_type];
+            tagSpan.innerText = t(EDGELABEL_TYPE_NAME[edgelabel_type]);
             typeInfoDiv.insertBefore(tagSpan, typeSpan.nextSibling);
         }
         container.appendChild(typeInfoDiv);

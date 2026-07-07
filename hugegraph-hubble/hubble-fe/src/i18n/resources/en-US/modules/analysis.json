@@ -162,7 +162,12 @@
       "element_tooltip": {
         "node": "Node",
         "edge": "Edge",
-        "type": "Type"
+        "type": "Type",
+        "edge_label_type": {
+          "parent": "Parent edge",
+          "sub": "Sub edge",
+          "normal": "Normal edge"
+        }
       },
       "task_navigation": {
         "success_alt": "Submitted successfully",

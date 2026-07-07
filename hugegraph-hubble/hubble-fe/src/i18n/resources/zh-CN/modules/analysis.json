@@ -162,7 +162,12 @@
       "element_tooltip": {
         "node": "节点",
         "edge": "边",
-        "type": "类型"
+        "type": "类型",
+        "edge_label_type": {
+          "parent": "父边",
+          "sub": "子边",
+          "normal": "普通边"
+        }
       },
       "task_navigation": {
         "success_alt": "提交成功",

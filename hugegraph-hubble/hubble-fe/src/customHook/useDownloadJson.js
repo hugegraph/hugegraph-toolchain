@@ -23,16 +23,25 @@
 const useDownloadJson = () => {
 
     const downloadJsonHandler = (fileName, data) => {
-        const formatedFileName = fileName.split('.').join('');
-        let element = document.createElement('a');
+        const sanitizedFileName = String(fileName || '')
+            .trim()
+            .replace(/\.json$/i, '')
+            .split('.')
+            .join('');
+        const formatedFileName = `${sanitizedFileName || 'graph-data'}.json`;
+        const element = document.createElement('a');
         const processedData = JSON.stringify(data);
-        element.setAttribute('href',
-            `data:application/json;charset=utf-8,\ufeff${encodeURIComponent(processedData)}`);
+        const blob = new Blob([`\ufeff${processedData}`], {
+            type: 'application/json;charset=utf-8',
+        });
+        const objectUrl = URL.createObjectURL(blob);
+        element.setAttribute('href', objectUrl);
         element.setAttribute('download', formatedFileName);
         element.style.display = 'none';
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
+        URL.revokeObjectURL(objectUrl);
     };
 
     return {downloadJsonHandler};
