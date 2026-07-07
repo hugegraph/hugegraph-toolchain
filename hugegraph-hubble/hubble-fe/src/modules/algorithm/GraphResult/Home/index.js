@@ -50,7 +50,8 @@ import {formatToGraphData, formatToOptionedGraphData, formatToStyleData,
 import {fetchExpandInfo, handleAddGraphNode, handleAddGraphEdge, handleExpandGraph} from '../utils';
 import {mapLayoutNameToLayoutDetails} from '../../../../utils/graph';
 import {
-    GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, getAlgorithmNameI18nKey, useTranslatedConstants,
+    GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, ALGORITHM_NAME, Algorithm_Layout,
+    getAlgorithmDisplayName, getCanonicalAlgorithmName,
 } from '../../../../utils/constants';
 import c from './index.module.scss';
 import _ from 'lodash';
@@ -74,9 +75,11 @@ const GraphResult = props => {
         graphRenderMode,
         onGraphRenderModeChange,
     } = props;
-    const {ALGORITHM_NAME, Algorithm_Layout} = useTranslatedConstants();
-    const algorithmNameI18nKey = getAlgorithmNameI18nKey(algorithmName);
-    const displayAlgorithmName = algorithmNameI18nKey ? t(algorithmNameI18nKey) : algorithmName;
+    const canonicalAlgorithmName = useMemo(
+        () => getCanonicalAlgorithmName(algorithmName, t),
+        [algorithmName, t]
+    );
+    const displayAlgorithmName = getAlgorithmDisplayName(algorithmName, t);
 
     const {STANDBY, LOADING, SUCCESS, FAILED, UPLOAD_FAILED} = GRAPH_STATUS;
     const {JACCARD_SIMILARITY, JACCARD_SIMILARITY_POST, RANK_API,
@@ -106,8 +109,11 @@ const GraphResult = props => {
     const {jaccardsimilarity, rankObj, rankArray} = options || {};
     const showCanvasInfo =  (_.size(data.vertices) !== 0 || _.size(data.edges) !== 0) && queryStatus === SUCCESS;
     const layoutInfo = useMemo(
-        () => mapLayoutNameToLayoutDetails({layout: Algorithm_Layout[algorithmName], startId: options?.startId}),
-        [algorithmName, options?.startId]
+        () => mapLayoutNameToLayoutDetails({
+            layout: Algorithm_Layout[canonicalAlgorithmName],
+            startId: options?.startId,
+        }),
+        [canonicalAlgorithmName, options?.startId]
     );
 
     const onGraphRender = useCallback(graph => {
@@ -121,12 +127,12 @@ const GraphResult = props => {
     useEffect(
         () => {
             const rawGraphData = formatToGraphData(data, metaData, {});
-            const finalGraphData = formatToOptionedGraphData(rawGraphData, options, algorithmName);
+            const finalGraphData = formatToOptionedGraphData(rawGraphData, options, canonicalAlgorithmName);
             const styleConfigData = formatToStyleData(rawGraphData);
             setGraphData(finalGraphData);
             setStyleConfigData(styleConfigData);
         },
-        [algorithmName, data, metaData, options]
+        [canonicalAlgorithmName, data, metaData, options]
     );
 
     const handleUpdateStatus = useCallback(
@@ -147,7 +153,7 @@ const GraphResult = props => {
         styleConfigData => {
             try {
                 const styledData = updateGraphDataStyle(graphData, styleConfigData);
-                const newGraphData = formatToOptionedGraphData(styledData, options, algorithmName);
+                const newGraphData = formatToOptionedGraphData(styledData, options, canonicalAlgorithmName);
                 graph.changeData(_.cloneDeep(newGraphData), true);
                 graph.getNodes().forEach(item => {
                     graph.refreshItem(item);
@@ -168,7 +174,7 @@ const GraphResult = props => {
                 }
             }
         },
-        [algorithmName, graph, graphData, options]
+        [canonicalAlgorithmName, graph, graphData, options]
     );
 
     const handleRefreshExcuteCount = useCallback(() => {
@@ -180,13 +186,13 @@ const GraphResult = props => {
             const {filter} = values;
             const newData = filterData(props.data, filter.rules, filter.logic);
             const newRawGraphData = formatToGraphData(newData || {}, metaData, styleConfigData);
-            const newGraphData = formatToOptionedGraphData(newRawGraphData, options, algorithmName);
+            const newGraphData = formatToOptionedGraphData(newRawGraphData, options, canonicalAlgorithmName);
             graph.changeData(newGraphData, true);
             graph.refresh();
             setGraphData(newGraphData);
             setStyleConfigData(formatToStyleData(newRawGraphData));
         },
-        [algorithmName, graph, metaData, options, props.data, styleConfigData]
+        [canonicalAlgorithmName, graph, metaData, options, props.data, styleConfigData]
     );
 
     const handleTogglePanel = useCallback(
@@ -237,10 +243,10 @@ const GraphResult = props => {
     const handleExpand = useCallback(
         (newData, graphInstance) => {
             const newGraphData = handleExpandGraph(newData, metaData,
-                styleConfigData, options, algorithmName, graphInstance);
+                styleConfigData, options, canonicalAlgorithmName, graphInstance);
             setGraphData(newGraphData);
             setStyleConfigData(formatToStyleData(newGraphData));
-        }, [algorithmName, metaData, options, styleConfigData]);
+        }, [canonicalAlgorithmName, metaData, options, styleConfigData]);
 
     const getExpandInfo = useCallback(
         async (params, graphInstance) => {
@@ -395,7 +401,7 @@ const GraphResult = props => {
     const renderCanvas2D = () => (
         <Graph
             data={graphData}
-            layout={{layout: Algorithm_Layout[algorithmName], startId: options.startId}}
+            layout={{layout: Algorithm_Layout[canonicalAlgorithmName], startId: options.startId}}
             onGraphRender={onGraphRender}
             onNodeClick={handleClickGraphNode}
             onEdgeClick={handleClickGraphEdge}
@@ -486,7 +492,7 @@ const GraphResult = props => {
                     />
                 );
             }
-            if (!showCanvasInfo && !noneGraphAlgorithm.includes(algorithmName)) {
+            if (!showCanvasInfo && !noneGraphAlgorithm.includes(canonicalAlgorithmName)) {
                 return (
                     <GraphStatusView
                         status={SUCCESS}
@@ -494,7 +500,7 @@ const GraphResult = props => {
                     />
                 );
             }
-            switch (algorithmName) {
+            switch (canonicalAlgorithmName) {
                 case JACCARD_SIMILARITY:
                 case ADAMIC_ADAR:
                 case RESOURCE_ALLOCATION:
