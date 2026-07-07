@@ -42,6 +42,7 @@ import org.springframework.web.bind.annotation.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -214,7 +215,9 @@ public class GraphMetricsController extends BaseController {
             list.add(totalCount);
         }
 
-        assert list.size() == 3;
+        E.checkState(list.size() == 3,
+                     "The 3-day count list size must be 3, but got %s",
+                     list.size());
         return list.toArray(new Long[3]);
     }
 
@@ -253,7 +256,11 @@ public class GraphMetricsController extends BaseController {
             List<String> dateRange,
             SchemaCount<Integer> todaySchema) {
 
-        assert dateRange.size() == 14 && map.size() == 14;
+        E.checkArgument(dateRange.size() == 14,
+                        "The weekly growth date range size must be 14");
+        if (map == null) {
+            map = Collections.emptyMap();
+        }
 
         SchemaCount<Long> s1 = new SchemaCount<>(0L, 0L, 0L, 0L);
         SchemaCount<Long> s2 = new SchemaCount<>(0L, 0L, 0L, 0L);
@@ -295,10 +302,10 @@ public class GraphMetricsController extends BaseController {
      * 只保留两位小数
      */
     private static Double growthRate(Long num1, Long num2) {
-        assert num1 != null;
-        assert num2 != null;
-        assert num1 >= 0;
-        assert num2 >= 0;
+        E.checkArgument(num1 != null, "num1 can't be null");
+        E.checkArgument(num2 != null, "num2 can't be null");
+        E.checkArgument(num1 >= 0, "num1 must be non-negative");
+        E.checkArgument(num2 >= 0, "num2 must be non-negative");
         if(num1 == 0 && num2 == 0){
             return 0.0;
         }

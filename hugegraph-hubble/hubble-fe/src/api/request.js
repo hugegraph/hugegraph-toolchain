@@ -104,7 +104,7 @@ instance.interceptors.response.use(
         }
         const res = error.response?.data;
         showRequestError(res);
-        return {data: {status: 500, message: res?.message ?? i18n.t('request.failed')}};
+        return Promise.reject(error);
     }
 );
 

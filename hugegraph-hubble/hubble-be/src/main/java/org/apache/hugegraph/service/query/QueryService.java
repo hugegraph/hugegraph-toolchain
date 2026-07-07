@@ -207,7 +207,9 @@ public class QueryService {
         for (Iterator<Result> iter = resultSet.iterator(); iter.hasNext();) {
             Path path = iter.next().getPath();
             List<Object> objects = path.objects();
-            assert objects.size() == 3;
+            Ex.check(objects.size() == 3,
+                     "The expanded vertex path must contain 3 objects, " +
+                     "but got %s", objects.size());
             Edge edge = (Edge) objects.get(1);
             Vertex vertex = (Vertex) objects.get(2);
             // Filter vertices and edges that existed in query
@@ -499,8 +501,9 @@ public class QueryService {
                                         rawVertexId, idStrategy);
         }
 
-        assert idStrategy == IdStrategy.PRIMARY_KEY ||
-               idStrategy == IdStrategy.CUSTOMIZE_STRING;
+        Ex.check(idStrategy == IdStrategy.PRIMARY_KEY ||
+                 idStrategy == IdStrategy.CUSTOMIZE_STRING,
+                 "Unsupported vertex id strategy: %s", idStrategy);
         return rawVertexId;
     }
 

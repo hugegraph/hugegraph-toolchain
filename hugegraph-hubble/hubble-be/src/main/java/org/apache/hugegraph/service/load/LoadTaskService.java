@@ -456,7 +456,9 @@ public class LoadTaskService {
                 vMapping = new org.apache.hugegraph.loader.mapping.VertexMapping(
                         idFields.get(0), true);
             } else {
-                assert vl.getIdStrategy().isPrimaryKey();
+                Ex.check(vl.getIdStrategy().isPrimaryKey(),
+                         "Unsupported vertex id strategy: %s",
+                         vl.getIdStrategy());
                 List<String> primaryKeys = vl.getPrimaryKeys();
                 if (idFields == null || idFields.isEmpty()) {
                     idFields = this.inferPrimaryKeyFields(fieldMappings,

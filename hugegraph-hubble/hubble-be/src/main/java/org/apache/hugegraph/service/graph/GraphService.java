@@ -413,10 +413,11 @@ public class GraphService {
             return rawId;
         } else if (idStrategy.isCustomizeNumber()) {
             return DataTypeUtil.parseNumber("id", rawId);
-        } else {
-            assert idStrategy.isCustomizeUuid();
+        } else if (idStrategy.isCustomizeUuid()) {
             return DataTypeUtil.parseUUID("id", rawId);
         }
+        Ex.check(false, "Unsupported vertex id strategy: %s", idStrategy);
+        return rawId;
     }
 
     private void fillProperties(HugeClient client, SchemaLabelEntity schema,
@@ -435,7 +436,8 @@ public class GraphService {
             PropertyKeyEntity pkEntity = this.pkService.get(key, client);
             PropertyKey propertyKey = PropertyKeyService.convert(pkEntity,
                                                                  client);
-            assert propertyKey != null;
+            Ex.check(propertyKey != null, "The property key '%s' is not found",
+                     key);
             Object value;
             try {
                 // DataTypeUtil.convert in loader need param InputSource

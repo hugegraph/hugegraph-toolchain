@@ -89,7 +89,9 @@ public class ApplicationInfoController extends BaseController {
 
         List<ApplicationInfo> apps =
                 appInfoService.query(join(idc, graphSpace, graph), appName, appType);
-        assert apps != null && apps.size() == 1;
+        E.checkState(apps != null && apps.size() == 1,
+                     "Expect exactly one application info for %s/%s",
+                     appName, appType);
         return apps.get(0);
     }
 

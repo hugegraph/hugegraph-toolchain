@@ -263,20 +263,14 @@ public class TaskApiTest extends BaseApiTest {
         long taskId = gremlin().executeAsTask(request);
 
         // Wait for task to start
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException ignored) {
-        }
-        
+        sleep(300L);
+
         // Cancel async task
         Task task = taskAPI.cancel(taskId);
         Assert.assertTrue(task.cancelling());
 
         // Wait for cancellation to complete
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException ignored) {
-        }
+        sleep(500L);
 
         task = taskAPI.get(taskId);
         Assert.assertTrue(task.cancelled());
@@ -303,5 +297,14 @@ public class TaskApiTest extends BaseApiTest {
         Map<String, Object> taskMap = task.asMap();
         Assert.assertEquals("rebuild_index", taskMap.get(Task.P.TYPE));
         Assert.assertEquals("success", taskMap.get(Task.P.STATUS));
+    }
+
+    private static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assert.fail(e.getMessage());
+        }
     }
 }

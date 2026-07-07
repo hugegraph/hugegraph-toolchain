@@ -55,6 +55,7 @@ import org.apache.hugegraph.service.graph.GraphService;
 import org.apache.hugegraph.service.query.EditElementHistoryService;
 import org.apache.hugegraph.service.schema.EdgeLabelService;
 import org.apache.hugegraph.service.schema.VertexLabelService;
+import org.apache.hugegraph.util.E;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -80,7 +81,8 @@ public class GraphController extends BaseController {
         HugeClient client = this.authClient(graphSpace, graph);
         GraphView graphView = this.graphService.addVertex(client, entity);
 
-        assert graphView.getVertices().size() == 1;
+        E.checkState(graphView.getVertices().size() == 1,
+                     "Adding a vertex must return exactly one vertex");
         VertexQueryEntity v = graphView.getVertices().iterator().next();
         String vertexId = v.id().toString();
         addEditEleHistory(graphSpace, graph, vertexId, entity.getLabel(),
@@ -125,7 +127,8 @@ public class GraphController extends BaseController {
                              @RequestBody EdgeEntity entity) {
         HugeClient client = this.authClient(graphSpace, graph);
         GraphView edge = this.graphService.addEdge(client, entity);
-        assert edge.getEdges().size() == 1;
+        E.checkState(edge.getEdges().size() == 1,
+                     "Adding an edge must return exactly one edge");
         Edge e = edge.getEdges().iterator().next();
         String edgeId = e.id().toString();
         addEditEleHistory(graphSpace, graph,
