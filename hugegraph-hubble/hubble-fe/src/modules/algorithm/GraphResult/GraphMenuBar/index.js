@@ -172,17 +172,6 @@ const GraphMenuBar = props => {
                         : t('analysis.canvas.tooltip.statistics_3d')}
                 />),
         },
-        // {
-        //     key: 8,
-        //     content: (
-        //         <Statistics
-        //             buttonEnable={buttonEnableForCanvas2D}
-        //             onClick={() => {
-        //                 handleTogglePanel(STATISTICS);
-        //             }}
-        //             tooltip={isCanvas2D ? MENUBAR_TOOLTIPS_2D.STATISTICS : MENUBAR_TOOLTIPS_3D.STATISTICS}
-        //         />),
-        // },
     ];
 
     const menubarExtras = [{

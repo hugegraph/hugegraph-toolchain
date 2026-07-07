@@ -31,6 +31,7 @@ import {
     Async_Taskt_Status,
     Filter_Task_Status,
     Status_Color,
+    getTranslatedAsyncTaskConstants,
 } from '../../../utils/constants';
 import {intersection, size} from 'lodash-es';
 import {format} from 'date-fns';
@@ -53,41 +54,11 @@ const AsyncTaskDetail = props => {
     const {graphSpace: currentGraphSpace, graph: currentGraph, isVermeer} = useContext(GraphAnalysisContext);
     const {records: asyncManageTaskDataRecords, total: asyncManageTaskDataTotal} = asyncManageTaskData || {};
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-    const taskTypeNames = {
-        '': t('analysis.async_task.type.all'),
-        gremlin: t('analysis.async_task.type.gremlin'),
-        'computer-dis': t('analysis.async_task.type.algorithm'),
-        remove_schema: t('analysis.async_task.type.remove_schema'),
-        create_index: t('analysis.async_task.type.create_index'),
-        rebuild_index: t('analysis.async_task.type.rebuild_index'),
-        cypher: t('analysis.async_task.type.cypher'),
-        'vermeer-task:load': t('analysis.async_task.type.vermeer_load'),
-        'vermeer-task:compute': t('analysis.async_task.type.vermeer_compute'),
-    };
-    const taskStatusNames = {
-        '': t('analysis.async_task.status.all'),
-        UNKNOWN: t('analysis.async_task.status.unknown'),
-        new: t('analysis.async_task.status.new'),
-        scheduling: t('analysis.async_task.status.scheduling'),
-        scheduled: t('analysis.async_task.status.scheduled'),
-        queued: t('analysis.async_task.status.queued'),
-        running: t('analysis.async_task.status.running'),
-        restoring: t('analysis.async_task.status.restoring'),
-        success: t('analysis.async_task.status.success'),
-        failed: t('analysis.async_task.status.failed'),
-        cancelled: t('analysis.async_task.status.cancelled'),
-        cancelling: t('analysis.async_task.status.cancelling'),
-        hanging: t('analysis.async_task.status.hanging'),
-        pending: t('analysis.async_task.status.pending'),
-        deleting: t('analysis.async_task.status.deleting'),
-    };
-    const taskManipulations = {
-        check_reason: t('analysis.async_task.action.check_reason'),
-        check_result: t('analysis.async_task.action.check_result'),
-        delete: t('analysis.async_task.action.delete'),
-        abort: t('analysis.async_task.action.abort'),
-        aborting: t('analysis.async_task.action.aborting'),
-    };
+    const {
+        taskTypeNames,
+        taskStatusNames,
+        taskManipulations,
+    } = getTranslatedAsyncTaskConstants(t);
 
     const onSelectChange = (rowKey, selectedRows) => {
         setSelectedRowKeys(rowKey);
@@ -120,7 +91,7 @@ const AsyncTaskDetail = props => {
         const keys = Object.keys(Async_Task_Type);
         for (let i = 0; i < keys.length; i++) {
             const item = keys[i];
-            const text = taskTypeNames[item] || Async_Task_Type[item];
+            const text = taskTypeNames[item] || item;
             if (!item.includes('vermeer')) {
                 res.push({text, value: item});
             }
@@ -136,7 +107,7 @@ const AsyncTaskDetail = props => {
         const keys = Object.keys(Filter_Task_Status);
         for (let i = 0; i < keys.length; i++) {
             const item = keys[i];
-            res.push({text: taskStatusNames[item] || Filter_Task_Status[item], value: item});
+            res.push({text: taskStatusNames[item] || item, value: item});
         }
         return res;
     };
@@ -216,7 +187,7 @@ const AsyncTaskDetail = props => {
             filters: renderTaskTypeFilters(),
             filterMultiple: false,
             render: (task_type, rowData, index) => {
-                return (<>{taskTypeNames[task_type] || Async_Task_Type[task_type] || task_type}</>);
+                return (<>{taskTypeNames[task_type] || task_type}</>);
             },
         },
         {
@@ -242,7 +213,11 @@ const AsyncTaskDetail = props => {
             filterMultiple: false,
             filters: renderTaskStatusFilters(),
             render: (task_status, rowData, index) => {
-                return <Tag color={Status_Color[task_status]}>{taskStatusNames[task_status]}</Tag>;
+                return (
+                    <Tag color={Status_Color[task_status]}>
+                        {taskStatusNames[task_status] || task_status}
+                    </Tag>
+                );
             },
         },
         {

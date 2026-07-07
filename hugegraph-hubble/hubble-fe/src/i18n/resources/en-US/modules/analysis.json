@@ -586,6 +586,9 @@
           "EGONET": "Egonet",
           "SSSP": "SSSP (Single Source Shortest Path)"
         },
+        "legacy_item_alias": {
+          "KOUT_POST": "K-out API(POST, Advanced)"
+        },
         "page_rank": {
           "desc": "PageRank ranks web pages or graph nodes by computing relationships through links, reflecting node relevance and importance.",
           "alpha": "Weight coefficient, also known as damping factor",

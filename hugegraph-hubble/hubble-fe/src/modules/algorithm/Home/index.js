@@ -126,12 +126,12 @@ const AlgorithmHome = () => {
             setLoading(true);
             const response  = await api.analysis.fetchFavoriteQueries(graphSpace, graph, params);
             setLoading(false);
-            const {status, message, data} = response || {};
-            if (status !== 200 && !message) {
-                message.error('获取收藏记录失败');
+            const {status, data} = response || {};
+            if (status !== 200) {
+                setFavoriteQueriesData({records: [], total: 0});
             }
             else {
-                setFavoriteQueriesData({records: data.records, total: data.total});
+                setFavoriteQueriesData({records: data?.records ?? [], total: data?.total ?? 0});
             }
         },
         [favorSearch, graph, graphSpace, pageFavorite, pageSize, sortMode]
@@ -143,12 +143,12 @@ const AlgorithmHome = () => {
             setLoading(true);
             const response = await api.analysis.getExecutionLogs(graphSpace, graph, params);
             setLoading(false);
-            const {status, message, data} = response || {};
-            if (status !== 200 && !message) {
-                message.error('获取图算法的执行记录失败');
+            const {status, data} = response || {};
+            if (status !== 200) {
+                setExecutionLogsData({records: [], total: 0});
             }
             else {
-                setExecutionLogsData({records: data.records, total: data.total});
+                setExecutionLogsData({records: data?.records ?? [], total: data?.total ?? 0});
             }
         },
         [graph, graphSpace, pageExecute, pageSize]
@@ -168,7 +168,7 @@ const AlgorithmHome = () => {
 
     useEffect(
         () => {
-            if (pageFavorite > 1 && _.isEmpty(setFavoriteQueriesData.records)) {
+            if (pageFavorite > 1 && _.isEmpty(favoriteQueriesData.records)) {
                 setFavoritePage(pageFavorite - 1);
             }
         },

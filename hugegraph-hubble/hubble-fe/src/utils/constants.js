@@ -17,6 +17,8 @@
  */
 
 import {useTranslation} from 'react-i18next';
+import enAnalysis from '../i18n/resources/en-US/modules/analysis.json';
+import zhAnalysis from '../i18n/resources/zh-CN/modules/analysis.json';
 
 export const colors = [
     '#5c73e6',
@@ -132,15 +134,15 @@ export const EDGELABEL_TYPE_NAME = {
 };
 
 export const Async_Task_Type = {
-    '': '全部',
-    gremlin: 'Gremlin任务',
-    'computer-dis': '算法任务',
-    remove_schema: '删除元数据',
-    create_index: '创建索引',
-    rebuild_index: '重建索引',
-    cypher: 'Cypher任务',
-    'vermeer-task:load': 'vermeer图加载任务',
-    'vermeer-task:compute': 'vermeer图计算任务',
+    '': 'analysis.async_task.type.all',
+    gremlin: 'analysis.async_task.type.gremlin',
+    'computer-dis': 'analysis.async_task.type.algorithm',
+    remove_schema: 'analysis.async_task.type.remove_schema',
+    create_index: 'analysis.async_task.type.create_index',
+    rebuild_index: 'analysis.async_task.type.rebuild_index',
+    cypher: 'analysis.async_task.type.cypher',
+    'vermeer-task:load': 'analysis.async_task.type.vermeer_load',
+    'vermeer-task:compute': 'analysis.async_task.type.vermeer_compute',
 };
 
 export const Async_Taskt_Status = {
@@ -161,41 +163,53 @@ export const Async_Taskt_Status = {
 };
 
 export const Async_Taskt_Status_Name = {
-    '': '全部',
-    UNKNOWN: '未知',
-    new: '初始化',
-    scheduling: '调度中',
-    scheduled: '已调度',
-    queued: '排队中',
-    running: '运行中',
-    restoring: '恢复中',
-    success: '成功',
-    failed: '失败',
-    cancelled: '已取消',
-    cancelling: '取消中',
-    hanging: '挂起',
-    pending: '挂起',
-    deleting: '删除中',
+    '': 'analysis.async_task.status.all',
+    UNKNOWN: 'analysis.async_task.status.unknown',
+    new: 'analysis.async_task.status.new',
+    scheduling: 'analysis.async_task.status.scheduling',
+    scheduled: 'analysis.async_task.status.scheduled',
+    queued: 'analysis.async_task.status.queued',
+    running: 'analysis.async_task.status.running',
+    restoring: 'analysis.async_task.status.restoring',
+    success: 'analysis.async_task.status.success',
+    failed: 'analysis.async_task.status.failed',
+    cancelled: 'analysis.async_task.status.cancelled',
+    cancelling: 'analysis.async_task.status.cancelling',
+    hanging: 'analysis.async_task.status.hanging',
+    pending: 'analysis.async_task.status.pending',
+    deleting: 'analysis.async_task.status.deleting',
 };
 
 export const Filter_Task_Status = {
-    '': '全部',
-    scheduling: '调度中',
-    queued: '排队中',
-    running: '运行中',
-    restoring: '恢复中',
-    success: '成功',
-    failed: '失败',
-    cancelled: '已取消',
+    '': Async_Taskt_Status_Name[''],
+    scheduling: Async_Taskt_Status_Name.scheduling,
+    queued: Async_Taskt_Status_Name.queued,
+    running: Async_Taskt_Status_Name.running,
+    restoring: Async_Taskt_Status_Name.restoring,
+    success: Async_Taskt_Status_Name.success,
+    failed: Async_Taskt_Status_Name.failed,
+    cancelled: Async_Taskt_Status_Name.cancelled,
 };
 
 export const Async_Task_Manipulations = {
-    abort: '终止',
-    aborting: '终止中',
-    delete: '删除',
-    check_result: '查看结果',
-    check_reason: '查看原因',
+    abort: 'analysis.async_task.action.abort',
+    aborting: 'analysis.async_task.action.aborting',
+    delete: 'analysis.async_task.action.delete',
+    check_result: 'analysis.async_task.action.check_result',
+    check_reason: 'analysis.async_task.action.check_reason',
 };
+
+const translateMap = (t, map) => Object.entries(map)
+    .reduce((result, [key, value]) => ({
+        ...result,
+        [key]: t(value),
+    }), {});
+
+export const getTranslatedAsyncTaskConstants = t => ({
+    taskTypeNames: translateMap(t, Async_Task_Type),
+    taskStatusNames: translateMap(t, Async_Taskt_Status_Name),
+    taskManipulations: translateMap(t, Async_Task_Manipulations),
+});
 
 export const Status_Color = {
     new: 'geekblue',
@@ -249,98 +263,97 @@ export const GRAPH_RENDER_MODE = {
     CANVAS3D: '3D模式',
 };
 
-export const MENUBAR_TOOLTIPS_2D = {
-    IMPORT: '清空画布后再导入',
-    EXPORT: '空图无法导出',
-    STYLE: '空图无法设置外观',
-    FILTER: '空图无法筛选',
-    LAYOUT: '空图无法布局',
-    SETTING: '空图无法设置',
-    NEW: '空图无法新建',
-    STATISTICS: '空图无法统计',
-    SWITCH: '空图无法切换模式',
-};
+const ALGORITHM_NAME_BASE_PATH = 'analysis.algorithm.olap.item';
+const ALGORITHM_NAME_RESOURCE = enAnalysis.analysis.algorithm.olap.item;
+const LEGACY_ALGORITHM_NAME_RESOURCE = zhAnalysis.analysis.algorithm.olap.item;
+const LEGACY_ALGORITHM_NAME_ALIAS_RESOURCE
+    = zhAnalysis.analysis.algorithm.olap.legacy_item_alias || {};
 
-export const MENUBAR_TOOLTIPS_3D = {
-    IMPORT: '3D模式不可以导入',
-    EXPORT: '3D模式无法导出',
-    STYLE: '3D模式无法外观设置',
-    FILTER: '3D模式无法筛选',
-    LAYOUT: '3D模式无法布局',
-    SETTING: '3D模式无法设置',
-    NEW: '3D模式无法新建',
-    STATISTICS: '3D模式无法统计',
-};
-
-// TODO TRANSLATE NAME
 export const ALGORITHM_NAME = {
-    PAGE_RANK: 'PageRank',
-    WEAKLY_CONNECTED_COMPONENT: 'Weakly Connected Component',
-    DEGREE_CENTRALIT: 'Degree Centrality',
-    CLOSENESS_CENTRALITY: 'Closeness Centrality',
-    TRIANGLE_COUNT: 'Triangle Count',
-    K_NEIGHBOR: 'K-neighbor（GET，基础版）',
-    K_OUT: 'K-out API（GET，基础版）',
-    SAME_NEIGHBORS: 'Same Neighbors',
-    RINGS: 'Rings',
-    SHORTEST_PATH: 'Shortest Path',
-    ALLPATHS: '查找所有路径（POST，高级版）',
-    JACCARD_SIMILARITY: 'Jaccard Similarity（GET）',
-    CROSSPOINTS: 'Crosspoints',
-    RINGS_DETECTION: 'Rings Detection',
-    FILTERED_RINGS_DETECTION: 'Filtered Rings Detection',
-    LINKS: 'Links',
-    CLUSTER_COEFFICIENT: 'Cluster Coefficient',
-    BETWEENNESS_CENTRALITY: 'Betweenness Centrality',
-    LABEL_PROPAGATION_ALGORITHM: 'Label Propagation Algorithm',
-    LOUVAIN: 'Louvain',
-    FILTER_SUBGRAPH_MATCHING: 'Filter SubGraph Matching',
-    K_CORE: 'K-Core',
-    PERSONAL_PAGE_RANK: 'PersonalPageRank',
-    KOUT_POST: 'K-out API(POST, 高级版)',
-    KNEIGHBOR_POST: 'K-neighbor API（POST，高级版）',
-    JACCARD_SIMILARITY_POST: 'Jaccard Similarity（POST）',
-    RANK_API: 'rank API',
-    NEIGHBOR_RANK_API: 'Neighbor Rank API',
-    FINDSHORTESTPATH: '查找最短路径',
-    FINDSHORTESTPATHWITHWEIGHT: '查找带权重的最短路径',
-    SINGLESOURCESHORTESTPATH: '(从一个顶点出发)查找最短路径',
-    MULTINODESSHORTESTPATH: '(指定顶点集)查找最短路径',
-    CUSTOMIZEDPATHS: '自定义路径查询',
-    TEMPLATEPATHS: '模版路径查询',
-    CUSTOMIZED_CROSSPOINTS: 'Customized Crosspoints',
-    RAYS: 'Rays',
-    PATHS: '查找所有路径（GET，基础版）',
-    FUSIFORM_SIMILARITY: 'Fusiform Similarity',
-    ADAMIC_ADAR: 'Adamic Adar',
-    RESOURCE_ALLOCATION: 'Resource Allocation',
-    SAME_NEIGHBORS_BATCH: 'Same Neighbors Batch',
-    EGONET: 'Egonet',
-    SSSP: 'SSSP（单元最短路径）',
+    PAGE_RANK: ALGORITHM_NAME_RESOURCE.PAGE_RANK,
+    WEAKLY_CONNECTED_COMPONENT: ALGORITHM_NAME_RESOURCE.WEAKLY_CONNECTED_COMPONENT,
+    DEGREE_CENTRALIT: ALGORITHM_NAME_RESOURCE.DEGREE_CENTRALIT,
+    CLOSENESS_CENTRALITY: ALGORITHM_NAME_RESOURCE.CLOSENESS_CENTRALITY,
+    TRIANGLE_COUNT: ALGORITHM_NAME_RESOURCE.TRIANGLE_COUNT,
+    K_NEIGHBOR: ALGORITHM_NAME_RESOURCE.K_NEIGHBOR,
+    K_OUT: ALGORITHM_NAME_RESOURCE.K_OUT,
+    SAME_NEIGHBORS: ALGORITHM_NAME_RESOURCE.SAME_NEIGHBORS,
+    RINGS: ALGORITHM_NAME_RESOURCE.RINGS,
+    SHORTEST_PATH: ALGORITHM_NAME_RESOURCE.SHORTEST_PATH,
+    ALLPATHS: ALGORITHM_NAME_RESOURCE.ALLPATHS,
+    JACCARD_SIMILARITY: ALGORITHM_NAME_RESOURCE.JACCARD_SIMILARITY,
+    CROSSPOINTS: ALGORITHM_NAME_RESOURCE.CROSSPOINTS,
+    RINGS_DETECTION: ALGORITHM_NAME_RESOURCE.RINGS_DETECTION,
+    FILTERED_RINGS_DETECTION: ALGORITHM_NAME_RESOURCE.FILTERED_RINGS_DETECTION,
+    LINKS: ALGORITHM_NAME_RESOURCE.LINKS,
+    CLUSTER_COEFFICIENT: ALGORITHM_NAME_RESOURCE.CLUSTER_COEFFICIENT,
+    BETWEENNESS_CENTRALITY: ALGORITHM_NAME_RESOURCE.BETWEENNESS_CENTRALITY,
+    LABEL_PROPAGATION_ALGORITHM: ALGORITHM_NAME_RESOURCE.LABEL_PROPAGATION_ALGORITHM,
+    LOUVAIN: ALGORITHM_NAME_RESOURCE.LOUVAIN,
+    FILTER_SUBGRAPH_MATCHING: ALGORITHM_NAME_RESOURCE.FILTER_SUBGRAPH_MATCHING,
+    K_CORE: ALGORITHM_NAME_RESOURCE.K_CORE,
+    PERSONAL_PAGE_RANK: ALGORITHM_NAME_RESOURCE.PERSONAL_PAGE_RANK,
+    KOUT_POST: ALGORITHM_NAME_RESOURCE.KOUT_POST,
+    KNEIGHBOR_POST: ALGORITHM_NAME_RESOURCE.KNEIGHBOR_POST,
+    JACCARD_SIMILARITY_POST: ALGORITHM_NAME_RESOURCE.JACCARD_SIMILARITY_POST,
+    RANK_API: ALGORITHM_NAME_RESOURCE.RANK_API,
+    NEIGHBOR_RANK_API: ALGORITHM_NAME_RESOURCE.NEIGHBOR_RANK_API,
+    FINDSHORTESTPATH: ALGORITHM_NAME_RESOURCE.FINDSHORTESTPATH,
+    FINDSHORTESTPATHWITHWEIGHT: ALGORITHM_NAME_RESOURCE.FINDSHORTESTPATHWITHWEIGHT,
+    SINGLESOURCESHORTESTPATH: ALGORITHM_NAME_RESOURCE.SINGLESOURCESHORTESTPATH,
+    MULTINODESSHORTESTPATH: ALGORITHM_NAME_RESOURCE.MULTINODESSHORTESTPATH,
+    CUSTOMIZEDPATHS: ALGORITHM_NAME_RESOURCE.CUSTOMIZEDPATHS,
+    TEMPLATEPATHS: ALGORITHM_NAME_RESOURCE.TEMPLATEPATHS,
+    CUSTOMIZED_CROSSPOINTS: ALGORITHM_NAME_RESOURCE.CUSTOMIZED_CROSSPOINTS,
+    RAYS: ALGORITHM_NAME_RESOURCE.RAYS,
+    PATHS: ALGORITHM_NAME_RESOURCE.PATHS,
+    FUSIFORM_SIMILARITY: ALGORITHM_NAME_RESOURCE.FUSIFORM_SIMILARITY,
+    ADAMIC_ADAR: ALGORITHM_NAME_RESOURCE.ADAMIC_ADAR,
+    RESOURCE_ALLOCATION: ALGORITHM_NAME_RESOURCE.RESOURCE_ALLOCATION,
+    SAME_NEIGHBORS_BATCH: ALGORITHM_NAME_RESOURCE.SAME_NEIGHBORS_BATCH,
+    EGONET: ALGORITHM_NAME_RESOURCE.EGONET,
+    SSSP: ALGORITHM_NAME_RESOURCE.SSSP,
+};
+
+const getAlgorithmNameEntry = (name, t = key => key) => {
+    return Object.entries(ALGORITHM_NAME).find(([key, value]) => {
+        const i18nKey = `${ALGORITHM_NAME_BASE_PATH}.${key}`;
+        return value === name
+            || t(i18nKey) === name
+            || LEGACY_ALGORITHM_NAME_RESOURCE[key] === name
+            || LEGACY_ALGORITHM_NAME_ALIAS_RESOURCE[key] === name;
+    });
+};
+
+export const getCanonicalAlgorithmName = (name, t = key => key) => {
+    const entry = getAlgorithmNameEntry(name, t);
+    return entry ? entry[1] : name;
 };
 
 export const getAlgorithmNameI18nKey = name => {
-    const entry = Object.entries(ALGORITHM_NAME).find(([, value]) => value === name);
-    return entry ? `analysis.algorithm.olap.item.${entry[0]}` : undefined;
+    const entry = getAlgorithmNameEntry(name);
+    return entry ? `${ALGORITHM_NAME_BASE_PATH}.${entry[0]}` : undefined;
 };
 
 export const getAlgorithmDisplayName = (name, t = key => key) => {
-    const i18nKey = getAlgorithmNameI18nKey(name);
+    const entry = getAlgorithmNameEntry(name, t);
+    const i18nKey = entry ? `${ALGORITHM_NAME_BASE_PATH}.${entry[0]}` : undefined;
     return i18nKey ? t(i18nKey) : name;
 };
 
 const getAlgorithmSearchNames = (name, t = key => key) => {
-    const entry = Object.entries(ALGORITHM_NAME).find(([key, value]) => {
-        return value === name || t(`analysis.algorithm.olap.item.${key}`) === name;
-    });
+    const entry = getAlgorithmNameEntry(name, t);
     if (!entry) {
         return [name];
     }
     const [key, value] = entry;
+    const i18nValue = t(`${ALGORITHM_NAME_BASE_PATH}.${key}`);
     return [
         name,
         value,
-        t(`analysis.algorithm.olap.item.${key}`),
+        LEGACY_ALGORITHM_NAME_RESOURCE[key],
+        LEGACY_ALGORITHM_NAME_ALIAS_RESOURCE[key],
+        i18nValue,
     ];
 };
 
@@ -431,53 +444,50 @@ export const useTranslatedConstants = () => {
         {label: t('analysis.algorithm.form.direction_options.in'), value: 'in'},
         {label: t('analysis.algorithm.form.direction_options.both'), value: 'both'},
     ];
-    // TODO Tranfer directionOptions to here
-    const ALGO_NAME_BASE_PATH = 'analysis.algorithm.olap.item';
-
     const ALGORITHM_NAME = {
-        PAGE_RANK: t(`${ALGO_NAME_BASE_PATH}.PAGE_RANK`),
-        WEAKLY_CONNECTED_COMPONENT: t(`${ALGO_NAME_BASE_PATH}.WEAKLY_CONNECTED_COMPONENT`),
-        DEGREE_CENTRALIT: t(`${ALGO_NAME_BASE_PATH}.DEGREE_CENTRALIT`),
-        CLOSENESS_CENTRALITY: t(`${ALGO_NAME_BASE_PATH}.CLOSENESS_CENTRALITY`),
-        TRIANGLE_COUNT: t(`${ALGO_NAME_BASE_PATH}.TRIANGLE_COUNT`),
-        K_NEIGHBOR: t(`${ALGO_NAME_BASE_PATH}.K_NEIGHBOR`),
-        K_OUT: t(`${ALGO_NAME_BASE_PATH}.K_OUT`),
-        SAME_NEIGHBORS: t(`${ALGO_NAME_BASE_PATH}.SAME_NEIGHBORS`),
-        RINGS: t(`${ALGO_NAME_BASE_PATH}.RINGS`),
-        SHORTEST_PATH: t(`${ALGO_NAME_BASE_PATH}.SHORTEST_PATH`),
-        ALLPATHS: t(`${ALGO_NAME_BASE_PATH}.ALLPATHS`),
-        JACCARD_SIMILARITY: t(`${ALGO_NAME_BASE_PATH}.JACCARD_SIMILARITY`),
-        CROSSPOINTS: t(`${ALGO_NAME_BASE_PATH}.CROSSPOINTS`),
-        RINGS_DETECTION: t(`${ALGO_NAME_BASE_PATH}.RINGS_DETECTION`),
-        FILTERED_RINGS_DETECTION: t(`${ALGO_NAME_BASE_PATH}.FILTERED_RINGS_DETECTION`),
-        LINKS: t(`${ALGO_NAME_BASE_PATH}.LINKS`),
-        CLUSTER_COEFFICIENT: t(`${ALGO_NAME_BASE_PATH}.CLUSTER_COEFFICIENT`),
-        BETWEENNESS_CENTRALITY: t(`${ALGO_NAME_BASE_PATH}.BETWEENNESS_CENTRALITY`),
-        LABEL_PROPAGATION_ALGORITHM: t(`${ALGO_NAME_BASE_PATH}.LABEL_PROPAGATION_ALGORITHM`),
-        LOUVAIN: t(`${ALGO_NAME_BASE_PATH}.LOUVAIN`),
-        FILTER_SUBGRAPH_MATCHING: t(`${ALGO_NAME_BASE_PATH}.FILTER_SUBGRAPH_MATCHING`),
-        K_CORE: t(`${ALGO_NAME_BASE_PATH}.K_CORE`),
-        PERSONAL_PAGE_RANK: t(`${ALGO_NAME_BASE_PATH}.PERSONAL_PAGE_RANK`),
-        KOUT_POST: t(`${ALGO_NAME_BASE_PATH}.KOUT_POST`),
-        KNEIGHBOR_POST: t(`${ALGO_NAME_BASE_PATH}.KNEIGHBOR_POST`),
-        JACCARD_SIMILARITY_POST: t(`${ALGO_NAME_BASE_PATH}.JACCARD_SIMILARITY_POST`),
-        RANK_API: t(`${ALGO_NAME_BASE_PATH}.RANK_API`),
-        NEIGHBOR_RANK_API: t(`${ALGO_NAME_BASE_PATH}.NEIGHBOR_RANK_API`),
-        FINDSHORTESTPATH: t(`${ALGO_NAME_BASE_PATH}.FINDSHORTESTPATH`),
-        FINDSHORTESTPATHWITHWEIGHT: t(`${ALGO_NAME_BASE_PATH}.FINDSHORTESTPATHWITHWEIGHT`),
-        SINGLESOURCESHORTESTPATH: t(`${ALGO_NAME_BASE_PATH}.SINGLESOURCESHORTESTPATH`),
-        MULTINODESSHORTESTPATH: t(`${ALGO_NAME_BASE_PATH}.MULTINODESSHORTESTPATH`),
-        CUSTOMIZEDPATHS: t(`${ALGO_NAME_BASE_PATH}.CUSTOMIZEDPATHS`),
-        TEMPLATEPATHS: t(`${ALGO_NAME_BASE_PATH}.TEMPLATEPATHS`),
-        CUSTOMIZED_CROSSPOINTS: t(`${ALGO_NAME_BASE_PATH}.CUSTOMIZED_CROSSPOINTS`),
-        RAYS: t(`${ALGO_NAME_BASE_PATH}.RAYS`),
-        PATHS: t(`${ALGO_NAME_BASE_PATH}.PATHS`),
-        FUSIFORM_SIMILARITY: t(`${ALGO_NAME_BASE_PATH}.FUSIFORM_SIMILARITY`),
-        ADAMIC_ADAR: t(`${ALGO_NAME_BASE_PATH}.ADAMIC_ADAR`),
-        RESOURCE_ALLOCATION: t(`${ALGO_NAME_BASE_PATH}.RESOURCE_ALLOCATION`),
-        SAME_NEIGHBORS_BATCH: t(`${ALGO_NAME_BASE_PATH}.SAME_NEIGHBORS_BATCH`),
-        EGONET: t(`${ALGO_NAME_BASE_PATH}.EGONET`),
-        SSSP: t(`${ALGO_NAME_BASE_PATH}.SSSP`),
+        PAGE_RANK: t(`${ALGORITHM_NAME_BASE_PATH}.PAGE_RANK`),
+        WEAKLY_CONNECTED_COMPONENT: t(`${ALGORITHM_NAME_BASE_PATH}.WEAKLY_CONNECTED_COMPONENT`),
+        DEGREE_CENTRALIT: t(`${ALGORITHM_NAME_BASE_PATH}.DEGREE_CENTRALIT`),
+        CLOSENESS_CENTRALITY: t(`${ALGORITHM_NAME_BASE_PATH}.CLOSENESS_CENTRALITY`),
+        TRIANGLE_COUNT: t(`${ALGORITHM_NAME_BASE_PATH}.TRIANGLE_COUNT`),
+        K_NEIGHBOR: t(`${ALGORITHM_NAME_BASE_PATH}.K_NEIGHBOR`),
+        K_OUT: t(`${ALGORITHM_NAME_BASE_PATH}.K_OUT`),
+        SAME_NEIGHBORS: t(`${ALGORITHM_NAME_BASE_PATH}.SAME_NEIGHBORS`),
+        RINGS: t(`${ALGORITHM_NAME_BASE_PATH}.RINGS`),
+        SHORTEST_PATH: t(`${ALGORITHM_NAME_BASE_PATH}.SHORTEST_PATH`),
+        ALLPATHS: t(`${ALGORITHM_NAME_BASE_PATH}.ALLPATHS`),
+        JACCARD_SIMILARITY: t(`${ALGORITHM_NAME_BASE_PATH}.JACCARD_SIMILARITY`),
+        CROSSPOINTS: t(`${ALGORITHM_NAME_BASE_PATH}.CROSSPOINTS`),
+        RINGS_DETECTION: t(`${ALGORITHM_NAME_BASE_PATH}.RINGS_DETECTION`),
+        FILTERED_RINGS_DETECTION: t(`${ALGORITHM_NAME_BASE_PATH}.FILTERED_RINGS_DETECTION`),
+        LINKS: t(`${ALGORITHM_NAME_BASE_PATH}.LINKS`),
+        CLUSTER_COEFFICIENT: t(`${ALGORITHM_NAME_BASE_PATH}.CLUSTER_COEFFICIENT`),
+        BETWEENNESS_CENTRALITY: t(`${ALGORITHM_NAME_BASE_PATH}.BETWEENNESS_CENTRALITY`),
+        LABEL_PROPAGATION_ALGORITHM: t(`${ALGORITHM_NAME_BASE_PATH}.LABEL_PROPAGATION_ALGORITHM`),
+        LOUVAIN: t(`${ALGORITHM_NAME_BASE_PATH}.LOUVAIN`),
+        FILTER_SUBGRAPH_MATCHING: t(`${ALGORITHM_NAME_BASE_PATH}.FILTER_SUBGRAPH_MATCHING`),
+        K_CORE: t(`${ALGORITHM_NAME_BASE_PATH}.K_CORE`),
+        PERSONAL_PAGE_RANK: t(`${ALGORITHM_NAME_BASE_PATH}.PERSONAL_PAGE_RANK`),
+        KOUT_POST: t(`${ALGORITHM_NAME_BASE_PATH}.KOUT_POST`),
+        KNEIGHBOR_POST: t(`${ALGORITHM_NAME_BASE_PATH}.KNEIGHBOR_POST`),
+        JACCARD_SIMILARITY_POST: t(`${ALGORITHM_NAME_BASE_PATH}.JACCARD_SIMILARITY_POST`),
+        RANK_API: t(`${ALGORITHM_NAME_BASE_PATH}.RANK_API`),
+        NEIGHBOR_RANK_API: t(`${ALGORITHM_NAME_BASE_PATH}.NEIGHBOR_RANK_API`),
+        FINDSHORTESTPATH: t(`${ALGORITHM_NAME_BASE_PATH}.FINDSHORTESTPATH`),
+        FINDSHORTESTPATHWITHWEIGHT: t(`${ALGORITHM_NAME_BASE_PATH}.FINDSHORTESTPATHWITHWEIGHT`),
+        SINGLESOURCESHORTESTPATH: t(`${ALGORITHM_NAME_BASE_PATH}.SINGLESOURCESHORTESTPATH`),
+        MULTINODESSHORTESTPATH: t(`${ALGORITHM_NAME_BASE_PATH}.MULTINODESSHORTESTPATH`),
+        CUSTOMIZEDPATHS: t(`${ALGORITHM_NAME_BASE_PATH}.CUSTOMIZEDPATHS`),
+        TEMPLATEPATHS: t(`${ALGORITHM_NAME_BASE_PATH}.TEMPLATEPATHS`),
+        CUSTOMIZED_CROSSPOINTS: t(`${ALGORITHM_NAME_BASE_PATH}.CUSTOMIZED_CROSSPOINTS`),
+        RAYS: t(`${ALGORITHM_NAME_BASE_PATH}.RAYS`),
+        PATHS: t(`${ALGORITHM_NAME_BASE_PATH}.PATHS`),
+        FUSIFORM_SIMILARITY: t(`${ALGORITHM_NAME_BASE_PATH}.FUSIFORM_SIMILARITY`),
+        ADAMIC_ADAR: t(`${ALGORITHM_NAME_BASE_PATH}.ADAMIC_ADAR`),
+        RESOURCE_ALLOCATION: t(`${ALGORITHM_NAME_BASE_PATH}.RESOURCE_ALLOCATION`),
+        SAME_NEIGHBORS_BATCH: t(`${ALGORITHM_NAME_BASE_PATH}.SAME_NEIGHBORS_BATCH`),
+        EGONET: t(`${ALGORITHM_NAME_BASE_PATH}.EGONET`),
+        SSSP: t(`${ALGORITHM_NAME_BASE_PATH}.SSSP`),
     };
 
     const Algorithm_Layout = {

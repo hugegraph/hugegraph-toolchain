@@ -586,6 +586,9 @@
           "EGONET": "Egonet",
           "SSSP": "SSSP（单元最短路径）"
         },
+        "legacy_item_alias": {
+          "KOUT_POST": "K-out API(POST, 高级版)"
+        },
         "page_rank": {
           "desc": "PageRank算法又称网页排名算法，是一种由搜索引擎根据网页（节点）之间相互的超链接进行计算的技术，用来体现网页（节点）的相关性和重要性。",
           "alpha": "权重系数(又称阻尼系数)",
