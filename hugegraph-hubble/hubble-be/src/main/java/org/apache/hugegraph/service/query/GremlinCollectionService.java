@@ -55,7 +55,7 @@ public class GremlinCollectionService {
             String value = SQLUtil.escapeLike(content);
             if (nameOrderAsc != null) {
                 // order by name
-                assert timeOrderAsc == null;
+                checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 query.eq("graphspace", graphSpace)
                      .eq("graph", graph).
                         eq("type", type).and(wrapper -> {
@@ -66,7 +66,7 @@ public class GremlinCollectionService {
                 return this.mapper.selectPage(page, query);
             } else if (timeOrderAsc != null) {
                 // order by time
-                assert nameOrderAsc == null;
+                checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 query.eq("graphspace", graphSpace)
                      .eq("graph", graph).
                         eq("type", type).and(wrapper -> {
@@ -77,7 +77,7 @@ public class GremlinCollectionService {
                 return this.mapper.selectPage(page, query);
             } else {
                 // order by relativity
-                assert nameOrderAsc == null && timeOrderAsc == null;
+                checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 return this.mapper.selectByContentInPage(page, graphSpace, graph ,
                                                          content, type);
             }
@@ -85,7 +85,7 @@ public class GremlinCollectionService {
             // Select all
             if (nameOrderAsc != null) {
                 // order by name
-                assert timeOrderAsc == null;
+                checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 query.eq("graphspace", graphSpace)
                      .eq("graph", graph)
                         .eq("type", type)
@@ -100,6 +100,14 @@ public class GremlinCollectionService {
                      .orderBy(true, isAsc, "create_time");
                 return this.mapper.selectPage(page, query);
             }
+        }
+    }
+
+    private static void checkSingleOrder(Boolean nameOrderAsc,
+                                         Boolean timeOrderAsc) {
+        if (nameOrderAsc != null && timeOrderAsc != null) {
+            throw new InternalException("Only one gremlin collection order " +
+                                        "field can be specified");
         }
     }
 

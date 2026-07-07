@@ -69,7 +69,13 @@ const Login = () => {
     }, [location.search]);
 
     const onFinish = useCallback(async value => {
-        const res = await api.auth.login(value);
+        let res;
+        try {
+            res = await api.auth.login(value);
+        }
+        catch {
+            return;
+        }
         if (res.status !== 200) {
             return;
         }
@@ -81,6 +87,9 @@ const Login = () => {
             if (configRes.status === 200) {
                 configUtil.setConfig(configRes.data);
             }
+        }
+        catch {
+            // The request interceptor has already shown the error message.
         }
         finally {
             navigateAfterLogin();

@@ -241,8 +241,10 @@ public class SchemaController extends BaseController {
     public <T extends SchemaEntity> void sortByCreateTime(List<T> entities,
                                                           boolean asc) {
         Comparator<T> dateAscComparator = (o1, o2) -> {
-            assert o1 instanceof Timefiable;
-            assert o2 instanceof Timefiable;
+            if (!(o1 instanceof Timefiable) || !(o2 instanceof Timefiable)) {
+                throw new InternalException("Schema entities must implement " +
+                                            "Timefiable for create time sort");
+            }
             Date t1 = ((Timefiable) o1).getCreateTime();
             Date t2 = ((Timefiable) o2).getCreateTime();
             if (t1 == null && t2 == null) {

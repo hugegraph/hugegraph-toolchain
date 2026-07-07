@@ -1,0 +1,122 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {MemoryRouter} from 'react-router-dom';
+import Login from './index';
+import * as api from '../../api';
+
+jest.mock('../../api', () => ({
+    auth: {
+        login: jest.fn(),
+    },
+    config: {
+        getConfig: jest.fn(),
+    },
+}));
+
+jest.mock('../../utils/user', () => ({
+    setUser: jest.fn(),
+}));
+
+jest.mock('../../utils/config', () => ({
+    setConfig: jest.fn(),
+}));
+
+const userUtil = require('../../utils/user');
+const configUtil = require('../../utils/config');
+
+jest.mock('react-i18next', () => ({
+    useTranslation: () => ({
+        t: key => key,
+    }),
+}));
+
+const submitLoginForm = async () => {
+    render(
+        <MemoryRouter initialEntries={['/login?redirect=%2Fnavigation']}>
+            <Login />
+        </MemoryRouter>
+    );
+
+    await userEvent.type(screen.getByPlaceholderText('login.username'), 'admin');
+    await userEvent.type(screen.getByPlaceholderText('login.password'), 'bad-password');
+    await userEvent.click(screen.getByRole('button', {name: 'login.submit'}));
+};
+
+describe('Login request errors', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        localStorage.clear();
+        sessionStorage.clear();
+        window.matchMedia = jest.fn().mockImplementation(query => ({
+            matches: false,
+            media: query,
+            onchange: null,
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            dispatchEvent: jest.fn(),
+        }));
+        delete window.location;
+        window.location = {
+            origin: 'http://localhost',
+            replace: jest.fn(),
+        };
+    });
+
+    it('keeps rejected login requests from escaping the submit handler', async () => {
+        const loginError = new Error('login failed');
+        api.auth.login.mockRejectedValue(loginError);
+
+        await submitLoginForm();
+
+        await waitFor(() => {
+            expect(api.auth.login).toHaveBeenCalledWith({
+                user_name: 'admin',
+                user_password: 'bad-password',
+            });
+        });
+        expect(localStorage.getItem('user')).toBeNull();
+        expect(window.location.replace).not.toHaveBeenCalled();
+    });
+
+    it('keeps rejected config requests from escaping after a successful login', async () => {
+        api.auth.login.mockResolvedValue({
+            status: 200,
+            data: {
+                user_name: 'admin',
+            },
+        });
+        api.config.getConfig.mockRejectedValue(new Error('config failed'));
+
+        await submitLoginForm();
+
+        await waitFor(() => {
+            expect(api.config.getConfig).toHaveBeenCalledTimes(1);
+        });
+        expect(localStorage.getItem('user')).toBe('admin');
+        expect(userUtil.setUser).toHaveBeenCalledWith({
+            user_name: 'admin',
+        });
+        expect(configUtil.setConfig).not.toHaveBeenCalled();
+        expect(window.location.replace).toHaveBeenCalledWith('/navigation');
+    });
+});
