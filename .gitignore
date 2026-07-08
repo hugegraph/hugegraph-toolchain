@@ -103,6 +103,23 @@ Thumbs.db
 go.env
 
 # AI-IDE prompt files (We only keep AGENTS.md, other files could soft-linked it when needed)
+# Local AI-agent workspaces and run evidence
+.codex-task/
+.autonomous/
+.claude/
+
+# Local Hubble runtime / extracted distributions
+/db*.db
+/db*.trace.db
+/logs/
+/hugegraph-hubble/apache-hugegraph-hubble-*/
+/hugegraph-hubble/hubble-dist/apache-hugegraph-hubble-*/
+/hugegraph-loader/apache-hugegraph-loader-*/
+
+# Local dependency analysis reports
+/hugegraph-dist/scripts/dependency/current-dependencies.txt
+/hugegraph-dist/scripts/dependency/result.txt
+
 # Claude Projects
 CLAUDE.md
 CLAUDE_*.md
@@ -124,5 +141,3 @@ codeium-instructions.md
 .ai-instructions.md
 *.ai-prompt.md
 WARP.md
-
-
