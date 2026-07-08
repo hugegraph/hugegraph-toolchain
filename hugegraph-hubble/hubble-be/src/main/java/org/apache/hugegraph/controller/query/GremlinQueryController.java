@@ -77,7 +77,7 @@ public class GremlinQueryController extends GremlinController {
     public Map<String, String> execute(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph) {
 
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         Map<String, String> graphCount = new HashMap<>();
         graphCount.put("vertexcount", queryCount(client, "g.V().count()"));
         graphCount.put("edgecount", queryCount(client, "g.E().count()"));
@@ -144,7 +144,7 @@ public class GremlinQueryController extends GremlinController {
 
         StopWatch timer = StopWatch.createStarted();
         try {
-            HugeClient client = this.authClient(graphSpace, graph);
+            HugeClient client = this.authGremlinClient(graphSpace, graph);
             GremlinResult result =
                     this.queryService.executeGremlinQuery(client, query);
             status = ExecuteStatus.SUCCESS;
@@ -185,7 +185,7 @@ public class GremlinQueryController extends GremlinController {
         long asyncId = 0L;
         Map<String, Object> result = new HashMap<>(3);
         try {
-            HugeClient client = this.authClient(graphSpace, graph);
+            HugeClient client = this.authGremlinClient(graphSpace, graph);
             asyncId = this.queryService.executeGremlinAsyncTask(client, query);
             status = ExecuteStatus.ASYNC_TASK_SUCCESS;
             result.put("task_id", asyncId);
@@ -210,7 +210,7 @@ public class GremlinQueryController extends GremlinController {
                                 @RequestBody AdjacentQuery query) {
         this.checkParamsValid(query);
         try {
-            HugeClient client = this.authClient(graphSpace, graph);
+            HugeClient client = this.authGremlinClient(graphSpace, graph);
             return this.queryService.expandVertex(client, query);
         } catch (Exception e) {
             Throwable rootCause = Ex.rootCause(e);

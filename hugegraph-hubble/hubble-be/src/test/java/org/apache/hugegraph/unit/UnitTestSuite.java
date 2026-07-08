@@ -30,6 +30,7 @@ import org.junit.runners.Suite;
     AppTypeTest.class,
     AuthzRouteRegistrationTest.class,
     BusinessAssertTest.class,
+    BaseControllerGremlinClientTest.class,
     ConsolePrintTest.class,
     EmptyCatchTest.class,
     FileMappingSchemaTest.class,

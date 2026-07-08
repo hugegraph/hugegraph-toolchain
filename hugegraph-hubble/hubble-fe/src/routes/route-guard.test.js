@@ -1,0 +1,105 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {render, screen} from '@testing-library/react';
+import {MemoryRouter, Outlet} from 'react-router-dom';
+import RouteList from './index';
+
+jest.mock('../pages/Datasource', () => () => <div>datasource page</div>);
+jest.mock('../pages/Task', () => () => <div>task page</div>);
+jest.mock('../pages/TaskEdit/index', () => () => <div>task edit page</div>);
+jest.mock('../pages/TaskDetail', () => () => <div>task detail page</div>);
+jest.mock('../pages/Schema', () => () => <div>schema page</div>);
+jest.mock('../pages/Login', () => {
+    const React = require('react');
+    const {useLocation} = require('react-router-dom');
+
+    return function MockLogin() {
+        const location = useLocation();
+
+        return React.createElement('div', null, `login:${location.pathname}${location.search}`);
+    };
+});
+jest.mock('../pages/Graph', () => () => <div>graph page</div>);
+jest.mock('../pages/GraphSpace', () => () => <div>graphspace page</div>);
+jest.mock('../pages/Meta', () => () => <div>meta page</div>);
+jest.mock('../pages/GraphDetail', () => () => <div>graph detail page</div>);
+jest.mock('../pages/My', () => () => <div>my page</div>);
+jest.mock('../pages/Account', () => () => <div>account page</div>);
+jest.mock('../pages/Role/Auth', () => () => <div>role auth page</div>);
+jest.mock('../pages/Navigation', () => () => <div>navigation page</div>);
+jest.mock('../pages/Error404', () => () => <div>not found page</div>);
+jest.mock('../pages/Test', () => () => <div>test page</div>);
+jest.mock('../pages/GraphAnalysis', () => () => <div>graph analysis page</div>);
+jest.mock('../pages/AsyncTaskResult', () => () => <div>async task result page</div>);
+jest.mock('../utils/config', () => ({
+    isPdEnabled: jest.fn(() => false),
+}));
+
+const renderRoutes = initialEntry => {
+    const TestLayout = () => (
+        <div>
+            <div>protected layout</div>
+            <Outlet />
+        </div>
+    );
+
+    return render(
+        <MemoryRouter
+            initialEntries={[initialEntry]}
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
+            <RouteList element={<TestLayout />} />
+        </MemoryRouter>
+    );
+};
+
+describe('route guard', () => {
+    beforeEach(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+    });
+
+    it('redirects unauthenticated business route visits to login with the current URL', () => {
+        renderRoutes('/task/edit?source=direct');
+
+        expect(screen.getByText('login:/login?redirect=%2Ftask%2Fedit%3Fsource%3Ddirect'))
+            .toBeTruthy();
+        expect(screen.queryByText('task edit page')).toBeNull();
+        expect(sessionStorage.getItem('redirect')).toBe('/task/edit?source=direct');
+    });
+
+    it('allows authenticated business route visits', () => {
+        sessionStorage.setItem('user_', JSON.stringify({id: 'admin', user_nickname: 'admin'}));
+
+        renderRoutes('/task/edit?source=direct');
+
+        expect(screen.getByText('task edit page')).toBeTruthy();
+        expect(screen.queryByText(/^login:/)).toBeNull();
+    });
+
+    it('keeps login route public', () => {
+        renderRoutes('/login?redirect=%2Ftask%2Fedit');
+
+        expect(screen.getByText('login:/login?redirect=%2Ftask%2Fedit')).toBeTruthy();
+        expect(sessionStorage.getItem('redirect')).toBeNull();
+    });
+});

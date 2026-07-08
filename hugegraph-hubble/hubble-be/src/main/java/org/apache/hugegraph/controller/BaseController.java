@@ -164,6 +164,30 @@ public abstract class BaseController {
         return client;
     }
 
+    protected HugeClient authGremlinClient(String graphSpace, String graph) {
+        String username = this.getUser();
+        String password = this.getCredentialPassword();
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        HttpServletRequest request = getRequest();
+        if (request.getAttribute("hugeClient") != null) {
+            HugeClient client = (HugeClient) request.getAttribute("hugeClient");
+            client.close();
+        }
+        HugeClient client = this.createBasicClient(graphSpace, graph, username,
+                                                   password);
+        request.setAttribute("hugeClient", client);
+        return client;
+    }
+
+    protected HugeClient createBasicClient(String graphSpace, String graph,
+                                           String username, String password) {
+        return this.hugeClientPoolService.createBasicClient(graphSpace, graph,
+                                                            username, password);
+    }
+
     protected HugeClient unauthClient() {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
