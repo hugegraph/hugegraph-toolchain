@@ -50,7 +50,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult shortPath(@PathVariable("graphspace") String graphSpace,
                                    @PathVariable("graph") String graph,
                                    @RequestBody ShortestPathEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.shortestPath(client, body);
     }
 
