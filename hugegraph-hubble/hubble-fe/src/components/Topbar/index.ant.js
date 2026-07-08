@@ -51,11 +51,15 @@ const Topbar = () => {
             return undefined;
         }
 
-        api.auth.status().then(res => {
-            if (!cancelled && res.status === 401) {
-                redirectToLogin();
-            }
-        });
+        api.auth.status()
+            .then(res => {
+                if (!cancelled && res.status === 401) {
+                    redirectToLogin();
+                }
+            })
+            .catch(() => {
+                // The request interceptor has already shown the error message.
+            });
 
         return () => {
             cancelled = true;

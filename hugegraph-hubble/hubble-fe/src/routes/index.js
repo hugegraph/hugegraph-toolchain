@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Navigate, Routes, Route, useParams} from 'react-router-dom';
+import {Navigate, Routes, Route, useParams, useLocation} from 'react-router-dom';
 import Datasource from '../pages/Datasource';
 import Task from '../pages/Task';
 import TaskEdit from '../pages/TaskEdit/index';
@@ -43,6 +43,30 @@ import {
     DEFAULT_GRAPHSPACE,
     shouldUseNonPdDefaultGraphspace,
 } from '../utils/productMode';
+import * as user from '../utils/user';
+
+const LOGIN_PATH = '/login';
+
+const getRedirectTarget = location => {
+    return `${location.pathname}${location.search}${location.hash}`;
+};
+
+const isLoggedIn = () => {
+    return Boolean(user.getUser().id);
+};
+
+const ProtectedRoute = ({children}) => {
+    const location = useLocation();
+
+    if (isLoggedIn()) {
+        return children;
+    }
+
+    const redirect = getRedirectTarget(location);
+    sessionStorage.setItem('redirect', redirect);
+
+    return <Navigate to={`${LOGIN_PATH}?redirect=${encodeURIComponent(redirect)}`} replace />;
+};
 
 const PdOnlyRoute = ({children, fallback = '/navigation'}) => {
     return isPdEnabled() ? children : <Navigate to={fallback} replace />;
@@ -79,9 +103,15 @@ const RouteList = ({element}) => {
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={element}>
+            <Route
+                path="/"
+                element={(
+                    <ProtectedRoute>
+                        {element}
+                    </ProtectedRoute>
+                )}
+            >
                 <Route index element={<Navigation />} />
-                <Route path="/login" element={<Login />} />
                 <Route path="/source" element={<Datasource />} />
                 <Route
                     path="/graphspace/:graphspace/schema"

@@ -28,6 +28,7 @@ import org.junit.runners.Suite;
         BatchElementRequestTest.class,
         PropertyKeyTest.class,
         IndexLabelTest.class,
+        GraphSpaceAPITest.class,
         GraphsAPITest.class,
         CommonUtilTest.class,
         IdUtilTest.class,

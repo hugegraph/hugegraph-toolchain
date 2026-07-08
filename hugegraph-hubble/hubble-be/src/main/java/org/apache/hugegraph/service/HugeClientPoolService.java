@@ -92,6 +92,11 @@ public final class HugeClientPoolService {
         return getOrCreate(null, null, null, null, username, password);
     }
 
+    public HugeClient createBasicClient(String graphSpace, String graph,
+                                        String username, String password) {
+        return getOrCreate(null, graphSpace, graph, null, username, password);
+    }
+
     public HugeClient createAuthClient(String graphSpace,
             String graph, String token) {
         return getOrCreate(null, graphSpace, graph, token);

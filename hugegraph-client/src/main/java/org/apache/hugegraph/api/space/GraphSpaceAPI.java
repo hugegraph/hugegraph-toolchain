@@ -131,8 +131,16 @@ public class GraphSpaceAPI extends API {
         if (StringUtils.isNotEmpty(graph)) {
             params.put("graph", graph);
         }
-        RestResult result = this.client.delete(path, params);
-        return result.readObject(Map.class);
+        this.client.delete(path, params);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("user", user);
+        result.put("role", role);
+        result.put("graphSpace", name);
+        if (StringUtils.isNotEmpty(graph)) {
+            result.put("graph", graph);
+        }
+        return result;
     }
 
     public void delete(String name) {
