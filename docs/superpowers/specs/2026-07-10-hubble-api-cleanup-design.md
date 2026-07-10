@@ -1,5 +1,8 @@
 # Hubble API Cleanup Design
 
+> **Status: Accepted.** 本文只记录稳定的 API/兼容性决策，不记录当前进度。
+> 未完成事项以 [Hubble2 TODOs](../../../.codex-task/hubble2-hardening/TODOs.md) 为准。
+
 ## Goal
 
 Align Hubble's graph-management facade with the canonical HugeGraph Server
