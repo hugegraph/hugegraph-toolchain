@@ -47,6 +47,7 @@ import {
 } from '../../utils/productMode';
 import moment from 'moment';
 import GraphCard from './Card';
+import ClearGraphConfirmModal from './ClearGraphConfirmModal';
 
 const Graph = () => {
     const {t} = useTranslation();
@@ -62,6 +63,7 @@ const Graph = () => {
     const [refresh, setRefresh] = useState(false);
     const [pagination, setPagination] = useState({current: 1, pageSize: 11});
     const [loading, setLoading] = useState(false);
+    const [clearSelection, setClearSelection] = useState(null);
     const {graphspace} = useParams();
     const navigate = useNavigate();
     const pdMode = isPdEnabled();
@@ -97,38 +99,28 @@ const Graph = () => {
     };
 
     const clearData = graph => {
-        Modal.confirm({
-            title: '确定清除数据？',
-            content: '清除后无法恢复',
-            onOk: () => {
-                api.manage.clearGraphData(graphspace, graph).then(res => {
-                    if (res.status === 200) {
-                        message.success('操作成功');
-                        setRefresh(!refresh);
-                        return;
-                    }
-                    message.error(res.message);
-                });
-            },
-        });
+        setClearSelection({graph, mode: 'data'});
     };
 
     const clearSchema = graph => {
-        Modal.confirm({
-            title: '确定清除schema+数据？',
-            content: '清除后无法恢复',
-            onOk: () => {
-                api.manage.clearGraphDataAndSchema(graphspace, graph).then(res => {
-                    if (res.status === 200) {
-                        message.success('操作成功');
-                        setRefresh(!refresh);
-                        return;
-                    }
-                    message.error(res.message);
-                });
-            },
-        });
+        setClearSelection({graph, mode: 'schema-data'});
     };
+
+    const handleClearSuccess = useCallback(() => {
+        message.success(t('common.msg.success'));
+        setClearSelection(null);
+        setRefresh(value => !value);
+    }, [t]);
+
+    const handleClearCancel = useCallback(() => {
+        setClearSelection(null);
+    }, []);
+
+    const handleClearConfirm = useCallback(() => {
+        return clearSelection?.mode === 'data'
+            ? api.manage.clearGraphData(graphspace, clearSelection.graph)
+            : api.manage.clearGraphDataAndSchema(graphspace, clearSelection.graph);
+    }, [clearSelection, graphspace]);
 
     const showSchema = graph => {
         setViewLayer(true);
@@ -507,6 +499,15 @@ const Graph = () => {
                     refresh={handleRefresh}
                     graph={selectGraph}
                     graphspace={graphspace}
+                />
+                <ClearGraphConfirmModal
+                    open={Boolean(clearSelection)}
+                    graphspace={graphspace}
+                    graph={clearSelection?.graph || ''}
+                    mode={clearSelection?.mode || 'data'}
+                    onCancel={handleClearCancel}
+                    onSuccess={handleClearSuccess}
+                    onConfirm={handleClearConfirm}
                 />
             </div>
         </Spin>

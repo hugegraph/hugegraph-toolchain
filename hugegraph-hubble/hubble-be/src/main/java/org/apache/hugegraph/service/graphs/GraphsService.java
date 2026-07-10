@@ -277,6 +277,8 @@ public class GraphsService {
         if (isClearSchema) {
             client.graphs().clearGraph(graph,"I'm sure to delete all data");
         }
+        // TODO: Replace this temporary facade after Server exposes and verifies a
+        // data-only clear operation that preserves schema.
         else if (isClearData) {
             client.graphs().clearGraph(graph, "I'm sure to delete all data");
         }

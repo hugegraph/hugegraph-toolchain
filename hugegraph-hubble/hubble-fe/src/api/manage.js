@@ -115,6 +115,8 @@ const getDefaultGraph = graphspace => {
 };
 
 const clearGraphData = (graphspace, graph) => {
+    // TODO: Replace this temporary facade after Server exposes and verifies a
+    // data-only clear operation that preserves schema.
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/truncate`, {
         params: {clear_schema: false, clear_data: true},
     });

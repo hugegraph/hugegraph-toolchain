@@ -144,6 +144,20 @@
     "create": "Create Graph",
     "search_placeholder": "Search by graph name",
     "set_default_confirm": "Confirm changing the default graph?",
+    "clear_confirm": {
+      "title": "Confirm graph clear",
+      "graphspace": "GraphSpace: {{graphspace}}",
+      "graph": "Graph: {{graph}}",
+      "scope_data": "Deletion scope: graph data only",
+      "scope_schema_data": "Deletion scope: graph data, property keys, vertex labels, edge labels, and indexes",
+      "irreversible": "This operation is irreversible.",
+      "schema_preservation_warning": "No verified dedicated Server operation currently guarantees schema preservation.",
+      "input_label": "Enter the graph name to confirm",
+      "input_placeholder": "Graph name",
+      "confirm": "Clear graph",
+      "cancel": "Cancel",
+      "request_failed": "Clear failed"
+    },
     "col": {
       "name": "Graph Name",
       "auth": "Authentication",
