@@ -39,20 +39,12 @@ const delGraphSpace = graphspace => {
     return request.delete(`/graphspaces/${graphspace}`);
 };
 
-const setDefaultGraphSpace = graphspace => {
-    return request.get(`/graphspaces/${graphspace}/setdefault`);
-};
-
-const getDefaultGraphSpace = () => {
-    return request.get('/graphspaces/getdefault');
-};
-
 const initBuiltin = params => {
     return request.post('/graphspaces/builtin', params);
 };
 
 export {getGraphSpace, getGraphSpaceList, addGraphSpace, updateGraphSpace,
-    delGraphSpace, setDefaultGraphSpace, getDefaultGraphSpace, initBuiltin};
+    delGraphSpace, initBuiltin};
 
 // schema
 const getSchemaList = (graphspace, params) => {
@@ -99,7 +91,7 @@ const addGraph = (graphspace, data) => {
 };
 
 const updateGraph = (graphspace, graph, params) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/update`, {params});
+    return request.put(`/graphspaces/${graphspace}/graphs/${graph}`, params);
 };
 
 const getGraph = (graphspace, graph) => {
@@ -119,7 +111,7 @@ const setDefaultGraph = (graphspace, graph) => {
 };
 
 const getDefaultGraph = graphspace => {
-    return request.get(`graphspaces/${graphspace}/graphs/getdefault`);
+    return request.get(`graphspaces/${graphspace}/graphs/default`);
 };
 
 const clearGraphData = (graphspace, graph) => {

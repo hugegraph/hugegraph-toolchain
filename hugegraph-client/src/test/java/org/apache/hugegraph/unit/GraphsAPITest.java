@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.apache.hugegraph.api.graphs.GraphsAPI;
 import org.apache.hugegraph.client.RestClient;
+import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.rest.RestHeaders;
 import org.apache.hugegraph.rest.RestResult;
 import org.apache.hugegraph.testutil.Assert;
@@ -151,5 +152,15 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertEquals("graphspaces/DEFAULT/graphs/test-graph/default",
                             pathCaptor.getValue());
         Assert.assertTrue(paramsCaptor.getValue().isEmpty());
+    }
+
+    @Test
+    public void testPerGraphReloadIsDeprecated() throws NoSuchMethodException {
+        Assert.assertNotNull(GraphsAPI.class.getMethod("reload", String.class)
+                                            .getAnnotation(Deprecated.class));
+        Assert.assertNotNull(GraphsManager.class.getMethod("reload", String.class)
+                                                .getAnnotation(Deprecated.class));
+        Assert.assertNull(GraphsAPI.class.getMethod("reload")
+                                         .getAnnotation(Deprecated.class));
     }
 }
