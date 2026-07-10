@@ -1,0 +1,32 @@
+{
+  "selects": [
+    {
+      "aria": null,
+      "cls": "ant-select ant-select-sm ant-select-single ant-select-show-arrow",
+      "i": 0,
+      "role": null,
+      "tag": "DIV",
+      "text": "中文",
+      "title": null
+    },
+    {
+      "aria": null,
+      "cls": "ant-select-selector",
+      "i": 1,
+      "role": null,
+      "tag": "DIV",
+      "text": "中文",
+      "title": null
+    },
+    {
+      "aria": null,
+      "cls": "ant-select-selection-search-input",
+      "i": 2,
+      "role": "combobox",
+      "tag": "INPUT",
+      "text": "",
+      "title": null
+    }
+  ],
+  "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n导航\n1数据管理\n图管理\n数据源管理\n数据导入\n2业务分析\n图语言分析\n图算法\n3系统管理\n超管管理\n账号管理\n资源管理\n角色管理\n4运维管理\n集群管理\n监控管理\n运维管理\n报警管理"
+}

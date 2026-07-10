@@ -1,0 +1,1405 @@
+[
+  {
+    "path": "/super",
+    "state": {
+      "buttons": [],
+      "has404": true,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        },
+        {
+          "href": "http://localhost:3000/",
+          "text": "返回首页"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n404\n页面不存在\n返回首页",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/super"
+    },
+    "logs": [
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:35:58.596Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:01.986Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s handleFormSubmit handleformsubmit \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s searchValue searchvalue \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s currentAlgorithm currentalgorithm \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s updateCurrentAlgorithm updatecurrentalgorithm \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at ExecuteLog (http://localhost:3000/static/js/bundle.js:11405:68)\n    at div\n    at http://localhost:3000/static/js/bundle.js:444874:24\n    at DomWrapper (http://localhost:3000/static/js/bundle.js:425558:90)\n    at http://localhost:3000/static/js/bundle.js:425258:32\n    at div\n    at div\n    at TabPanelList (http://localhost:3000/static/js/bundle.js:444932:17)\n    at div\n    at Tabs (http://localhost:3000/static/js/bundle.js:445037:17)\n    at Tabs (http://localhost:3000/static/js/bundle.js:328218:17)\n    at div\n    at LogsDetail (http://localhost:3000/static/js/bundle.js:12004:68)\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:02.055Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:02.074Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:02.074Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:04.499Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:04.511Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:06.522Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:06.533Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:22.233Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/resource",
+    "state": {
+      "buttons": [],
+      "has404": true,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        },
+        {
+          "href": "http://localhost:3000/",
+          "text": "返回首页"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n404\n页面不存在\n返回首页",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/resource"
+    },
+    "logs": [
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s searchValue searchvalue \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s currentAlgorithm currentalgorithm \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: React does not recognize the `%s` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `%s` instead. If you accidentally passed it from a parent component, remove it from the DOM element.%s updateCurrentAlgorithm updatecurrentalgorithm \n    at div\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:416483:90)\n    at CollapsePanel (http://localhost:3000/static/js/bundle.js:312991:82)\n    at KoutGet (http://localhost:3000/static/js/bundle.js:26597:68)\n    at OltpItem (http://localhost:3000/static/js/bundle.js:28506:5)\n    at div\n    at Collapse (http://localhost:3000/static/js/bundle.js:416301:90)\n    at Collapse (http://localhost:3000/static/js/bundle.js:312894:62)\n    at div\n    at OltpFormHome (http://localhost:3000/static/js/bundle.js:32336:5)\n    at div\n    at AlgorithmFormHome (http://localhost:3000/static/js/bundle.js:12901:5)\n    at div\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:01.999Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at ExecuteLog (http://localhost:3000/static/js/bundle.js:11405:68)\n    at div\n    at http://localhost:3000/static/js/bundle.js:444874:24\n    at DomWrapper (http://localhost:3000/static/js/bundle.js:425558:90)\n    at http://localhost:3000/static/js/bundle.js:425258:32\n    at div\n    at div\n    at TabPanelList (http://localhost:3000/static/js/bundle.js:444932:17)\n    at div\n    at Tabs (http://localhost:3000/static/js/bundle.js:445037:17)\n    at Tabs (http://localhost:3000/static/js/bundle.js:328218:17)\n    at div\n    at LogsDetail (http://localhost:3000/static/js/bundle.js:12004:68)\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:02.055Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:02.074Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:02.074Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:04.499Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:04.511Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:06.522Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:06.533Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:22.233Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:25.049Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/role",
+    "state": {
+      "buttons": [],
+      "has404": true,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        },
+        {
+          "href": "http://localhost:3000/",
+          "text": "返回首页"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n404\n页面不存在\n返回首页",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/role"
+    },
+    "logs": [
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at ExecuteLog (http://localhost:3000/static/js/bundle.js:11405:68)\n    at div\n    at http://localhost:3000/static/js/bundle.js:444874:24\n    at DomWrapper (http://localhost:3000/static/js/bundle.js:425558:90)\n    at http://localhost:3000/static/js/bundle.js:425258:32\n    at div\n    at div\n    at TabPanelList (http://localhost:3000/static/js/bundle.js:444932:17)\n    at div\n    at Tabs (http://localhost:3000/static/js/bundle.js:445037:17)\n    at Tabs (http://localhost:3000/static/js/bundle.js:328218:17)\n    at div\n    at LogsDetail (http://localhost:3000/static/js/bundle.js:12004:68)\n    at AlgorithmHome (http://localhost:3000/static/js/bundle.js:10992:79)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:02.055Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:02.074Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:02.074Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:04.499Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:04.511Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:06.522Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:06.533Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:22.233Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:25.049Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:28.041Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:28.050Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:28.051Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/role/graphspace/DEFAULT/admin",
+    "state": {
+      "buttons": [
+        "返回"
+      ],
+      "has404": false,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        },
+        {
+          "href": null,
+          "text": "添加资源"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n角色管理\n当前图空间:\nDEFAULT\n当前角色:\nadmin\n添加资源",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/role/graphspace/DEFAULT/admin"
+    },
+    "logs": [
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:04.499Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:04.511Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:06.522Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:06.533Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:22.233Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:25.049Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:28.041Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:28.050Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:28.051Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:30.044Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/graphspace/DEFAULT",
+    "state": {
+      "buttons": [
+        "返回"
+      ],
+      "has404": false,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        },
+        {
+          "href": null,
+          "text": "1"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n默认图空间 - 图管理\n图模式\n列表模式\n创建图\n默认图空间-\n存储空间: 0 KB\n创建时间: 2026-07-08\n详情\n\n\n1",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/graphspace/DEFAULT"
+    },
+    "logs": [
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:04.521Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:06.522Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at AsyncTaskDetail (http://localhost:3000/static/js/bundle.js:37236:69)\n    at div\n    at div\n    at AsyncTaskHome (http://localhost:3000/static/js/bundle.js:37703:68)\n    at GraphAnalysisHome (http://localhost:3000/static/js/bundle.js:8814:5)\n    at GraphAnalysis (http://localhost:3000/static/js/bundle.js:57117:3)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:06.533Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:22.233Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:25.049Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:28.041Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:28.050Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:28.051Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:30.044Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:31.788Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/graphspace/DEFAULT/schema",
+    "state": {
+      "buttons": [
+        "返回",
+        "创建schema模版"
+      ],
+      "has404": false,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n默认图空间 - Schema模版管理\n创建schema模版\nschema模版名称\t创建时间\t更新时间\t创建人\t操作\n\n暂无数据",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/graphspace/DEFAULT/schema"
+    },
+    "logs": [
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:06.540Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:22.233Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:22.243Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:25.049Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:28.041Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:28.050Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:28.051Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:30.044Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:31.788Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:35.053Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at Schema (http://localhost:3000/static/js/bundle.js:65662:74)\n    at PdOnlyRoute (http://localhost:3000/static/js/bundle.js:70594:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:35.062Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:35.070Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:35.070Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/graphspace/DEFAULT/graph/hugegraph/meta",
+    "state": {
+      "buttons": [
+        "返回",
+        "创 建",
+        "刷 新",
+        "批量删除"
+      ],
+      "has404": false,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        },
+        {
+          "href": null,
+          "text": "删除"
+        },
+        {
+          "href": null,
+          "text": "1"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n默认图空间 - hugegraph - 元数据管理\n列表模式\n图模式\n属性\n顶点类型\n边类型\n顶点索引\n边索引\n创 建\n刷 新\n批量删除\n\n\n\t属性名称\t数据类型\t基数\t操作\n\n\th2_algo_name\tstring\tsingle\t删除\n1",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/graphspace/DEFAULT/graph/hugegraph/meta"
+    },
+    "logs": [
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:25.049Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:25.059Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:28.041Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:28.050Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:28.051Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:30.044Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:31.788Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:35.053Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at Schema (http://localhost:3000/static/js/bundle.js:65662:74)\n    at PdOnlyRoute (http://localhost:3000/static/js/bundle.js:70594:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:35.062Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:35.070Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:35.070Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:37.447Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at PropertyTable (http://localhost:3000/static/js/bundle.js:61281:3)\n    at div\n    at http://localhost:3000/static/js/bundle.js:444874:24\n    at DomWrapper (http://localhost:3000/static/js/bundle.js:425558:90)\n    at http://localhost:3000/static/js/bundle.js:425258:32\n    at div\n    at div\n    at TabPanelList (http://localhost:3000/static/js/bundle.js:444932:17)\n    at div\n    at Tabs (http://localhost:3000/static/js/bundle.js:445037:17)\n    at Tabs (http://localhost:3000/static/js/bundle.js:328218:17)\n    at ListView\n    at div\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at Meta (http://localhost:3000/static/js/bundle.js:63456:82)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:37.457Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:37.464Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:37.464Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  },
+  {
+    "path": "/graphspace/DEFAULT/graph/hugegraph/detail",
+    "state": {
+      "buttons": [
+        "返回",
+        "数据更新"
+      ],
+      "has404": false,
+      "links": [
+        {
+          "href": "http://localhost:3000/navigation",
+          "text": "导航"
+        },
+        {
+          "href": "http://localhost:3000/graphspace",
+          "text": "图管理"
+        },
+        {
+          "href": "http://localhost:3000/source",
+          "text": "数据源管理"
+        },
+        {
+          "href": "http://localhost:3000/task",
+          "text": "数据导入"
+        },
+        {
+          "href": "http://localhost:3000/gremlin",
+          "text": "图语言分析"
+        },
+        {
+          "href": "http://localhost:3000/algorithms",
+          "text": "图算法"
+        },
+        {
+          "href": "http://localhost:3000/asyncTasks",
+          "text": "任务管理"
+        },
+        {
+          "href": "http://localhost:3000/my",
+          "text": "个人中心"
+        },
+        {
+          "href": "http://localhost:3000/account",
+          "text": "账号管理"
+        }
+      ],
+      "text": "中文\n超级管理员\n导航\n数据管理\n图管理\n数据源管理\n数据导入\n业务分析\n图语言分析\n图算法\n任务管理\n系统管理\n个人中心\n账号管理\n默认图空间 - hugegraph - 详情\n最近更新时间：--/--\n数据更新\n点总数\n0\n点类型\t数量\n\n暂无数据\n边总数\n0\n边类型\t数量\n\n暂无数据\nGremlin 执行失败，详细信息:\nGremlin 执行失败，详细信息:",
+      "title": "HugeGraph Hubble",
+      "url": "http://localhost:3000/graphspace/DEFAULT/graph/hugegraph/detail"
+    },
+    "logs": [
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:28.051Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:30.044Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:30.060Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:31.788Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:31.804Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:35.053Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at Schema (http://localhost:3000/static/js/bundle.js:65662:74)\n    at PdOnlyRoute (http://localhost:3000/static/js/bundle.js:70594:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:35.062Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:35.070Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:35.070Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:37.447Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at PropertyTable (http://localhost:3000/static/js/bundle.js:61281:3)\n    at div\n    at http://localhost:3000/static/js/bundle.js:444874:24\n    at DomWrapper (http://localhost:3000/static/js/bundle.js:425558:90)\n    at http://localhost:3000/static/js/bundle.js:425258:32\n    at div\n    at div\n    at TabPanelList (http://localhost:3000/static/js/bundle.js:444932:17)\n    at div\n    at Tabs (http://localhost:3000/static/js/bundle.js:445037:17)\n    at Tabs (http://localhost:3000/static/js/bundle.js:328218:17)\n    at ListView\n    at div\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at Meta (http://localhost:3000/static/js/bundle.js:63456:82)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:37.457Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:37.464Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:37.464Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: [antd: Dropdown] `overlay` is deprecated. Please use `menu` instead.",
+        "timestamp": "2026-07-08T12:36:40.067Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+        "timestamp": "2026-07-08T12:36:40.076Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "warn",
+        "message": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+        "timestamp": "2026-07-08T12:36:40.077Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: %s: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.%s Table \n    at Table (http://localhost:3000/static/js/bundle.js:442204:25)\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at div\n    at InternalTable (http://localhost:3000/static/js/bundle.js:325711:34)\n    at div\n    at div\n    at http://localhost:3000/static/js/bundle.js:316522:62\n    at div\n    at http://localhost:3000/static/js/bundle.js:316701:34\n    at div\n    at div\n    at div\n    at Spin (http://localhost:3000/static/js/bundle.js:325235:25)\n    at SpinFC (http://localhost:3000/static/js/bundle.js:325295:34)\n    at GraphDetail (http://localhost:3000/static/js/bundle.js:57228:94)\n    at GraphspaceParamRoute (http://localhost:3000/static/js/bundle.js:70648:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Outlet (http://localhost:3000/static/js/bundle.js:499273:26)\n    at main\n    at http://localhost:3000/static/js/bundle.js:318383:25\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at section\n    at http://localhost:3000/static/js/bundle.js:318396:63\n    at http://localhost:3000/static/js/bundle.js:318366:66\n    at LayoutAnt\n    at ProtectedRoute (http://localhost:3000/static/js/bundle.js:70571:3)\n    at RenderedRoute (http://localhost:3000/static/js/bundle.js:498626:5)\n    at Routes (http://localhost:3000/static/js/bundle.js:499360:5)\n    at RouteList (http://localhost:3000/static/js/bundle.js:70674:3)\n    at div\n    at App\n    at LocaleProvider (http://localhost:3000/static/js/bundle.js:318951:29)\n    at ProviderChildren (http://localhost:3000/static/js/bundle.js:313396:24)\n    at LocaleReceiver (http://localhost:3000/static/js/bundle.js:318855:36)\n    at ConfigProvider (http://localhost:3000/static/js/bundle.js:313495:13)\n    at Router (http://localhost:3000/static/js/bundle.js:499294:15)\n    at BrowserRouter (http://localhost:3000/static/js/bundle.js:497195:5)",
+        "timestamp": "2026-07-08T12:36:40.169Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      },
+      {
+        "level": "error",
+        "message": "Warning: findDOMNode is deprecated and will be removed in the next major release. Instead, add a ref directly to the element you want to reference. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-find-node%s \n    at http://localhost:3000/static/js/bundle.js:425258:32\n    at div\n    at CSSMotionList (http://localhost:3000/static/js/bundle.js:425424:92)\n    at div\n    at Notification (http://localhost:3000/static/js/bundle.js:426557:90)",
+        "timestamp": "2026-07-08T12:36:40.185Z",
+        "url": "http://localhost:3000/static/js/bundle.js"
+      }
+    ]
+  }
+]
