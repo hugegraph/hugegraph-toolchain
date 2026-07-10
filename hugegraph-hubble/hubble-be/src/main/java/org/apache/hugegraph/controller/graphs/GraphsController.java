@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.entity.graphs.GraphCloneEntity;
 import org.apache.hugegraph.entity.graphs.GraphCreateEntity;
+import org.apache.hugegraph.entity.graphs.GraphUpdateEntity;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.entity.graphs.GraphStatisticsEntity;
@@ -247,22 +248,6 @@ public class GraphsController extends BaseController {
         return result;
     }
 
-    @PostMapping
-    public Object create(@PathVariable("graphspace") String graphspace,
-                         @RequestParam("graph") String graph,
-                         @RequestParam("nickname") String nickname,
-                         @RequestParam(value = "auth", required = false,
-                                 defaultValue = "false") boolean isAuth,
-                         @RequestParam(value = "schema", required = false)
-                                 String schemaTemplage) {
-
-        return this.create(graphspace, graph,
-                           GraphCreateEntity.builder()
-                                            .nickname(nickname)
-                                            .schema(schemaTemplage)
-                                            .build());
-    }
-
     @PostMapping("{graph}")
     public Object create(@PathVariable("graphspace") String graphspace,
                          @PathVariable("graph") String graph,
@@ -277,13 +262,13 @@ public class GraphsController extends BaseController {
                                          nickname, graph, schema);
     }
 
-    @GetMapping("{graph}/update")
+    @PutMapping("{graph}")
     public void update(@PathVariable("graphspace") String graphspace,
                        @PathVariable("graph") String graph,
-                       @RequestParam("nickname") String nickname) {
+                       @RequestBody GraphUpdateEntity request) {
 
         this.graphsService.update(this.authClient(graphspace, null),
-                nickname, graph);
+                                  request.getNickname(), graph);
     }
     @DeleteMapping("{graph}")
     public void delete(@PathVariable("graphspace") String graphspace,
@@ -328,35 +313,24 @@ public class GraphsController extends BaseController {
                 isClearSchema, isClearData);
     }
 
-    @GetMapping("{graph}/setdefault")
-    public void setDefault(@PathVariable("graphspace") String graphspace,
-                           @PathVariable("graph") String graph) {
-        this.graphsService.setDefault(this.authClient(graphspace, graph), graph);
-    }
-
     @PostMapping("{graph}/default")
     public void setDefaultByCanonicalApi(
             @PathVariable("graphspace") String graphspace,
             @PathVariable("graph") String graph) {
-        this.setDefault(graphspace, graph);
-    }
-
-    @GetMapping("{graph}/unsetdefault")
-    public void unSetDefault(@PathVariable("graphspace") String graphspace,
-                             @PathVariable("graph") String graph) {
-        this.graphsService.unSetDefault(this.authClient(graphspace, graph),
-                                        graph);
+        this.graphsService.setDefault(this.authClient(graphspace, graph), graph);
     }
 
     @DeleteMapping("{graph}/default")
     public void unSetDefaultByCanonicalApi(
             @PathVariable("graphspace") String graphspace,
             @PathVariable("graph") String graph) {
-        this.unSetDefault(graphspace, graph);
+        this.graphsService.unSetDefault(this.authClient(graphspace, graph),
+                                        graph);
     }
 
-    @GetMapping("getdefault")
-    public Map<String, String> getDefault(@PathVariable("graphspace") String graphspace) {
+    @GetMapping("default")
+    public Map<String, String> getDefault(
+            @PathVariable("graphspace") String graphspace) {
         return this.graphsService.getDefault(this.authClient(graphspace, null));
     }
 

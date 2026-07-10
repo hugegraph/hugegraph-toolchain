@@ -43,7 +43,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping(Constant.API_VERSION + "graphspaces")
@@ -202,16 +201,6 @@ public class GraphSpaceController extends BaseController {
 
         // delete graphspace
         graphSpaceService.delete(client, graphspace);
-    }
-
-    @GetMapping("{graphspace}/setdefault")
-    public Map<String, String> setdefault(@PathVariable("graphspace") String graphspace) {
-        return graphSpaceService.setdefault(this.authClient(null, null), graphspace);
-    }
-
-    @GetMapping("getdefault")
-    public Map<String, String> getdefault() {
-        return graphSpaceService.getdefault(this.authClient(null, null));
     }
 
     @PostMapping("builtin")

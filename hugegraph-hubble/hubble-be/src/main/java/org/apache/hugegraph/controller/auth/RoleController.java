@@ -106,29 +106,6 @@ public class RoleController extends AuthController {
         this.roleService.delete(client, id);
     }
 
-    @GetMapping("setdefaultrole")
-    public Map<String, String> setDefaultRole(
-            @PathVariable("graphspace") String graphSpace,
-            @RequestParam("user") String user,
-            @RequestParam("role") String role,
-            @RequestParam(name = "graph", required = false,
-                          defaultValue = "") String graph) {
-        HugeClient client = this.authClient(graphSpace, graph);
-        return client.graphSpace().setDefaultRole(graphSpace, user, role, graph);
-    }
-
-    @DeleteMapping("deldefaultrole")
-    public Map<String, String> delDefaultRole(
-            @PathVariable("graphspace") String graphSpace,
-            @RequestParam("user") String user,
-            @RequestParam("role") String role,
-            @RequestParam(name = "graph", required = false,
-                          defaultValue = "") String graph) {
-        HugeClient client = this.authClient(graphSpace, graph);
-        return client.graphSpace().deleteDefaultRole(graphSpace, user, role,
-                                                     graph);
-    }
-
     private static String firstNonBlank(Map<String, Object> body,
                                         String... keys) {
         for (String key : keys) {
