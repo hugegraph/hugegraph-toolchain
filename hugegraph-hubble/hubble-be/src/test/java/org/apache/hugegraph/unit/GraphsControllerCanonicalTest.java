@@ -34,7 +34,9 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.service.graphs.GraphsService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class GraphsControllerCanonicalTest {
@@ -79,24 +81,38 @@ public class GraphsControllerCanonicalTest {
     }
 
     @Test
-    public void testLegacyFormCreateGraphStillUsesSameServiceCreate()
+    public void testCanonicalUpdateGraphUsesJsonBody()
            throws Exception {
-        Mockito.when(this.graphsService.create(Mockito.eq(this.client),
-                                               Mockito.eq("LegacyNick"),
-                                               Mockito.eq("graph_b"),
-                                               Mockito.eq("template_b")))
-               .thenReturn(Collections.singletonMap("name", "graph_b"));
+        this.mvc.perform(put("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a")
+                         .with(this.withClient)
+                         .contentType(MediaType.APPLICATION_JSON)
+                         .content("{\"nickname\":\"GraphNick\"}"))
+                .andExpect(status().isOk());
 
+        Mockito.verify(this.graphsService)
+               .update(this.client, "GraphNick", "graph_a");
+    }
+
+    @Test
+    public void testLegacyGraphMutationRoutesAreNotSuccessful()
+           throws Exception {
+        this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/update")
+                         .with(this.withClient)
+                         .param("nickname", "GraphNick"))
+                .andExpect(status().is4xxClientError());
+        this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/setdefault")
+                         .with(this.withClient))
+                .andExpect(status().is4xxClientError());
+        this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/unsetdefault")
+                         .with(this.withClient))
+                .andExpect(status().is4xxClientError());
         this.mvc.perform(post("/api/v1.3/graphspaces/DEFAULT/graphs")
                          .with(this.withClient)
                          .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                          .param("graph", "graph_b")
                          .param("nickname", "LegacyNick")
                          .param("schema", "template_b"))
-                .andExpect(status().isOk());
-
-        Mockito.verify(this.graphsService)
-               .create(this.client, "LegacyNick", "graph_b", "template_b");
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
@@ -117,6 +133,19 @@ public class GraphsControllerCanonicalTest {
                 .andExpect(status().isOk());
 
         Mockito.verify(this.graphsService).unSetDefault(this.client, "graph_a");
+    }
+
+    @Test
+    public void testCanonicalGetDefaultGraphUsesServiceDefault()
+           throws Exception {
+        Mockito.when(this.graphsService.getDefault(this.client))
+               .thenReturn(Collections.singletonMap("name", "graph_a"));
+
+        this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/default")
+                         .with(this.withClient))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.graphsService).getDefault(this.client);
     }
 
     private void setField(Object object, String name, Object value)

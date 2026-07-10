@@ -285,14 +285,6 @@ public class GraphSpaceService {
         return authClient.graphSpace().updateGraphSpace(graphSpace);
     }
 
-    public Map<String, String> setdefault(HugeClient authClient, String graphSpace) {
-        return authClient.graphSpace().setDefault(graphSpace);
-    }
-
-    public Map<String, String> getdefault(HugeClient authClient) {
-        return authClient.graphSpace().getDefault();
-    }
-
     public void initBuiltIn(HugeClient client) {
         String builtInStr = Constant.BUILT_IN;
         GraphSpace builtIn = new GraphSpace(builtInStr);
