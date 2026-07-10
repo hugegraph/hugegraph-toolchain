@@ -162,5 +162,7 @@ public class GraphsAPITest extends BaseUnitTest {
                                                 .getAnnotation(Deprecated.class));
         Assert.assertNull(GraphsAPI.class.getMethod("reload")
                                          .getAnnotation(Deprecated.class));
+        Assert.assertNull(GraphsManager.class.getMethod("reload")
+                                             .getAnnotation(Deprecated.class));
     }
 }

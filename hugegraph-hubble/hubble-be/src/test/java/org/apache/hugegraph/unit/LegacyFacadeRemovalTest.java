@@ -68,10 +68,14 @@ public class LegacyFacadeRemovalTest {
             if (get != null) {
                 this.findObsoleteValues(controller, method, get.value(),
                                         obsoleteRoutes, violations);
+                this.findObsoleteValues(controller, method, get.path(),
+                                        obsoleteRoutes, violations);
             }
             DeleteMapping delete = method.getAnnotation(DeleteMapping.class);
             if (delete != null) {
                 this.findObsoleteValues(controller, method, delete.value(),
+                                        obsoleteRoutes, violations);
+                this.findObsoleteValues(controller, method, delete.path(),
                                         obsoleteRoutes, violations);
             }
         }

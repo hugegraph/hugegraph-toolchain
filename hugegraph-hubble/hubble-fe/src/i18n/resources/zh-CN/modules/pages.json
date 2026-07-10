@@ -144,6 +144,20 @@
     "create": "创建图",
     "search_placeholder": "请输入图名称",
     "set_default_confirm": "确认更改图的默认设置?",
+    "clear_confirm": {
+      "title": "确认清空图",
+      "graphspace": "GraphSpace：{{graphspace}}",
+      "graph": "图：{{graph}}",
+      "scope_data": "删除范围：仅图数据",
+      "scope_schema_data": "删除范围：图数据、属性键、顶点类型、边类型和索引",
+      "irreversible": "此操作不可恢复。",
+      "schema_preservation_warning": "当前尚无经过验证、可保证保留 schema 的专用 Server 操作。",
+      "input_label": "输入图名以确认",
+      "input_placeholder": "图名",
+      "confirm": "清空图",
+      "cancel": "取消",
+      "request_failed": "清空失败"
+    },
     "col": {
       "name": "图名称",
       "auth": "是否开启鉴权",

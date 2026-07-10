@@ -106,6 +106,9 @@ public class GraphsControllerCanonicalTest {
         this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/unsetdefault")
                          .with(this.withClient))
                 .andExpect(status().is4xxClientError());
+        this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/getdefault")
+                         .with(this.withClient))
+                .andExpect(status().is4xxClientError());
         this.mvc.perform(post("/api/v1.3/graphspaces/DEFAULT/graphs")
                          .with(this.withClient)
                          .contentType(MediaType.APPLICATION_FORM_URLENCODED)
