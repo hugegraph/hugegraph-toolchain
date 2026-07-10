@@ -48,7 +48,7 @@ class CustomLegend extends Legend {
                 });
                 let attrs;
                 let shapeType = data.type;
-                const {width, height, r} = this.getShapeSize(data);
+                const {width, r} = this.getShapeSize(data);
                 const style = this.getStyle(itemType.substr(0, 4), data);
                 switch (data.type) {
                     case 'circle':

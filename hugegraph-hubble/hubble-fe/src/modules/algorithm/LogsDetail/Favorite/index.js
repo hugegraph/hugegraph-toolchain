@@ -27,6 +27,9 @@ import {Table, Input, Popconfirm, Modal} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
 import c from './index.module.scss';
 
+const createValueHandler = (handler, value) => () => handler(value);
+const getRowKey = item => item.id;
+
 const Favorite = props => {
     const {t} = useTranslation();
     const {
@@ -154,19 +157,22 @@ const Favorite = props => {
                             placement="left"
                             className={c.favoriteModel}
                             title={editFavoriteForm}
-                            onConfirm={() => onSaveEditFavorite(rowData)}
+                            onConfirm={createValueHandler(onSaveEditFavorite, rowData)}
                             okText={t('analysis.logs.action.save')}
                             okButtonProps={{disabled: isDisabledName}}
                             cancelText={t('common.action.cancel')}
                         >
                             <a
                                 style={{marginLeft: '8px'}}
-                                onClick={() => onEditFavorite(rowData)}
+                                onClick={createValueHandler(onEditFavorite, rowData)}
                             >
                                 {t('analysis.logs.action.edit_name')}
                             </a>
                         </Popconfirm>
-                        <a style={{marginLeft: '8px'}} onClick={() => onConfirm(rowData.id)}>
+                        <a
+                            style={{marginLeft: '8px'}}
+                            onClick={createValueHandler(onConfirm, rowData.id)}
+                        >
                             {t('common.action.delete')}
                         </a>
                     </div>
@@ -212,7 +218,7 @@ const Favorite = props => {
             <Table
                 columns={queryFavoriteColumns}
                 dataSource={favoriteQueriesDataRecords}
-                rowKey={item => item.id}
+                rowKey={getRowKey}
                 onChange={onSortChange}
                 pagination={{
                     onChange: onFavoritePageChange,

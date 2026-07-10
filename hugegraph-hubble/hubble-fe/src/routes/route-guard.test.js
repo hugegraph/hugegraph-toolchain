@@ -102,4 +102,19 @@ describe('route guard', () => {
         expect(screen.getByText('login:/login?redirect=%2Ftask%2Fedit')).toBeTruthy();
         expect(sessionStorage.getItem('redirect')).toBeNull();
     });
+
+    it.each(['/super', '/resource', '/role'])(
+        'redirects unavailable legacy route %s to navigation',
+        route => {
+            sessionStorage.setItem('user_', JSON.stringify({
+                id: 'admin',
+                user_nickname: 'admin',
+            }));
+
+            renderRoutes(route);
+
+            expect(screen.getByText('navigation page')).toBeTruthy();
+            expect(screen.queryByText('not found page')).toBeNull();
+        }
+    );
 });

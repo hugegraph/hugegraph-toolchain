@@ -70,6 +70,19 @@ const GraphMenuBar = props => {
         [downloadJsonHandler, graphData]
     );
 
+    const handleLayoutPanel = useCallback(
+        () => handleTogglePanel(LAYOUT),
+        [handleTogglePanel]
+    );
+    const handleSettingPanel = useCallback(
+        () => handleTogglePanel(SETTING),
+        [handleTogglePanel]
+    );
+    const handleStatisticsPanel = useCallback(
+        () => handleTogglePanel(STATISTICS),
+        [handleTogglePanel]
+    );
+
     const menubarContent = [
         {
             key: 1,
@@ -125,9 +138,7 @@ const GraphMenuBar = props => {
             content: (
                 <LayoutConfig
                     buttonEnable={buttonEnableForCanvas2D}
-                    onClick={() => {
-                        handleTogglePanel(LAYOUT);
-                    }}
+                    onClick={handleLayoutPanel}
                     tooltip={isCanvas2D
                         ? t('analysis.canvas.tooltip.layout_2d')
                         : t('analysis.canvas.tooltip.layout_3d')}
@@ -139,9 +150,7 @@ const GraphMenuBar = props => {
             content: (
                 <SettingConfig
                     buttonEnable={buttonEnableForCanvas2D}
-                    onClick={() => {
-                        handleTogglePanel(SETTING);
-                    }}
+                    onClick={handleSettingPanel}
                     tooltip={isCanvas2D
                         ? t('analysis.canvas.tooltip.setting_2d')
                         : t('analysis.canvas.tooltip.setting_3d')}
@@ -165,9 +174,7 @@ const GraphMenuBar = props => {
             content: (
                 <Statistics
                     buttonEnable={buttonEnableForCanvas2D}
-                    onClick={() => {
-                        handleTogglePanel(STATISTICS);
-                    }}
+                    onClick={handleStatisticsPanel}
                     tooltip={isCanvas2D
                         ? t('analysis.canvas.tooltip.statistics_2d')
                         : t('analysis.canvas.tooltip.statistics_3d')}

@@ -69,7 +69,7 @@ const ClosenessCentralityVermeer = props => {
         () => {
             setEnableRun(graphStatus === LOADED);
         },
-        [graphStatus]
+        [LOADED, graphStatus]
     );
 
     const handleRunning = useCallback(
@@ -97,7 +97,8 @@ const ClosenessCentralityVermeer = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [CLOSENESS_CENTRALITY, FAILED, LOADING, SUCCESS, graph, graphSpace,
+            handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

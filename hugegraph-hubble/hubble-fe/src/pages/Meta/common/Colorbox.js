@@ -17,6 +17,7 @@
  */
 
 import {Select} from 'antd';
+import {useCallback} from 'react';
 import Style from './index.module.scss';
 
 const colorSchemas = [
@@ -48,9 +49,9 @@ const Colorbox = ({color, border}) => {
 
 const SelectColorbox = ({value = '', onChange}) => {
 
-    const triggerChange = changedValue => {
+    const triggerChange = useCallback(changedValue => {
         onChange?.(changedValue);
-    };
+    }, [onChange]);
 
     return (
         <Select

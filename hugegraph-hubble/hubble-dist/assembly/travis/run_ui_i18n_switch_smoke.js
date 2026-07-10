@@ -21,6 +21,7 @@
 const fs = require('fs');
 const moduleBuiltin = require('module');
 const path = require('path');
+const {authenticateUi} = require('./ui_auth');
 
 const MAC_CHROME_PATHS = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -109,24 +110,21 @@ async function main() {
   const outputDir = path.resolve(argValue('--output-dir',
                                           '.workflow/hubble-v2-issue-694/evidence/ui'));
   const jsonOutput = argValue('--json-output', '');
+  const username = argValue('--username', process.env.HUBBLE_USERNAME || 'admin');
+  const password = argValue('--password', process.env.HUBBLE_PASSWORD || 'pa');
   const { chromium } = await loadPlaywright();
   const executablePath = chromiumExecutablePath();
   fs.mkdirSync(outputDir, { recursive: true });
 
   const browser = await chromium.launch({ headless: true, executablePath });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext();
+  const page = await context.newPage({ viewport: { width: 1440, height: 900 } });
   await page.addInitScript(() => {
-    window.sessionStorage.setItem('user_', JSON.stringify({
-      id: 1,
-      user_name: 'smoke',
-      user_nickname: 'Smoke',
-      is_superadmin: true,
-      resSpaces: ['DEFAULT']
-    }));
     if (!window.localStorage.getItem('languageType')) {
       window.localStorage.setItem('languageType', 'zh-CN');
     }
   });
+  const auth = await authenticateUi(context, page, hubbleUrl, username, password);
   let zhText;
   let enText;
   let selectorTextAfterSwitch = '';
@@ -151,6 +149,8 @@ async function main() {
   );
   const report = {
     hubbleUrl,
+    authenticatedUser: auth.user.user_name,
+    authLevel: auth.level,
     zhContainsChinese: /[\u4e00-\u9fff]/.test(zhText),
     enSelectorVisible: /English/.test(selectorTextAfterSwitch),
     textChanged: zhText !== enText,

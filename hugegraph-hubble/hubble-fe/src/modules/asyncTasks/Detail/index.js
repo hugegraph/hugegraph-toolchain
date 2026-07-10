@@ -158,7 +158,7 @@ const AsyncTaskDetail = props => {
         });
     };
 
-    const onMassDeleteConfirm = () => {
+    const onMassDeleteConfirm = useCallback(() => {
         Modal.confirm({
             title: t('analysis.async_task.batch_delete_title'),
             content: t('analysis.async_task.batch_delete_content'),
@@ -166,7 +166,11 @@ const AsyncTaskDetail = props => {
             cancelText: t('common.action.cancel'),
             onOk: () => deleteTaskByIds(currentSelectedRowKeys),
         });
-    };
+    }, [currentSelectedRowKeys, deleteTaskByIds, t]);
+
+    const clearSelectedRowKeys = useCallback(() => {
+        setSelectedRowKeys([]);
+    }, []);
 
     const columns = [
         {
@@ -283,7 +287,7 @@ const AsyncTaskDetail = props => {
                             {t('analysis.async_task.batch_delete')}
                         </Button>
                     </div>
-                    <CloseOutlined onClick={() => setSelectedRowKeys([])} />
+                    <CloseOutlined onClick={clearSelectedRowKeys} />
                 </div>
             )}
             <Table

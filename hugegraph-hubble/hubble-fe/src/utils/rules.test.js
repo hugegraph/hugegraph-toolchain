@@ -79,7 +79,8 @@ const rules = require('./rules');
 const validate = async rule => {
     try {
         await rule.validator(null, 'bad value');
-    } catch (error) {
+    }
+    catch (error) {
         return error instanceof Error ? error.message : error;
     }
     throw new Error('Expected rule validation to reject');

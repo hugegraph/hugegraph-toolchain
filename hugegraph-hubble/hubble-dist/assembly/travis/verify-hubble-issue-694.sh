@@ -31,6 +31,8 @@ evidence_dir=${HUBBLE_694_EVIDENCE_DIR:-.workflow/hubble-v2-issue-694/evidence}
 script_dir=$(cd "$(dirname "$0")" && pwd)
 python_bin=${PYTHON:-python3}
 node_bin=${NODE:-node}
+username=${HUBBLE_USERNAME:-admin}
+password=${HUBBLE_PASSWORD:-pa}
 
 if [[ ! -f "${tarball}" ]]; then
     echo "Hubble tarball not found: ${tarball}" >&2
@@ -61,6 +63,7 @@ trap cleanup EXIT
     --leave-running \
     --json-output "${evidence_dir}/live-hubble-smoke.json"
 
+HUBBLE_USERNAME="${username}" HUBBLE_PASSWORD="${password}" \
 "${node_bin}" "${script_dir}/run_ui_full_acceptance.js" \
     --hubble-url "${hubble_url}" \
     --output-dir "${evidence_dir}/ui" \

@@ -70,7 +70,7 @@ const LabelPropagationAlgorithmVermeer = props => {
         () => {
             setEnableRun(graphStatus === LOADED);
         },
-        [graphStatus]
+        [LOADED, graphStatus]
     );
 
     const handleRunning = useCallback(
@@ -98,7 +98,8 @@ const LabelPropagationAlgorithmVermeer = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FAILED, LABEL_PROPAGATION_ALGORITHM, LOADING, SUCCESS, graph,
+            graphSpace, handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

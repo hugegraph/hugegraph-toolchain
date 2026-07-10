@@ -21,28 +21,19 @@
  */
 
 import Item from '../Item';
+import {useTranslation} from 'react-i18next';
 
 const AdminItem = () => {
+    const {t} = useTranslation();
+
     return (
         <Item
             btnIndex={3}
-            btnTitle={'系统管理'}
+            btnTitle={t('navigation_page.step3')}
             listData={[
                 {
-                    title: '超管管理',
-                    url: '/super',
-                },
-                {
-                    title: '账号管理',
+                    title: t('navigation_page.account_manage'),
                     url: '/account',
-                },
-                {
-                    title: '资源管理',
-                    url: '/resource',
-                },
-                {
-                    title: '角色管理',
-                    url: '/role',
                 },
             ]}
         />

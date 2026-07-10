@@ -16,10 +16,9 @@
  * under the License.
  */
 
-import {Graph, Cell, Shape, Color} from '@antv/x6';
-import {ReactShape} from '@antv/x6-react-shape';
-import {Menu, Toolbar, Dropdown} from '@antv/x6-react-components';
-import {memo, useCallback, useEffect, useRef, useState} from 'react';
+import {Graph, Shape} from '@antv/x6';
+import {Menu, Toolbar} from '@antv/x6-react-components';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
     ZoomInOutlined,
     ZoomOutOutlined,
@@ -29,9 +28,6 @@ import {
 } from '@ant-design/icons';
 import style from './index.module.scss';
 import testData from './data/test.json';
-import vertexData from './data/vertex.json';
-import edgeData from './data/edge.json';
-import propertyData from './data/property.json';
 import {erRectConfig, erRectHeadConfig, erPortPosition} from './config';
 import '@antv/x6-react-components/es/menu/style/index.css';
 import '@antv/x6-react-components/es/toolbar/style/index.css';
@@ -43,37 +39,12 @@ Graph.registerPortLayout('erPortPosition', erPortPosition);
 Graph.registerNode('er-rect', erRectConfig, true);
 Graph.registerNode('er-head-rect', erRectHeadConfig, true);
 
-const ERShapce = memo(
-    ({node, text}) => {
-        const color = Color.randomHex();
-
-        return (
-            <div
-                style={{
-                    color: Color.invert(color, true),
-                    width: '100%',
-                    height: '100%',
-                    textAlign: 'center',
-                    lineHeight: '40px',
-                    background: color,
-                }}
-            >
-                {text}
-            </div>
-        );
-    },
-    (prev, next) => {
-        return Boolean(next.node?.hasChanged('data'));
-    }
-);
-
 const ERView = () => {
     const container = useRef(null);
     const graph = useRef(null);
     const {t} = useTranslation();
     const [vertexVisible, setVertexVisible] = useState(false);
     const [edgeVisible, setEdgeVisible] = useState(false);
-    const [data, setData] = useState([]);
 
     useEffect(() => {
         graph.current = new Graph({
@@ -130,7 +101,7 @@ const ERView = () => {
 
         graph.current.on('node:add', ({e, node}) => {
             e.stopPropagation();
-            console.log('add', node);
+            void node;
             // const member = createNode(
             //     'Employee',
             //     'New Employee',
@@ -143,7 +114,7 @@ const ERView = () => {
 
         graph.current.on('node:delete', ({e, node}) => {
             e.stopPropagation();
-            console.log('delete', node);
+            void node;
             // graph.freeze();
             // graph.removeCell(node);
             // layout();
@@ -170,7 +141,7 @@ const ERView = () => {
                     args: {
                         distance: 0.5,
                         onClick: ({cell}) => {
-                            console.log(cell);
+                            void cell;
                         },
                         markup: [
                             {
@@ -234,9 +205,6 @@ const ERView = () => {
         });
     }, []);
 
-    const [vertexList, setVertexList] = useState([]);
-    const [edgeList, setEdgeList] = useState([]);
-
     const addVertex = useCallback(vertex => {
         graph.current.addNode(graph.current.createNode(setCell(t, vertex)));
     }, [t]);
@@ -244,10 +212,6 @@ const ERView = () => {
     const addEdge = useCallback(edge => {
         graph.current.addNode(graph.current.createNode(setCell(t, edge, 'edge')));
     }, [t]);
-
-    const addValueMap = () => {
-
-    };
 
     const showVertex = useCallback(() => {
         setVertexVisible(true);
@@ -303,7 +267,7 @@ const ERView = () => {
 
     return (
         <div className={style.main}>
-            <Toolbar extra={<span onClick={() => console.log(graph.current.toJSON())}>Save</span>}>
+            <Toolbar>
                 <Group>
                     <Item
                         name="zoomIn"

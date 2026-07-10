@@ -32,14 +32,14 @@ test('updates a graph with PUT JSON on the canonical route', () => {
     manage.updateGraph('DEFAULT', 'g', {nickname: 'nick'});
     expect(request.put).toHaveBeenCalledWith(
         '/graphspaces/DEFAULT/graphs/g',
-        {nickname: 'nick'},
+        {nickname: 'nick'}
     );
 });
 
 test('reads the default graph from the canonical route', () => {
     manage.getDefaultGraph('DEFAULT');
     expect(request.get).toHaveBeenCalledWith(
-        'graphspaces/DEFAULT/graphs/default',
+        'graphspaces/DEFAULT/graphs/default'
     );
 });
 

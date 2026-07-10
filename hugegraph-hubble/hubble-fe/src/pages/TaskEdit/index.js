@@ -23,7 +23,7 @@ import {
     message,
     Modal,
 } from 'antd';
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import Style from './index.module.scss';
 import BaseForm from './BaseForm/index';
@@ -51,13 +51,11 @@ const TaskEdit = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const cancel = () => {
+    const cancel = useCallback(() => {
         navigate('/task');
-    };
+    }, [navigate]);
 
-    const prev = () => {
-        setCurrent(current - 1);
-    };
+    const prev = useCallback(() => setCurrent(value => value - 1), []);
 
     // const addEdge = item => {
     //     edgeList.push(item);
@@ -72,7 +70,7 @@ const TaskEdit = () => {
     //     //
     // };
 
-    const submitBase = values => {
+    const submitBase = useCallback(values => {
         const {ingestion_option, datasource_id} = values;
         setGraphspace(ingestion_option.graphspace);
         setGraph(ingestion_option.graph);
@@ -102,21 +100,21 @@ const TaskEdit = () => {
 
             setCurrent(1);
         });
-    };
+    }, [t]);
 
-    const submitField = values => {
+    const submitField = useCallback(values => {
         const {source_keys, target_keys} = values;
         setTargetField(target_keys);
         setHeader(source_keys.map(item => item.key));
 
         setCurrent(2);
-    };
+    }, []);
 
-    const submitMapping = () => {
+    const submitMapping = useCallback(() => {
         setCurrent(3);
-    };
+    }, []);
 
-    const submitVertex = values => {
+    const submitVertex = useCallback(values => {
         const {index} = values;
 
         if (index >= 0) {
@@ -127,9 +125,9 @@ const TaskEdit = () => {
         }
 
         setVertexList([...vertexList]);
-    };
+    }, [vertexList]);
 
-    const submitEdge = values => {
+    const submitEdge = useCallback(values => {
         const {index} = values;
 
         if (index >= 0) {
@@ -140,9 +138,9 @@ const TaskEdit = () => {
         }
 
         setEdgeList([...edgeList]);
-    };
+    }, [edgeList]);
 
-    const submitForms = ({base_form, mapping_form, schedule_form}) => {
+    const submitForms = useCallback(({base_form, mapping_form, schedule_form}) => {
         const baseValues = base_form.getFieldsValue();
         const mappingValues = mapping_form.getFieldsValue();
         const scheduleValues = schedule_form.getFieldsValue();
@@ -179,9 +177,9 @@ const TaskEdit = () => {
 
             message.error(res.message);
         });
-    };
+    }, [datasource, header, navigate, t]);
 
-    const handleFinish = (name, {values, forms}) => {
+    const handleFinish = useCallback((name, {values, forms}) => {
         // console.log(name, values, forms, JSONbig.stringify(values));
         if (name === 'base_form') {
             submitBase(values);
@@ -206,7 +204,7 @@ const TaskEdit = () => {
         if (name === 'schedule_form') {
             submitForms(forms);
         }
-    };
+    }, [submitBase, submitEdge, submitField, submitForms, submitMapping, submitVertex]);
 
     // const onFinish = () => {
     //     form.validateFields().then(values => {
@@ -271,17 +269,17 @@ const TaskEdit = () => {
                             datasourceID={datasourceID}
                             prev={prev}
                             visible={current === 1}
-                            setTargetField={val => setTargetField(val)}
-                            setHeader={val => setHeader(val)}
+                            setTargetField={setTargetField}
+                            setHeader={setHeader}
                         />
                         <MappingForm
                             targetField={targetField}
                             graphspace={graphspace}
                             graph={graph}
                             vertexList={vertexList}
-                            changeVertexList={list => setVertexList(list)}
+                            changeVertexList={setVertexList}
                             edgeList={edgeList}
-                            changeEdgeList={list => setEdgeList(list)}
+                            changeEdgeList={setEdgeList}
                             prev={prev}
                             visible={current === 2}
                         />

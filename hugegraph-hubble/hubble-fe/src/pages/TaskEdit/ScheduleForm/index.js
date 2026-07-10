@@ -17,7 +17,7 @@
  */
 
 import {Typography, Form, Radio, Input, Space, Button, Select} from 'antd';
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
 
@@ -35,6 +35,10 @@ const ScheduleForm = ({prev, visible, datasource, loading}) => {
             {label: t('task.edit.schedule_cron'), value: 'CRON'},
         ];
 
+    const handleSyncTypeChange = useCallback(event => {
+        setSyncType(event.target.value);
+    }, []);
+
     return (
         <div style={{display: visible ? '' : 'none'}}>
             <Form
@@ -50,9 +54,7 @@ const ScheduleForm = ({prev, visible, datasource, loading}) => {
                 <Form.Item label={t('task.edit.sync_type')} required name='task_schedule_type'>
                     <Radio.Group
                         options={scheduleOptions}
-                        onChange={e => {
-                            setSyncType(e.target.value);
-                        }}
+                        onChange={handleSyncTypeChange}
                     />
                 </Form.Item>
                 {syncType === 'CRON'

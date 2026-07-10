@@ -32,7 +32,7 @@ import _ from 'lodash';
 
 const {STANDBY, LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 const {QUERY} = GREMLIN_EXECUTES_MODE;
-const {GREMLIN, ASYNC_CYPHER, ASYNC_GREMLIN} = ANALYSIS_TYPE;
+const {GREMLIN} = ANALYSIS_TYPE;
 const {CLOSED} = PANEL_TYPE;
 const {CANVAS2D} = GRAPH_RENDER_MODE;
 const defaultPageParams = {page: 1, pageSize: 10};
@@ -207,21 +207,6 @@ const AnalysisHome = () => {
             }
         },
         [favoriteQueriesData, pageFavorite, pageSize]
-    );
-
-    const getExecuteAsyncTask = useCallback(
-        async taskType => {
-            const params = {type: EXECUTION_LOGS_TYPE[taskType]};
-            setLoading(true);
-            const response = await api.analysis.getExecuteAsyncTaskList(graphSpace, graph, params);
-            setLoading(false);
-            const {status, data} = response;
-            if (status === 200) {
-                const {async_id} = data.records[0];
-                setAsyncTaskResult(async_id);
-            }
-        },
-        [graph, graphSpace]
     );
 
     const onExecuteQuery = useCallback(

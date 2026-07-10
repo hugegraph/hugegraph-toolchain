@@ -145,6 +145,9 @@ const RouteList = ({element}) => {
                 <Route path="/task/detail/:taskid" element={<TaskDetail />} />
 
                 <Route path='/my' element={<My />} />
+                <Route path='/super' element={<Navigate to='/navigation' replace />} />
+                <Route path='/resource' element={<Navigate to='/navigation' replace />} />
+                <Route path='/role' element={<Navigate to='/navigation' replace />} />
                 <Route
                     path='/account'
                     element={<PdOnlyRoute fallback='/my'><Account /></PdOnlyRoute>}

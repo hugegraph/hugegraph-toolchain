@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Layout, Space, Avatar, Dropdown, Menu, message, Modal, Select} from 'antd';
+import {Layout, Space, Avatar, Dropdown, message, Modal, Select} from 'antd';
 import {UserOutlined} from '@ant-design/icons';
 import style from './index.module.scss';
 import Logo from '../../assets/logo.png';
@@ -70,13 +70,13 @@ const Topbar = () => {
         redirectToLogin();
     }
 
-    const i18Change = e => {
+    const i18Change = useCallback(e => {
         localStorage.setItem('languageType', e);
         setLanguageType(e);
         window.location.reload();
-    };
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
 
         api.auth.logout().then(res => {
             if (res.status === 200) {
@@ -86,15 +86,23 @@ const Topbar = () => {
                 navigate('/login');
             }
         });
-    };
+    }, [navigate, t]);
 
-    const confirm = () => {
+    const confirm = useCallback(() => {
         Modal.confirm({
             title: t('Topbar.exit.confirm'),
             okText: t('common.verify.ok'),
             cancelText: t('common.verify.cancel'),
             onOk: logout,
         });
+    }, [logout, t]);
+
+    const userMenu = {
+        items: [{
+            key: 'logout',
+            label: t('Topbar.exit.name'),
+        }],
+        onClick: confirm,
     };
 
     return (
@@ -110,12 +118,7 @@ const Topbar = () => {
                     <Option value="zh-CN">中文</Option>
                     <Option value="en-US">English</Option>
                 </Select>
-                <Dropdown overlay={<Menu items={[{
-                    key: 'logout',
-                    label: <a onClick={confirm}>{t('Topbar.exit.name')}</a>,
-                }]}
-                />}
-                >
+                <Dropdown menu={userMenu}>
                     <Space className={style.right}>
                         <Avatar size={'small'} icon={<UserOutlined />} />
                         <span>{userInfo?.user_nickname ?? ''}</span>

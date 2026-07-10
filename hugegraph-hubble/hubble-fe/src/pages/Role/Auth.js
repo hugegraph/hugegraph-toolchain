@@ -18,10 +18,6 @@
 
 import {
     PageHeader,
-    Row,
-    Col,
-    Space,
-    Divider,
     Tree,
     Spin,
     message,
@@ -35,7 +31,6 @@ import treeData from './treeData';
 import {AddResourceLayer} from './EditLayer';
 import * as user from '../../utils/user';
 import {StatusA} from '../../components/Status';
-import ListButton from '../../components/ListButton';
 
 const RoleAuth = () => {
     const params = useParams();

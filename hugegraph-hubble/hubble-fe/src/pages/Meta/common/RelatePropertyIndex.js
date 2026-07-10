@@ -17,8 +17,23 @@
  */
 
 import {Form, Select, Input, Space} from 'antd';
-import {useState, useEffect, useCallback} from 'react';
+import {useCallback, useState, useEffect} from 'react';
 import {indexTypeOptions} from './config';
+
+const IndexTypeSelect = ({index, onChange}) => {
+    const handleChange = useCallback(value => onChange(index, value), [index, onChange]);
+    return <Select options={indexTypeOptions} onChange={handleChange} />;
+};
+
+const PropertyFieldsSelect = ({options, type}) => {
+    const handleChange = useCallback(value => {
+        if (type !== 'SECONDARY' && value?.length > 1) {
+            value.shift();
+        }
+    }, [type]);
+
+    return <Select options={options} mode='multiple' onChange={handleChange} />;
+};
 
 const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit, primaryKeys}) => {
     const [plist, setPlist] = useState([]);
@@ -30,10 +45,13 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
         propertyMap[item.value] = item.data_type;
     }
 
-    const setPropertyList = (index, value) => {
-        plist[index] = value;
-        setPlist([...plist]);
-    };
+    const setPropertyList = useCallback((index, value) => {
+        setPlist(list => {
+            const next = [...list];
+            next[index] = value;
+            return next;
+        });
+    }, []);
 
     const getPropertyList = value => selectedPropertyList.filter(item => {
         if (primaryKeys && primaryKeys.includes(item.value)) {
@@ -141,10 +159,7 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                             className="form_attr_select"
                                             name={[field.name, 'type']}
                                         >
-                                            <Select
-                                                options={indexTypeOptions}
-                                                onChange={val => setPropertyList(index, val)}
-                                            />
+                                            <IndexTypeSelect index={index} onChange={setPropertyList} />
                                         </Form.Item>
                                         <Form.Item
                                             className="form_attr_select"
@@ -194,23 +209,15 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                         className="form_attr_select"
                                         name={[field.name, 'type']}
                                     >
-                                        <Select
-                                            options={indexTypeOptions}
-                                            onChange={val => setPropertyList(index, val)}
-                                        />
+                                        <IndexTypeSelect index={index} onChange={setPropertyList} />
                                     </Form.Item>
                                     <Form.Item
                                         className="form_attr_select"
                                         name={[field.name, 'fields']}
                                     >
-                                        <Select
+                                        <PropertyFieldsSelect
                                             options={getPropertyList(plist[index])}
-                                            mode={'multiple'}
-                                            onChange={value => {
-                                                if (plist[index] !== 'SECONDARY' && value?.length > 1) {
-                                                    value.shift();
-                                                }
-                                            }}
+                                            type={plist[index]}
                                         />
                                     </Form.Item>
                                     <a onClick={() => {

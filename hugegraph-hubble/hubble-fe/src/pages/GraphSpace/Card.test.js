@@ -42,8 +42,8 @@ jest.mock('antd', () => {
             items.map(({key, label}) => React.createElement(
                 React.Fragment,
                 {key},
-                label,
-            )),
+                label
+            ))
         ),
         Dropdown: {
             ...antd.Dropdown,
@@ -51,7 +51,7 @@ jest.mock('antd', () => {
                 React.Fragment,
                 null,
                 children,
-                overlay,
+                overlay
             ),
         },
     };
@@ -91,7 +91,7 @@ test('does not expose a default GraphSpace mutation action', () => {
             deleteGraphspace={jest.fn()}
             handleSetDefault={handleSetDefault}
             handleInit={jest.fn()}
-        />,
+        />
     );
 
     expect(screen.queryByText('设为默认')).not.toBeInTheDocument();

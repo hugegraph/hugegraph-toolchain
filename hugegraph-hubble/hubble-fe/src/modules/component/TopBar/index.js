@@ -227,11 +227,11 @@ const TopBar = props => {
         [onOlapModeChange]
     );
 
-    const onStatusBtnClick = () => {
+    const onStatusBtnClick = useCallback(() => {
         navigate('/asyncTasks');
-    };
+    }, [navigate]);
 
-    const onLoadBtnClick = async () => {
+    const onLoadBtnClick = useCallback(async () => {
         const params = {
             graphspace: currentGraphSpace,
             graph: currentGraph.name,
@@ -248,7 +248,7 @@ const TopBar = props => {
         else {
             getGraphs();
         }
-    };
+    }, [currentGraph.name, currentGraphSpace, currentGraphStatus, getGraphs, t]);
 
     const handleClickNavigate = useCallback(
         () => {

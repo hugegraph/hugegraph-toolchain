@@ -27,6 +27,58 @@ import ExecutionContent from '../../../../components/ExecutionContent';
 import Highlighter from 'react-highlight-words';
 import c from './index.module.scss';
 
+function getRowKey(item) {
+    return item.id;
+}
+
+const FavoriteActions = props => {
+    const {
+        rowData, index, loadStatements, onSaveEditFavorite, onEditFavorite,
+        onConfirm, editFavoriteForm, isDisabledName, t,
+    } = props;
+    const {content, id} = rowData;
+    const handleLoadStatements = useCallback(
+        () => loadStatements(content, index),
+        [content, index, loadStatements]
+    );
+    const handleSaveEditFavorite = useCallback(
+        () => onSaveEditFavorite(rowData),
+        [onSaveEditFavorite, rowData]
+    );
+    const handleEditFavorite = useCallback(
+        () => onEditFavorite(rowData),
+        [onEditFavorite, rowData]
+    );
+    const handleConfirm = useCallback(
+        () => onConfirm(id),
+        [id, onConfirm]
+    );
+
+    return (
+        <div className={c.manipulation}>
+            <a style={{marginLeft: '8px'}} onClick={handleLoadStatements}>
+                {t('analysis.logs.action.load_statement')}
+            </a>
+            <Popconfirm
+                placement="left"
+                className={c.favoriteModel}
+                title={editFavoriteForm}
+                onConfirm={handleSaveEditFavorite}
+                okText={t('analysis.logs.action.save')}
+                okButtonProps={{disabled: isDisabledName}}
+                cancelText={t('common.action.cancel')}
+            >
+                <a style={{marginLeft: '8px'}} onClick={handleEditFavorite}>
+                    {t('analysis.logs.action.edit_name')}
+                </a>
+            </Popconfirm>
+            <a style={{marginLeft: '8px'}} onClick={handleConfirm}>
+                {t('common.action.delete')}
+            </a>
+        </div>
+    );
+};
+
 const Favorite = props => {
     const {t} = useTranslation();
     const {
@@ -88,7 +140,7 @@ const Favorite = props => {
         []
     );
 
-    const onConfirm = id => {
+    const onConfirm = useCallback(id => {
         Modal.confirm({
             title: t('analysis.logs.confirm_delete'),
             content: t('analysis.logs.delete_favorite_confirm'),
@@ -96,7 +148,7 @@ const Favorite = props => {
             cancelText: t('common.action.cancel'),
             onOk: () => onDel(id),
         });
-    };
+    }, [onDel, t]);
 
     const editFavoriteForm = (
         <div>
@@ -164,35 +216,18 @@ const Favorite = props => {
             dataIndex: 'manipulation',
             width: '20%',
             render(_, rowData, index) {
-                const {content, id} = rowData;
                 return (
-                    <div className={c.manipulation}>
-                        <a
-                            style={{marginLeft: '8px'}}
-                            onClick={() => loadStatements(content, index)}
-                        >
-                            {t('analysis.logs.action.load_statement')}
-                        </a>
-                        <Popconfirm
-                            placement="left"
-                            className={c.favoriteModel}
-                            title={editFavoriteForm}
-                            onConfirm={() => onSaveEditFavorite(rowData)}
-                            okText={t('analysis.logs.action.save')}
-                            okButtonProps={{disabled: isDisabledName}}
-                            cancelText={t('common.action.cancel')}
-                        >
-                            <a
-                                style={{marginLeft: '8px'}}
-                                onClick={() => onEditFavorite(rowData)}
-                            >
-                                {t('analysis.logs.action.edit_name')}
-                            </a>
-                        </Popconfirm>
-                        <a style={{marginLeft: '8px'}} onClick={() => onConfirm(id)}>
-                            {t('common.action.delete')}
-                        </a>
-                    </div>
+                    <FavoriteActions
+                        rowData={rowData}
+                        index={index}
+                        loadStatements={loadStatements}
+                        onSaveEditFavorite={onSaveEditFavorite}
+                        onEditFavorite={onEditFavorite}
+                        onConfirm={onConfirm}
+                        editFavoriteForm={editFavoriteForm}
+                        isDisabledName={isDisabledName}
+                        t={t}
+                    />
                 );
             },
         },
@@ -235,7 +270,7 @@ const Favorite = props => {
             <Table
                 columns={queryFavoriteColumns}
                 dataSource={favoriteQueriesDataRecords}
-                rowKey={item => item.id}
+                rowKey={getRowKey}
                 onChange={onSortChange}
                 pagination={{
                     onChange: onFavoritePageChange,

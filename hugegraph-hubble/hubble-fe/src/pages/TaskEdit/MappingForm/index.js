@@ -17,11 +17,34 @@
  */
 
 import {Space, Button, Form, Typography, message, List} from 'antd';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import VertexForm from './Vertex';
 import EdgeForm from './Edge';
+
+const MappingListItem = ({item, index, type, onEdit, onRemove, t}) => {
+    const handleEdit = useCallback(() => {
+        onEdit(index);
+    }, [index, onEdit]);
+    const handleRemove = useCallback(() => {
+        onRemove(index);
+    }, [index, onRemove]);
+
+    return (
+        <List.Item
+            actions={[
+                <a key={'1'} onClick={handleEdit}>{t('common.action.edit')}</a>,
+                <a key={'2'} onClick={handleRemove}>{t('common.action.delete')}</a>,
+            ]}
+        >
+            <Space>
+                <span>{t('task.edit.type')}: {t(`task.edit.${type}`)}</span>
+                <span>{t('task.edit.mapping_name')}: {item.label}</span>
+            </Space>
+        </List.Item>
+    );
+};
 
 const fieldMapping = list => {
     const obj = {};
@@ -60,6 +83,30 @@ const valueMapping = list => {
     return obj;
 };
 
+const formatVertex = item => {
+    const {label, id, attr, value} = item;
+    const field_mapping = fieldMapping(attr);
+    const value_mapping = valueMapping(value);
+    const selected = Object.keys(field_mapping);
+    return {
+        label, skip: false, id: id ?? null, unfold: false, field_mapping, value_mapping,
+        selected: id ? selected.concat(id) : selected,
+        ignored: [], null_values: [''], update_strategies: {},
+    };
+};
+
+const formatEdge = item => {
+    const {label, attr, value, source, target} = item;
+    const field_mapping = fieldMapping(attr);
+    return {
+        label, skip: false, source: [source], unfold_source: false,
+        target: [target], unfold_target: false, field_mapping,
+        value_mapping: valueMapping(value),
+        selected: Object.keys(field_mapping).concat(source, target),
+        ignored: [], null_values: [''], update_strategies: {},
+    };
+};
+
 const MappingForm = ({prev,
     visible,
     targetField,
@@ -79,75 +126,57 @@ const MappingForm = ({prev,
     const [edgeIndex, setEdgeIndex] = useState(-1);
     const [submitEnable, setSubmitEnable] = useState(false);
 
-    const formatVertex = item => {
-        const {label, id, attr, value} = item;
-        const field_mapping = fieldMapping(attr);
-        const value_mapping = valueMapping(value);
-        // const id = selectLabel.id_strategy === 'PRIMARY_KEY' ? null : info.id;
-        const selected = Object.keys(field_mapping);
-
-        return {
-            label,
-            skip: false,
-            id: id ?? null,
-            unfold: false,
-            field_mapping,
-            value_mapping,
-            selected: id ? selected.concat(id) : selected,
-            ignored: [],
-            null_values: [''],
-            update_strategies: {},
-        };
-    };
-
-    const formatEdge = item => {
-        const {label, attr, value, source, target} = item;
-        const field_mapping = fieldMapping(attr);
-        const value_mapping = valueMapping(value);
-
-        return {
-            label,
-            skip: false,
-            source: [source],
-            unfold_source: false,
-            target: [target],
-            unfold_target: false,
-            field_mapping,
-            value_mapping,
-            selected: Object.keys(field_mapping).concat(source, target),
-            ignored: [],
-            null_values: [''],
-            update_strategies: {},
-        };
-    };
-
-    const onFinish = () => {
+    const onFinish = useCallback(() => {
         const vertices = vertexList.map(item => formatVertex(item));
         const edges = edgeList.map(item => formatEdge(item));
         // console.log({vertices, edges});
         mappingForm.setFieldsValue({vertices, edges});
         mappingForm.submit();
-    };
+    }, [edgeList, mappingForm, vertexList]);
 
-    const removeVertex = index => {
+    const removeVertex = useCallback(index => {
         vertexList.splice(index, 1);
         changeVertexList([...vertexList]);
-    };
+    }, [changeVertexList, vertexList]);
 
-    const removeEdge = index => {
+    const removeEdge = useCallback(index => {
         edgeList.splice(index, 1);
         changeEdgeList([...edgeList]);
-    };
+    }, [changeEdgeList, edgeList]);
 
-    const editVertex = index => {
+    const editVertex = useCallback(index => {
         setVertexIndex(index);
         setType('vertex');
-    };
+    }, []);
 
-    const editEdge = index => {
+    const editEdge = useCallback(index => {
         setEdgeIndex(index);
         setType('edge');
-    };
+    }, []);
+
+    const createVertex = useCallback(() => editVertex(-1), [editVertex]);
+    const createEdge = useCallback(() => editEdge(-1), [editEdge]);
+    const closeEditor = useCallback(() => setType(''), []);
+    const renderVertex = useCallback((item, index) => (
+        <MappingListItem
+            item={item}
+            index={index}
+            type='vertex'
+            onEdit={editVertex}
+            onRemove={removeVertex}
+            t={t}
+        />
+    ), [editVertex, removeVertex, t]);
+    const renderEdge = useCallback((item, index) => (
+        <MappingListItem
+            item={item}
+            index={index}
+            type='edge'
+            onEdit={editEdge}
+            onRemove={removeEdge}
+            t={t}
+        />
+    ), [editEdge, removeEdge, t]);
 
     useEffect(() => {
         setSubmitEnable(vertexList.length > 0 || edgeList.length > 0);
@@ -181,17 +210,17 @@ const MappingForm = ({prev,
         <div style={{display: visible ? '' : 'none'}}>
             <Typography.Title level={5}>{t('task.edit.step_mapping_fields')}</Typography.Title>
             <Space className={'form_attr_button'}>
-                <Button onClick={() => editVertex(-1)}>
+                <Button onClick={createVertex}>
                     {t('task.edit.add_vertex_mapping')}
                 </Button>
-                <Button onClick={() => editEdge(-1)}>
+                <Button onClick={createEdge}>
                     {t('task.edit.add_edge_mapping')}
                 </Button>
             </Space>
 
             <VertexForm
                 open={type === 'vertex'}
-                onCancel={() => setType('')}
+                onCancel={closeEditor}
                 targetField={targetField}
                 sourceField={vertex || []}
                 index={vertexIndex}
@@ -200,7 +229,7 @@ const MappingForm = ({prev,
 
             <EdgeForm
                 open={type === 'edge'}
-                onCancel={() => setType('')}
+                onCancel={closeEditor}
                 targetField={targetField}
                 sourceField={edge || []}
                 index={edgeIndex}
@@ -214,23 +243,7 @@ const MappingForm = ({prev,
                     dataSource={vertexList}
                     bordered
                     locale={{emptyText: <></>}}
-                    renderItem={(item, index) => (
-                        <List.Item
-                            actions={[
-                                <a key={'1'} onClick={() => editVertex(index)}>
-                                    {t('common.action.edit')}
-                                </a>,
-                                <a key={'2'} onClick={() => removeVertex(index)}>
-                                    {t('common.action.delete')}
-                                </a>,
-                            ]}
-                        >
-                            <Space>
-                                <span>{t('task.edit.type')}: {t('task.edit.vertex')}</span>
-                                <span>{t('task.edit.mapping_name')}: {item.label}</span>
-                            </Space>
-                        </List.Item>
-                    )}
+                    renderItem={renderVertex}
                 />
             )}
 
@@ -241,23 +254,7 @@ const MappingForm = ({prev,
                     dataSource={edgeList}
                     bordered
                     locale={{emptyText: <></>}}
-                    renderItem={(item, index) => (
-                        <List.Item
-                            actions={[
-                                <a key={'1'} onClick={() => editEdge(index)}>
-                                    {t('common.action.edit')}
-                                </a>,
-                                <a key={'2'} onClick={() => removeEdge(index)}>
-                                    {t('common.action.delete')}
-                                </a>,
-                            ]}
-                        >
-                            <Space>
-                                <span>{t('task.edit.type')}: {t('task.edit.edge')}</span>
-                                <span>{t('task.edit.mapping_name')}: {item.label}</span>
-                            </Space>
-                        </List.Item>
-                    )}
+                    renderItem={renderEdge}
                 />
             )}
 

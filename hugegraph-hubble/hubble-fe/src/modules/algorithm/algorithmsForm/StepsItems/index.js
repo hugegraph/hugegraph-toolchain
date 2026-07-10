@@ -28,6 +28,12 @@ import {propertiesValidator} from '../utils';
 import classnames from 'classnames';
 import c from './index.module.scss';
 
+const createValueHandler = (handler, value) => () => handler(value);
+const createAddHandler = (add, setItemVisible) => () => {
+    add();
+    setItemVisible(true);
+};
+
 const StepsItems = props => {
     const {t} = useTranslation();
 
@@ -99,7 +105,7 @@ const StepsItems = props => {
                                             <Button
                                                 block
                                                 danger
-                                                onClick={() => remove(name)}
+                                                onClick={createValueHandler(remove, name)}
                                             >
                                                 Delete
                                             </Button>
@@ -111,10 +117,7 @@ const StepsItems = props => {
                     }
                     <Button
                         type="dashed"
-                        onClick={() => {
-                            add();
-                            setItemVisible(true);
-                        }}
+                        onClick={createAddHandler(add, setItemVisible)}
                         style={{width: '100%'}}
                         icon={<PlusOutlined />}
                     >

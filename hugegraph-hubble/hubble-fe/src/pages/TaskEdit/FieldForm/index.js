@@ -18,11 +18,46 @@
 
 import {Form, Input, Transfer, Space, Button, Typography, message, Tree, Popconfirm} from 'antd';
 import {PlusOutlined, MinusSquareOutlined} from '@ant-design/icons';
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
 import style from '../index.module.scss';
+
+const FieldTitle = ({fieldKey, onDelete, confirmTitle, okText, cancelText}) => {
+    const handleConfirm = useCallback(() => onDelete(fieldKey), [fieldKey, onDelete]);
+    return (
+        <Space>
+            {fieldKey}
+            <Popconfirm
+                title={confirmTitle}
+                onConfirm={handleConfirm}
+                okText={okText}
+                cancelText={cancelText}
+            >
+                <MinusSquareOutlined />
+            </Popconfirm>
+        </Space>
+    );
+};
+
+const FieldTree = ({checkedKeys, data, onItemSelect}) => {
+    const handleCheck = useCallback((_, {node: {key}}) => {
+        onItemSelect(key, !checkedKeys.includes(key));
+    }, [checkedKeys, onItemSelect]);
+
+    return (
+        <Tree
+            blockNode
+            checkable
+            checkStrictly
+            defaultExpandAll
+            checkedKeys={checkedKeys}
+            treeData={data}
+            onCheck={handleCheck}
+        />
+    );
+};
 
 // const formatData = field => {
 //     const {vertex, edge} = field;
@@ -43,36 +78,34 @@ const FieldForm = ({visible, prev, datasourceID}) => {
     const [transferStatus, setTransferStatus] = useState('');
     const [fieldForm] = Form.useForm();
 
-    const setSourceData = data => {
+    const setSourceData = useCallback(data => {
         setData(data);
         fieldForm.setFieldValue('source_keys', data);
-    };
+    }, [fieldForm]);
 
-    const setKey = val => {
+    const setKey = useCallback(val => {
         setTargetKeys(val);
         if (val.length > 0) {
             setTransferStatus('');
         }
-    };
+    }, []);
 
-    const addField = () => {
+    const addField = useCallback(() => {
         if (inputData && status !== 'error') {
             setSourceData([...data, {key: inputData}]);
             setInputData('');
         }
-    };
+    }, [data, inputData, setSourceData, status]);
 
-    const isChecked = (selectedKeys, eventKey) => selectedKeys.includes(eventKey);
-
-    const handleDelete = key => {
+    const handleDelete = useCallback(key => {
         const index = data.findIndex(item => item.key === key);
         const tmp = [...data];
         tmp.splice(index, 1);
 
         setSourceData(tmp);
-    };
+    }, [data, setSourceData]);
 
-    const handleInputData = e => {
+    const handleInputData = useCallback(e => {
         const value = e.target.value;
         if (/[^a-zA-Z0-9\-\_]/.test(value)) {
             setStatus('error');
@@ -82,28 +115,22 @@ const FieldForm = ({visible, prev, datasourceID}) => {
         }
 
         setInputData(value);
-    };
+    }, []);
 
-    const generateTree = (treeNodes = [], checkedKeys = []) =>
+    const generateTree = useCallback((treeNodes = [], checkedKeys = []) =>
         treeNodes.map(({children, ...props}) => ({
             ...props,
-            title: (
-                <Space>
-                    {props.key}
-                    <Popconfirm
-                        title={t('task.edit.delete_field_confirm')}
-                        onConfirm={() => handleDelete(props.key)}
-                        okText={t('common.action.confirm')}
-                        cancelText={t('common.action.cancel')}
-                    >
-                        <MinusSquareOutlined />
-                    </Popconfirm>
-                </Space>
-            ),
+            title: <FieldTitle
+                fieldKey={props.key}
+                onDelete={handleDelete}
+                confirmTitle={t('task.edit.delete_field_confirm')}
+                okText={t('common.action.confirm')}
+                cancelText={t('common.action.cancel')}
+            />,
             disabled: checkedKeys.includes(props.key),
-        }));
+        })), [handleDelete, t]);
 
-    const footer = (_, {direction}) => {
+    const footer = useCallback((_, {direction}) => {
         return (
             direction === 'left'
             && (
@@ -118,7 +145,9 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                 </div>
             )
         );
-    };
+    }, [addField, handleInputData, inputData, status, t]);
+
+    const renderField = useCallback(item => item.key, []);
 
     useEffect(() => {
         if (!datasourceID) {
@@ -133,7 +162,7 @@ const FieldForm = ({visible, prev, datasourceID}) => {
 
             message.error(res.message);
         });
-    }, [datasourceID]);
+    }, [datasourceID, setSourceData]);
 
     return (
         <div style={{display: visible ? '' : 'none'}} className={style.transfer}>
@@ -150,7 +179,7 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                             t('task.edit.selected_fields'),
                         ]}
                         listStyle={{width: 400, height: 400}}
-                        render={item => item.key}
+                        render={renderField}
                         targetKeys={targetKeys}
                         status={transferStatus}
                         onChange={setKey}
@@ -161,19 +190,10 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                             if (direction === 'left') {
                                 const checkedKeys = [...selectedKeys, ...targetKeys];
                                 return (
-                                    <Tree
-                                        blockNode
-                                        checkable
-                                        checkStrictly
-                                        defaultExpandAll
+                                    <FieldTree
                                         checkedKeys={checkedKeys}
-                                        treeData={generateTree(data, targetKeys)}
-                                        onCheck={(_, {node: {key}}) => {
-                                            onItemSelect(key, !isChecked(checkedKeys, key));
-                                        }}
-                                        // onSelect={(_, {node: {key}}) => {
-                                        //     onItemSelect(key, !isChecked(checkedKeys, key));
-                                        // }}
+                                        data={generateTree(data, targetKeys)}
+                                        onItemSelect={onItemSelect}
                                     />
                                 );
                             }
