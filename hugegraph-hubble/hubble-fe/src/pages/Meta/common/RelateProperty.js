@@ -82,7 +82,7 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                     >
                                         <Select
                                             options={propertyList}
-                                            onChange={_ => selectProperty()}
+                                            onChange={selectProperty}
                                             showSearch
                                         />
                                     </Form.Item>
@@ -92,7 +92,7 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                     >
                                         <Select
                                             options={attrOptions.map(item => ({...item, disabled: !item.value}))}
-                                            onChange={_ => selectProperty()}
+                                            onChange={selectProperty}
                                         />
                                     </Form.Item>
                                     <a onClick={() => {
@@ -126,7 +126,7 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                 >
                                     <Select
                                         options={propertyList}
-                                        onChange={_ => selectProperty()}
+                                        onChange={selectProperty}
                                         showSearch
                                     />
                                 </Form.Item>
@@ -136,7 +136,7 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                 >
                                     <Select
                                         options={attrOptions}
-                                        onChange={_ => selectProperty()}
+                                        onChange={selectProperty}
                                     />
                                 </Form.Item>
                                 <a onClick={() => {

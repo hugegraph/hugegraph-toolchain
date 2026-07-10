@@ -16,11 +16,25 @@
  * under the License.
  */
 
-import {useState, useEffect} from 'react';
+import {useCallback, useState, useEffect} from 'react';
 import {Table, Space, PageHeader, Row, Col, Input, Button, message, Modal, Spin} from 'antd';
 import EditLayer from './EditLayer';
 import {useParams, useNavigate} from 'react-router-dom';
 import * as api from '../../api/index';
+
+const SchemaActions = ({row, onView, onEdit, onDelete}) => {
+    const handleView = useCallback(() => onView(row), [onView, row]);
+    const handleEdit = useCallback(() => onEdit(row), [onEdit, row]);
+    const handleDelete = useCallback(() => onDelete(row), [onDelete, row]);
+
+    return (
+        <Space>
+            <a onClick={handleView}>查看</a>
+            <a onClick={handleEdit}>编辑</a>
+            <a onClick={handleDelete}>删除</a>
+        </Space>
+    );
+};
 
 const Schema = () => {
     const [data, setData] = useState([]);
@@ -31,44 +45,45 @@ const Schema = () => {
     const [pagination, setPagination] = useState({current: 1, pageSize: 10});
     const [query, setQuery] = useState('');
     const [graphspaceInfo, setGraphspaceInfo] = useState({});
-    const [loading, setLoading] = useState(false);
+    const [loading] = useState(false);
     const {graphspace} = useParams();
     const navigate = useNavigate();
+    const {current} = pagination;
 
-    const viewSchema = data => {
+    const viewSchema = useCallback(data => {
         setMode('view');
         setDetail(data);
         setEditLayer(true);
-    };
+    }, []);
 
-    const editSchema = data => {
+    const editSchema = useCallback(data => {
         setMode('edit');
         setDetail(data);
         setEditLayer(true);
-    };
+    }, []);
 
-    const createSchema = () => {
+    const createSchema = useCallback(() => {
         setMode('create');
         setDetail({});
         setEditLayer(true);
-    };
+    }, []);
 
-    const handleTable = newPagination => {
+    const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
-    };
+    }, []);
 
-    const onSearch = val => {
+    const onSearch = useCallback(val => {
         setQuery(val);
-    };
+    }, []);
 
-    const deleteSchema = row => {
+    const deleteSchema = useCallback(row => {
         Modal.confirm({
             title: `确定要删除 ${row.name}吗？`,
             onOk: () => {
                 api.manage.delSchema(graphspace, row.name).then(res => {
                     if (res.status === 200) {
                         message.success('删除成功');
-                        setRefresh(!refresh);
+                        setRefresh(value => !value);
                         return;
                     }
 
@@ -76,7 +91,11 @@ const Schema = () => {
                 });
             },
         });
-    };
+    }, [graphspace]);
+
+    const handleBack = useCallback(() => navigate('/graphspace'), [navigate]);
+    const hideEditLayer = useCallback(() => setEditLayer(false), []);
+    const handleRefresh = useCallback(() => setRefresh(value => !value), []);
 
     const columns = [
         {
@@ -97,15 +116,14 @@ const Schema = () => {
         },
         {
             title: '操作',
-            render: row => {
-                return (
-                    <Space>
-                        <a onClick={() => viewSchema(row)}>查看</a>
-                        <a onClick={() => editSchema(row)}>编辑</a>
-                        <a onClick={() => deleteSchema(row)}>删除</a>
-                    </Space>
-                );
-            },
+            render: row => (
+                <SchemaActions
+                    row={row}
+                    onView={viewSchema}
+                    onEdit={editSchema}
+                    onDelete={deleteSchema}
+                />
+            ),
         },
     ];
 
@@ -118,26 +136,26 @@ const Schema = () => {
 
             message.error(res.message);
         });
-    }, []);
+    }, [graphspace]);
 
     useEffect(() => {
         api.manage.getSchemaList(graphspace, {
             query,
-            page_no: pagination.current,
+            page_no: current,
         }).then(res => {
             if (res.status === 200) {
                 setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
+                setPagination(value => ({...value, total: res.data.total}));
             }
         });
-    }, [refresh, pagination.current, query]);
+    }, [graphspace, refresh, current, query]);
 
     return (
         <>
             <Spin spinning={loading}>
                 <PageHeader
                     ghost={false}
-                    onBack={() => navigate('/graphspace')}
+                    onBack={handleBack}
                     title={`${graphspaceInfo.nickname} - Schema模版管理`}
                 >
                     <Row justify='space-between'>
@@ -163,9 +181,9 @@ const Schema = () => {
                         visible={editLayer}
                         detail={detail}
                         mode={mode}
-                        onCancel={() => setEditLayer(false)}
+                        onCancel={hideEditLayer}
                         graphspace={graphspace}
-                        refresh={() => setRefresh(!refresh)}
+                        refresh={handleRefresh}
                     />
                 </div>
             </Spin>

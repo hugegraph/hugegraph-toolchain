@@ -31,7 +31,6 @@ const EditVertexLayer = ({open, onCancle: onCancel, onChange}) => {
     }, [form]);
 
     const onFinish = useCallback(() => {
-        console.log(form.getFieldsValue());
         onChange(form.getFieldValue('vertex'));
         onCancel();
     }, [form, onChange, onCancel]);

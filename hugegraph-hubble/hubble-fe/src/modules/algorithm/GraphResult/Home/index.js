@@ -203,7 +203,7 @@ const GraphResult = props => {
             else {
                 updatePanelType(type);
             }
-        }, [panelType, updatePanelType]
+        }, [CLOSED, panelType, updatePanelType]
     );
 
     const handleLayoutChange = useCallback(
@@ -306,7 +306,7 @@ const GraphResult = props => {
         () => {
             updatePanelType(CLOSED);
         },
-        [updatePanelType]
+        [CLOSED, updatePanelType]
     );
 
     const handleRedoUndoChange = useCallback(
@@ -328,7 +328,7 @@ const GraphResult = props => {
             resetGraphStatus && resetGraphStatus(STANDBY, undefined, {});
             updatePanelType(CLOSED);
         },
-        [resetGraphStatus, updatePanelType]
+        [CLOSED, STANDBY, resetGraphStatus, updatePanelType]
     );
 
     const handleClickAddNode = useCallback(() => {
@@ -521,7 +521,7 @@ const GraphResult = props => {
             onGraphRenderModeChange(value);
             updatePanelType(CLOSED);
         },
-        [onGraphRenderModeChange, updatePanelType]
+        [CLOSED, onGraphRenderModeChange, updatePanelType]
     );
 
     return (

@@ -94,11 +94,11 @@ jobs:
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
         env:
-          CI: false
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           yarn install --frozen-lockfile --network-timeout 600000 --prefer-offline --ignore-engines
           yarn i18n:check
+          node --test ../hubble-dist/assembly/travis/ui_auth.test.js
 
       - name: Install Playwright Chromium
         working-directory: hugegraph-hubble/hubble-fe
@@ -112,7 +112,6 @@ jobs:
 
       - name: Prepare env and service
         env:
-          CI: false
           COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
           COMMIT_REF: ${{ steps.get-commit.outputs.fetch_ref }}
           NODE_OPTIONS: --max-old-space-size=4096
@@ -121,7 +120,6 @@ jobs:
           node -v
           yarn -v
           echo "NODE_OPTIONS: $NODE_OPTIONS"
-          echo "CI: $CI"
           echo "COMMIT_ID: $COMMIT_ID"
           echo "COMMIT_REF: $COMMIT_REF"
           free -h || true
@@ -172,8 +170,6 @@ jobs:
         run: mvn test -P unit-test -pl hugegraph-hubble/hubble-be -ntp
 
       - name: API test
-        env:
-          CI: false
         run: |
           cd hugegraph-hubble
           HUBBLE_TARBALL="$(ls target/apache-hugegraph-hubble-*.tar.gz | head -n 1)"

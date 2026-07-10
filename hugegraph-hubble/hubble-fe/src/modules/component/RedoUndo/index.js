@@ -70,8 +70,6 @@ const RedoUndo = props => {
                     lockNode.unlock();
                     graph.clearItemStates(lockNode, ['customFixed', 'customSelected']);
                     toolBar?.undo();
-                    const {before: lockBefore} = data;
-                    // onChange(action, lockBefore);
                     break;
                 case 'unlock':
                     const {id: unlockId} = data;
@@ -80,8 +78,6 @@ const RedoUndo = props => {
                     graph?.clearItemStates(unlockNode, ['customSelected']);
                     graph?.setItemState(unlockNode, 'customFixed', true);
                     toolBar?.undo();
-                    const {before: unlockBefore} = data;
-                    // onChange(action, unlockBefore);
                     break;
                 case 'changedata':
                     toolBar?.undo();
@@ -101,8 +97,6 @@ const RedoUndo = props => {
                     break;
                 default:
                     toolBar?.undo();
-                    const {before} = data;
-                    // onChange(action, before);
                     break;
             }
         },
@@ -121,8 +115,6 @@ const RedoUndo = props => {
                     graph?.clearItemStates(toLockNode, ['customSelected']);
                     graph?.setItemState(toLockNode, 'customFixed', true);
                     toolBar?.redo();
-                    let {after: lockAfter} = data;
-                    // onChange(action, lockAfter);
                     break;
                 case 'unlock':
                     const {id: toUnLockId} = data;
@@ -130,8 +122,6 @@ const RedoUndo = props => {
                     toUnlockNode.unlock();
                     graph.clearItemStates(toUnlockNode, ['customFixed', 'customSelected']);
                     toolBar?.redo();
-                    let {after: unlockAfter} = data;
-                    // onChange(action, unlockAfter);
                     break;
                 case 'changedata':
                     toolBar?.redo();
@@ -151,8 +141,6 @@ const RedoUndo = props => {
                     break;
                 default:
                     toolBar?.redo();
-                    const {after} = data;
-                    // onChange(action, after);
                     break;
             }
         },

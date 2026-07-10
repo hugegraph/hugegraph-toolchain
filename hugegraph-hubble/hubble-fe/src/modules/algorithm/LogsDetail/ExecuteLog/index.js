@@ -51,6 +51,9 @@ const statusColor =  {
     ASYNC_TASK_FAILED: 'volcano',
 };
 
+const createValueHandler = (handler, value) => () => handler(value);
+const getRowKey = item => item.id;
+
 const ExecuteLog = props => {
     const {t} = useTranslation();
     const {
@@ -165,7 +168,7 @@ const ExecuteLog = props => {
                         <Popconfirm
                             placement="left"
                             title={favoriteContent(rowData)}
-                            onConfirm={() => onAddFavorite(rowData.content)}
+                            onConfirm={createValueHandler(onAddFavorite, rowData.content)}
                             okButtonProps={{disabled: disabledFavorite}}
                             okText={t('analysis.logs.action.favorite')}
                             cancelText={t('common.action.cancel')}
@@ -184,7 +187,7 @@ const ExecuteLog = props => {
         <Table
             columns={executeLogColumns}
             dataSource={executionLogsDataRecords}
-            rowKey={item => item.id}
+            rowKey={getRowKey}
             pagination={{
                 onChange: onExecutePageChange,
                 position: ['bottomRight'],

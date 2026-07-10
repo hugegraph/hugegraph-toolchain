@@ -19,8 +19,14 @@
 import {render, screen} from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+jest.mock('./routes', () => ({element}) => (
+    <div data-testid="app-route">{element}</div>
+));
+
+jest.mock('./layout.ant', () => () => <div>Hubble layout</div>);
+
+test('wires the Hubble layout into the application router', () => {
     render(<App />);
-    const linkElement = screen.getByText(/learn react/i);
-    expect(linkElement).toBeInTheDocument();
+    expect(screen.getByTestId('app-route')).toBeInTheDocument();
+    expect(screen.getByText('Hubble layout')).toBeInTheDocument();
 });

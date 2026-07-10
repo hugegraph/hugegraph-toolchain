@@ -24,7 +24,6 @@ import {
     Space,
     Table,
     List,
-    Divider,
     Dropdown,
     Menu,
     Modal,
@@ -35,7 +34,6 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import {DetailLayer, AddRoleLayer, AddAccountLayer} from './EditLayer';
 import {EllipsisOutlined, PlusOutlined} from '@ant-design/icons';
-import ListButton from '../../components/ListButton';
 import * as api from '../../api';
 import {Link} from 'react-router-dom';
 import style from './index.module.scss';

@@ -17,6 +17,7 @@
  */
 
 import {Space, Switch, Tag, Modal, message} from 'antd';
+import {useCallback} from 'react';
 import * as api from '../../api';
 import {StatusA} from '../../components/Status';
 
@@ -65,12 +66,30 @@ const initTitle = item => {
     );
 };
 
+const ResourceTitle = ({data, role, refresh, readOnly}) => {
+    const update = useCallback(value => handleUpdate(data, value, refresh), [data, refresh]);
+    const remove = useCallback(() => handleDelete(data, refresh), [data, refresh]);
+    const disabled = /.*DEFAULT_OBSERVER_GROUP$/.test(role);
+
+    return (
+        <Space>
+            {data.target_name}
+            <Switch
+                checkedChildren="读写"
+                unCheckedChildren="只读"
+                checked={!readOnly}
+                onChange={update}
+                disabled={disabled}
+            />
+            <StatusA onClick={remove} disable={disabled}>删除</StatusA>
+        </Space>
+    );
+};
+
 const treeData = (data, role, refresh) => {
     const checkREAD = permissions => {
         return permissions.length === 1 && permissions[0] === 'READ';
     };
-
-    const isDefault = name => /.*DEFAULT_OBSERVER_GROUP$/.test(name);
 
     const meta = [];
     const list = [];
@@ -153,19 +172,12 @@ const treeData = (data, role, refresh) => {
     _task && list.push(_task);
 
     return {
-        title: (
-            <Space>
-                {data.target_name}
-                <Switch
-                    checkedChildren="读写"
-                    unCheckedChildren="只读"
-                    checked={!checkREAD(data.permissions)}
-                    onChange={val => handleUpdate(data, val, refresh)}
-                    disabled={isDefault(role)}
-                />
-                <StatusA onClick={() => handleDelete(data, refresh)} disable={isDefault(role)}>删除</StatusA>
-            </Space>
-        ),
+        title: <ResourceTitle
+            data={data}
+            role={role}
+            refresh={refresh}
+            readOnly={checkREAD(data.permissions)}
+        />,
         key: data.target_id,
         children: list,
     };

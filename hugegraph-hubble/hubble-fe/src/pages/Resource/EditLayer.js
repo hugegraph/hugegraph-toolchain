@@ -43,6 +43,21 @@ const metaOptions = [
 
 const cardGridOption = {style: {width: '100%'}, hoverable: false};
 
+const ResourceTag = ({type, label, property, index, closable, onRemove}) => {
+    const handleRemove = useCallback(() => onRemove(type, label, index),
+        [index, label, onRemove, type]);
+
+    return (
+        <Tag
+            closable={closable}
+            color={property ? 'default' : 'processing'}
+            onClick={handleRemove}
+        >
+            {property ? `${property.key}=${property.val}` : label}
+        </Tag>
+    );
+};
+
 const AddFieldLayer = ({visible, onCancel, onChange, type}) => {
     const [form] = Form.useForm();
 
@@ -265,7 +280,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, op, detail}) => {
         form.setFieldsValue({[type]: list});
     }, [form]);
 
-    const removeLabel = (type, label, index) => {
+    const removeLabel = useCallback((type, label, index) => {
         const list = form.getFieldValue(type);
 
         for (let i in list) {
@@ -281,7 +296,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, op, detail}) => {
         }
 
         form.setFieldsValue({[type]: list});
-    };
+    }, [form]);
 
     const showAddVertex = () => {
         setAddLayerVisible(true);
@@ -398,7 +413,6 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, op, detail}) => {
             }
         }
 
-        console.log(detail, vertex, edge);
         form.setFieldsValue({
             meta,
             vertex,
@@ -491,23 +505,22 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, op, detail}) => {
                                                 <Row gutter={[4, 4]}>
                                                     {vertex && vertex.map(item => (
                                                         <Col span={24} key={item.label}>
-                                                            <Tag
+                                                            <ResourceTag
                                                                 closable={checkClose('vertex')}
-                                                                color="processing"
-                                                                onClick={() => removeLabel('vertex', item.label)}
-                                                            >
-                                                                {item.label}
-                                                            </Tag>
+                                                                type='vertex'
+                                                                label={item.label}
+                                                                onRemove={removeLabel}
+                                                            />
                                                             {item.properties && item.properties.map((property, k) => (
-                                                                <Tag
+                                                                <ResourceTag
                                                                     closable={checkClose('vertex')}
-                                                                    color="default"
                                                                     key={property.key}
-                                                                    onClick={() =>
-                                                                        removeLabel('vertex', item.label, k)}
-                                                                >
-                                                                    {property.key}={property.val}
-                                                                </Tag>
+                                                                    type='vertex'
+                                                                    label={item.label}
+                                                                    property={property}
+                                                                    index={k}
+                                                                    onRemove={removeLabel}
+                                                                />
                                                             ))}
                                                         </Col>
                                                     ))}
@@ -544,23 +557,22 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, op, detail}) => {
                                                 <Row gutter={[4, 4]}>
                                                     {edge && edge.map(item => (
                                                         <Col span={24} key={item.label}>
-                                                            <Tag
+                                                            <ResourceTag
                                                                 closable={checkClose('edge')}
-                                                                color="processing"
-                                                                onClick={() => removeLabel('edge', item.label)}
-                                                            >
-                                                                {item.label}
-                                                            </Tag>
+                                                                type='edge'
+                                                                label={item.label}
+                                                                onRemove={removeLabel}
+                                                            />
                                                             {item.properties && item.properties.map((property, k) => (
-                                                                <Tag
+                                                                <ResourceTag
                                                                     closable={checkClose('edge')}
-                                                                    color="default"
                                                                     key={property.key}
-                                                                    onClick={() =>
-                                                                        removeLabel('edge', item.label, k)}
-                                                                >
-                                                                    {property.key}={property.val}
-                                                                </Tag>
+                                                                    type='edge'
+                                                                    label={item.label}
+                                                                    property={property}
+                                                                    index={k}
+                                                                    onRemove={removeLabel}
+                                                                />
                                                             ))}
                                                         </Col>
                                                     ))}

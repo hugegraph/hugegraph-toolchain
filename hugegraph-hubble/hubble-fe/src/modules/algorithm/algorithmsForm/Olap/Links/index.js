@@ -92,7 +92,8 @@ const Links = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FAILED, LINKS, LOADING, SUCCESS, graph, graphSpace,
+            handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

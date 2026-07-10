@@ -16,7 +16,6 @@
  * under the License.
  */
 
-import {useTranslation} from 'react-i18next';
 
 const setPropertyRow = item => {
     return {...item, attr: {...item.attr, rect: {fill: '#FAFAFA'}}};

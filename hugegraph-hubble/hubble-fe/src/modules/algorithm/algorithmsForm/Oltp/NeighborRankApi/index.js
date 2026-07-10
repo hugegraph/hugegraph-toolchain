@@ -37,6 +37,9 @@ import s from '../OltpItem/index.module.scss';
 const {NEIGHBOR_RANK_API} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 
+const createActionHandler = handler => () => handler();
+const createValueHandler = (handler, value) => () => handler(value);
+
 const NeighborRankApi = props => {
     const {t} = useTranslation();
     const {
@@ -189,7 +192,11 @@ const NeighborRankApi = props => {
                                         {stepFormItems(item)}
                                         {lists.length > 1 ? (
                                             <Form.Item>
-                                                <Button block danger onClick={() => remove(item.name)}>
+                                                <Button
+                                                    block
+                                                    danger
+                                                    onClick={createValueHandler(remove, item.name)}
+                                                >
                                                     {t('common.action.delete')}
                                                 </Button>
                                             </Form.Item>
@@ -200,7 +207,7 @@ const NeighborRankApi = props => {
                         }
                         <Button
                             type="dashed"
-                            onClick={() => add()}
+                            onClick={createActionHandler(add)}
                             style={{width: '100%'}}
                             icon={<PlusOutlined />}
                         >

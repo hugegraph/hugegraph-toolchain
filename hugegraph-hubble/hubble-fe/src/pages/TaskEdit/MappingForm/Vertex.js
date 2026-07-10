@@ -17,17 +17,38 @@
  */
 
 import {Space, Button, Form, Select, Input, Drawer} from 'antd';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useMemo} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
+
+const ListAction = ({index, action, children, ...props}) => {
+    const handleClick = useCallback(() => action(index), [action, index]);
+    return <Button {...props} onClick={handleClick}>{children}</Button>;
+};
+
+const AddAction = ({action, children, ...props}) => {
+    const handleClick = useCallback(() => action(), [action]);
+    return <Button {...props} onClick={handleClick}>{children}</Button>;
+};
 
 const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index}) => {
     const {t} = useTranslation();
     const [selectLabel, setSelectLabel] = useState({});
     const [errorList, setErrorList] = useState({});
     const [vertexForm] = Form.useForm();
+    const targetOptions = useMemo(() => targetField.map(item => ({label: item, value: item})),
+        [targetField]);
+    const labelOptions = useMemo(() => sourceField.map(item => ({
+        label: item.name,
+        value: item.name,
+        info: item,
+    })), [sourceField]);
+    const propertyOptions = useMemo(() => (selectLabel?.properties ?? []).map(item => ({
+        label: item.name,
+        value: item.name,
+    })), [selectLabel]);
 
-    const autoSelect = () => {
+    const autoSelect = useCallback(() => {
         const list = vertexForm.getFieldValue('attr') ?? [];
         const existKeys = list.map(item => item?.key);
         const enableKeys = selectLabel.properties ? selectLabel.properties.map(item => item.name) : [];
@@ -39,7 +60,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
             }
         });
         vertexForm.setFieldValue('attr', [...list, ...addRows]);
-    };
+    }, [selectLabel, targetField, vertexForm]);
 
     const checkDuplicate = () => ({
         validator(_, value) {
@@ -73,7 +94,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                         name={[field.name, 'key']}
                     >
                         <Select
-                            options={targetField.map(item => ({label: item, value: item}))}
+                            options={targetOptions}
                             placeholder={t('task.edit.select_schema_field')}
                         />
                     </Form.Item>
@@ -83,25 +104,24 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                         name={[field.name, 'val']}
                     >
                         <Select
-                            options={(selectLabel?.properties ?? []).map(item =>
-                                ({label: item.name, value: item.name}))}
+                            options={propertyOptions}
                             placeholder={t('task.edit.select_mapping_field')}
                         />
                     </Form.Item>
                     <Space>
-                        <Button type='link' onClick={() => remove(index)}>
+                        <ListAction type='link' action={remove} index={index}>
                             {t('common.action.delete')}
-                        </Button>
+                        </ListAction>
                     </Space>
                 </div>
             ))}
             <Form.ErrorList errors={errors} />
-            <Button onClick={() => autoSelect()} block style={{marginBottom: 8}}>
+            <AddAction action={autoSelect} block style={{marginBottom: 8}}>
                 {t('task.edit.auto_match')}
-            </Button>
-            <Button type='dashed' onClick={() => add()} block>
+            </AddAction>
+            <AddAction type='dashed' action={add} block>
                 +{t('common.action.add')}
-            </Button>
+            </AddAction>
         </>
     );
 
@@ -114,7 +134,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                         name={[field.name, 'key']}
                     >
                         <Select
-                            options={targetField.map(item => ({label: item, value: item}))}
+                            options={targetOptions}
                         />
                     </Form.Item>
                     <span className={'form_attr_split'}>:</span>
@@ -131,14 +151,16 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                     >
                         <Input />
                     </Form.Item>
-                    <a onClick={() => remove(index)}>{t('common.action.delete')}</a>
+                    <ListAction type='link' action={remove} index={index}>
+                        {t('common.action.delete')}
+                    </ListAction>
                 </div>
             )
 
             )}
-            <div className={'form_attr_add'} onClick={() => add()}>
+            <AddAction type='link' className='form_attr_add' action={add}>
                 +{t('common.action.add')}
-            </div>
+            </AddAction>
         </>
     );
 
@@ -148,22 +170,22 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
             vertexForm.resetFields(['id']);
         }
         setErrorList({...errorList, label: ''});
-    }, [errorList]);
+    }, [errorList, vertexForm]);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         setErrorList({});
         setSelectLabel({});
         vertexForm.resetFields();
         onCancel();
-    };
+    }, [onCancel, vertexForm]);
 
-    const onFinish = () => {
+    const onFinish = useCallback(() => {
 
         vertexForm.validateFields().then(() => {
             vertexForm.submit();
             onCancel();
         });
-    };
+    }, [onCancel, vertexForm]);
 
     useEffect(() => {
         if (!open) {
@@ -179,7 +201,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                 setSelectLabel(sourceField.find(item => item.name === vertexList[index].label));
             });
         }
-    }, [open, index]);
+    }, [index, open, sourceField, vertexForm, vertexList]);
 
     return (
         <Drawer
@@ -197,7 +219,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                     rules={[rules.required()]}
                 >
                     <Select
-                        options={sourceField.map(item => ({label: item.name, value: item.name, info: item}))}
+                        options={labelOptions}
                         onChange={handleLabel}
                     />
                 </Form.Item>
@@ -210,9 +232,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                     <Select
                         disabled={['PRIMARY_KEY', 'AUTOMATIC'].includes(selectLabel.id_strategy)
                         || !selectLabel.id_strategy}
-                        options={targetField.map(item => ({label: item, value: item}))}
-                        onChange={value => (['PRIMARY_KEY', 'AUTOMATIC'].includes(selectLabel.id_strategy)
-                            ? null : value)}
+                        options={targetOptions}
                     />
                 </Form.Item>
                 <Form.Item label={t('task.edit.property_mapping')}>

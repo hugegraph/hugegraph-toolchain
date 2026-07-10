@@ -72,7 +72,7 @@ const AlgorithmHome = () => {
             setQueryResult({});
             setPanelType(CLOSED);
         },
-        []
+        [CLOSED, STANDBY]
     );
 
     const getMetaData = useCallback(
@@ -151,7 +151,7 @@ const AlgorithmHome = () => {
                 setExecutionLogsData({records: data?.records ?? [], total: data?.total ?? 0});
             }
         },
-        [graph, graphSpace, pageExecute, pageSize]
+        [TYPE.ALGORITHM, graph, graphSpace, pageExecute, pageSize]
     );
 
     const onFavoriteRefresh = useCallback(() => {
@@ -188,7 +188,7 @@ const AlgorithmHome = () => {
         () => {
             setExecutePage(defaultPageParams.page);
             setFavoritePage(defaultPageParams.page);
-        }, []
+        }, [defaultPageParams.page]
     );
 
     useEffect(() => {
@@ -216,7 +216,7 @@ const AlgorithmHome = () => {
             options && setGraphOptions(options);
             getExecutionLogsList();
         },
-        [getExecutionLogsList]
+        [CANVAS2D, CLOSED, OLTP, getExecutionLogsList]
     );
 
     const handleOlapFormSubmit = useCallback(
@@ -228,7 +228,7 @@ const AlgorithmHome = () => {
             setAsyncTaskResult(data);
             setQueryMessage(message || '');
         },
-        []
+        [CLOSED, OLAP]
     );
 
     const resetGraphStatus = useCallback(
@@ -240,7 +240,7 @@ const AlgorithmHome = () => {
             status && setQueryStatus(status);
             message && setQueryMessage(message);
             data && setQueryResult(data);
-        }, []);
+        }, [CLOSED, OLTP]);
 
     const updatePanelType = useCallback(type => {
         setPanelType(type);

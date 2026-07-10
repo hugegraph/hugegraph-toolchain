@@ -195,7 +195,14 @@
       "creator": "创建者",
       "create_time": "创建时间",
       "last_update": "最近更新时间：",
-      "update_data": "数据更新"
+      "update_data": "数据更新",
+      "update_success": "已发起更新，请稍后刷新页面查看结果。",
+      "statistics_unavailable": "统计数据暂不可用，请稍后重试。",
+      "vertex_total": "点总数",
+      "edge_total": "边总数",
+      "vertex_type": "点类型",
+      "edge_type": "边类型",
+      "count": "数量"
     },
     "card": {
       "storage": "存储空间",
@@ -616,7 +623,14 @@
     "role_manage": "角色管理",
     "resource_manage": "资源管理",
     "task_manage": "任务管理",
-    "datasource_manage": "数据源管理"
+    "datasource_manage": "数据源管理",
+    "operation_manage": "运维管理",
+    "cluster_manage": "集群管理",
+    "monitor_manage": "监控管理",
+    "node_manage": "节点运维",
+    "alert_manage": "报警管理",
+    "dashboard_checking": "正在检查 Dashboard 可用性……",
+    "dashboard_unavailable": "Dashboard 不可用，请检查 dashboard.address 配置和服务健康状态。"
   },
   "login": {
     "submit": "登录",

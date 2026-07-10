@@ -18,13 +18,10 @@
 
 import {
     PageHeader,
-    Row,
-    Col,
     Button,
     Input,
     Space,
     Table,
-    Divider,
     Modal,
     message,
     Select,
@@ -32,7 +29,6 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import {EditLayer} from './EditLayer';
 import {StatusText} from '../../components/Status';
-import ListButton from '../../components/ListButton';
 import TableHeader from '../../components/TableHeader';
 import * as api from '../../api';
 import * as user from '../../utils/user';

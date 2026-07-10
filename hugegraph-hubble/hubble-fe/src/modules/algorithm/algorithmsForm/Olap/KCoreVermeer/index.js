@@ -69,7 +69,7 @@ const KCoreVermeer = props => {
         () => {
             setEnableRun(graphStatus === LOADED);
         },
-        [graphStatus]
+        [LOADED, graphStatus]
     );
 
     const handleRunning = useCallback(
@@ -97,7 +97,8 @@ const KCoreVermeer = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FAILED, K_CORE, LOADING, SUCCESS, graph, graphSpace,
+            handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

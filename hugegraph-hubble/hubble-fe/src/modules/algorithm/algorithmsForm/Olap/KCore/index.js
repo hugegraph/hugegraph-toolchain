@@ -89,7 +89,8 @@ const KCore = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FAILED, K_CORE, LOADING, SUCCESS, graph, graphSpace,
+            handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

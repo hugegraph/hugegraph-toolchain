@@ -156,7 +156,6 @@ const options =  {
             return;
         }
 
-        const edges = self.edges;
         const layoutNodes = [];
         nodes.forEach(node => {
             layoutNodes.push(node);

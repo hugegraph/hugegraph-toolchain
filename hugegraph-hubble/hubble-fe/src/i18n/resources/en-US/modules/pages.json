@@ -195,7 +195,14 @@
       "creator": "Creator",
       "create_time": "Created At",
       "last_update": "Last Updated: ",
-      "update_data": "Update Data"
+      "update_data": "Update Data",
+      "update_success": "Update requested. Refresh the page in a moment.",
+      "statistics_unavailable": "Statistics are unavailable. Retry later.",
+      "vertex_total": "Total vertices",
+      "edge_total": "Total edges",
+      "vertex_type": "Vertex type",
+      "edge_type": "Edge type",
+      "count": "Count"
     },
     "card": {
       "storage": "Storage",
@@ -616,7 +623,14 @@
     "role_manage": "Role Management",
     "resource_manage": "Resource Management",
     "task_manage": "Task Management",
-    "datasource_manage": "Data Source Management"
+    "datasource_manage": "Data Source Management",
+    "operation_manage": "Operations",
+    "cluster_manage": "Cluster Management",
+    "monitor_manage": "Monitoring",
+    "node_manage": "Node Operations",
+    "alert_manage": "Alert Management",
+    "dashboard_checking": "Checking Dashboard availability...",
+    "dashboard_unavailable": "Dashboard is unavailable. Check dashboard.address and service health."
   },
   "login": {
     "submit": "Sign In",

@@ -99,7 +99,8 @@ const DegreeCentralityVermeer = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [DEGREE_CENTRALIT, graph, graphSpace, handleFormSubmit,
+            updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

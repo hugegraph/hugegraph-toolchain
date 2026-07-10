@@ -72,7 +72,8 @@ const Louvain = props => {
             setRequiring(true);
             updateCurrentAlgorithm(LOUVAIN);
             handleFormSubmit(LOADING);
-            const {worker, ...args} = algorithmParams;
+            const args = {...algorithmParams};
+            delete args.worker;
             const formParams = {
                 algorithm: 'louvain',
                 worker: 1,
@@ -89,7 +90,8 @@ const Louvain = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FAILED, LOADING, LOUVAIN, SUCCESS, graph, graphSpace,
+            handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

@@ -93,7 +93,8 @@ const FilteredRingsDetection = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FILTERED_RINGS_DETECTION, graph, graphSpace, handleFormSubmit,
+            updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

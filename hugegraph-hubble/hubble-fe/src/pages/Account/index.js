@@ -33,12 +33,10 @@ import {getUser} from '../../utils/user';
 
 const Account = () => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
-    const [addLayerVisible, setAddLayerVisible] = useState(false);
     const [op, setOp] = useState('detail');
     const [detail, setDetail] = useState({});
     const [data, setData] = useState([]);
     const [refresh, setRefresh] = useState(false);
-    const [search, setSearch] = useState('');
     const [pagination, setPagination] = useState({toatal: 0, current: 1, pageSize: 10});
 
     const showDetail = row => {
@@ -66,21 +64,12 @@ const Account = () => {
     }, []);
 
     const handleRefresh = useCallback(() => {
-        setRefresh(!refresh);
-    }, [refresh]);
+        setRefresh(value => !value);
+    }, []);
 
     const handleHideLayer = useCallback(() => {
         setEditLayerVisible(false);
     }, []);
-
-    const handleHideAddLayer = useCallback(() => {
-        setAddLayerVisible(false);
-    }, []);
-
-    const handleSearch = useCallback(value => {
-        setRefresh(!refresh);
-        setSearch(value);
-    }, [refresh]);
 
     const handleDelete = row => {
         Modal.confirm({
@@ -89,7 +78,7 @@ const Account = () => {
                 api.auth.delUser(row.id).then(res => {
                     if (res.status === 200) {
                         message.success('删除成功');
-                        setRefresh(!refresh);
+                        setRefresh(value => !value);
                         return;
                     }
                     message.error(res.message);
@@ -146,22 +135,23 @@ const Account = () => {
     ];
 
     const rowKey = useCallback(item => item.user_name, []);
+    const {current, pageSize} = pagination;
 
     useEffect(() => {
         api.auth.getAllUserList({
-            query: search,
-            page_no: pagination.current,
-            page_size: pagination.pageSize,
+            query: '',
+            page_no: current,
+            page_size: pageSize,
         }).then(res => {
             if (res.status === 200) {
                 setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
+                setPagination(value => ({...value, total: res.data.total}));
                 return;
             }
 
             message.error(res.message);
         });
-    }, [refresh, pagination.current, pagination.pageSize, search]);
+    }, [refresh, current, pageSize]);
 
     return (
         <>

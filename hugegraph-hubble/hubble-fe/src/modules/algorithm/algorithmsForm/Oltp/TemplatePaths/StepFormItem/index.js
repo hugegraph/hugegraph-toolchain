@@ -28,6 +28,9 @@ import {integerValidator, propertiesValidator} from '../../../utils';
 import classnames from 'classnames';
 import s from '../../OltpItem/index.module.scss';
 
+const createActionHandler = handler => () => handler();
+const createValueHandler = (handler, value) => () => handler(value);
+
 const StepFormItem = () => {
     const {t} = useTranslation();
 
@@ -119,7 +122,11 @@ const StepFormItem = () => {
                                         {stepFormItems(item)}
                                         {lists.length > 1 ? (
                                             <Form.Item>
-                                                <Button block danger onClick={() => remove(item.name)}>
+                                                <Button
+                                                    block
+                                                    danger
+                                                    onClick={createValueHandler(remove, item.name)}
+                                                >
                                                     {t('common.action.delete')}
                                                 </Button>
                                             </Form.Item>
@@ -130,7 +137,7 @@ const StepFormItem = () => {
                         }
                         <Button
                             type="dashed"
-                            onClick={() => add()}
+                            onClick={createActionHandler(add)}
                             style={{width: '100%'}}
                             icon={<PlusOutlined />}
                         >

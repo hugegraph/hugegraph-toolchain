@@ -69,6 +69,18 @@ const GraphMenuBar = props => {
         },
         [downloadJsonHandler, graphData]
     );
+    const handleToggleLayout = useCallback(
+        () => handleTogglePanel(LAYOUT),
+        [handleTogglePanel]
+    );
+    const handleToggleSetting = useCallback(
+        () => handleTogglePanel(SETTING),
+        [handleTogglePanel]
+    );
+    const handleToggleStatistics = useCallback(
+        () => handleTogglePanel(STATISTICS),
+        [handleTogglePanel]
+    );
 
     const menubarContent = [
         {
@@ -126,9 +138,7 @@ const GraphMenuBar = props => {
             content: (
                 <LayoutConfig
                     buttonEnable={buttonEnableForCanvas2D}
-                    onClick={() => {
-                        handleTogglePanel(LAYOUT);
-                    }}
+                    onClick={handleToggleLayout}
                     tooltip={isCanvas2D
                         ? t('analysis.canvas.tooltip.layout_2d')
                         : t('analysis.canvas.tooltip.layout_3d')}
@@ -139,9 +149,7 @@ const GraphMenuBar = props => {
             content: (
                 <SettingConfig
                     buttonEnable={buttonEnableForCanvas2D}
-                    onClick={() => {
-                        handleTogglePanel(SETTING);
-                    }}
+                    onClick={handleToggleSetting}
                     tooltip={isCanvas2D
                         ? t('analysis.canvas.tooltip.setting_2d')
                         : t('analysis.canvas.tooltip.setting_3d')}
@@ -164,9 +172,7 @@ const GraphMenuBar = props => {
             content: (
                 <Statistics
                     buttonEnable={buttonEnableForCanvas2D}
-                    onClick={() => {
-                        handleTogglePanel(STATISTICS);
-                    }}
+                    onClick={handleToggleStatistics}
                     tooltip={isCanvas2D
                         ? t('analysis.canvas.tooltip.statistics_2d')
                         : t('analysis.canvas.tooltip.statistics_3d')}

@@ -93,7 +93,8 @@ const BetweennessCentralityVermeer = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [BETWEENNESS_CENTRALITY, graph, graphSpace, handleFormSubmit,
+            updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

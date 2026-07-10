@@ -86,7 +86,8 @@ const LabelPropagationAlgorithm = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [FAILED, LABEL_PROPAGATION_ALGORITHM, LOADING, SUCCESS, graph,
+            graphSpace, handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

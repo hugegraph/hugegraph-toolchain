@@ -20,57 +20,69 @@
  * @file 运维管理子项块
  */
 import {useEffect, useState} from 'react';
-import {message} from 'antd';
+import {useTranslation} from 'react-i18next';
 
 import * as api from '../../../api';
 import Item from '../Item';
+import {normalizeDashboardUrl, probeDashboard} from './dashboard';
 
 const ConsoleItem = () => {
 
-    const [data, setData] = useState({});
+    const {t} = useTranslation();
+    const [dashboard, setDashboard] = useState({status: 'loading', url: ''});
 
     useEffect(() => {
-        api.auth.getDashboard().then(res => {
-            const {
-                status,
-                data,
-                message: errMsg,
-            } = res || {};
-            if (status === 200) {
-                setData(res.data);
+        let cancelled = false;
+        const loadDashboard = async () => {
+            try {
+                const res = await api.auth.getDashboard();
+                if (res?.status !== 200) {
+                    if (!cancelled) {
+                        setDashboard({status: 'unavailable', url: ''});
+                    }
+                    return;
+                }
+                const url = normalizeDashboardUrl(res.data?.address);
+                const reachable = await probeDashboard(url);
+                if (!cancelled) {
+                    setDashboard({
+                        status: reachable ? 'available' : 'unavailable',
+                        url,
+                    });
+                }
             }
-            else {
-                !errMsg && message.error('获取dashboard失败');
+            catch {
+                if (!cancelled) {
+                    setDashboard({status: 'unavailable', url: ''});
+                }
             }
-        });
+        };
+        loadDashboard();
+        return () => {
+            cancelled = true;
+        };
     }, []);
-    const address = data?.address;
-    const clusterUrl = address ? `http://${address}` : '';
-    const machineUrl = address ? clusterUrl + '/monitor/machine' : '';
-    const nodeUrl = address ? clusterUrl + '/operate/node' : '';
-    const ruleUrl = address ? clusterUrl + '/alert/rule' : '';
+    const available = dashboard.status === 'available';
+    const reason = dashboard.status === 'loading'
+        ? t('navigation_page.dashboard_checking')
+        : t('navigation_page.dashboard_unavailable');
+    const clusterUrl = available ? dashboard.url : '';
+    const item = (titleKey, path = '') => ({
+        title: t(titleKey),
+        url: clusterUrl ? clusterUrl + path : '',
+        disabled: !available,
+        reason: available ? '' : reason,
+    });
 
     return (
         <Item
             btnIndex={4}
-            btnTitle={'运维管理'}
+            btnTitle={t('navigation_page.operation_manage')}
             listData={[
-                {
-                    title: '集群管理',
-                    url: clusterUrl,
-                },
-                {
-                    title: '监控管理',
-                    url: machineUrl,
-                },
-                {
-                    title: '运维管理',
-                    url: nodeUrl,
-                },
-                {
-                    title: '报警管理',
-                    url: ruleUrl,
-                },
+                item('navigation_page.cluster_manage'),
+                item('navigation_page.monitor_manage', '/monitor/machine'),
+                item('navigation_page.node_manage', '/operate/node'),
+                item('navigation_page.alert_manage', '/alert/rule'),
             ]}
         />
     );

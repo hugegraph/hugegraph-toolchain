@@ -27,21 +27,16 @@ import {
     Radio,
     DatePicker,
     Card,
-    Menu,
-    Dropdown,
     message,
     Modal,
-    Typography,
     Pagination,
-    Progress,
     Spin,
 } from 'antd';
 import {useState, useEffect, useCallback} from 'react';
-import moment from 'moment';
 import {EditLayer} from './EditLayer';
 import TableHeader from '../../components/TableHeader';
-import {Link, useNavigate} from 'react-router-dom';
-import {PlusOutlined, InfoOutlined} from '@ant-design/icons';
+import {Link} from 'react-router-dom';
+import {PlusOutlined} from '@ant-design/icons';
 import GraphSpaceCard from './Card';
 import style from './index.module.scss';
 import * as api from '../../api/index';
@@ -87,14 +82,14 @@ const GraphSpace = () => {
                 api.manage.delGraphSpace(graphspace).then(res => {
                     if (res.status === 200) {
                         message.success('删除成功');
-                        setRefresh(!refresh);
+                        setRefresh(value => !value);
                         return;
                     }
                     message.error(res.message);
                 });
             },
         });
-    }, [refresh]);
+    }, []);
 
     const handlePage = useCallback(current => {
         setPagination({...pagination, current});
@@ -106,21 +101,21 @@ const GraphSpace = () => {
 
     const handleSearch = useCallback(value => {
         setGraphspacename(value);
-        setRefresh(!refresh);
-    }, [refresh]);
+        setRefresh(value => !value);
+    }, []);
 
     const handleDatePickerChange = useCallback((_, val) => {
         setDateData(val);
-        setRefresh(!refresh);
-    }, [refresh]);
+        setRefresh(value => !value);
+    }, []);
 
-    const handleRefresh = useCallback(() => setRefresh(!refresh), [refresh]);
+    const handleRefresh = useCallback(() => setRefresh(value => !value), []);
 
     const handleInit = useCallback(() => {
         api.manage.initBuiltin({init_space: true, init_hlm: true, init_covid19: true}).then(res => {
             if (res.status === 200) {
                 message.success('初始化成功');
-                setRefresh(!refresh);
+                setRefresh(value => !value);
                 return;
             }
             message.error(res.message);

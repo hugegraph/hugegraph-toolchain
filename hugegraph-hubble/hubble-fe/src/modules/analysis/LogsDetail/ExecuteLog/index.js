@@ -51,6 +51,43 @@ const statusColor =  {
     ASYNC_TASK_FAILED: 'volcano',
 };
 
+function getRowKey(item) {
+    return item.id;
+}
+
+const ExecuteLogActions = props => {
+    const {
+        text, rowData, index, favoriteContent, onAddFavorite, onFavoriteCard,
+        loadStatements, disabledFavorite, t,
+    } = props;
+    const handleAddFavorite = useCallback(
+        () => onAddFavorite(rowData.content),
+        [onAddFavorite, rowData.content]
+    );
+    const handleLoadStatements = useCallback(
+        () => loadStatements(text, rowData, index),
+        [index, loadStatements, rowData, text]
+    );
+
+    return (
+        <div className={c.manipulation}>
+            <Popconfirm
+                placement="left"
+                title={favoriteContent(rowData)}
+                onConfirm={handleAddFavorite}
+                okButtonProps={{disabled: disabledFavorite}}
+                okText={t('analysis.logs.action.favorite')}
+                cancelText={t('common.action.cancel')}
+            >
+                <a onClick={onFavoriteCard}>{t('analysis.logs.action.favorite')}</a>
+            </Popconfirm>
+            <a style={{marginLeft: '8px'}} onClick={handleLoadStatements}>
+                {t('analysis.logs.action.load_statement')}
+            </a>
+        </div>
+    );
+};
+
 const ExecuteLog = props => {
     const {t} = useTranslation();
     const {
@@ -106,20 +143,23 @@ const ExecuteLog = props => {
         [updateAddCollection]
     );
 
-    const favoriteContent = rowData => (
-        <>
-            <div style={{marginBottom: '16px'}}>
-                {t('analysis.logs.favorite_statement')}
-            </div>
-            <Input
-                style={{marginBottom: '18px'}}
-                placeholder={t('analysis.logs.favorite_name_placeholder')}
-                showCount
-                maxLength={48}
-                value={favoriteName}
-                onChange={onFavoraiteName}
-            />
-        </>
+    const favoriteContent = useCallback(
+        () => (
+            <>
+                <div style={{marginBottom: '16px'}}>
+                    {t('analysis.logs.favorite_statement')}
+                </div>
+                <Input
+                    style={{marginBottom: '18px'}}
+                    placeholder={t('analysis.logs.favorite_name_placeholder')}
+                    showCount
+                    maxLength={48}
+                    value={favoriteName}
+                    onChange={onFavoraiteName}
+                />
+            </>
+        ),
+        [favoriteName, onFavoraiteName, t]
     );
 
     const typeDesc = type => {
@@ -186,26 +226,17 @@ const ExecuteLog = props => {
             width: '15%',
             render: (text, rowData, index) => {
                 return (
-                    <div className={c.manipulation}>
-                        <Popconfirm
-                            placement="left"
-                            title={favoriteContent(rowData)}
-                            onConfirm={() => onAddFavorite(rowData.content)}
-                            okButtonProps={{disabled: disabledFavorite}}
-                            okText={t('analysis.logs.action.favorite')}
-                            cancelText={t('common.action.cancel')}
-                        >
-                            <a onClick={onFavoriteCard}>
-                                {t('analysis.logs.action.favorite')}
-                            </a>
-                        </Popconfirm>
-                        <a
-                            style={{marginLeft: '8px'}}
-                            onClick={() => loadStatements(text, rowData, index)}
-                        >
-                            {t('analysis.logs.action.load_statement')}
-                        </a>
-                    </div>
+                    <ExecuteLogActions
+                        text={text}
+                        rowData={rowData}
+                        index={index}
+                        favoriteContent={favoriteContent}
+                        onAddFavorite={onAddFavorite}
+                        onFavoriteCard={onFavoriteCard}
+                        loadStatements={loadStatements}
+                        disabledFavorite={disabledFavorite}
+                        t={t}
+                    />
                 );
             },
         },
@@ -216,7 +247,7 @@ const ExecuteLog = props => {
         <Table
             columns={executeLogColumns}
             dataSource={executeLogsDataRecords}
-            rowKey={item => item.id}
+            rowKey={getRowKey}
             pagination={{
                 onChange: onExecutePageChange,
                 position: ['bottomRight'],

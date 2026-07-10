@@ -28,6 +28,9 @@ import {propertiesValidator, maxDegreeValidator} from '../../../utils';
 import classnames from 'classnames';
 import s from '../../OltpItem/index.module.scss';
 
+const createActionHandler = handler => () => handler();
+const createValueHandler = (handler, value) => () => handler(value);
+
 const PathPatternsFormItems = () => {
     const {t} = useTranslation();
 
@@ -101,7 +104,11 @@ const PathPatternsFormItems = () => {
                                         {stepFormItems(item)}
                                         {lists.length > 1 ? (
                                             <Form.Item>
-                                                <Button block danger onClick={() => remove(item.name)}>
+                                                <Button
+                                                    block
+                                                    danger
+                                                    onClick={createValueHandler(remove, item.name)}
+                                                >
                                                     Delete
                                                 </Button>
                                             </Form.Item>
@@ -112,7 +119,7 @@ const PathPatternsFormItems = () => {
                         }
                         <Button
                             type="dashed"
-                            onClick={() => add()}
+                            onClick={createActionHandler(add)}
                             style={{width: '100%'}}
                             icon={<PlusOutlined />}
                         >

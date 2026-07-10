@@ -90,7 +90,8 @@ const BetweennessCentrality = props => {
             }
             setRequiring(false);
         },
-        [graph, graphSpace, handleFormSubmit, updateCurrentAlgorithm]
+        [BETWEENNESS_CENTRALITY, FAILED, LOADING, SUCCESS, graph, graphSpace,
+            handleFormSubmit, updateCurrentAlgorithm]
     );
 
     const onFormFinish = useCallback(

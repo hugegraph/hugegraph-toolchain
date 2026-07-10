@@ -199,7 +199,7 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
                 message.error(res.message);
             });
         });
-    }, [form, graphspace, graph, onCancel]);
+    }, [form, graphspace, graph, onCancel, refresh]);
 
     useEffect(() => {
         if (!open) {

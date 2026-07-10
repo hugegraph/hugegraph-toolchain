@@ -25,6 +25,7 @@ import {Button} from 'antd';
 
 import ModuleButton from '../ModuleButton';
 import {useNavigate} from 'react-router-dom';
+import {useCallback} from 'react';
 
 import style from './index.module.scss';
 
@@ -37,7 +38,8 @@ const Item = props => {
 
     const navigate = useNavigate();
 
-    const onItemClick = value => {
+    const onItemClick = useCallback(event => {
+        const value = event.currentTarget.dataset.url;
         if (!value) {
             return;
         }
@@ -47,7 +49,7 @@ const Item = props => {
         else {
             window.open(value);
         }
-    };
+    }, [navigate]);
 
     const renderList = () => {
         const res = [];
@@ -55,15 +57,18 @@ const Item = props => {
             const {
                 title,
                 url,
+                disabled = false,
+                reason = '',
             } = item;
             const content = (
                 <div className={style.item} key={title}>
                     <Button
                         block
                         type={'primary'}
-                        onClick={() => {
-                            onItemClick(url);
-                        }}
+                        data-url={url}
+                        onClick={onItemClick}
+                        disabled={disabled}
+                        title={reason}
                     >
                         {title}
                     </Button>

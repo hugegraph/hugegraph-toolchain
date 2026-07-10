@@ -17,17 +17,38 @@
  */
 
 import {Space, Button, Form, Select, Input, Drawer} from 'antd';
-import {useState, useEffect} from 'react';
+import {useCallback, useMemo, useState, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
+
+const ListAction = ({index, action, children, ...props}) => {
+    const handleClick = useCallback(() => action(index), [action, index]);
+    return <Button {...props} onClick={handleClick}>{children}</Button>;
+};
+
+const AddAction = ({action, children, ...props}) => {
+    const handleClick = useCallback(() => action(), [action]);
+    return <Button {...props} onClick={handleClick}>{children}</Button>;
+};
 
 const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) => {
     const {t} = useTranslation();
     const [selectLabel, setSelectLabel] = useState({});
     const [errorList, setErrorList] = useState({});
     const [edgeForm] = Form.useForm();
+    const targetOptions = useMemo(() => targetField.map(item => ({label: item, value: item})),
+        [targetField]);
+    const labelOptions = useMemo(() => sourceField.map(item => ({
+        label: item.name,
+        value: item.name,
+        info: item,
+    })), [sourceField]);
+    const propertyOptions = useMemo(() => (selectLabel?.properties ?? []).map(item => ({
+        label: item.name,
+        value: item.name,
+    })), [selectLabel]);
 
-    const autoSelect = () => {
+    const autoSelect = useCallback(() => {
         const list = edgeForm.getFieldValue('attr') ?? [];
         const existKeys = list.map(item => item?.key);
         const enableKeys = selectLabel.properties ? selectLabel.properties.map(item => item.name) : [];
@@ -45,7 +66,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
         // if (row && selectLabel.properties && selectLabel.properties.find(item => item.name === row.key)) {
         //     edgeForm.setFieldValue(['attr', index, 'val'], row.key);
         // }
-    };
+    }, [edgeForm, selectLabel, targetField]);
 
     const checkDuplicate = () => ({
         validator(_, value) {
@@ -79,7 +100,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                         name={[field.name, 'key']}
                     >
                         <Select
-                            options={targetField.map(item => ({label: item, value: item}))}
+                            options={targetOptions}
                             placeholder={t('task.edit.select_schema_field')}
                         />
                     </Form.Item>
@@ -89,23 +110,22 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                         name={[field.name, 'val']}
                     >
                         <Select
-                            options={(selectLabel?.properties ?? []).map(item =>
-                                ({label: item.name, value: item.name}))}
+                            options={propertyOptions}
                             placeholder={t('task.edit.select_mapping_field')}
                         />
                     </Form.Item>
-                    <Button type='link' onClick={() => remove(index)}>
+                    <ListAction type='link' action={remove} index={index}>
                         {t('common.action.delete')}
-                    </Button>
+                    </ListAction>
                 </div>
             ))}
             <Form.ErrorList errors={errors} />
-            <Button onClick={() => autoSelect()} block style={{marginBottom: 8}}>
+            <AddAction action={autoSelect} block style={{marginBottom: 8}}>
                 {t('task.edit.auto_match')}
-            </Button>
-            <Button type='dashed' onClick={() => add()} block>
+            </AddAction>
+            <AddAction type='dashed' action={add} block>
                 +{t('common.action.add')}
-            </Button>
+            </AddAction>
         </>
     );
 
@@ -117,7 +137,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                         className={'form_attr_select'}
                         name={[field.name, 'key']}
                     >
-                        <Select options={targetField.map(item => ({label: item, value: item}))} />
+                        <Select options={targetOptions} />
                     </Form.Item>
                     <span className={'form_attr_split'}>:</span>
                     <Form.Item
@@ -133,37 +153,39 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                     >
                         <Input />
                     </Form.Item>
-                    <a onClick={() => remove(index)}>{t('common.action.delete')}</a>
+                    <ListAction type='link' action={remove} index={index}>
+                        {t('common.action.delete')}
+                    </ListAction>
                 </div>
             )
 
             )}
-            <div className={'form_attr_add'} onClick={() => add()}>
+            <AddAction type='link' className='form_attr_add' action={add}>
                 +{t('common.action.add')}
-            </div>
+            </AddAction>
         </>
     );
 
-    const handleLabel = (_, option) => {
+    const handleLabel = useCallback((_, option) => {
         setSelectLabel(option.info);
         setErrorList({...errorList, label: ''});
-    };
+    }, [errorList]);
 
-    const handleSource = () => {
+    const handleSource = useCallback(() => {
         setErrorList({...errorList, source: ''});
-    };
+    }, [errorList]);
 
-    const handleTarget = () => {
+    const handleTarget = useCallback(() => {
         setErrorList({...errorList, target: ''});
-    };
+    }, [errorList]);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         setErrorList({});
         setSelectLabel({});
         onCancel();
-    };
+    }, [onCancel]);
 
-    const addEdge = () => {
+    const addEdge = useCallback(() => {
         // const info = form.getFieldValue('edge_form') || {};
         // const edges = form.getFieldValue('edges') || [];
         // const error = {};
@@ -214,7 +236,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
             edgeForm.submit();
             onCancel();
         });
-    };
+    }, [edgeForm, onCancel]);
 
     useEffect(() => {
         if (!open) {
@@ -230,7 +252,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                 setSelectLabel(sourceField.find(item => item.name === edgeList[index].label));
             });
         }
-    }, [open, index]);
+    }, [edgeForm, edgeList, index, open, sourceField]);
 
     return (
         <Drawer
@@ -248,7 +270,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                     rules={[rules.required()]}
                 >
                     <Select
-                        options={sourceField.map(item => ({label: item.name, value: item.name, info: item}))}
+                        options={labelOptions}
                         onChange={handleLabel}
                     />
                 </Form.Item>
@@ -259,7 +281,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                     rules={[rules.required()]}
                 >
                     <Select
-                        options={targetField.map(item => ({label: item, value: item}))}
+                        options={targetOptions}
                         onChange={handleSource}
                     />
                 </Form.Item>
@@ -270,7 +292,7 @@ const EdgeForm = ({open, index, onCancel, sourceField, targetField, edgeList}) =
                     rules={[rules.required()]}
                 >
                     <Select
-                        options={targetField.map(item => ({label: item, value: item}))}
+                        options={targetOptions}
                         onChange={handleTarget}
                     />
                 </Form.Item>
