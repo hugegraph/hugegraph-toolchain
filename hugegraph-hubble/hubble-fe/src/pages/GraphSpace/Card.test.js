@@ -1,0 +1,99 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {render, screen} from '@testing-library/react';
+import GraphSpaceCard from './Card';
+
+jest.mock('react-router-dom', () => {
+    const router = jest.requireActual('react-router-dom');
+    const React = require('react');
+
+    return {
+        ...router,
+        Link: ({children, to}) => React.createElement('a', {href: to}, children),
+        useNavigate: () => jest.fn(),
+    };
+});
+
+jest.mock('antd', () => {
+    const antd = jest.requireActual('antd');
+    const React = require('react');
+
+    return {
+        ...antd,
+        Menu: ({items}) => React.createElement(
+            React.Fragment,
+            null,
+            items.map(({key, label}) => React.createElement(
+                React.Fragment,
+                {key},
+                label,
+            )),
+        ),
+        Dropdown: {
+            ...antd.Dropdown,
+            Button: ({children, overlay}) => React.createElement(
+                React.Fragment,
+                null,
+                children,
+                overlay,
+            ),
+        },
+    };
+});
+
+test('does not expose a default GraphSpace mutation action', () => {
+    window.matchMedia = jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+    }));
+    const handleSetDefault = jest.fn();
+    const item = {
+        name: 'DEFAULT',
+        nickname: 'Default',
+        create_time: '2026-07-10',
+        default: false,
+        auth: false,
+        max_graph_number: 10,
+        cpu_limit: 2,
+        memory_limit: 4,
+        storage_limit: 100,
+        storage_used: 1,
+        storage_percent: 0.01,
+        statistic: {vertex: 0, edge: 0, date: '2026-07-10'},
+    };
+
+    render(
+        <GraphSpaceCard
+            item={item}
+            editGraphspace={jest.fn()}
+            deleteGraphspace={jest.fn()}
+            handleSetDefault={handleSetDefault}
+            handleInit={jest.fn()}
+        />,
+    );
+
+    expect(screen.queryByText('设为默认')).not.toBeInTheDocument();
+    expect(handleSetDefault).not.toHaveBeenCalled();
+});

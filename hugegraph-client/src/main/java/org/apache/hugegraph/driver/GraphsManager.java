@@ -103,6 +103,11 @@ public class GraphsManager {
         this.graphsAPI.drop(graph, message);
     }
 
+    /**
+     * @deprecated Current Server per-graph management accepts only update.
+     *             Use {@link #reload()} for a whole-server graph reload.
+     */
+    @Deprecated
     public void reload(String graph) {
         this.graphsAPI.reload(graph);
     }

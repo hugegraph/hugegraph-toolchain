@@ -79,40 +79,6 @@ const GraphSpace = () => {
         setPagination({...pagination, current: 1, pageSize: e.target.value === 'image' ? 11 : 10});
     }, [pagination]);
 
-    const setDefault = useCallback(graphspace => {
-        setLoading(true);
-
-        api.manage.setDefaultGraphSpace(graphspace).then(res => {
-            setLoading(false);
-            if (res.status === 200) {
-                message.success('设置成功');
-                setRefresh(!refresh);
-                return;
-            }
-            message.error(res.message);
-        });
-    }, [refresh]);
-
-    const handleSetDefault = useCallback(graphspace => {
-        api.manage.getDefaultGraphSpace().then(res => {
-            if (res.status !== 200) {
-                message.error(res.message);
-                return;
-            }
-
-            if (res.data.default_space) {
-                Modal.confirm({
-                    title: '确认更改图空间的默认设置?',
-                    onOk: () => setDefault(graphspace),
-                });
-
-                return;
-            }
-
-            setDefault(graphspace);
-        });
-    }, [setDefault]);
-
     const deleteGraphspace = useCallback(graphspace => {
         Modal.confirm({
             title: '确定删除?',
@@ -230,9 +196,6 @@ const GraphSpace = () => {
                                 : <a onClick={() => deleteGraphspace(row.name)}>删除</a>
                             }
                             <Link to={`/graphspace/${row.name}/schema`}>schema管理</Link>
-                            {(row.default)
-                                ? <span className={style.disable}>设为默认</span>
-                                : <a onClick={() => handleSetDefault(row.name)}>设为默认</a>}
                         </Space>
                     )
                 );
@@ -307,7 +270,6 @@ const GraphSpace = () => {
                                                     item={item}
                                                     deleteGraphspace={deleteGraphspace}
                                                     editGraphspace={editGraphspace}
-                                                    handleSetDefault={handleSetDefault}
                                                     handleInit={handleInit}
                                                 />
                                             </Col>

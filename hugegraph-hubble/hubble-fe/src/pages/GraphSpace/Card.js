@@ -45,7 +45,7 @@ const TitleField = ({item, onClick}) => (
     </>
 );
 
-const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleSetDefault, handleInit}) => {
+const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) => {
     const navigate = useNavigate();
 
     const handleGotoGraph = useCallback(() => {
@@ -59,10 +59,6 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleSetDefaul
     const handleDelete = useCallback(() => {
         deleteGraphspace(item.name);
     }, [deleteGraphspace, item]);
-
-    const handleSet = useCallback(() => {
-        handleSetDefault(item.name);
-    }, [handleSetDefault, item]);
 
     const Overlay = ({item}) => (
         item.name === 'neizhianli' ? (
@@ -94,12 +90,6 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleSetDefaul
                         label: (item.default)
                             ? <span className={style.disable}>删除</span>
                             : <a onClick={handleDelete}>删除</a>,
-                    },
-                    {
-                        key: '4',
-                        label: (item.default)
-                            ? <span className={style.disable}>设为默认</span>
-                            : <a onClick={handleSet}>设为默认</a>,
                     },
                 ]}
             />

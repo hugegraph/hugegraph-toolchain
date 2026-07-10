@@ -172,6 +172,11 @@ public class GraphsAPI extends API {
                            ImmutableMap.of(CONFIRM_MESSAGE, message));
     }
 
+    /**
+     * @deprecated Current Server per-graph management accepts only update.
+     *             Use {@link #reload()} for a whole-server graph reload.
+     */
+    @Deprecated
     public Map<String, String> reload(String name) {
         RestResult result = this.client.put(this.path(), name,
                                             ImmutableMap.of("action", "reload"));
