@@ -31,6 +31,7 @@ import {
     message,
     Pagination,
     Spin,
+    Alert,
 } from 'antd';
 import {useState, useEffect, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -63,6 +64,7 @@ const Graph = () => {
     const [refresh, setRefresh] = useState(false);
     const [pagination, setPagination] = useState({current: 1, pageSize: 11});
     const [loading, setLoading] = useState(false);
+    const [listUnavailable, setListUnavailable] = useState(false);
     const [clearSelection, setClearSelection] = useState(null);
     const {graphspace} = useParams();
     const navigate = useNavigate();
@@ -129,45 +131,54 @@ const Graph = () => {
 
     const deleteGraph = graph => {
         Modal.confirm({
-            title: '确定删除图吗?',
-            content: '删除后无法恢复',
+            title: t('graph.delete_confirm.title'),
+            content: t('graph.delete_confirm.irreversible'),
             onOk: () => {
-                const hide = message.loading('删除中', 0);
+                const hide = message.loading(t('graph.delete_confirm.deleting'), 0);
                 api.manage.delGraph(graphspace, graph).then(res => {
                     hide();
                     if (res.status === 200) {
-                        message.success('删除成功');
+                        message.success(t('graph.delete_confirm.success'));
                         setRefresh(!refresh);
                         return;
                     }
 
-                    message.error('删除失败');
+                    message.error(t('graph.delete_confirm.failed'));
                 });
             },
         });
     };
 
     const setDefault = graph => {
-        const hide = message.loading('设置中...', 0);
-        api.manage.setDefaultGraph(graphspace, graph).then(res => {
+        const hide = message.loading(t('graph.set_default.setting'), 0);
+        return api.manage.setDefaultGraph(graphspace, graph, {
+            suppressBusinessErrorToast: true,
+        }).then(res => {
             hide();
             if (res.status === 200) {
-                message.success('设置成功');
+                message.success(t('graph.set_default.success'));
                 setRefresh(!refresh);
                 return;
             }
-            message.error(res.message);
+            message.error(t('common.msg.operation_failed'));
+        }).catch(() => {
+            hide();
+            message.error(t('common.msg.operation_failed'));
         });
     };
 
     const handleSetDefault = graph => {
-        api.manage.getDefaultGraph(graphspace).then(res => {
+        api.manage.getDefaultGraph(graphspace, {
+            suppressBusinessErrorToast: true,
+        }).then(res => {
             if (res.status !== 200) {
-                message.error(res.message);
+                message.error(t('common.msg.operation_failed'));
                 return;
             }
 
-            if (res.data.default_graph) {
+            const value = res.data.default_graph;
+            const defaults = Array.isArray(value) ? value : [value].filter(Boolean);
+            if (defaults.some(defaultGraph => defaultGraph !== graph)) {
                 Modal.confirm({
                     title: t('graph.set_default_confirm'),
                     onOk: () => setDefault(graph),
@@ -177,7 +188,7 @@ const Graph = () => {
             }
 
             setDefault(graph);
-        });
+        }).catch(() => message.error(t('common.msg.operation_failed')));
     };
 
     const handleBack = useCallback(() => {
@@ -223,7 +234,7 @@ const Graph = () => {
 
     const columns = [
         {
-            title: '图名称',
+            title: t('graph.col.name'),
             render: row => (
                 <Link to={`/gremlin/${row.graphspace || 'DEFAULT'}/${row.name}`}>
                     {row.nickname}
@@ -338,10 +349,6 @@ const Graph = () => {
             key: '8',
             label: <a onClick={() => showClone(item.name)}>{t('graph.menu.clone')}</a>,
         },
-        // {
-        //     key: '8',
-        //     label: <a onClick={() => showClone(item.name)}>克隆图</a>,
-        // },
     ].filter(Boolean);
 
     useEffect(() => {
@@ -362,23 +369,25 @@ const Graph = () => {
 
     useEffect(() => {
         setLoading(true);
+        setListUnavailable(false);
 
         api.manage.getGraphList(graphspace, {
             create_time: dateData,
             query: graphname,
             page_no: pagination.current,
             page_size: pagination.pageSize,
-        }).then(res => {
-            // hide();
-            setLoading(false);
+        }, {suppressBusinessErrorToast: true}).then(res => {
             if (res.status === 200) {
                 setData(res.data.records);
                 setPagination({...pagination, total: res.data.total});
 
                 return;
             }
-
-            message.error(res.message);
+            setListUnavailable(true);
+        }).catch(() => {
+            setListUnavailable(true);
+        }).finally(() => {
+            setLoading(false);
         });
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -419,6 +428,13 @@ const Graph = () => {
             </PageHeader>
 
             <div className='container'>
+                {listUnavailable && (
+                    <Alert
+                        showIcon
+                        type='error'
+                        message={t('graph.unavailable')}
+                    />
+                )}
                 {listType === 'image'
                     ? (
                         <>

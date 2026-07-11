@@ -128,7 +128,6 @@ const BetweennessCentrality = props => {
                     highlightName={currentAlgorithm === BETWEENNESS_CENTRALITY}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

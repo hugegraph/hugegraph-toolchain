@@ -17,7 +17,7 @@
  */
 
 import {useCallback} from 'react';
-import {Card, Dropdown, Menu, Typography, Tooltip} from 'antd';
+import {Card, Dropdown, Typography, Tooltip} from 'antd';
 import {UnorderedListOutlined, EyeOutlined} from '@ant-design/icons';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
@@ -80,9 +80,7 @@ const GraphCard = ({item, menus}) => {
             }}
             extra={(
                 <Dropdown
-                    overlay={<Menu
-                        items={menus}
-                    />}
+                    menu={{items: menus}}
                     trigger={['click']}
                 >
                     <UnorderedListOutlined />

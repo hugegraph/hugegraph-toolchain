@@ -128,7 +128,6 @@ const PersonalPageRank = props => {
                     highlightName={currentAlgorithm === PERSONAL_PAGE_RANK}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

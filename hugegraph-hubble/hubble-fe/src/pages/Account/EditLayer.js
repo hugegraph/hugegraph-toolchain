@@ -18,61 +18,65 @@
 
 import {Modal, Input, Form, Select, message, Spin, Switch} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
 import style from './index.module.scss';
 
+const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
+
 const EditLayer = ({visible, onCancel, data, op, refresh}) => {
+    const {t} = useTranslation();
     const [form] = Form.useForm();
     const [graphspaceList, setGraphspaceList] = useState([]);
     const [detail, setDetail] = useState({});
     const [loading, setLoading] = useState(false);
 
     const title = {
-        'detail': '查看账号',
-        'edit': '编辑账号',
-        'auth': '分配权限',
-        'create': '创建账号',
+        'detail': t('account.form.title_detail'),
+        'edit': t('account.form.title_edit'),
+        'auth': t('account.form.title_auth'),
+        'create': t('account.form.title_create'),
     };
 
     const createUser = useCallback(values => {
-        api.auth.addUser(values).then(res => {
+        api.auth.addUser(values, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
-                message.success('创建成功');
+                message.success(t('common.msg.create_success'));
                 onCancel();
                 refresh();
                 return;
             }
-            message.error(res.message);
-        });
-    }, [onCancel, refresh]);
+            message.error(t('common.msg.operation_failed'));
+        }).catch(() => message.error(t('common.msg.operation_failed')));
+    }, [onCancel, refresh, t]);
     const updateUser = useCallback(values => {
-        api.auth.updateUser(data.id, values).then(res => {
+        api.auth.updateUser(data.id, values, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
-                message.success('创建成功');
+                message.success(t('common.msg.update_success'));
                 onCancel();
                 refresh();
 
                 return;
             }
 
-            message.error(res.message);
-        });
-    }, [onCancel, refresh, data.id]);
+            message.error(t('common.msg.operation_failed'));
+        }).catch(() => message.error(t('common.msg.operation_failed')));
+    }, [onCancel, refresh, data.id, t]);
 
     const updateUserAuth = useCallback(values => {
-        api.auth.updateAdminspace(data.id, values.adminSpaces).then(res => {
+        api.auth.updateAdminspace(data.id, values.adminSpaces, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
-                message.success('创建成功');
+                message.success(t('common.msg.set_success'));
                 onCancel();
                 refresh();
 
                 return;
             }
 
-            message.error(res.message);
-        });
-    }, [data.id, onCancel, refresh]);
+            message.error(t('common.msg.operation_failed'));
+        }).catch(() => message.error(t('common.msg.operation_failed')));
+    }, [data.id, onCancel, refresh, t]);
 
     const onFinish = useCallback(() => {
         form.validateFields().then(values => {
@@ -96,19 +100,19 @@ const EditLayer = ({visible, onCancel, data, op, refresh}) => {
             return;
         }
 
-        api.manage.getGraphSpaceList().then(res => {
+        api.manage.getGraphSpaceList(undefined, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 setGraphspaceList(res.data.records.map(item => ({label: item.name, value: item.name})));
 
                 return;
             }
 
-            message.error(res.message);
-        });
+            message.error(t('common.msg.load_failed'));
+        }).catch(() => message.error(t('common.msg.load_failed')));
 
         if (data.id) {
             setLoading(true);
-            api.auth.getUserInfo(data.id).then(res => {
+            api.auth.getUserInfo(data.id, PAGE_ERROR_CONFIG).then(res => {
                 setLoading(false);
                 if (res.status === 200) {
                     form.setFieldsValue(res.data);
@@ -116,19 +120,22 @@ const EditLayer = ({visible, onCancel, data, op, refresh}) => {
                     return;
                 }
 
-                message.error(res.message);
+                message.error(t('common.msg.load_failed'));
+            }).catch(() => {
+                setLoading(false);
+                message.error(t('common.msg.load_failed'));
             });
         }
         else {
             form.resetFields();
         }
-    }, [visible, data.id, form]);
+    }, [visible, data.id, form, t]);
 
     return (
         op === 'detail'
             ? (
                 <Modal
-                    title={'查看账号'}
+                    title={t('account.form.title_detail')}
                     onCancel={onCancel}
                     open={visible}
                     footer={null}
@@ -140,23 +147,31 @@ const EditLayer = ({visible, onCancel, data, op, refresh}) => {
                             labelCol={{span: 6}}
                             preserve={false}
                         >
-                            <Form.Item label="账号ID" className={style.item}>{detail.user_name}</Form.Item>
-                            <Form.Item label="账号名" className={style.item}>{detail.user_nickname}</Form.Item>
-                            <Form.Item label="是否为超级管理员" className={style.item}>
-                                {detail.is_superadmin ? '是' : '否'}
+                            <Form.Item label={t('account.form.id')} className={style.item}>
+                                {detail.user_name}
                             </Form.Item>
-                            <Form.Item label="备注" className={style.item}>{detail.user_description}</Form.Item>
-                            <Form.Item label="管理权限" className={style.item}>
+                            <Form.Item label={t('account.form.name')} className={style.item}>
+                                {detail.user_nickname}
+                            </Form.Item>
+                            <Form.Item label={t('account.form.is_superadmin')} className={style.item}>
+                                {detail.is_superadmin ? t('common.yes') : t('common.no')}
+                            </Form.Item>
+                            <Form.Item label={t('account.form.remark')} className={style.item}>
+                                {detail.user_description}
+                            </Form.Item>
+                            <Form.Item label={t('account.form.permission')} className={style.item}>
                                 {detail.adminSpaces ? detail.adminSpaces.join(',') : ''}
                             </Form.Item>
-                            <Form.Item label="创建时间" className={style.item}>{detail.user_create}</Form.Item>
+                            <Form.Item label={t('account.col.create_time')} className={style.item}>
+                                {detail.user_create}
+                            </Form.Item>
                         </Form>
                     </Spin>
                 </Modal>
             )
             : (
                 <Modal
-                    title={title[op] ?? '创建账号'}
+                    title={title[op] ?? t('account.form.title_create')}
                     onCancel={onCancel}
                     open={visible}
                     onOk={onFinish}
@@ -172,44 +187,51 @@ const EditLayer = ({visible, onCancel, data, op, refresh}) => {
                             {(op === 'create' || op === 'edit') && (
                                 <>
                                     <Form.Item
-                                        label="账号ID"
+                                        label={t('account.form.id')}
                                         name="user_name"
                                         validateFirst
                                         rules={[{type: 'string', min: 5, max: 16}, rules.isName, rules.required()]}
                                     >
-                                        <Input placeholder="用户登录" disabled={op === 'edit'} />
+                                        <Input
+                                            placeholder={t('account.form.id_placeholder')}
+                                            disabled={op === 'edit'}
+                                        />
                                     </Form.Item>
                                     <Form.Item
-                                        label="账号名"
+                                        label={t('account.form.name')}
                                         name="user_nickname"
                                         rules={[rules.required(), rules.isAccountName]}
                                         validateFirst
                                     >
-                                        <Input placeholder="账号名设置后可更改" />
-                                    </Form.Item>
-                                    <Form.Item label="是否为超级管理员" name="is_superadmin" valuePropName="checked">
-                                        <Switch />
-                                    </Form.Item>
-                                    <Form.Item label="备注" name="user_description">
-                                        <Input placeholder="输入账号备注" />
+                                        <Input placeholder={t('account.form.name_placeholder')} />
                                     </Form.Item>
                                     <Form.Item
-                                        label="默认密码"
+                                        label={t('account.form.is_superadmin')}
+                                        name="is_superadmin"
+                                        valuePropName="checked"
+                                    >
+                                        <Switch />
+                                    </Form.Item>
+                                    <Form.Item label={t('account.form.remark')} name="user_description">
+                                        <Input placeholder={t('account.form.remark_placeholder')} />
+                                    </Form.Item>
+                                    <Form.Item
+                                        label={t('account.form.default_password')}
                                         name="user_password"
                                         rules={[{type: 'string', min: 5, max: 16}]}
                                     >
                                         <Input.Password
-                                            placeholder="123456（创建后可前往个人中心更改）"
+                                            placeholder={t('account.form.default_password_placeholder')}
                                             autoComplete="new-password"
                                         />
                                     </Form.Item>
-                                    <Form.Item label="管理权限" name="adminSpaces">
+                                    <Form.Item label={t('account.form.permission')} name="adminSpaces">
                                         <Select options={graphspaceList} mode="multiple" />
                                     </Form.Item>
                                 </>
                             )}
                             {op === 'auth' && (
-                                <Form.Item label="管理权限" name="adminSpaces">
+                                <Form.Item label={t('account.form.permission')} name="adminSpaces">
                                     <Select options={graphspaceList} mode="multiple" />
                                 </Form.Item>
                             )}

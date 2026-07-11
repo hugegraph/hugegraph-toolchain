@@ -132,7 +132,6 @@ const BetweennessCentralityVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 disabled={graphStatus !== LOADED}

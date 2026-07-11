@@ -21,7 +21,9 @@ import * as manage from './manage';
 
 jest.mock('./request', () => ({
     get: jest.fn(),
+    post: jest.fn(),
     put: jest.fn(),
+    delete: jest.fn(),
 }));
 
 beforeEach(() => {
@@ -43,7 +45,94 @@ test('reads the default graph from the canonical route', () => {
     );
 });
 
+test('forwards default-graph error ownership controls', () => {
+    const config = {suppressBusinessErrorToast: true};
+
+    manage.getDefaultGraph('DEFAULT', config);
+    expect(request.get).toHaveBeenCalledWith(
+        'graphspaces/DEFAULT/graphs/default',
+        config
+    );
+
+    manage.setDefaultGraph('DEFAULT', 'g', config);
+    expect(request.post).toHaveBeenCalledWith(
+        'graphspaces/DEFAULT/graphs/g/default',
+        undefined,
+        config
+    );
+});
+
+test('keeps graph-list request controls out of query parameters', () => {
+    manage.getGraphList(
+        'DEFAULT',
+        {page_no: 1, page_size: 10},
+        {suppressBusinessErrorToast: true}
+    );
+
+    expect(request.get).toHaveBeenCalledWith(
+        '/graphspaces/DEFAULT/graphs',
+        {
+            params: {page_no: 1, page_size: 10},
+            suppressBusinessErrorToast: true,
+        }
+    );
+});
+
 test('does not expose default GraphSpace mutation facades', () => {
     expect(manage.setDefaultGraphSpace).toBeUndefined();
     expect(manage.getDefaultGraphSpace).toBeUndefined();
+});
+
+test.each([
+    ['checkMetaProperty', 'post',
+        '/graphspaces/DEFAULT/graphs/g/schema/propertykeys/check_using'],
+    ['checkMetaVertex', 'post',
+        '/graphspaces/DEFAULT/graphs/g/schema/vertexlabels/check_using'],
+])('%s forwards request controls outside the request body', (method, verb, route) => {
+    manage[method]('DEFAULT', 'g', {names: ['name']}, {
+        suppressBusinessErrorToast: true,
+    });
+
+    expect(request[verb]).toHaveBeenCalledWith(
+        route,
+        {names: ['name']},
+        {suppressBusinessErrorToast: true}
+    );
+});
+
+test.each([
+    ['addGraphSpace', [{name: 'SPACE'}], 'post', '/graphspaces'],
+    ['updateGraphSpace', ['SPACE', {nickname: 'Space'}], 'put', '/graphspaces/SPACE'],
+    ['delGraphSpace', ['SPACE'], 'delete', '/graphspaces/SPACE'],
+    ['initBuiltin', [{init_space: true}], 'post', '/graphspaces/builtin'],
+    ['addSchema', ['SPACE', {name: 'schema'}], 'post',
+        '/graphspaces/SPACE/schematemplates'],
+    ['updateSchema', ['SPACE', 'schema', {schema: 'g'}], 'put',
+        'graphspaces/SPACE/schematemplates/schema'],
+    ['delSchema', ['SPACE', 'schema'], 'delete',
+        'graphspaces/SPACE/schematemplates/schema'],
+])('%s forwards page-owned error controls', (method, args, verb, route) => {
+    const config = {suppressBusinessErrorToast: true};
+    manage[method](...args, config);
+
+    const expected = verb === 'delete'
+        ? [route, undefined, config]
+        : [route, args.at(-1), config];
+    expect(request[verb]).toHaveBeenCalledWith(...expected);
+});
+
+test.each([
+    ['delMetaProperty', '/schema/propertykeys'],
+    ['delMetaVertex', '/schema/vertexlabels'],
+    ['delMetaEdge', '/schema/edgelabels'],
+])('%s forwards request controls to the delete request', (method, suffix) => {
+    manage[method]('DEFAULT', 'g', {names: ['name']}, {
+        suppressBusinessErrorToast: true,
+    });
+
+    expect(request.delete).toHaveBeenCalledWith(
+        `/graphspaces/DEFAULT/graphs/g${suffix}?names=name&skip_using=false`,
+        undefined,
+        {suppressBusinessErrorToast: true}
+    );
 });

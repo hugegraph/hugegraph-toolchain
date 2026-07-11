@@ -22,7 +22,7 @@
 
 import React, {useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Tooltip, Dropdown, Menu, Modal, Form, Input} from 'antd';
+import {Button, Tooltip, Dropdown, Modal, Form, Input} from 'antd';
 import {DownloadOutlined} from '@ant-design/icons';
 
 const ExportData = props => {
@@ -105,24 +105,22 @@ const ExportData = props => {
         [exportJsonForm, onExportJsonChange]
     );
 
-    const exportMenu = (
-        <Menu
-            items={[
-                {
-                    key: '1',
-                    label: (<a onClick={handleClickExportJson}>{t('analysis.canvas.export_json')}</a>),
-                },
-                {
-                    key: '2',
-                    label: (<a onClick={handleClickExportPng}>{t('analysis.canvas.export_png')}</a>),
-                },
-            ]}
-        />
-    );
+    const exportMenu = {
+        items: [
+            {
+                key: '1',
+                label: (<a onClick={handleClickExportJson}>{t('analysis.canvas.export_json')}</a>),
+            },
+            {
+                key: '2',
+                label: (<a onClick={handleClickExportPng}>{t('analysis.canvas.export_png')}</a>),
+            },
+        ],
+    };
 
     return (
         <>
-            <Dropdown overlay={exportMenu} placement="bottomLeft" disabled={!buttonEnable}>
+            <Dropdown menu={exportMenu} placement="bottomLeft" disabled={!buttonEnable}>
                 <Tooltip placement="bottom" title={buttonEnable ? '' : tooltip}>
                     <Button
                         type='text'

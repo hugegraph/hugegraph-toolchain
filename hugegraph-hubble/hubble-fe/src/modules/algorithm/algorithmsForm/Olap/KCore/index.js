@@ -127,7 +127,6 @@ const KCore = props => {
                     highlightName={currentAlgorithm === K_CORE}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

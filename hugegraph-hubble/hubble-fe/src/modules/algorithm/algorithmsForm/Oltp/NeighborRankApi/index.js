@@ -258,7 +258,6 @@ const NeighborRankApi = props => {
                     highlightName={currentAlgorithm === NEIGHBOR_RANK_API}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

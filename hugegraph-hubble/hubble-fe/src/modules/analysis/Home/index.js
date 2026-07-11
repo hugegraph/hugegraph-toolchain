@@ -21,6 +21,7 @@
  */
 
 import React, {useState, useCallback, useEffect, useContext} from 'react';
+import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../Context';
 import QueryBar from '../QueryBar/Home';
 import QueryResult from '../QueryResult/Home';
@@ -38,6 +39,7 @@ const {CANVAS2D} = GRAPH_RENDER_MODE;
 const defaultPageParams = {page: 1, pageSize: 10};
 
 const AnalysisHome = () => {
+    const {t} = useTranslation();
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
     const [queryStatus, setQueryStatus] = useState(STANDBY);
     const [queryMessage, setQueryMessage] = useState();
@@ -225,18 +227,19 @@ const AnalysisHome = () => {
             const {status, data, message} = response || {};
             setQueryResult(data);
             setAsyncTaskResult();
-            setQueryMessage(message);
             if (status === 200) {
+                setQueryMessage(message);
                 setQueryStatus(SUCCESS);
             }
             else {
+                setQueryMessage(t('analysis.query_result.run_failed_action'));
                 setQueryStatus(FAILED);
             }
             onExeLogsRefresh();
             onFavoriteRefresh();
             resetGraphInfo();
         },
-        [graph, graphSpace, codeEditorContent, onExeLogsRefresh, onFavoriteRefresh, resetGraphInfo]
+        [graph, graphSpace, codeEditorContent, onExeLogsRefresh, onFavoriteRefresh, resetGraphInfo, t]
     );
 
     const onExecuteTask = useCallback(

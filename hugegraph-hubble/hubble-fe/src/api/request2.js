@@ -88,7 +88,8 @@ instance.interceptors.response.use(
         if (response.status === 401 || response.data?.status === 401) {
             redirectToLogin();
         }
-        else if (response.data?.status !== 200) {
+        else if (response.data?.status !== 200
+                 && !response.config?.suppressBusinessErrorToast) {
             if (!_.isEmpty(response.data.message)) {
                 message.error(response.data.message);
             }
@@ -100,8 +101,10 @@ instance.interceptors.response.use(
             redirectToLogin();
             return {data: {status: 401, message: 'Unauthorized'}};
         }
-        const res = error.response?.data;
-        showRequestError(res);
+        if (!error.config?.suppressBusinessErrorToast) {
+            const res = error.response?.data;
+            showRequestError(res);
+        }
         return Promise.reject(error);
     }
 );
@@ -141,19 +144,20 @@ request.post1 = async (url, params, config) => {
     return responseData(resposne);
 };
 
-request.put = async (url, params) => {
+request.put = async (url, params, config) => {
     const resposne = await instance.put(
         `${url}`,
-        params
+        params,
+        config
     );
 
     return responseData(resposne);
 };
 
-request.delete = async (url, params) => {
+request.delete = async (url, params, config) => {
     const resposne = await instance.delete(
         `${url}`,
-        {params}
+        {...config, params}
     );
 
     return responseData(resposne);

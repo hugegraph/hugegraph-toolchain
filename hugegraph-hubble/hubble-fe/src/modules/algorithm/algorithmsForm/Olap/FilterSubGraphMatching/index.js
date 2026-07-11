@@ -131,7 +131,6 @@ const FilterSubGraphMatching = props => {
                     highlightName={currentAlgorithm === FILTER_SUBGRAPH_MATCHING}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

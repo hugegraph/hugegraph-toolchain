@@ -82,7 +82,7 @@ const IconSelect = props => {
     if (disabled) {
         return (
             <Input
-                placeholder="请选择"
+                placeholder={t('selector.placeholder')}
                 disabled
             />
         );

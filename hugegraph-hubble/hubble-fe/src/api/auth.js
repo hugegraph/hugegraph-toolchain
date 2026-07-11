@@ -29,35 +29,35 @@ const logout = () => {
 };
 
 const status = () => {
-    return request.get('/auth/status');
+    return request.get('/auth/status', {suppressBusinessErrorToast: true});
 };
 
-const getUserList = params => {
-    return request.get('/auth/users/list', {params});
+const getUserList = (params, config = {}) => {
+    return request.get('/auth/users/list', {...config, params});
 };
 
-const getAllUserList = params => {
-    return request.get('/auth/users', {params});
+const getAllUserList = (params, config = {}) => {
+    return request.get('/auth/users', {...config, params});
 };
 
-const getUserInfo = username => {
-    return request.get(`/auth/users/${username}`);
+const getUserInfo = (username, config) => {
+    return request.get(`/auth/users/${username}`, config);
 };
 
-const updateUser = (id, data) => {
-    return request.put(`/auth/users/${id}`, data);
+const updateUser = (id, data, config) => {
+    return request.put(`/auth/users/${id}`, data, config);
 };
 
-const delUser = id => {
-    return request.delete(`/auth/users/${id}`);
+const delUser = (id, config) => {
+    return request.delete(`/auth/users/${id}`, undefined, config);
 };
 
-const updateAdminspace = (username, data) => {
-    return request.post(`/auth/users/updateadminspace/${username}`, data);
+const updateAdminspace = (username, data, config) => {
+    return request.post(`/auth/users/updateadminspace/${username}`, data, config);
 };
 
-const addUser = data => {
-    return request.post('/auth/users', data);
+const addUser = (data, config) => {
+    return request.post('/auth/users', data, config);
 };
 
 const updatePwd = (username, oldpwd, newpwd) => {

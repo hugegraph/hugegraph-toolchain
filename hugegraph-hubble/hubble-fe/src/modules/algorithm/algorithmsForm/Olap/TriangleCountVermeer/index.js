@@ -127,7 +127,6 @@ const TriangleCountVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

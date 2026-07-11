@@ -110,20 +110,20 @@ public class GraphsAPI extends API {
         return profiles;
     }
 
-    public Map<String, String> setDefault(String name) {
+    public Map<String, Object> setDefault(String name) {
         String defaultPath = joinPath(this.path(), name, "default");
         RestResult result = this.client.post(defaultPath, Collections.emptyMap());
         return result.readObject(Map.class);
     }
 
-    public Map<String, String> unSetDefault(String name) {
+    public Map<String, Object> unSetDefault(String name) {
         String unDefaultPath = joinPath(this.path(), name, "default");
         RestResult result = this.client.delete(unDefaultPath,
-                                              Collections.emptyMap());
+                                                Collections.emptyMap());
         return result.readObject(Map.class);
     }
 
-    public Map<String, String> getDefault() {
+    public Map<String, Object> getDefault() {
         String defaultPath = joinPath(this.path(), "default");
         RestResult result = this.client.get(defaultPath);
         return result.readObject(Map.class);

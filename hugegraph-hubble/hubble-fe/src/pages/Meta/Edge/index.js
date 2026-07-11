@@ -20,7 +20,10 @@ import {Table, Row, Col, Space, Button, message, Modal, Tooltip} from 'antd';
 import {EditEdgeLayer} from './EditLayer';
 import {useState, useEffect, useCallback} from 'react';
 import {useParams} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
+
+const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
 const EdgeTable = () => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
@@ -32,6 +35,7 @@ const EdgeTable = () => {
     const [propertyList, setPropertyList] = useState([]);
     const [vertexList, setVertexList] = useState([]);
     const {graphspace, graph} = useParams();
+    const {t} = useTranslation();
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
@@ -39,28 +43,30 @@ const EdgeTable = () => {
 
     const removeEdge = useCallback((names, isBatch) => {
         Modal.confirm({
-            title: '确认删除此边类型？',
+            title: t('schema.edge.delete_confirm'),
             content: (
-                <><div>删除后无法恢复，请谨慎操作</div>
-                    <div>删除元数据耗时较久，详情可在任务管理中查看</div>
+                <><div>{t('schema.delete_irreversible')}</div>
+                    <div>{t('schema.delete_task_hint')}</div>
                 </>),
-            onOk: () => {
-                api.manage.delMetaEdge(graphspace, graph, {names}).then(res => {
-                    if (res.status !== 200) {
-                        message.error(res.message);
-                        return;
-                    }
+            onOk: () => api.manage.delMetaEdge(
+                graphspace, graph, {names}, DELETE_REQUEST_CONFIG
+            ).then(res => {
+                if (res.status !== 200) {
+                    message.error(t('schema.delete_failed'));
+                    return;
+                }
 
-                    if (isBatch) {
-                        setSelectedItems([]);
-                    }
+                if (isBatch) {
+                    setSelectedItems([]);
+                }
 
-                    message.success('删除成功');
-                    setRefresh(!refresh);
-                });
-            },
+                message.success(t('common.delete_success'));
+                setRefresh(!refresh);
+            }).catch(() => {
+                message.error(t('schema.delete_failed'));
+            }),
         });
-    }, [graph, graphspace, refresh]);
+    }, [graph, graphspace, refresh, t]);
 
     const handleDelete = useCallback(row => {
         removeEdge([row.name]);
@@ -82,12 +88,12 @@ const EdgeTable = () => {
 
     const handleDeleteBatch = useCallback(() => {
         if (selectedItems.length === 0) {
-            message.error('请至少选择一项');
+            message.error(t('common.select_at_least_one'));
             return;
         }
 
         removeEdge(selectedItems, true);
-    }, [removeEdge, selectedItems]);
+    }, [removeEdge, selectedItems, t]);
 
     const handleRefresh = useCallback(() => {
         setRefresh(!refresh);
@@ -97,54 +103,58 @@ const EdgeTable = () => {
 
     const columns = [
         {
-            title: '边类型名称',
+            title: t('schema.edge.col.name'),
             dataIndex: 'name',
         },
         {
-            title: '边类型',
+            title: t('schema.edge.col.type'),
             dataIndex: 'edgelabel_type',
             render: (val, row) => ({
-                NORMAL: '普通类型',
-                PARENT: '父类型',
-                SUB: <Tooltip title={'父边：' + row.parent_label}>子类型</Tooltip>,
+                NORMAL: t('schema.edge.type.normal'),
+                PARENT: t('schema.edge.type.parent'),
+                SUB: (
+                    <Tooltip title={t('schema.edge.parent_hint', {name: row.parent_label})}>
+                        {t('schema.edge.type.sub')}
+                    </Tooltip>
+                ),
             }[val]),
         },
         {
-            title: '起点类型',
+            title: t('schema.edge.col.source'),
             dataIndex: 'source_label',
         },
         {
-            title: '终点类型',
+            title: t('schema.edge.col.target'),
             dataIndex: 'target_label',
         },
         {
-            title: '关联属性',
+            title: t('schema.col.properties'),
             dataIndex: 'properties',
             ellipsis: true,
             render: val => val.map(item => item.name).join(';'),
         },
         {
-            title: '区分键',
+            title: t('schema.edge.col.sort_keys'),
             dataIndex: 'sort_keys',
         },
         {
-            title: '类型索引',
+            title: t('schema.col.label_index'),
             dataIndex: 'open_label_index',
-            render: val => (val ? '是' : '否'),
+            render: val => (val ? t('common.yes') : t('common.no')),
         },
         {
-            title: '属性索引',
+            title: t('schema.col.property_indexes'),
             dataIndex: 'property_indexes',
             ellipsis: true,
             render: val => val.map(item => item.name).join(';'),
         },
         {
-            title: '操作',
+            title: t('common.operation'),
             align: 'center',
             render: row => (
                 <Space>
-                    <a onClick={() => handleEdit(row)}>编辑</a>
-                    <a onClick={() => handleDelete(row)}>删除</a>
+                    <a onClick={() => handleEdit(row)}>{t('common.edit')}</a>
+                    <a onClick={() => handleDelete(row)}>{t('common.delete')}</a>
                 </Space>
             ),
         },
@@ -186,9 +196,9 @@ const EdgeTable = () => {
             <Row>
                 <Col>
                     <Space>
-                        <Button type='primary' onClick={handleCreate}>创建</Button>
-                        <Button onClick={handleRefresh}>刷新</Button>
-                        <Button onClick={handleDeleteBatch}>批量删除</Button>
+                        <Button type='primary' onClick={handleCreate}>{t('common.create')}</Button>
+                        <Button onClick={handleRefresh}>{t('common.refresh')}</Button>
+                        <Button onClick={handleDeleteBatch}>{t('common.batch_delete')}</Button>
                     </Space>
                 </Col>
             </Row>

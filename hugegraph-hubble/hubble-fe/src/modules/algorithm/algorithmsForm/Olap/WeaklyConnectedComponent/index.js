@@ -123,7 +123,6 @@ const WeaklyConnectedComponent = props => {
                     highlightName={currentAlgorithm === WEAKLY_CONNECTED_COMPONENT}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

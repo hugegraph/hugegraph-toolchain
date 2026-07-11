@@ -29,10 +29,14 @@ import enUS from 'antd/lib/locale/en_US';
 import './i18n';
 
 const languageType = localStorage.getItem('languageType') === 'en-US' ? enUS : zhCN;
+const routerFuture = {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+};
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
-    <BrowserRouter>
+    <BrowserRouter future={routerFuture}>
         <ConfigProvider locale={languageType}>
             <App />
         </ConfigProvider>

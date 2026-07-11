@@ -234,7 +234,6 @@ const JaccardSimilarityPost = props => {
                     highlightName={currentAlgorithm === JACCARD_SIMILARITY_POST}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

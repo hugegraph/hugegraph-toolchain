@@ -39,10 +39,12 @@ jest.mock('react-i18next', () => ({
         'graph.detail.edge_type': 'Edge type',
         'graph.detail.count': 'Count',
         'graph.detail.statistics_unavailable': 'Statistics are unavailable. Retry later.',
+        'graph.detail.unavailable': 'Graph details are unavailable. Check the server and retry.',
     })[key] || key}),
 }));
 
 beforeEach(() => {
+    jest.clearAllMocks();
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
         value: query => ({
@@ -52,6 +54,29 @@ beforeEach(() => {
             removeListener: jest.fn(),
         }),
     });
+});
+
+test('renders one actionable page error when all initialization requests fail', async () => {
+    api.manage.getGraphSpace.mockRejectedValue(new Error('connection refused'));
+    api.manage.getGraph.mockRejectedValue(new Error('connection refused'));
+    api.manage.getGraphStatistic.mockRejectedValue(new Error('connection refused'));
+
+    render(
+        <MemoryRouter initialEntries={['/graphspace/DEFAULT/graph/g/detail']}>
+            <Routes>
+                <Route
+                    path='/graphspace/:graphspace/graph/:graph/detail'
+                    element={<GraphDetail />}
+                />
+            </Routes>
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByText(
+        'Graph details are unavailable. Check the server and retry.'
+    )).toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(message.error).not.toHaveBeenCalled();
 });
 
 test('shows one inline fallback without duplicating the transport toast', async () => {

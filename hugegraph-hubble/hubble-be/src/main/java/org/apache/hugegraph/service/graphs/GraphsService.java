@@ -285,14 +285,49 @@ public class GraphsService {
     }
 
     public void setDefault(HugeClient client, String graph) {
-        client.graphs().setDefault(graph);
+        Map<String, Object> response = client.graphs().getDefault();
+        Set<String> defaults = defaultGraphs(response.get("default_graph"));
+
+        boolean targetIsDefault = defaults.contains(graph);
+        if (!targetIsDefault) {
+            client.graphs().setDefault(graph);
+        }
+        for (String current : defaults) {
+            if (!graph.equals(current)) {
+                client.graphs().unSetDefault(current);
+            }
+        }
+    }
+
+    private static Set<String> defaultGraphs(Object value) {
+        if (value == null) {
+            return Collections.emptySet();
+        }
+
+        Collection<?> values;
+        if (value instanceof Collection) {
+            values = (Collection<?>) value;
+        } else if (value instanceof String) {
+            values = Collections.singleton(value);
+        } else {
+            throw new IllegalStateException("Invalid default_graph response type");
+        }
+
+        Set<String> defaults = new LinkedHashSet<>();
+        for (Object item : values) {
+            if (!(item instanceof String) || StringUtils.isBlank((String) item)) {
+                throw new IllegalStateException("Invalid default_graph entry");
+            }
+            defaults.add((String) item);
+        }
+        return defaults;
     }
 
     public void unSetDefault(HugeClient client, String graph) {
         client.graphs().unSetDefault(graph);
     }
 
-    public Map<String, String> getDefault(HugeClient client) {
+    public Map<String, Object> getDefault(HugeClient client) {
         return client.graphs().getDefault();
     }
 
@@ -578,6 +613,10 @@ public class GraphsService {
             return asyncId;
         } catch (Throwable e) {
             status = ExecuteStatus.ASYNC_TASK_FAILED;
+            // TODO: Persist an async failure reason only after the Server Task
+            // DTO exposes a stable, sanitized reason code. Depending on task
+            // status alone cannot distinguish submission from execution
+            // failures; remove this TODO when that Server capability exists.
             throw e;
         } finally {
             timer.stop();

@@ -69,6 +69,29 @@ public class FileMappingSchemaTest {
         }
     }
 
+    @Test
+    public void testSchemaMigratorAddsExecuteHistoryFailureReasonIdempotently()
+           throws Exception {
+        String url = "jdbc:h2:mem:execute_history_failure_reason;DB_CLOSE_DELAY=-1";
+        try (Connection conn = DriverManager.getConnection(url)) {
+            try (Statement statement = conn.createStatement()) {
+                statement.execute("CREATE TABLE `execute_history` (" +
+                                  "`id` INT NOT NULL AUTO_INCREMENT, " +
+                                  "PRIMARY KEY (`id`))");
+            }
+
+            DatabaseSchemaMigrator migrator = new DatabaseSchemaMigrator();
+            migrator.migrate(conn);
+            migrator.migrate(conn);
+
+            try (ResultSet columns = conn.getMetaData().getColumns(
+                    null, null, "EXECUTE_HISTORY", "FAILURE_REASON")) {
+                Assert.assertTrue(columns.next());
+                Assert.assertEquals(64, columns.getInt("COLUMN_SIZE"));
+            }
+        }
+    }
+
     private void insertDeepPath(Connection conn, String deepPath)
             throws Exception {
         try (PreparedStatement insert = conn.prepareStatement(

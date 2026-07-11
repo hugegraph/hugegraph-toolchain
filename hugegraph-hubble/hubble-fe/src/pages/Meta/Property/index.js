@@ -21,6 +21,10 @@ import {useState, useEffect, useCallback} from 'react';
 import {EditPropertyLayer} from './EditLayer';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
+
+const PROPERTY_IN_USE_KEY = 'schema.property.in_use';
+const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
 const PropertyTable = ({noHeader, forceRefresh}) => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
@@ -29,43 +33,48 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
     const [pagination, setPagination] = useState({current: 1, total: 10});
     const [selectedItems, setSelectedItems] = useState([]);
     const {graphspace, graph} = useParams();
+    const {t} = useTranslation();
 
     const removeProperty = useCallback((names, isBatch) => {
-        api.manage.checkMetaProperty(graphspace, graph, {names}).then(res => {
+        api.manage.checkMetaProperty(graphspace, graph, {names}, DELETE_REQUEST_CONFIG).then(res => {
             if (res.status !== 200) {
-                message.error(res.message);
+                message.error(t('schema.delete_failed'));
                 return;
             }
 
             const inUse = names.filter(name => res.data[name] === true);
             if (inUse.length > 0) {
-                message.error(`属性数据 ${inUse.join(',')} 正在使用中，不可删除`);
+                message.error(t(PROPERTY_IN_USE_KEY, {names: inUse.join(',')}));
                 return;
             }
 
             Modal.confirm({
-                title: '确认删除此属性？',
+                title: t('schema.property.delete_confirm'),
                 content: (
-                    <div>删除后无法恢复，请谨慎操作。</div>
+                    <div>{t('schema.common.delete_warning')}</div>
                 ),
-                onOk: () => {
-                    api.manage.delMetaProperty(graphspace, graph, {names: names}).then(res => {
-                        if (res.status !== 200) {
-                            message.error(res.message);
-                            return;
-                        }
+                onOk: () => api.manage.delMetaProperty(
+                    graphspace, graph, {names}, DELETE_REQUEST_CONFIG
+                ).then(res => {
+                    if (res.status !== 200) {
+                        message.error(t('schema.delete_failed'));
+                        return;
+                    }
 
-                        if (isBatch) {
-                            setSelectedItems([]);
-                        }
+                    if (isBatch) {
+                        setSelectedItems([]);
+                    }
 
-                        message.success('删除成功');
-                        setRefresh(!refresh);
-                    });
-                },
+                    message.success(t('common.msg.delete_success'));
+                    setRefresh(!refresh);
+                }).catch(() => {
+                    message.error(t('schema.delete_failed'));
+                }),
             });
+        }).catch(() => {
+            message.error(t('schema.delete_failed'));
         });
-    }, [graph, graphspace, refresh]);
+    }, [graph, graphspace, refresh, t]);
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
@@ -89,40 +98,40 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
 
     const handleDeleteBatch = useCallback(() => {
         if (selectedItems.length === 0) {
-            message.error('请至少选择一项');
+            message.error(t('common.msg.select_one'));
             return;
         }
 
         removeProperty(selectedItems, true);
-    }, [removeProperty, selectedItems]);
+    }, [removeProperty, selectedItems, t]);
 
     const rowKey = useCallback(item => item.name, []);
 
     const columns = [
         {
-            title: '属性名称',
+            title: t('schema.property.col.name'),
             dataIndex: 'name',
             render: val => <span style={{wordBreak: 'break-all'}}>{val}</span>,
         },
         {
-            title: '数据类型',
+            title: t('schema.property.col.type'),
             dataIndex: 'data_type',
             width: 120,
             align: 'center',
             render: val => (val === 'TEXT' ? 'string' : val.toLocaleLowerCase()),
         },
         {
-            title: '基数',
+            title: t('schema.property.col.cardinality'),
             dataIndex: 'cardinality',
             width: 120,
             align: 'center',
             render: val => val.toLocaleLowerCase(),
         },
         {
-            title: '操作',
+            title: t('schema.property.col.operation'),
             width: 120,
             align: 'center',
-            render: val => <a onClick={() => handleDelete(val)}>删除</a>,
+            render: val => <a onClick={() => handleDelete(val)}>{t('common.action.delete')}</a>,
         },
     ];
 
@@ -145,9 +154,9 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
                 <Row>
                     <Col>
                         <Space>
-                            <Button type='primary' onClick={handleShowLayer}>创建</Button>
-                            <Button onClick={handleRefresh}>刷新</Button>
-                            <Button onClick={handleDeleteBatch}>批量删除</Button>
+                            <Button type='primary' onClick={handleShowLayer}>{t('common.action.create')}</Button>
+                            <Button onClick={handleRefresh}>{t('common.action.refresh')}</Button>
+                            <Button onClick={handleDeleteBatch}>{t('schema.common.batch_delete')}</Button>
                         </Space>
                     </Col>
                 </Row>

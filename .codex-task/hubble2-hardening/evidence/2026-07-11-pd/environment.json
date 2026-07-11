@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-07-11T15:03:00+08:00",
+  "isolation": {
+    "root": "/private/tmp/hubble2-hardening/pd-99936be5-prep",
+    "production_data": false,
+    "server_pd_repositories_modified": false
+  },
+  "versions": {
+    "toolchain_sha": "bf4e66a15a2feb77ae7bddcf421c9d4b8ddc4bf6",
+    "server_pd_store_sha": "99936be5f41fccd193f120e01206e3cf3c73a050",
+    "server_version_response": {"version": "v1", "core": "1.7.0", "gremlin": "3.5.1", "api": "0.71.0.0"},
+    "hubble_version": "1.8.0",
+    "hubble_baseline_tar_sha256": "4878c712989bfc4a78c998099c55ee0d95af45b5a401587f23b347b1fd1dad8a",
+    "hubble_final_tar_sha256": "df94a648448ec3b65f631c811a4f2ab83bf67de357f0aab3c49ac545f5227e14",
+    "hubble_final_main_asset": "main.2872755f.js",
+    "hubble_runtime": "/private/tmp/hubble2-hardening/pd-hubble-run10b/apache-hugegraph-hubble-1.8.0",
+    "java": "Eclipse Temurin 11.0.29+7",
+    "os_arch": "macOS arm64"
+  },
+  "ports": {
+    "pd_grpc": 18686,
+    "pd_rest": 18620,
+    "pd_raft": 18610,
+    "store_grpc": 18500,
+    "store_rest": 18520,
+    "store_raft": 18510,
+    "server_rest": 18080,
+    "server_gremlin": 18182,
+    "hubble": 28088
+  },
+  "server": {
+    "backend": "hstore",
+    "serializer": "binary",
+    "store": "hugegraph",
+    "use_pd": true,
+    "pd_peers": "127.0.0.1:18686",
+    "authenticator": "org.apache.hugegraph.auth.StandardAuthenticator",
+    "auth_graph_store": "hugegraph"
+  },
+  "hubble": {
+    "pd_enabled": true,
+    "direct_url": "http://127.0.0.1:18080",
+    "pd_peers": "127.0.0.1:18686",
+    "pd_rest": "127.0.0.1:18620"
+  },
+  "startup_attempts": [
+    {
+      "result": "failed",
+      "reason": "Server service discovery used the default 127.0.0.1:8686 because rest-server.properties lacked pd.peers"
+    },
+    {
+      "result": "failed",
+      "reason": "JDK 21 caused Groovy 2.5.14 Unsupported class file major version 65"
+    },
+    {
+      "result": "passed",
+      "java": "11.0.29",
+      "evidence": [
+        "PDClient connect to host = 127.0.0.1:18686 success",
+        "Success to register service to pd",
+        "RestServer started on 127.0.0.1:18080",
+        "Gremlin Channel started at port 18182"
+      ]
+    }
+  ],
+  "chrome_baseline": {
+    "login": "passed with isolated admin fixture",
+    "pd_navigation": "rendered",
+    "graphspace_route": "/graphspace",
+    "english_findings": [
+      "GraphSpace page is hard-coded Chinese",
+      "Schema Template and Account pages have the same i18n gap",
+      "super-admin nickname is Server-returned content and must be recorded as an external-content exception"
+    ],
+    "screenshot": "screenshots/graphspace-english-before.png"
+  }
+}

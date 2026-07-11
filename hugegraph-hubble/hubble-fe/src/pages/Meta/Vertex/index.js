@@ -19,9 +19,13 @@
 import {Table, Space, Button, message, Modal} from 'antd';
 import {useState, useEffect, useCallback} from 'react';
 import {useParams} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 import {EditVertexLayer} from './EditLayer';
 import TableHeader from '../../../components/TableHeader';
 import * as api from '../../../api';
+
+const VERTEX_IN_USE_KEY = 'schema.vertex.in_use';
+const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
 const VertexTable = () => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
@@ -32,48 +36,53 @@ const VertexTable = () => {
     const [vertexName, setVertexName] = useState('');
     const [propertyList, setPropertyList] = useState([]);
     const {graphspace, graph} = useParams();
+    const {t} = useTranslation();
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
     }, []);
 
     const removeVertex = useCallback((names, isBatch) => {
-        api.manage.checkMetaVertex(graphspace, graph, {names}).then(res => {
+        api.manage.checkMetaVertex(graphspace, graph, {names}, DELETE_REQUEST_CONFIG).then(res => {
             if (res.status !== 200) {
-                message.error(res.message);
+                message.error(t('schema.delete_failed'));
                 return;
             }
 
             const inUse = names.filter(name => res.data[name] === true);
             if (inUse.length > 0) {
-                message.error(`顶点数据 ${inUse.join(',')} 正在使用中，不可删除`);
+                message.error(t(VERTEX_IN_USE_KEY, {names: inUse.join(',')}));
                 return;
             }
 
             Modal.confirm({
-                title: '确认删除此顶点类型？',
+                title: t('schema.vertex.delete_confirm'),
                 content: (
-                    <><div>删除后无法恢复，请谨慎操作</div>
-                        <div>删除元数据耗时较久，详情可在任务管理中查看</div>
+                    <><div>{t('schema.delete_irreversible')}</div>
+                        <div>{t('schema.delete_task_hint')}</div>
                     </>),
-                onOk: () => {
-                    api.manage.delMetaVertex(graphspace, graph, {names}).then(res => {
-                        if (res.status !== 200) {
-                            message.error(res.message);
-                            return;
-                        }
+                onOk: () => api.manage.delMetaVertex(
+                    graphspace, graph, {names}, DELETE_REQUEST_CONFIG
+                ).then(res => {
+                    if (res.status !== 200) {
+                        message.error(t('schema.delete_failed'));
+                        return;
+                    }
 
-                        if (isBatch) {
-                            setSelectedItems([]);
-                        }
+                    if (isBatch) {
+                        setSelectedItems([]);
+                    }
 
-                        message.success('删除成功');
-                        setRefresh(!refresh);
-                    });
-                },
+                    message.success(t('common.delete_success'));
+                    setRefresh(!refresh);
+                }).catch(() => {
+                    message.error(t('schema.delete_failed'));
+                }),
             });
+        }).catch(() => {
+            message.error(t('schema.delete_failed'));
         });
-    }, [graph, graphspace, refresh]);
+    }, [graph, graphspace, refresh, t]);
 
     const handleDelete = useCallback(row => {
         removeVertex([row.name]);
@@ -101,51 +110,51 @@ const VertexTable = () => {
 
     const handleDeleteBatch = useCallback(() => {
         if (selectedItems.length === 0) {
-            message.error('请至少选择一项');
+            message.error(t('common.select_at_least_one'));
             return;
         }
 
         removeVertex(selectedItems, true);
-    }, [selectedItems, removeVertex]);
+    }, [selectedItems, removeVertex, t]);
 
     const columns = [
         {
-            title: '顶点类型名称',
+            title: t('schema.vertex.col.name'),
             dataIndex: 'name',
         },
         {
-            title: '关联属性',
+            title: t('schema.col.properties'),
             dataIndex: 'properties',
             ellipsis: true,
             render: val => val.map(item => item.name).join(';'),
         },
         {
-            title: 'ID策略',
+            title: t('schema.vertex.col.id_strategy'),
             dataIndex: 'id_strategy',
         },
         {
-            title: '主键属性',
+            title: t('schema.vertex.col.primary_keys'),
             dataIndex: 'primary_keys',
             render: val => val.join(','),
         },
         {
-            title: '类型索引',
+            title: t('schema.col.label_index'),
             dataIndex: 'open_label_index',
-            render: val => (val ? '是' : '否'),
+            render: val => (val ? t('common.yes') : t('common.no')),
         },
         {
-            title: '属性索引',
+            title: t('schema.col.property_indexes'),
             dataIndex: 'property_indexes',
             ellipsis: true,
             render: val => val.map(item => item.name).join(';'),
         },
         {
-            title: '操作',
+            title: t('common.operation'),
             align: 'center',
             render: val => (
                 <Space>
-                    <a onClick={() => handleEdit(val)}>编辑</a>
-                    <a onClick={() => handleDelete(val)}>删除</a>
+                    <a onClick={() => handleEdit(val)}>{t('common.edit')}</a>
+                    <a onClick={() => handleDelete(val)}>{t('common.delete')}</a>
                 </Space>
             ),
         },
@@ -179,9 +188,9 @@ const VertexTable = () => {
         <>
             <TableHeader>
                 <Space>
-                    <Button type='primary' onClick={handleCreate}>创建</Button>
-                    <Button onClick={handleRefresh}>刷新</Button>
-                    <Button onClick={handleDeleteBatch}>批量删除</Button>
+                    <Button type='primary' onClick={handleCreate}>{t('common.create')}</Button>
+                    <Button onClick={handleRefresh}>{t('common.refresh')}</Button>
+                    <Button onClick={handleDeleteBatch}>{t('common.batch_delete')}</Button>
                 </Space>
             </TableHeader>
 

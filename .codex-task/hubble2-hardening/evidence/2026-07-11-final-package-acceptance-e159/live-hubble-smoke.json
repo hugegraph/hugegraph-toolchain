@@ -1,0 +1,165 @@
+{
+  "checks": [
+    {
+      "detail": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"/><link rel=\"icon\" href=\"/favicon.ico\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/><meta name=\"theme-color\" content=\"#000000\"/><meta name=\"description\" content=\"Web site created using create-react-app\"/><link rel=\"apple-touch-icon\" href=\"/logo192.png\"/><link rel=\"manifest\" href=\"/manifest.json\"/><title>HugeGraph Hubble</title><script defer=\"defer\" src=\"/static/js/main.e159790d.js\"></script><link href=\"/static/css/main.0dca135e.css\" rel=\"stylesheet\"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id=\"root\"></div></body></html>",
+      "name": "hubble-health",
+      "status": "passed"
+    },
+    {
+      "name": "hubble-ui-root",
+      "status": "passed"
+    },
+    {
+      "name": "route:/navigation",
+      "status": "passed"
+    },
+    {
+      "name": "route:/graphspace",
+      "status": "passed"
+    },
+    {
+      "name": "route:/gremlin",
+      "status": "passed"
+    },
+    {
+      "name": "route:/algorithms",
+      "status": "passed"
+    },
+    {
+      "name": "route:/asyncTasks",
+      "status": "passed"
+    },
+    {
+      "name": "hubble-login",
+      "status": "passed",
+      "user": "admin"
+    },
+    {
+      "level": "ADMIN",
+      "name": "hubble-auth-status",
+      "status": "passed"
+    },
+    {
+      "name": "server-login",
+      "status": "passed",
+      "user": "admin"
+    },
+    {
+      "name": "graphspace-list",
+      "status": "passed"
+    },
+    {
+      "name": "schema-graphview",
+      "status": "passed"
+    },
+    {
+      "name": "job-manager-list",
+      "status": "passed"
+    },
+    {
+      "name": "async-task-list",
+      "status": "passed"
+    },
+    {
+      "detail_type": "dict",
+      "name": "server-versions",
+      "status": "passed"
+    },
+    {
+      "name": "hubble-schema-propertykeys",
+      "status": "passed"
+    },
+    {
+      "label": "issue_694_1783757475_person",
+      "name": "hubble-schema-vertexlabel",
+      "status": "passed"
+    },
+    {
+      "label": "issue_694_1783757475_knows",
+      "name": "hubble-schema-edgelabel",
+      "status": "passed"
+    },
+    {
+      "label": "issue_694_1783757475_person",
+      "name": "server-direct-schema-vertexlabel",
+      "status": "passed"
+    },
+    {
+      "file_mapping_id": 1,
+      "job_id": 1,
+      "name": "hubble-upload-csv",
+      "status": "passed"
+    },
+    {
+      "file_mapping_id": 1,
+      "name": "hubble-file-mapping",
+      "status": "passed"
+    },
+    {
+      "job_status": "LOADING",
+      "name": "hubble-loader-task",
+      "status": "passed",
+      "task_id": 1,
+      "task_status": "SUCCEED"
+    },
+    {
+      "edges": 2,
+      "expected_edges": 2,
+      "expected_vertices": 3,
+      "name": "server-loader-rest-count",
+      "status": "passed",
+      "vertices": 3
+    },
+    {
+      "expected_edges": [
+        [
+          "issue_694_1783757475_alice",
+          "issue_694_1783757475_bob",
+          "issue_694_1783757475_knows"
+        ],
+        [
+          "issue_694_1783757475_bob",
+          "issue_694_1783757475_carol",
+          "issue_694_1783757475_knows"
+        ]
+      ],
+      "expected_vertices": [
+        "issue_694_1783757475_alice",
+        "issue_694_1783757475_bob",
+        "issue_694_1783757475_carol"
+      ],
+      "name": "server-direct-shortestpath",
+      "server_edges": 2,
+      "server_path_objects": 3,
+      "server_vertices": 3,
+      "status": "passed"
+    },
+    {
+      "classification": "known-follow-up",
+      "name": "hubble-shortestpath-string-id-followup",
+      "reason": "Hubble shortestPath string-id handling is tracked outside the loader auth smoke gate",
+      "status": "skipped"
+    },
+    {
+      "classification": "hubble-api-available",
+      "http_or_business_status": 200,
+      "name": "analysis-cypher-boundary",
+      "status": "passed"
+    },
+    {
+      "classification": "boundary-or-environment-dependent",
+      "http_or_business_status": 400,
+      "name": "analysis-olap-boundary",
+      "status": "passed"
+    }
+  ],
+  "connection_name": "issue_694_1783757475_conn",
+  "data_prefix": "issue_694_1783757475",
+  "graph": "hugegraph",
+  "hubble_home": "/var/folders/9h/hhd8xz1x0bj2kx8vjsm0h4sc0000gn/T/hubble-694-runtime-H2w1OG/apache-hugegraph-hubble-1.8.0",
+  "hubble_url": "http://127.0.0.1:48088",
+  "server_url": "http://127.0.0.1:8080",
+  "status": "passed",
+  "tarball": "hugegraph-hubble/target/apache-hugegraph-hubble-1.8.0.tar.gz",
+  "work_dir": "/var/folders/9h/hhd8xz1x0bj2kx8vjsm0h4sc0000gn/T/hubble-694-runtime-H2w1OG"
+}

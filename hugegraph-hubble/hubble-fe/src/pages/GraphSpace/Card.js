@@ -17,36 +17,46 @@
  */
 
 import {ExclamationCircleOutlined, InfoOutlined} from '@ant-design/icons';
-import {Menu, Typography, Dropdown, Row, Col, Space, Progress, Card, Tooltip} from 'antd';
+import {Typography, Dropdown, Row, Col, Space, Progress, Card, Tooltip} from 'antd';
 import {Link, useNavigate} from 'react-router-dom';
 import moment from 'moment';
 import style from './index.module.scss';
 import React, {useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 
-const showText = (val, suffix, empty) => (val > 99999 ? (empty === undefined ? '未限制' : empty) : `${val}${suffix}`);
+const showText = (val, suffix, unlimited, empty) => (
+    val > 99999 ? (empty === undefined ? unlimited : empty) : `${val}${suffix}`
+);
 
 const formatPercent = percent => {
     return percent >= 100 ? <InfoOutlined /> : `${percent}%`;
 };
 
-const TitleField = ({item, onClick}) => (
-    <>
-        <Typography.Text
-            style={{maxWidth: 244}}
-            ellipsis={{ellipsis: true}}
-            title={`${item.nickname}`}
-            onClick={onClick}
-        >{item.nickname}
-        </Typography.Text>
-        <div className={style.subtitle}>
-            {item.default && <span className={style.default}>默认图空间</span>}
-            {moment(item.create_time).format('YYYY-MM-DD')}创建
-        </div>
-    </>
-);
+const TitleField = ({item, onClick}) => {
+    const {t} = useTranslation();
+
+    return (
+        <>
+            <Typography.Text
+                style={{maxWidth: 244}}
+                ellipsis={{ellipsis: true}}
+                title={`${item.nickname}`}
+                onClick={onClick}
+            >{item.nickname}
+            </Typography.Text>
+            <div className={style.subtitle}>
+                {item.default && (
+                    <span className={style.default}>{t('graphspace.card.set_default')}</span>
+                )}
+                {moment(item.create_time).format('YYYY-MM-DD')} {t('graphspace.card.created')}
+            </div>
+        </>
+    );
+};
 
 const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) => {
     const navigate = useNavigate();
+    const {t} = useTranslation();
 
     const handleGotoGraph = useCallback(() => {
         navigate(`/graphspace/${item.name}`);
@@ -60,41 +70,48 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
         deleteGraphspace(item.name);
     }, [deleteGraphspace, item]);
 
-    const Overlay = ({item}) => (
-        item.name === 'neizhianli' ? (
-            <Menu
-                items={[
-                    {
-                        key: '1',
-                        label: <Link to={`/graphspace/${item.name}/schema`}>schema模版管理</Link>,
-                    },
-                    {
-                        key: '2',
-                        label: <a onClick={handleInit}>初始化</a>,
-                    },
-                ]}
-            />
-        ) : (
-            <Menu
-                items={[
-                    {
-                        key: '1',
-                        label: <Link to={`/graphspace/${item.name}/schema`}>schema模版管理</Link>,
-                    },
-                    {
-                        key: '2',
-                        label: <a onClick={handleEdit}>编辑</a>,
-                    },
-                    {
-                        key: '3',
-                        label: (item.default)
-                            ? <span className={style.disable}>删除</span>
-                            : <a onClick={handleDelete}>删除</a>,
-                    },
-                ]}
-            />
-        )
-    );
+    const getMenu = item => ({
+        items: item.name === 'neizhianli'
+            ? [
+                {
+                    key: '1',
+                    label: (
+                        <Link to={`/graphspace/${item.name}/schema`}>
+                            {t('common.action.schema_manage')}
+                        </Link>
+                    ),
+                },
+                {
+                    key: '2',
+                    label: <a onClick={handleInit}>{t('common.action.init')}</a>,
+                },
+            ]
+            : [
+                {
+                    key: '1',
+                    label: (
+                        <Link to={`/graphspace/${item.name}/schema`}>
+                            {t('common.action.schema_manage')}
+                        </Link>
+                    ),
+                },
+                {
+                    key: '2',
+                    label: <a onClick={handleEdit}>{t('common.action.edit')}</a>,
+                },
+                {
+                    key: '3',
+                    label: (item.default)
+                        ? <span className={style.disable}>{t('common.action.delete')}</span>
+                        : <a onClick={handleDelete}>{t('common.action.delete')}</a>,
+                },
+            ],
+    });
+
+    const unlimited = t('graphspace.unit.unlimited');
+    const cpu = showText(item.cpu_limit, t('graphspace.unit.cpu'), unlimited);
+    const memory = showText(item.memory_limit, t('graphspace.unit.memory'), unlimited);
+    const storage = showText(item.storage_limit, t('graphspace.unit.memory'), unlimited);
 
     return (
         <Card
@@ -112,19 +129,28 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
             }}
             extra={(
                 <Dropdown.Button
-                    overlay={<Overlay item={item} />}
+                    menu={getMenu(item)}
                     trigger={['click']}
                 >
-                    <Link to={`/graphspace/${item.name}`}>进入图空间</Link>
+                    <Link to={`/graphspace/${item.name}`}>{t('graphspace.card.enter')}</Link>
                 </Dropdown.Button>
             )}
             actions={
                 [
                     <Space key="1">
-                        <span>顶点：{item.statistic?.vertex}</span>
-                        <span>边：{item.statistic?.edge}</span>
+                        <span>{t('graphspace.card.vertex')}: {item.statistic?.vertex}</span>
+                        <span>{t('graphspace.card.edge')}: {item.statistic?.edge}</span>
                         <span>
-                            <Tooltip title={<><div>点边数每日更新</div><div>本次数据更新于 {item.statistic.date}</div></>}>
+                            <Tooltip title={(
+                                <>
+                                    <div>{t('graphspace.card.daily_update')}</div>
+                                    <div>{t('graphspace.card.last_update', {
+                                        date: item.statistic.date,
+                                    })}
+                                    </div>
+                                </>
+                            )}
+                            >
                                 <ExclamationCircleOutlined />
                             </Tooltip>
                         </span>
@@ -136,15 +162,19 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
                 <Row justify='space-between'>
                     <Col span={14}>
                         <ul className={style.list}>
-                            <li>图ID：{item.name}</li>
-                            <li>是否鉴权：{item.auth ? '是' : '否'}</li>
+                            <li>{t('graphspace.card.graph_id', {name: item.name})}</li>
                             <li>
-                                最大图数：{showText(item.max_graph_number, '')}
+                                {t('graphspace.card.auth_label')}
+                                {t(item.auth ? 'graphspace.auth_yes' : 'graphspace.auth_no')}
                             </li>
-                            <li>cpu资源：{showText(item.cpu_limit, '核')}</li>
-                            <li>内存资源：{showText(item.memory_limit, 'G')}</li>
-                            <li>最大存储空间限制：
-                                {showText(item.storage_limit, 'G')}
+                            <li>
+                                {t('graphspace.card.max_graph')}
+                                {showText(item.max_graph_number, '', t('graphspace.unit.unlimited'))}
+                            </li>
+                            <li>{t('graphspace.card.cpu', {val: cpu})}</li>
+                            <li>{t('graphspace.card.memory', {val: memory})}</li>
+                            <li>{t('graphspace.card.storage')}
+                                {storage}
                             </li>
                         </ul>
                     </Col>
@@ -161,11 +191,16 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
                             <div
                                 style={{textAlign: 'center', fontSize: '12px'}}
                             >
-                                <div>已使用：</div>
+                                <div>{t('graphspace.card.used')}</div>
                                 <div>
-                                    {item.storage_used}G
+                                    {item.storage_used}{t('graphspace.unit.memory')}
                                     {' / '}
-                                    {showText(item.storage_limit, 'G', '--')}
+                                    {showText(
+                                        item.storage_limit,
+                                        t('graphspace.unit.memory'),
+                                        t('graphspace.unit.unlimited'),
+                                        '--'
+                                    )}
                                 </div>
                             </div>
                         </Space>

@@ -120,7 +120,6 @@ const Rings = props => {
                     highlightName={currentAlgorithm === RINGS}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

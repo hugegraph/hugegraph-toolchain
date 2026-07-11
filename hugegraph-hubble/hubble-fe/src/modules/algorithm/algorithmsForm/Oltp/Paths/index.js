@@ -115,7 +115,6 @@ const Paths = props => {
                     highlightName={currentAlgorithm === PATHS}
                 />
             }
-            {...props}
         >
             <Form
                 form={pathsForm}

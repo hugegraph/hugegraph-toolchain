@@ -5,19 +5,23 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0.
  */
 
-const normalizeDashboardUrl = address => {
+const normalizeDashboardUrl = (address, protocol = 'http') => {
     const value = typeof address === 'string' ? address.trim() : '';
     if (!value) {
         throw new Error('Dashboard address is empty');
     }
-    if (/^[a-z][a-z\d+.-]*:\/\//i.test(value) && !/^https?:\/\//i.test(value)) {
+    if (!['http', 'https'].includes(protocol)) {
         throw new Error('Dashboard address must use HTTP or HTTPS');
     }
-    const url = new URL(/^https?:\/\//i.test(value) ? value : `http://${value}`);
-    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) {
-        throw new Error('Dashboard address must use HTTP or HTTPS');
+    if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) {
+        throw new Error('Dashboard address must contain only host and port');
     }
-    return url.toString().replace(/\/$/, '');
+    const url = new URL(`${protocol}://${value}`);
+    if (!url.hostname || url.username || url.password
+        || url.pathname !== '/' || url.search || url.hash) {
+        throw new Error('Dashboard address must contain only host and port');
+    }
+    return url.origin;
 };
 
 const probeDashboard = async (url, fetchImpl = window.fetch.bind(window), timeout = 3000) => {

@@ -128,7 +128,6 @@ const Louvain = props => {
                     highlightName={currentAlgorithm === LOUVAIN}
                 />
             }
-            {...props}
             forceRender
         >
             <Form

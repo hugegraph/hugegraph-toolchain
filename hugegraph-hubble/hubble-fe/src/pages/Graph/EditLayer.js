@@ -18,6 +18,7 @@
 
 import {Modal, Form, Input, Select, message} from 'antd';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../api/index';
 import * as rules from '../../utils/rules';
 import {byteConvert, timeConvert} from '../../utils/format';
@@ -27,17 +28,17 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
     const [schemaList, setSchemaList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
+    const {t} = useTranslation();
 
     const onFinish = useCallback(() => {
         form.validateFields().then(values => {
             setLoading(true);
 
             if (graph) {
-                // 编辑
                 api.manage.updateGraph(graphspace, graph, {nickname: values.nickname}).then(res => {
                     setLoading(false);
                     if (res.status === 200) {
-                        message.success('添加成功');
+                        message.success(t('graph.form.update_success'));
                         onCancel();
                         refresh();
                         return;
@@ -47,11 +48,10 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                 return;
             }
 
-            // 新增
             api.manage.addGraph(graphspace, {...values, auth: false, graphspace}).then(res => {
                 setLoading(false);
                 if (res.status === 200) {
-                    message.success('添加成功');
+                    message.success(t('graph.form.create_success'));
                     onCancel();
                     refresh();
                     return;
@@ -59,7 +59,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                 message.error(res.message);
             });
         });
-    }, [form, graphspace, graph, refresh, onCancel]);
+    }, [form, graphspace, graph, refresh, onCancel, t]);
 
     useEffect(() => {
         if (!visible) {
@@ -88,7 +88,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
         <Modal
             open={visible}
             onCancel={onCancel}
-            title={graph ? '编辑' : '创建'}
+            title={graph ? t('graph.form.title_edit') : t('graph.form.title_create')}
             destroyOnClose
             width={600}
             onOk={onFinish}
@@ -101,18 +101,18 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                 preserve={false}
             >
                 <Form.Item
-                    label='图ID'
+                    label={t('graph.form.name')}
                     rules={[rules.required(), rules.isName, {type: 'string', max: 48}]}
                     name='graph'
                 >
-                    <Input placeholder='只能包含小写字母、数字、_，最长48位' disabled={graph} />
+                    <Input placeholder={t('graph.form.name_placeholder')} disabled={graph} />
                 </Form.Item>
                 <Form.Item
-                    label='图名'
+                    label={t('graph.form.nickname')}
                     rules={[rules.required(), rules.isPropertyName, {type: 'string', max: 12}]}
                     name='nickname'
                 >
-                    <Input placeholder='只能包含中文、字母、数字、_，最长12位' />
+                    <Input placeholder={t('graph.form.nickname_placeholder')} />
                 </Form.Item>
                 {!graph && (
                     <Form.Item
@@ -120,7 +120,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                         name='schema'
                     >
                         <Select
-                            placeholder='请选择schema'
+                            placeholder={t('graph.form.schema_placeholder')}
                             options={schemaList.map(item => ({label: item.name, value: item.name}))}
                         />
                     </Form.Item>
@@ -132,6 +132,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
 
 const ViewLayer = ({visible, onCancel, graphspace, graph}) => {
     const [info, setInfo] = useState('');
+    const {t} = useTranslation();
 
     useEffect(() => {
         if (!visible) {
@@ -151,7 +152,7 @@ const ViewLayer = ({visible, onCancel, graphspace, graph}) => {
         <Modal
             open={visible}
             onCancel={onCancel}
-            title='查看schema'
+            title={t('graph.menu.view_schema')}
             width={600}
             onOk={onCancel}
             footer={null}
@@ -167,8 +168,8 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
     const [graphspaceList, setGraphspaceList] = useState([]);
     const [detail, setDetail] = useState({});
     const [loading, setLoading] = useState(false);
+    const {t} = useTranslation();
 
-    // 不等
     const notEq = (str, msg) => ({
         validator(_, value) {
             if (value !== str) {
@@ -190,7 +191,7 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
             }).then(res => {
                 setLoading(false);
                 if (res.status === 200) {
-                    message.success('克隆成功');
+                    message.success(t('graph.clone.success'));
                     onCancel();
                     refresh();
                     return;
@@ -199,7 +200,7 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
                 message.error(res.message);
             });
         });
-    }, [form, graphspace, graph, onCancel, refresh]);
+    }, [form, graphspace, graph, onCancel, refresh, t]);
 
     useEffect(() => {
         if (!open) {
@@ -211,7 +212,7 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
                 setDetail(res.data);
                 form.setFieldsValue({
                     name: res.data.name,
-                    nickname: `${res.data.nickname}复制`,
+                    nickname: t('graph.clone.nickname', {nickname: res.data.nickname}),
                 });
             }
         });
@@ -223,13 +224,13 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
             }
             message.error(res.message);
         });
-    }, [open, graphspace, graph, form]);
+    }, [open, graphspace, graph, form, t]);
 
     return (
         <Modal
             open={open}
             onCancel={onCancel}
-            title='克隆图'
+            title={t('graph.clone.title')}
             width={600}
             onOk={handleClone}
             maskClosable={false}
@@ -246,52 +247,52 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
                 }}
             >
                 <Form.Item
-                    label='克隆图ID'
+                    label={t('graph.clone.name')}
                     rules={[
                         rules.required(),
                         rules.isName,
                         {type: 'string', max: 48},
-                        notEq(graph, '不可以和原图ID重复'),
+                        notEq(graph, t('graph.clone.name_duplicate')),
                     ]}
                     name='name'
                 >
-                    <Input placeholder='不可以和原图ID重复' />
+                    <Input placeholder={t('graph.clone.name_duplicate')} />
                 </Form.Item>
                 <Form.Item
-                    label='克隆图名称'
+                    label={t('graph.clone.nickname_label')}
                     rules={[
                         rules.required(),
                         rules.isPropertyName,
                         {type: 'string', max: 48},
-                        notEq(detail.nickname, '不可以和原图名称重复'),
+                        notEq(detail.nickname, t('graph.clone.nickname_duplicate')),
                     ]}
                     name='nickname'
                 >
-                    <Input placeholder='不可以和原图名称重复' />
+                    <Input placeholder={t('graph.clone.nickname_duplicate')} />
                 </Form.Item>
                 <Form.Item
-                    label='存储图空间'
+                    label={t('graph.clone.graphspace')}
                     rules={[rules.required()]}
                     name='graphspace'
                 >
                     <Select options={graphspaceList.map(item => ({label: item.nickname, value: item.name}))} />
                 </Form.Item>
                 <Form.Item
-                    label='克隆内容'
+                    label={t('graph.clone.content')}
                     name='load_data'
                     required
                 >
                     <Select
                         options={[
-                            {label: '克隆schema', value: 0},
-                            {label: '克隆schema+数据', value: 1},
+                            {label: t('graph.clone.schema'), value: 0},
+                            {label: t('graph.clone.schema_data'), value: 1},
                         ]}
                     />
                 </Form.Item>
-                <Form.Item label='所需硬盘为' className={style.form_item}>{byteConvert(detail.storage)}</Form.Item>
-                {/* <Form.Item label='所需内存为' className={style.form_item}>111</Form.Item> */}
-                {/* 复制时间按4G/h估算 */}
-                <Form.Item label='预计复制时间' className={style.form_item}>
+                <Form.Item label={t('graph.clone.required_disk')} className={style.form_item}>
+                    {byteConvert(detail.storage)}
+                </Form.Item>
+                <Form.Item label={t('graph.clone.estimated_time')} className={style.form_item}>
                     {timeConvert(detail.storage * 3600 / (4 * 1024 * 1024))}
                 </Form.Item>
             </Form>

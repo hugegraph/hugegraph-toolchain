@@ -317,7 +317,7 @@ public class GraphsController extends BaseController {
     public void setDefaultByCanonicalApi(
             @PathVariable("graphspace") String graphspace,
             @PathVariable("graph") String graph) {
-        this.graphsService.setDefault(this.authClient(graphspace, graph), graph);
+        this.graphsService.setDefault(this.authClient(graphspace, null), graph);
     }
 
     @DeleteMapping("{graph}/default")
@@ -329,7 +329,7 @@ public class GraphsController extends BaseController {
     }
 
     @GetMapping("default")
-    public Map<String, String> getDefault(
+    public Map<String, Object> getDefault(
             @PathVariable("graphspace") String graphspace) {
         return this.graphsService.getDefault(this.authClient(graphspace, null));
     }

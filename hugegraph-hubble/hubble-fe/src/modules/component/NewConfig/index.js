@@ -22,7 +22,7 @@
 
 import React, {useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Tooltip, Dropdown, Menu} from 'antd';
+import {Button, Tooltip, Dropdown} from 'antd';
 import {PlusSquareOutlined} from '@ant-design/icons';
 
 const NewConfig = props => {
@@ -48,27 +48,25 @@ const NewConfig = props => {
         [onClickAddEdge]
     );
 
-    const newMenu = (
-        <Menu
-            items={[
-                {
-                    key: '1',
-                    label: (<a onClick={handleClickNewNode}>{t('analysis.canvas.add_vertex')}</a>),
-                },
-                {
-                    key: '2',
-                    label: (<a onClick={() => handleClickNewEdge(false)}>{t('analysis.canvas.add_in_edge')}</a>),
-                },
-                {
-                    key: '3',
-                    label: (<a onClick={() => handleClickNewEdge(true)}>{t('analysis.canvas.add_out_edge')}</a>),
-                },
-            ]}
-        />
-    );
+    const newMenu = {
+        items: [
+            {
+                key: '1',
+                label: (<a onClick={handleClickNewNode}>{t('analysis.canvas.add_vertex')}</a>),
+            },
+            {
+                key: '2',
+                label: (<a onClick={() => handleClickNewEdge(false)}>{t('analysis.canvas.add_in_edge')}</a>),
+            },
+            {
+                key: '3',
+                label: (<a onClick={() => handleClickNewEdge(true)}>{t('analysis.canvas.add_out_edge')}</a>),
+            },
+        ],
+    };
 
     return (
-        <Dropdown overlay={newMenu} placement="bottomLeft" disabled={!buttonEnable}>
+        <Dropdown menu={newMenu} placement="bottomLeft" disabled={!buttonEnable}>
             <Tooltip placement="bottom" title={!buttonEnable ? tooltip : ''}>
                 <Button
                     type='text'

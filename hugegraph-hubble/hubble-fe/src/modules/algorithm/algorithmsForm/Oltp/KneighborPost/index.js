@@ -246,7 +246,6 @@ const KneighborPost = props => {
                     highlightName={currentAlgorithm === KNEIGHBOR_POST}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

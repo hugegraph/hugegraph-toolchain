@@ -132,7 +132,6 @@ const CustomizedCrosspoints = props => {
                     highlightName={currentAlgorithm === CUSTOMIZED_CROSSPOINTS}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

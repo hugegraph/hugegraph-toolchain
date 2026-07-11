@@ -119,7 +119,6 @@ const SameNeighborsBatch = props => {
                     highlightName={currentAlgorithm === SAME_NEIGHBORS_BATCH}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

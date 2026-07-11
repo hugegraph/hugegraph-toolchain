@@ -114,7 +114,6 @@ const ResourceAllocation = props => {
                     highlightName={currentAlgorithm === RESOURCE_ALLOCATION}
                 />
             }
-            {...props}
         >
             <Form
                 form={resourceAllocationForm}

@@ -20,6 +20,7 @@ import SelectedSolidArrowIcon from '../../../assets/ic_arrow_selected.svg';
 import NoSelectedSolidArrowIcon from '../../../assets/ic_arrow.svg';
 import SelectedSolidStraightIcon from '../../../assets/ic_straight_selected.svg';
 import NoSelectedSolidStraightIcon from '../../../assets/ic_straight.svg';
+import i18n from '../../../i18n';
 
 const colorSchemas = [
     '#5c73e6',
@@ -45,25 +46,25 @@ const colorSchemas = [
 ];
 
 const vertexSizeSchemas = [
-    {label: '超小', value: 'TINY'},
-    {label: '小', value: 'SMALL'},
-    {label: '中', value: 'NORMAL'},
-    {label: '大', value: 'BIG'},
-    {label: '超大', value: 'HUGE'},
+    {label: i18n.t('schema.options.size_tiny'), value: 'TINY'},
+    {label: i18n.t('schema.options.size_small'), value: 'SMALL'},
+    {label: i18n.t('schema.options.size_normal'), value: 'NORMAL'},
+    {label: i18n.t('schema.options.size_big'), value: 'BIG'},
+    {label: i18n.t('schema.options.size_huge'), value: 'HUGE'},
 ];
 
 const edgeSizeSchemas = [
-    {label: '粗', value: 'THICK'},
-    {label: '中', value: 'NORMAL'},
-    {label: '细', value: 'FINE'},
+    {label: i18n.t('schema.options.line_thick'), value: 'THICK'},
+    {label: i18n.t('schema.options.size_normal'), value: 'NORMAL'},
+    {label: i18n.t('schema.options.line_fine'), value: 'FINE'},
 ];
 
 const idOptions = [
-    {label: '主键ID', value: 'PRIMARY_KEY'},
-    {label: '自动生成', value: 'AUTOMATIC'},
-    {label: '自定义字符串', value: 'CUSTOMIZE_STRING'},
-    {label: '自定义数字', value: 'CUSTOMIZE_NUMBER'},
-    {label: '自定义UUID', value: 'CUSTOMIZE_UUID'},
+    {label: i18n.t('schema.options.id_primary'), value: 'PRIMARY_KEY'},
+    {label: i18n.t('schema.options.id_auto'), value: 'AUTOMATIC'},
+    {label: i18n.t('schema.options.id_string'), value: 'CUSTOMIZE_STRING'},
+    {label: i18n.t('schema.options.id_number'), value: 'CUSTOMIZE_NUMBER'},
+    {label: i18n.t('schema.options.id_uuid'), value: 'CUSTOMIZE_UUID'},
 ];
 
 const dataTypeOptions = [
@@ -97,16 +98,16 @@ const edgeShapeSchemas = [
 ];
 
 const attrOptions = [
-    {label: '非空', value: false},
-    {label: '允许空', value: true},
+    {label: i18n.t('schema.options.required'), value: false},
+    {label: i18n.t('schema.options.nullable'), value: true},
 ];
 
 const indexTypeOptions = [
-    {label: '二级索引', value: 'SECONDARY'},
-    {label: '范围索引', value: 'RANGE'},
-    {label: '全文索引', value: 'SEARCH'},
+    {label: i18n.t('schema.options.index_secondary'), value: 'SECONDARY'},
+    {label: i18n.t('schema.options.index_range'), value: 'RANGE'},
+    {label: i18n.t('schema.options.index_search'), value: 'SEARCH'},
     {label: 'SHARD', value: 'SHARD'},
-    {label: '唯一索引', value: 'UNIQUE'},
+    {label: i18n.t('schema.options.index_unique'), value: 'UNIQUE'},
 ];
 
 export {

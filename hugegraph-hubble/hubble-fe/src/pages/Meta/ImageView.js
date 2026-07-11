@@ -26,8 +26,10 @@ import {EditEdgeLayer} from './Edge/EditLayer';
 import PropertyTable from './Property';
 import {Button, Row, Space, Col, Drawer} from 'antd';
 import {formatToGraphInData} from '../../utils/formatGraphInData';
+import {useTranslation} from 'react-i18next';
 
 const ImageView = () => {
+    const {t} = useTranslation();
     // const graphRef = useRef(null);
     const {graphspace, graph} = useParams();
     const [data, setData] = useState({vertices: [], edges: []});
@@ -125,10 +127,10 @@ const ImageView = () => {
             <Row>
                 <Col>
                     <Space>
-                        <Button onClick={createProperty}>创建属性</Button>
-                        <Button onClick={createVertex}>创建顶点类型</Button>
-                        <Button onClick={createEdge}>创建边类型</Button>
-                        <Button onClick={showPropertyList}>查看属性</Button>
+                        <Button onClick={createProperty}>{t('schema.property.create')}</Button>
+                        <Button onClick={createVertex}>{t('schema.vertex.create')}</Button>
+                        <Button onClick={createEdge}>{t('schema.edge.form.title_create')}</Button>
+                        <Button onClick={showPropertyList}>{t('schema.image_view.view_properties')}</Button>
                     </Space>
                 </Col>
             </Row>
@@ -182,7 +184,7 @@ const ImageView = () => {
                 onClose={hidePropertyListLayer}
                 width={600}
                 mask={false}
-                title='查看属性'
+                title={t('schema.image_view.view_properties')}
             >
                 <PropertyTable noHeader forceRefresh={refresh} />
             </Drawer>

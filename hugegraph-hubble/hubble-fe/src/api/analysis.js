@@ -69,7 +69,11 @@ const getExecutionLogs = (graphspace, graph, params) => {
 };
 
 const getExecutionQuery = (graphspace, graph, params) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/gremlin-query`, params);
+    return request.post(
+        `/graphspaces/${graphspace}/graphs/${graph}/gremlin-query`,
+        params,
+        {suppressBusinessErrorToast: true}
+    );
 };
 
 const getGraphData = (graphspace, graph) => {
@@ -81,7 +85,10 @@ const putExecutionQuery = (graphspace, graph, params) => {
 };
 
 const getCypherExecutionQuery = (graphspace, graph, params) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/cypher`, {params});
+    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/cypher`, {
+        params,
+        suppressBusinessErrorToast: true,
+    });
 };
 
 const getExecutionTask = (graphspace, graph, params) => {

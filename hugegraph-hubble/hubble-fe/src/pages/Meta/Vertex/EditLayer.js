@@ -18,6 +18,7 @@
 
 import {Modal, Form, Input, Select, Row, Col, Checkbox, message, Spin} from 'antd';
 import {useEffect, useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
 import {
@@ -30,9 +31,9 @@ import {InputColorSelect} from '../../../components/ColorSelect';
 import RelateProperty from '../common/RelateProperty';
 import RelatePropertyIndex from '../common/RelatePropertyIndex';
 
-const defaultDisplayFields = {label: '顶点ID', value: '~id'};
-
 const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, propertyList}) => {
+    const {t} = useTranslation();
+    const defaultDisplayFields = {label: t('schema.vertex.id'), value: '~id'};
     const [selectedPropertyList, setSelectedPropertyList] = useState([]);
     const [idStrategy, setIdStrategy] = useState('PRIMARY_KEY');
     const [existProperties, setExistProperties] = useState([]);
@@ -82,7 +83,7 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
         api.manage.addMetaVertex(graphspace, graph, data).then(res => {
             setLoading(false);
             if (res.status === 200) {
-                message.success('添加成功');
+                message.success(t('common.add_success'));
                 onCancle();
                 refresh();
                 return;
@@ -90,7 +91,7 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
 
             message.error(res.message);
         });
-    }, [graph, graphspace, onCancle, refresh]);
+    }, [graph, graphspace, onCancle, refresh, t]);
 
     const updateVertex = useCallback((name, data) => {
         const {style, append_properties, remove_property_indexes, append_property_indexes} = data;
@@ -104,7 +105,7 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
         }).then(res => {
             setLoading(false);
             if (res.status === 200) {
-                message.success('更新成功');
+                message.success(t('common.update_success'));
                 onCancle();
                 refresh();
                 return;
@@ -112,7 +113,7 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
 
             message.error(res.message);
         });
-    }, [graph, graphspace, onCancle, refresh]);
+    }, [graph, graphspace, onCancle, refresh, t]);
 
     const onFinish = useCallback(() => {
         form.validateFields().then(values => {
@@ -166,7 +167,7 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
 
     return (
         <Modal
-            title={name ? '编辑顶点' : '创建顶点'}
+            title={name ? t('schema.vertex.edit') : t('schema.vertex.create')}
             open={visible}
             onCancel={onCancle}
             width={600}
@@ -190,10 +191,10 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
                     }}
                     // preserve={false}
                 >
-                    <Form.Item label='顶点类型名称：' name='name' rules={[rules.required()]}>
-                        <Input placeholder='允许出现中英文、数字、下划线' disabled={!!name} />
+                    <Form.Item label={t('schema.vertex.col.name')} name='name' rules={[rules.required()]}>
+                        <Input placeholder={t('schema.name_placeholder')} disabled={!!name} />
                     </Form.Item>
-                    <Form.Item label='顶点样式：'>
+                    <Form.Item label={t('schema.vertex.style')}>
                         <Row gutter={[12, 0]}>
                             <Col>
                                 <Form.Item
@@ -231,14 +232,19 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
                             </Col>
                         </Row>
                     </Form.Item>
-                    <Form.Item label='ID策略' wrapperCol={{span: 6}} name='id_strategy' rules={[rules.required()]}>
+                    <Form.Item
+                        label={t('schema.vertex.col.id_strategy')}
+                        wrapperCol={{span: 6}}
+                        name='id_strategy'
+                        rules={[rules.required()]}
+                    >
                         <Select
                             options={idOptions}
                             onChange={handleIDStrategy}
                             disabled={!!name}
                         />
                     </Form.Item>
-                    <Form.Item label='关联属性' required={idStrategy === 'PRIMARY_KEY'}>
+                    <Form.Item label={t('schema.col.properties')} required={idStrategy === 'PRIMARY_KEY'}>
                         <RelateProperty
                             propertyList={propertyList}
                             selectProperty={selectProperty}
@@ -248,9 +254,13 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
                         />
                     </Form.Item>
                     {idStrategy === 'PRIMARY_KEY' && (
-                        <Form.Item label='主键属性' name='primary_keys' rules={[rules.required()]}>
+                        <Form.Item
+                            label={t('schema.vertex.col.primary_keys')}
+                            name='primary_keys'
+                            rules={[rules.required()]}
+                        >
                             <Select
-                                placeholder='请先选择关联属性'
+                                placeholder={t('schema.vertex.select_properties_first')}
                                 mode='multiple'
                                 options={selectedPropertyList.map(item => ({
                                     ...item,
@@ -261,16 +271,20 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
                             />
                         </Form.Item>
                     )}
-                    <Form.Item label='顶点展示内容' name={['style', 'display_fields']} rules={[rules.required()]}>
+                    <Form.Item
+                        label={t('schema.vertex.display_fields')}
+                        name={['style', 'display_fields']}
+                        rules={[rules.required()]}
+                    >
                         <Select
                             options={selectedPropertyList.filter(item => !item.nullable).concat(defaultDisplayFields)}
                             mode='multiple'
                         />
                     </Form.Item>
-                    <Form.Item label='类型索引' valuePropName='checked' name='open_label_index'>
+                    <Form.Item label={t('schema.col.label_index')} valuePropName='checked' name='open_label_index'>
                         <Checkbox disabled={!!name} />
                     </Form.Item>
-                    <Form.Item label='属性索引'>
+                    <Form.Item label={t('schema.col.property_indexes')}>
                         <RelatePropertyIndex
                             selectedPropertyList={selectedPropertyList}
                             propertyList={propertyList}

@@ -128,7 +128,6 @@ const SSSPVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

@@ -8,15 +8,21 @@
 import {normalizeDashboardUrl, probeDashboard} from './dashboard';
 
 test.each([
-    ['127.0.0.1:8092', 'http://127.0.0.1:8092'],
-    ['https://dashboard.example/path/', 'https://dashboard.example/path'],
-])('normalizes configured dashboard address %s', (address, expected) => {
-    expect(normalizeDashboardUrl(address)).toBe(expected);
+    ['127.0.0.1:8092', 'http', 'http://127.0.0.1:8092'],
+    ['dashboard.example:8443', 'https', 'https://dashboard.example:8443'],
+])('normalizes configured dashboard address %s', (address, protocol, expected) => {
+    expect(normalizeDashboardUrl(address, protocol)).toBe(expected);
 });
 
-test.each(['', 'ftp://dashboard.example', 'not a host'])(
+test.each(['', 'ftp://dashboard.example', 'dashboard.example/path',
+    'user@dashboard.example', 'dashboard.example?probe=true'])(
     'rejects unsafe dashboard address %s',
     address => expect(() => normalizeDashboardUrl(address)).toThrow()
+);
+
+test.each(['ftp', 'file', 'javascript'])(
+    'rejects unsafe dashboard protocol %s',
+    protocol => expect(() => normalizeDashboardUrl('dashboard.example', protocol)).toThrow()
 );
 
 test('reports an unreachable dashboard after the browser probe fails', async () => {

@@ -218,7 +218,6 @@ const MultiNodesShortestPath = props => {
                     highlightName={currentAlgorithm === MULTINODESSHORTESTPATH}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

@@ -137,7 +137,6 @@ const LabelPropagationAlgorithmVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

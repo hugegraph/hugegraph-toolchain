@@ -21,11 +21,13 @@ import {indexTypeOptions} from '../common/config.js';
 import {useEffect, useState, useCallback} from 'react';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 
 const VertexIndexTable = () => {
     const [data, setData] = useState([]);
     const [pagination, setPagination] = useState({current: 1, total: 10});
     const {graphspace, graph} = useParams();
+    const {t} = useTranslation();
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
@@ -33,20 +35,20 @@ const VertexIndexTable = () => {
 
     const columns = [
         {
-            title: '顶点类型名称',
+            title: t('schema.vertex.col.name'),
             dataIndex: 'owner',
         },
         {
-            title: '索引名称',
+            title: t('schema.index.col.name'),
             dataIndex: 'name',
         },
         {
-            title: '索引类型',
+            title: t('schema.index.col.type'),
             dataIndex: 'type',
             render: val => indexTypeOptions.find(item => item.value === val)?.label || val,
         },
         {
-            title: '属性',
+            title: t('schema.index.col.fields'),
             dataIndex: 'fields',
             render: val => val.join(','),
         },

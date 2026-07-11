@@ -32,6 +32,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.apache.hugegraph.controller.graphs.GraphsController;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.service.graphs.GraphsService;
+import org.apache.hugegraph.testutil.Assert;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -129,6 +130,19 @@ public class GraphsControllerCanonicalTest {
     }
 
     @Test
+    public void testSetDefaultUsesGraphspaceScopedClient() throws Exception {
+        ScopeCapturingController controller = new ScopeCapturingController();
+        controller.client = this.client;
+        this.setField(controller, "graphsService", this.graphsService);
+
+        controller.setDefaultByCanonicalApi("DEFAULT", "graph_a");
+
+        Assert.assertEquals("DEFAULT", controller.graphspace);
+        Assert.assertNull(controller.graph);
+        Mockito.verify(this.graphsService).setDefault(this.client, "graph_a");
+    }
+
+    @Test
     public void testCanonicalUnsetDefaultGraphUsesServiceDefault()
            throws Exception {
         this.mvc.perform(delete("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/default")
@@ -153,8 +167,22 @@ public class GraphsControllerCanonicalTest {
 
     private void setField(Object object, String name, Object value)
                           throws Exception {
-        Field field = object.getClass().getDeclaredField(name);
+        Field field = GraphsController.class.getDeclaredField(name);
         field.setAccessible(true);
         field.set(object, value);
+    }
+
+    private static class ScopeCapturingController extends GraphsController {
+
+        private HugeClient client;
+        private String graphspace;
+        private String graph;
+
+        @Override
+        protected HugeClient authClient(String graphspace, String graph) {
+            this.graphspace = graphspace;
+            this.graph = graph;
+            return this.client;
+        }
     }
 }

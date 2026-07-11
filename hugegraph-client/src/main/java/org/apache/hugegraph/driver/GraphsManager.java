@@ -77,15 +77,15 @@ public class GraphsManager {
         return this.graphsAPI.listProfile(prefix);
     }
 
-    public Map<String, String> setDefault(String name) {
+    public Map<String, Object> setDefault(String name) {
         return this.graphsAPI.setDefault(name);
     }
 
-    public Map<String, String> unSetDefault(String name) {
+    public Map<String, Object> unSetDefault(String name) {
         return this.graphsAPI.unSetDefault(name);
     }
 
-    public Map<String, String> getDefault() {
+    public Map<String, Object> getDefault() {
         return this.graphsAPI.getDefault();
     }
 

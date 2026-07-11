@@ -48,6 +48,7 @@ public class DashboardController extends BaseController {
 
         Map<String, Object> result = new HashMap<>();
         result.put("address", address);
+        result.put("protocol", config.get(HubbleOptions.SERVER_PROTOCOL));
         return result;
     }
 }

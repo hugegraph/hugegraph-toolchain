@@ -41,6 +41,8 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
     private static final int FILE_MAPPING_PATH_LENGTH = 2048;
     private static final String FILE_MAPPING_TABLE = "file_mapping";
     private static final String FILE_MAPPING_PATH_COLUMN = "path";
+    private static final String EXECUTE_HISTORY_TABLE = "execute_history";
+    private static final String FAILURE_REASON_COLUMN = "failure_reason";
 
     @Autowired
     private DataSource dataSource;
@@ -55,10 +57,15 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
     public void migrate(Connection conn) throws SQLException {
         int currentLength = this.columnSize(conn, FILE_MAPPING_TABLE,
                                             FILE_MAPPING_PATH_COLUMN);
-        if (currentLength == 0 || currentLength >= FILE_MAPPING_PATH_LENGTH) {
-            return;
+        if (currentLength > 0 && currentLength < FILE_MAPPING_PATH_LENGTH) {
+            this.migrateFileMappingPath(conn, currentLength);
         }
 
+        this.migrateExecuteHistoryFailureReason(conn);
+    }
+
+    private void migrateFileMappingPath(Connection conn, int currentLength)
+            throws SQLException {
         String sql = this.alterFileMappingPathSql(
                      conn.getMetaData().getDatabaseProductName());
         if (sql == null) {
@@ -73,6 +80,46 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
         }
         log.info("Migrated file_mapping.path from {} to VARCHAR({})",
                  currentLength, FILE_MAPPING_PATH_LENGTH);
+    }
+
+    private void migrateExecuteHistoryFailureReason(Connection conn)
+            throws SQLException {
+        if (!this.tableExists(conn, EXECUTE_HISTORY_TABLE) ||
+            this.columnSize(conn, EXECUTE_HISTORY_TABLE,
+                            FAILURE_REASON_COLUMN) > 0) {
+            return;
+        }
+
+        String product = conn.getMetaData().getDatabaseProductName()
+                             .toLowerCase(Locale.ROOT);
+        if (!product.contains("h2") && !product.contains("mysql") &&
+            !product.contains("mariadb")) {
+            log.warn("Skip execute_history.failure_reason migration for " +
+                     "unsupported database product {}",
+                     conn.getMetaData().getDatabaseProductName());
+            return;
+        }
+
+        try (Statement statement = conn.createStatement()) {
+            statement.execute("ALTER TABLE `execute_history` ADD COLUMN " +
+                              "`failure_reason` VARCHAR(64) DEFAULT NULL");
+        }
+        log.info("Added execute_history.failure_reason VARCHAR(64)");
+    }
+
+    private boolean tableExists(Connection conn, String table)
+            throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        String[] tables = {table, table.toUpperCase(Locale.ROOT)};
+        for (String tableName : tables) {
+            try (ResultSet rs = metaData.getTables(null, null, tableName,
+                                                   new String[]{"TABLE"})) {
+                if (rs.next()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private int columnSize(Connection conn, String table, String column)

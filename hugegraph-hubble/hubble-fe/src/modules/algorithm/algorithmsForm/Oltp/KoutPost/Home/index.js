@@ -149,7 +149,6 @@ const KoutPost = props => {
                     highlightName={currentAlgorithm === KOUT_POST}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

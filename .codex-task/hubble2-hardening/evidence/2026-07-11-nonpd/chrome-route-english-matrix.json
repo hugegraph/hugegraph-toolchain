@@ -1,0 +1,252 @@
+{
+  "capturedAt": "2026-07-11T12:45:30+08:00",
+  "toolchainHead": "cc0c58c072d3700fecfc0b3d4e7c22438d6479f2",
+  "serverHead": "99936be5f41fccd193f120e01206e3cf3c73a050",
+  "routes": [
+    {
+      "route": "/navigation",
+      "url": "http://127.0.0.1:18088/navigation",
+      "has404": false,
+      "text": "导航\n1数据管理\n图管理\n数据源管理\n数据导入\n2业务分析\n图语言分析\n图算法",
+      "title": "HugeGraph Hubble",
+      "errorCount": 4,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/graphspace/DEFAULT",
+      "url": "http://127.0.0.1:18088/graphspace/DEFAULT",
+      "has404": false,
+      "text": "图管理\n图模式\n列表模式\nhugegraph\n存储空间: 0 KB\n创建时间: 2026-07-11\n详情\n\n\n1",
+      "title": "HugeGraph Hubble",
+      "errorCount": 5,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/source",
+      "url": "http://127.0.0.1:18088/source",
+      "has404": false,
+      "text": "数据源管理\n新增数据源\n删除数据源\n已选中 0 条 / 共 0 条\n\t数据源名称\t数据源类型\t创建人\t创建时间\t操作\n\n暂无数据",
+      "title": "HugeGraph Hubble",
+      "errorCount": 6,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/task",
+      "url": "http://127.0.0.1:18088/task",
+      "has404": false,
+      "text": "数据导入\n实时任务\n0\n最大并发\n非实时任务\n1\n最大并发\n待执行\n0\n一次性任务\n0\n周期任务\n0\n实时任务\n正在执行\n0\n一次性任务\n0\n周期任务\n0\n实时任务\n创建任务\n任务名称\t源数据类型\t目标图空间\t目标图\t创建时间\t账号ID\t状态\t同步类型\t操作\nh2np_20260711r3_job\t本地上传\tDEFAULT\thugegraph\t2026-07-11 12:32:26\t\tSUCCEED\t执行一次\t\n1",
+      "title": "HugeGraph Hubble",
+      "errorCount": 7,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/gremlin",
+      "url": "http://127.0.0.1:18088/gremlin/DEFAULT/hugegraph",
+      "has404": false,
+      "text": "图语言分析\n当前图空间:\nDEFAULT\n当前图:\n请选择\n元数据配置\n是否查询OLAP结果:\n否\nGremlin 分析\nCypher 分析\n1\n请输入查询语句\n\n执行查询\n收 藏清 空\n收起\n图\n表格\nJson\n导入\n导出\n外观设置\n筛选\n布局方式\n设置\n新建\n统计\n2D 模式\n3D 模式\n暂无数据结果\nNodes\n0/loading...\nEdges\n0/loading...\n执行记录\n收藏的查询\n时间\t执行类型\t执行内容\t状态\t耗时\t操作\n\n暂无数据",
+      "title": "HugeGraph Hubble",
+      "errorCount": 8,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/algorithms",
+      "url": "http://127.0.0.1:18088/algorithms/DEFAULT/hugegraph",
+      "has404": false,
+      "text": "图算法\n当前图空间:\nDEFAULT\n当前图:\nhugegraph\n元数据配置\n是否查询OLAP结果:\n否\nOLTP算法\nK-out API（GET，基础版）\nK-neighbor（GET，基础版）\nSame Neighbors\nRings\nShortest Path\n查找所有路径（POST，高级版）\nJaccard Similarity（GET）\nK-out API（POST，高级版）\nK-neighbor API（POST，高级版）\nJaccard Similarity（POST）\nrank API\nNeighbor Rank API\n查找最短路径\n查找带权重的最短路径\n(从一个顶点出发)查找最短路径\n(指定顶点集)查找最短路径\n自定义路径查询\n模版路径查询\nCrosspoints\nCustomized Crosspoints\nRays\nFusiform Similarity\nAdamic Adar\nResource Allocation\nSame Neighbors Batch\nEgonet\n查找所有路径（GET，基础版）\nOLAP算法\nPageRank\nWeakly Conne",
+      "title": "HugeGraph Hubble",
+      "errorCount": 9,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/asyncTasks",
+      "url": "http://127.0.0.1:18088/asyncTasks/DEFAULT/hugegraph",
+      "has404": false,
+      "text": "任务管理\n当前图空间:\nDEFAULT\n当前图:\n请选择\n\t任务ID\t任务名称\t\n任务类型\n\t创建时间\t耗时\t\n状态\n\t操作\n\n \n\t\n \n\t\n \n\t\n \n\t\n \n\t\n \n\t\n \n\t\n \n\n\n暂无数据",
+      "title": "HugeGraph Hubble",
+      "errorCount": 10,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/my",
+      "url": "http://127.0.0.1:18088/my",
+      "has404": false,
+      "text": "个人中心\n编 辑\n更改密码\n账号ID\nadmin\n账号名\n备注\n权限及角色\n创建时间\n2026-07-11 20:30:59",
+      "title": "HugeGraph Hubble",
+      "errorCount": 11,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/super",
+      "url": "http://127.0.0.1:18088/navigation",
+      "has404": false,
+      "text": "导航\n1数据管理\n图管理\n数据源管理\n数据导入\n2业务分析\n图语言分析\n图算法",
+      "title": "HugeGraph Hubble",
+      "errorCount": 12,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/resource",
+      "url": "http://127.0.0.1:18088/navigation",
+      "has404": false,
+      "text": "导航\n1数据管理\n图管理\n数据源管理\n数据导入\n2业务分析\n图语言分析\n图算法",
+      "title": "HugeGraph Hubble",
+      "errorCount": 13,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    },
+    {
+      "route": "/role",
+      "url": "http://127.0.0.1:18088/navigation",
+      "has404": false,
+      "text": "导航\n1数据管理\n图管理\n数据源管理\n数据导入\n2业务分析\n图语言分析\n图算法",
+      "title": "HugeGraph Hubble",
+      "errorCount": 14,
+      "errors": [
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist.",
+        "Error: Could not establish connection. Receiving end does not exist."
+      ]
+    }
+  ],
+  "graphRoutes": [
+    {
+      "route": "/graphspace/DEFAULT/graph/hugegraph/detail",
+      "url": "http://127.0.0.1:18088/graphspace/DEFAULT/graph/hugegraph/detail",
+      "has404": false,
+      "text": "DEFAULT - hugegraph - 详情\n最近更新时间：--/--\n数据更新\n点总数\n0\n点类型\t数量\n\n暂无数据\n边总数\n0\n边类型\t数量\n\n暂无数据"
+    },
+    {
+      "route": "/graphspace/DEFAULT/graph/hugegraph/meta",
+      "url": "http://127.0.0.1:18088/graphspace/DEFAULT/graph/hugegraph/meta",
+      "has404": false,
+      "text": "DEFAULT - hugegraph - 元数据管理\n列表模式\n图模式\n属性\n顶点类型\n边类型\n顶点索引\n边索引\n创 建\n刷 新\n批量删除\n\n\n\t属性名称\t数据类型\t基数\t操作\n\n\th2np_20260711r3_rank\tint\tsingle\t删除\n\n\th2np_20260711r3_name\tstring\tsingle\t删除\n\n\th2np_20260711r3_id\tstring\tsingle\t删除\n1"
+    }
+  ],
+  "englishBeforeFix": [
+    {
+      "route": "/navigation",
+      "url": "http://127.0.0.1:18088/navigation",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/graphspace/DEFAULT",
+      "url": "http://127.0.0.1:18088/graphspace/DEFAULT",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/graphspace/DEFAULT/graph/hugegraph/detail",
+      "url": "http://127.0.0.1:18088/graphspace/DEFAULT/graph/hugegraph/detail",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/graphspace/DEFAULT/graph/hugegraph/meta",
+      "url": "http://127.0.0.1:18088/graphspace/DEFAULT/graph/hugegraph/meta",
+      "count": 15,
+      "lines": [
+        "DEFAULT - hugegraph - 元数据管理",
+        "列表模式",
+        "图模式",
+        "属性",
+        "顶点类型",
+        "边类型",
+        "顶点索引",
+        "边索引",
+        "创 建",
+        "刷 新",
+        "批量删除",
+        "属性名称\t数据类型\t基数\t操作",
+        "h2np_20260711r3_rank\tint\tsingle\t删除",
+        "h2np_20260711r3_name\tstring\tsingle\t删除",
+        "h2np_20260711r3_id\tstring\tsingle\t删除"
+      ]
+    },
+    {
+      "route": "/source",
+      "url": "http://127.0.0.1:18088/source",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/task",
+      "url": "http://127.0.0.1:18088/task",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/gremlin",
+      "url": "http://127.0.0.1:18088/gremlin/DEFAULT/hugegraph",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/algorithms",
+      "url": "http://127.0.0.1:18088/algorithms/DEFAULT/hugegraph",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/asyncTasks",
+      "url": "http://127.0.0.1:18088/asyncTasks/DEFAULT/hugegraph",
+      "count": 0,
+      "lines": []
+    },
+    {
+      "route": "/my",
+      "url": "http://127.0.0.1:18088/my",
+      "count": 0,
+      "lines": []
+    }
+  ],
+  "metaEnglishAfterFix": {
+    "count": 0,
+    "lines": [],
+    "text": "DEFAULT - hugegraph - Metadata Management\nList View\nCard View\nProperty\nVertex Type\nEdge Type\nVertex Index\nEdge Index\nCreate\nRefresh\nDelete Selected\n\n\n\tProperty Name\tData Type\tCardinality\tActions\n\nNo data"
+  },
+  "gremlinFailureAfterFix": {
+    "fallbackCount": 1,
+    "internalSignatureCount": 0,
+    "toastCount": 0
+  }
+}

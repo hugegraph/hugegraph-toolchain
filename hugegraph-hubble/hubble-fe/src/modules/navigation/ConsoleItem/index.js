@@ -19,7 +19,8 @@
 /**
  * @file 运维管理子项块
  */
-import {useEffect, useState} from 'react';
+import {message} from 'antd';
+import {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
 import * as api from '../../../api';
@@ -42,13 +43,11 @@ const ConsoleItem = () => {
                     }
                     return;
                 }
-                const url = normalizeDashboardUrl(res.data?.address);
-                const reachable = await probeDashboard(url);
+                const url = normalizeDashboardUrl(
+                    res.data?.address, res.data?.protocol
+                );
                 if (!cancelled) {
-                    setDashboard({
-                        status: reachable ? 'available' : 'unavailable',
-                        url,
-                    });
+                    setDashboard({status: 'configured', url});
                 }
             }
             catch {
@@ -62,16 +61,40 @@ const ConsoleItem = () => {
             cancelled = true;
         };
     }, []);
-    const available = dashboard.status === 'available';
+
+    const openDashboard = useCallback(async url => {
+        const popup = window.open('about:blank', '_blank');
+        if (!popup) {
+            message.error(t('navigation_page.dashboard_popup_blocked'));
+            return;
+        }
+        popup.opener = null;
+        setDashboard(current => ({...current, status: 'checking'}));
+        const reachable = await probeDashboard(url);
+        if (!reachable) {
+            popup.close();
+            setDashboard(current => ({...current, status: 'unavailable'}));
+            message.error(t('navigation_page.dashboard_unavailable'));
+            return;
+        }
+        setDashboard(current => ({...current, status: 'configured'}));
+        popup.location.replace(url);
+    }, [t]);
+
+    const configured = Boolean(dashboard.url);
     const reason = dashboard.status === 'loading'
         ? t('navigation_page.dashboard_checking')
-        : t('navigation_page.dashboard_unavailable');
-    const clusterUrl = available ? dashboard.url : '';
+        : dashboard.status === 'unavailable'
+            ? t('navigation_page.dashboard_unavailable')
+            : '';
     const item = (titleKey, path = '') => ({
         title: t(titleKey),
-        url: clusterUrl ? clusterUrl + path : '',
-        disabled: !available,
-        reason: available ? '' : reason,
+        url: configured ? dashboard.url + path : '',
+        disabled: !configured || dashboard.status === 'checking',
+        reason,
+        onClick: configured
+            ? () => openDashboard(dashboard.url + path)
+            : undefined,
     });
 
     return (

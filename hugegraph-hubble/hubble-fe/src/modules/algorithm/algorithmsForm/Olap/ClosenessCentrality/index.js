@@ -126,7 +126,6 @@ const ClosenessCentrality = props => {
                     highlightName={currentAlgorithm === CLOSENESS_CENTRALITY}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

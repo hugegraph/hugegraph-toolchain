@@ -22,7 +22,7 @@
 
 import React, {useCallback, useState, useContext} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Menu, Tooltip, Dropdown, Input, Popover, message, Space} from 'antd';
+import {Button, Tooltip, Dropdown, Input, Popover, message, Space} from 'antd';
 import {UpOutlined, DownOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {GREMLIN_EXECUTES_MODE} from '../../../../utils/constants';
 import GraphAnalysisContext from '../../../Context';
@@ -185,15 +185,13 @@ const ContentCommon = props => {
         [activeTab, onExecute]
     );
 
-    const executeMenu = (
-        <Menu
-            onClick={onSwitchExecuteMenu}
-            items={[
-                {label: t('analysis.query.execute_query'), key: QUERY},
-                {label: t('analysis.query.execute_task'), key: TASK},
-            ]}
-        />
-    );
+    const executeMenu = {
+        onClick: onSwitchExecuteMenu,
+        items: [
+            {label: t('analysis.query.execute_query'), key: QUERY},
+            {label: t('analysis.query.execute_task'), key: TASK},
+        ],
+    };
 
     return (
         <div className={tabClassName}>
@@ -202,7 +200,7 @@ const ContentCommon = props => {
                 <div className={c.btnGroup}>
                     <Tooltip placement="bottom" title={isEmptyQuery ? emptyDesc : ''}>
                         <Dropdown.Button
-                            overlay={executeMenu}
+                            menu={executeMenu}
                             disabled={isEmptyQuery}
                             onClick={onExecution}
                             size='small'

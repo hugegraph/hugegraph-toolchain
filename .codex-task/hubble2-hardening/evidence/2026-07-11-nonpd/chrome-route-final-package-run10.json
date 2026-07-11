@@ -1,0 +1,40 @@
+{
+  "date": "2026-07-11",
+  "mode": "non-PD / RocksDB",
+  "hubble_package_sha256": "df94a648448ec3b65f631c811a4f2ab83bf67de357f0aab3c49ac545f5227e14",
+  "routes": [
+    {"route": "/navigation", "final_route": "/navigation"},
+    {"route": "/graphspace/DEFAULT", "final_route": "/graphspace/DEFAULT"},
+    {"route": "/graphspace/DEFAULT/graph/hugegraph/detail", "final_route": "/graphspace/DEFAULT/graph/hugegraph/detail"},
+    {"route": "/graphspace/DEFAULT/graph/hugegraph/meta", "final_route": "/graphspace/DEFAULT/graph/hugegraph/meta"},
+    {"route": "/source", "final_route": "/source"},
+    {"route": "/task", "final_route": "/task"},
+    {"route": "/gremlin", "final_route": "/gremlin/DEFAULT/hugegraph"},
+    {"route": "/gremlin/DEFAULT/hugegraph", "final_route": "/gremlin/DEFAULT/hugegraph"},
+    {"route": "/algorithms", "final_route": "/algorithms/DEFAULT/hugegraph"},
+    {"route": "/algorithms/DEFAULT/hugegraph", "final_route": "/algorithms/DEFAULT/hugegraph"},
+    {"route": "/asyncTasks", "final_route": "/asyncTasks/DEFAULT/hugegraph"},
+    {"route": "/asyncTasks/DEFAULT/hugegraph", "final_route": "/asyncTasks/DEFAULT/hugegraph"},
+    {"route": "/my", "final_route": "/my"},
+    {"route": "/account", "final_route": "/my", "reason": "non-PD route guard"},
+    {"route": "/role", "final_route": "/navigation", "reason": "non-PD route guard"},
+    {"route": "/resource", "final_route": "/navigation", "reason": "non-PD route guard"},
+    {"route": "/super", "final_route": "/navigation", "reason": "removed legacy route fallback"}
+  ],
+  "assertions": {
+    "unexpected_404": 0,
+    "render_failures": 0,
+    "product_controlled_chinese": 0,
+    "application_console_exceptions": 0,
+    "excluded_chrome_extension_transport_exceptions": 8,
+    "excluded_exception": "Error: Could not establish connection. Receiving end does not exist."
+  },
+  "dynamic_english_coverage": [
+    "login failure",
+    "GraphDetail error alerts",
+    "Meta property create and destructive delete",
+    "Datasource file upload",
+    "Task create, source fields, mapping, schedule and detail",
+    "Gremlin error result and execution history"
+  ]
+}

@@ -25,7 +25,6 @@ import {
     Table,
     List,
     Dropdown,
-    Menu,
     Modal,
     message,
     Spin,
@@ -163,14 +162,12 @@ const Role = () => {
         },
     ];
 
-    const menu = item => (
-        <Menu
-            items={[
-                {key: '1', label: <a onClick={() => handleDelete(item)}>删除</a>},
-                {key: '2', label: <Link to={`/role/graphspace/${item.graphspace}/${item.id}`}>配置权限</Link>},
-            ]}
-        />
-    );
+    const menu = item => ({
+        items: [
+            {key: '1', label: <a onClick={() => handleDelete(item)}>删除</a>},
+            {key: '2', label: <Link to={`/role/graphspace/${item.graphspace}/${item.id}`}>配置权限</Link>},
+        ],
+    });
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
@@ -287,7 +284,7 @@ const Role = () => {
                                         >
                                             {_.truncate(item.role_nickname, {length: 20})}
                                         </span>
-                                        <Dropdown overlay={menu(item)} trigger='click'>
+                                        <Dropdown menu={menu(item)} trigger='click'>
                                             <EllipsisOutlined />
                                         </Dropdown>
                                     </List.Item>

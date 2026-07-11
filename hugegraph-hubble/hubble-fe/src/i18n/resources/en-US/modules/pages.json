@@ -1,5 +1,17 @@
 {
   "common": {
+    "add_success": "Added successfully",
+    "batch_delete": "Delete Selected",
+    "create": "Create",
+    "delete": "Delete",
+    "delete_success": "Deleted successfully",
+    "edit": "Edit",
+    "no": "No",
+    "operation": "Actions",
+    "refresh": "Refresh",
+    "select_at_least_one": "Please select at least one item",
+    "update_success": "Updated successfully",
+    "yes": "Yes",
     "action": {
       "create": "Create",
       "save": "Save",
@@ -56,6 +68,8 @@
       "disable_success": "Paused successfully",
       "disable_fail": "Failed to pause",
       "delete_fail": "Deletion failed",
+      "operation_failed": "Operation failed. Check the server connection and retry.",
+      "load_failed": "Unable to load data. Check the server connection and retry.",
       "select_one": "Please select at least one item"
     },
     "confirm": {
@@ -143,7 +157,19 @@
     "title": "Graph Management",
     "create": "Create Graph",
     "search_placeholder": "Search by graph name",
+    "unavailable": "Graphs are unavailable. Check the server connection and retry.",
     "set_default_confirm": "Confirm changing the default graph?",
+    "set_default": {
+      "setting": "Setting default graph...",
+      "success": "Default graph updated"
+    },
+    "delete_confirm": {
+      "title": "Delete this graph?",
+      "irreversible": "This operation cannot be undone.",
+      "deleting": "Deleting graph...",
+      "success": "Graph deleted",
+      "failed": "Failed to delete graph"
+    },
     "clear_confirm": {
       "title": "Confirm graph clear",
       "graphspace": "GraphSpace: {{graphspace}}",
@@ -182,9 +208,27 @@
       "name_placeholder": "Lowercase letters, digits, underscore, max 48 chars",
       "nickname": "Display Name",
       "nickname_placeholder": "Letters, digits, underscore, max 12 chars",
+      "schema_placeholder": "Select a schema",
+      "create_success": "Graph created",
+      "update_success": "Graph updated",
       "auth": "Enable Authentication",
       "description": "Description",
       "description_placeholder": "Graph description (optional)"
+    },
+    "clone": {
+      "title": "Clone Graph",
+      "success": "Graph cloned",
+      "name": "Cloned Graph ID",
+      "name_duplicate": "Enter an ID different from the source graph",
+      "nickname_label": "Cloned Graph Name",
+      "nickname": "{{nickname}} Copy",
+      "nickname_duplicate": "Enter a name different from the source graph",
+      "graphspace": "Destination Graph Space",
+      "content": "Clone Content",
+      "schema": "Schema only",
+      "schema_data": "Schema and data",
+      "required_disk": "Required Disk Space",
+      "estimated_time": "Estimated Clone Time"
     },
     "detail": {
       "title": "Detail",
@@ -198,6 +242,7 @@
       "update_data": "Update Data",
       "update_success": "Update requested. Refresh the page in a moment.",
       "statistics_unavailable": "Statistics are unavailable. Retry later.",
+      "unavailable": "Graph details are unavailable. Check the server and retry.",
       "vertex_total": "Total vertices",
       "edge_total": "Total edges",
       "vertex_type": "Vertex type",
@@ -352,7 +397,16 @@
       "title": "Task Detail",
       "success": "Success",
       "failed": "Failed",
-      "running": "Running"
+      "running": "Running",
+      "job_id": "Execution Instance ID",
+      "import_count": "Imported Records",
+      "create_time": "Created At",
+      "average_rate": "Average Rate",
+      "records_per_second": "{{rate}} records/s",
+      "duration": "Import Duration",
+      "seconds": "{{seconds}} s",
+      "status": "Status",
+      "other": "Details"
     },
     "view": {
       "title": "View Task",
@@ -500,7 +554,33 @@
     }
   },
   "schema": {
+    "delete_failed": "Delete failed. Check the server connection and retry.",
     "title": "Metadata Management",
+    "name_placeholder": "Letters, numbers, underscores, and Chinese characters are allowed",
+    "delete_irreversible": "This action cannot be undone. Please proceed with caution.",
+    "delete_task_hint": "Deleting metadata may take a while. Check Task Management for progress.",
+    "col": {
+      "label_index": "Label Index",
+      "properties": "Properties",
+      "property_indexes": "Property Index"
+    },
+    "validation": {
+      "duplicate_index": "Index names cannot be duplicated",
+      "duplicate_property": "Properties cannot be duplicated"
+    },
+    "common": {
+      "add_success": "Added successfully",
+      "batch_delete": "Delete Selected",
+      "delete_warning": "This action cannot be undone. Please proceed with caution.",
+      "name_placeholder": "Letters, numbers, underscores, and Chinese characters are allowed"
+    },
+    "options": {
+      "size_tiny": "Tiny", "size_small": "Small", "size_normal": "Normal", "size_big": "Big", "size_huge": "Huge",
+      "line_thick": "Thick", "line_fine": "Fine",
+      "id_primary": "Primary Key ID", "id_auto": "Automatic", "id_string": "Custom String", "id_number": "Custom Number", "id_uuid": "Custom UUID",
+      "required": "Required", "nullable": "Nullable",
+      "index_secondary": "Secondary Index", "index_range": "Range Index", "index_search": "Search Index", "index_unique": "Unique Index"
+    },
     "tab": {
       "property": "Property",
       "vertex": "Vertex Type",
@@ -510,6 +590,8 @@
     },
     "property": {
       "create": "Create Property",
+      "delete_confirm": "Confirm deleting this property?",
+      "in_use": "Properties {{names}} are in use and cannot be deleted.",
       "col": {
         "name": "Property Name",
         "type": "Data Type",
@@ -524,6 +606,12 @@
     },
     "vertex": {
       "create": "Create Vertex Type",
+      "edit": "Edit Vertex Type",
+      "id": "Vertex ID",
+      "in_use": "Vertices {{names}} are in use and cannot be deleted.",
+      "select_properties_first": "Select related properties first",
+      "style": "Vertex Style: ",
+      "display_fields": "Display Fields",
       "delete_confirm": "Confirm deleting this vertex type?",
       "delete_warning": "This action cannot be undone. Please proceed with caution.",
       "delete_task_note": "Deleting metadata may take a while. Check Task Management for progress.",
@@ -549,6 +637,13 @@
       }
     },
     "edge": {
+      "create": "Create Edge Type",
+      "edit": "Edit Edge Type",
+      "display_fields": "Display Fields",
+      "link_multi_times": "Allow Multiple Links",
+      "parent": "Parent Edge Type: ",
+      "select_parent": "Select parent edge",
+      "style": "Edge Style: ",
       "delete_confirm": "Confirm deleting this edge type?",
       "delete_warning": "This action cannot be undone. Please proceed with caution.",
       "delete_task_note": "Deleting metadata may take a while. Check Task Management for progress.",
@@ -564,6 +659,9 @@
         "operation": "Actions"
       },
       "type": {
+        "normal": "Normal",
+        "parent": "Parent",
+        "sub": "Sub",
         "NORMAL": "Normal",
         "PARENT": "Parent",
         "SUB": "Sub",
@@ -603,7 +701,39 @@
     },
     "image_view": {
       "vertex": "Vertex Type",
-      "edge": "Edge Type"
+      "edge": "Edge Type",
+      "view_properties": "View Properties"
+    }
+  },
+  "schema_template": {
+    "title": "{{name}} - Schema Template Management",
+    "create": "Create Schema Template",
+    "search_placeholder": "Enter a schema template name",
+    "delete_confirm": "Delete {{name}}?",
+    "delete_success": "Deleted successfully",
+    "delete_failed": "Delete failed",
+    "create_duplicate": "A schema template named {{name}} already exists. Choose another name.",
+    "create_failed": "Could not create the schema template. Review the input and retry.",
+    "update_failed": "Could not update the schema template. Review the input and retry.",
+    "create_success": "Created successfully",
+    "update_success": "Updated successfully",
+    "action": {
+      "view": "View",
+      "edit": "Edit",
+      "create": "Create",
+      "delete": "Delete"
+    },
+    "column": {
+      "name": "Schema Template Name",
+      "created_at": "Created At",
+      "updated_at": "Updated At",
+      "creator": "Creator",
+      "operation": "Actions"
+    },
+    "form": {
+      "name": "Schema Template Name",
+      "name_placeholder": "Enter a schema name",
+      "schema_placeholder": "Enter a schema"
     }
   },
   "navigation_page": {
@@ -630,7 +760,8 @@
     "node_manage": "Node Operations",
     "alert_manage": "Alert Management",
     "dashboard_checking": "Checking Dashboard availability...",
-    "dashboard_unavailable": "Dashboard is unavailable. Check dashboard.address and service health."
+    "dashboard_unavailable": "Dashboard is unavailable. Check dashboard.address and service health.",
+    "dashboard_popup_blocked": "The Dashboard window was blocked. Allow pop-ups and retry."
   },
   "login": {
     "submit": "Sign In",

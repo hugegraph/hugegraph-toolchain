@@ -125,7 +125,6 @@ const SingleSourceShortestPath = props => {
                     highlightName={currentAlgorithm === SINGLESOURCESHORTESTPATH}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

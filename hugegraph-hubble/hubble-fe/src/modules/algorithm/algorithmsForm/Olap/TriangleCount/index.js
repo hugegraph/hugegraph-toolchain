@@ -127,7 +127,6 @@ const TriangleCount = props => {
                     highlightName={currentAlgorithm === TRIANGLE_COUNT}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

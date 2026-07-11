@@ -20,23 +20,28 @@ import {useCallback, useState, useEffect} from 'react';
 import {Table, Space, PageHeader, Row, Col, Input, Button, message, Modal, Spin} from 'antd';
 import EditLayer from './EditLayer';
 import {useParams, useNavigate} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../api/index';
 
+const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
+
 const SchemaActions = ({row, onView, onEdit, onDelete}) => {
+    const {t} = useTranslation();
     const handleView = useCallback(() => onView(row), [onView, row]);
     const handleEdit = useCallback(() => onEdit(row), [onEdit, row]);
     const handleDelete = useCallback(() => onDelete(row), [onDelete, row]);
 
     return (
         <Space>
-            <a onClick={handleView}>查看</a>
-            <a onClick={handleEdit}>编辑</a>
-            <a onClick={handleDelete}>删除</a>
+            <a onClick={handleView}>{t('schema_template.action.view')}</a>
+            <a onClick={handleEdit}>{t('schema_template.action.edit')}</a>
+            <a onClick={handleDelete}>{t('schema_template.action.delete')}</a>
         </Space>
     );
 };
 
 const Schema = () => {
+    const {t} = useTranslation();
     const [data, setData] = useState([]);
     const [detail, setDetail] = useState({});
     const [mode, setMode] = useState('view');
@@ -78,20 +83,20 @@ const Schema = () => {
 
     const deleteSchema = useCallback(row => {
         Modal.confirm({
-            title: `确定要删除 ${row.name}吗？`,
+            title: t('schema_template.delete_confirm', {name: row.name}),
             onOk: () => {
-                api.manage.delSchema(graphspace, row.name).then(res => {
+                return api.manage.delSchema(graphspace, row.name, PAGE_ERROR_CONFIG).then(res => {
                     if (res.status === 200) {
-                        message.success('删除成功');
+                        message.success(t('schema_template.delete_success'));
                         setRefresh(value => !value);
                         return;
                     }
 
-                    message.error('删除失败');
-                });
+                    message.error(t('common.msg.operation_failed'));
+                }).catch(() => message.error(t('common.msg.operation_failed')));
             },
         });
-    }, [graphspace]);
+    }, [graphspace, t]);
 
     const handleBack = useCallback(() => navigate('/graphspace'), [navigate]);
     const hideEditLayer = useCallback(() => setEditLayer(false), []);
@@ -99,23 +104,23 @@ const Schema = () => {
 
     const columns = [
         {
-            title: 'schema模版名称',
+            title: t('schema_template.column.name'),
             dataIndex: 'name',
         },
         {
-            title: '创建时间',
+            title: t('schema_template.column.created_at'),
             dataIndex: 'create_time',
         },
         {
-            title: '更新时间',
+            title: t('schema_template.column.updated_at'),
             dataIndex: 'update_time',
         },
         {
-            title: '创建人',
+            title: t('schema_template.column.creator'),
             dataIndex: 'creator',
         },
         {
-            title: '操作',
+            title: t('schema_template.column.operation'),
             render: row => (
                 <SchemaActions
                     row={row}
@@ -128,27 +133,29 @@ const Schema = () => {
     ];
 
     useEffect(() => {
-        api.manage.getGraphSpace(graphspace).then(res => {
+        api.manage.getGraphSpace(graphspace, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 setGraphspaceInfo(res.data);
                 return;
             }
 
-            message.error(res.message);
-        });
-    }, [graphspace]);
+            message.error(t('common.msg.load_failed'));
+        }).catch(() => message.error(t('common.msg.load_failed')));
+    }, [graphspace, t]);
 
     useEffect(() => {
         api.manage.getSchemaList(graphspace, {
             query,
             page_no: current,
-        }).then(res => {
+        }, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 setData(res.data.records);
                 setPagination(value => ({...value, total: res.data.total}));
+                return;
             }
-        });
-    }, [graphspace, refresh, current, query]);
+            message.error(t('common.msg.load_failed'));
+        }).catch(() => message.error(t('common.msg.load_failed')));
+    }, [graphspace, refresh, current, query, t]);
 
     return (
         <>
@@ -156,15 +163,22 @@ const Schema = () => {
                 <PageHeader
                     ghost={false}
                     onBack={handleBack}
-                    title={`${graphspaceInfo.nickname} - Schema模版管理`}
+                    title={t('schema_template.title', {name: graphspaceInfo.nickname})}
                 >
                     <Row justify='space-between'>
                         <Col>
                             <Space>
-                                <Button type='primary' onClick={createSchema}>创建schema模版</Button>
+                                <Button type='primary' onClick={createSchema}>
+                                    {t('schema_template.create')}
+                                </Button>
                             </Space>
                         </Col>
-                        <Col><Input.Search placeholder='请输入schema模版名称' onSearch={onSearch} /></Col>
+                        <Col>
+                            <Input.Search
+                                placeholder={t('schema_template.search_placeholder')}
+                                onSearch={onSearch}
+                            />
+                        </Col>
                     </Row>
                 </PageHeader>
 

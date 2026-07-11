@@ -19,40 +19,40 @@
 import request from './request';
 
 // 图空间
-const getGraphSpaceList = params => {
-    return request.get('/graphspaces', {params});
+const getGraphSpaceList = (params, config = {}) => {
+    return request.get('/graphspaces', {...config, params});
 };
 
-const getGraphSpace = graphspace => {
-    return request.get(`/graphspaces/${graphspace}`);
+const getGraphSpace = (graphspace, config) => {
+    return request.get(`/graphspaces/${graphspace}`, config);
 };
 
-const addGraphSpace = data => {
-    return request.post('/graphspaces', data);
+const addGraphSpace = (data, config) => {
+    return request.post('/graphspaces', data, config);
 };
 
-const updateGraphSpace = (graphspace, data) => {
-    return request.put(`/graphspaces/${graphspace}`, data);
+const updateGraphSpace = (graphspace, data, config) => {
+    return request.put(`/graphspaces/${graphspace}`, data, config);
 };
 
-const delGraphSpace = graphspace => {
-    return request.delete(`/graphspaces/${graphspace}`);
+const delGraphSpace = (graphspace, config) => {
+    return request.delete(`/graphspaces/${graphspace}`, undefined, config);
 };
 
-const initBuiltin = params => {
-    return request.post('/graphspaces/builtin', params);
+const initBuiltin = (params, config) => {
+    return request.post('/graphspaces/builtin', params, config);
 };
 
 export {getGraphSpace, getGraphSpaceList, addGraphSpace, updateGraphSpace,
     delGraphSpace, initBuiltin};
 
 // schema
-const getSchemaList = (graphspace, params) => {
-    return request.get(`/graphspaces/${graphspace}/schematemplates`, {params});
+const getSchemaList = (graphspace, params, config = {}) => {
+    return request.get(`/graphspaces/${graphspace}/schematemplates`, {...config, params});
 };
 
-const addSchema = (graphspace, data) => {
-    return request.post(`/graphspaces/${graphspace}/schematemplates`, data);
+const addSchema = (graphspace, data, config) => {
+    return request.post(`/graphspaces/${graphspace}/schematemplates`, data, config);
 };
 
 const getSchema = (graphspace, name) => {
@@ -67,19 +67,19 @@ const exportSchema = (graphspace, graph) => {
     return request.get(`graphspaces/${graphspace}/graphs/${graph}/schema/groovy/export`);
 };
 
-const updateSchema = (graphspace, name, data) => {
-    return request.put(`graphspaces/${graphspace}/schematemplates/${name}`, data);
+const updateSchema = (graphspace, name, data, config) => {
+    return request.put(`graphspaces/${graphspace}/schematemplates/${name}`, data, config);
 };
 
-const delSchema = (graphspace, name) => {
-    return request.delete(`graphspaces/${graphspace}/schematemplates/${name}`);
+const delSchema = (graphspace, name, config) => {
+    return request.delete(`graphspaces/${graphspace}/schematemplates/${name}`, undefined, config);
 };
 
 export {getSchemaList, addSchema, updateSchema, getSchema, getGraphSchema, exportSchema, delSchema};
 
 // 图
-const getGraphList = (graphspace, params) => {
-    return request.get(`/graphspaces/${graphspace}/graphs`, {params});
+const getGraphList = (graphspace, params, config = {}) => {
+    return request.get(`/graphspaces/${graphspace}/graphs`, {...config, params});
 };
 
 const addGraph = (graphspace, data) => {
@@ -94,8 +94,8 @@ const updateGraph = (graphspace, graph, params) => {
     return request.put(`/graphspaces/${graphspace}/graphs/${graph}`, params);
 };
 
-const getGraph = (graphspace, graph) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/get`);
+const getGraph = (graphspace, graph, config) => {
+    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/get`, config);
 };
 
 const delGraph = (graphspace, graph) => {
@@ -106,12 +106,14 @@ const getGraphView = (graphspace, graph) => {
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/schema/graphview`);
 };
 
-const setDefaultGraph = (graphspace, graph) => {
-    return request.post(`graphspaces/${graphspace}/graphs/${graph}/default`);
+const setDefaultGraph = (graphspace, graph, config) => {
+    const path = `graphspaces/${graphspace}/graphs/${graph}/default`;
+    return config ? request.post(path, undefined, config) : request.post(path);
 };
 
-const getDefaultGraph = graphspace => {
-    return request.get(`graphspaces/${graphspace}/graphs/default`);
+const getDefaultGraph = (graphspace, config) => {
+    const path = `graphspaces/${graphspace}/graphs/default`;
+    return config ? request.get(path, config) : request.get(path);
 };
 
 const clearGraphData = (graphspace, graph) => {
@@ -126,8 +128,8 @@ const clearGraphDataAndSchema = (graphspace, graph) => {
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/truncate`, {params: {clear_schema: true}});
 };
 
-const getGraphStatistic = (graphspace, graph) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/statistics`);
+const getGraphStatistic = (graphspace, graph, config) => {
+    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/statistics`, config);
 };
 
 const updateGraphStatistic = (graphspace, graph) => {
@@ -156,20 +158,22 @@ const addMetaProperty = (graphspace, graph, data) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys`, data);
 };
 
-const checkMetaProperty = (graphspace, graph, data) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys/check_using`, data);
+const checkMetaProperty = (graphspace, graph, data, config) => {
+    return request.post(
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys/check_using`, data, config);
 };
 
 const updateMetaProperty = () => {};
 
-const delMetaProperty = (graphspace, graph, data) => {
+const delMetaProperty = (graphspace, graph, data, config) => {
     const {names} = data;
     const str = names.map(name => 'names=' + encodeURIComponent(name)).join('&');
     const skip_using = String(names.length !== 1);
 
     // return request.delete(`/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys`, data);
     return request.delete(
-        `/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys?${str}&skip_using=${skip_using}`);
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys?${str}&skip_using=${skip_using}`,
+        undefined, config);
 };
 
 export {getMetaPropertyList, addMetaProperty, updateMetaProperty, delMetaProperty, checkMetaProperty};
@@ -199,15 +203,16 @@ const addMetaVertexNew = (graphspace, graph, data) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels/create_new`, data);
 };
 
-const checkMetaVertex = (graphspace, graph, data) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels/check_using`, data);
+const checkMetaVertex = (graphspace, graph, data, config) => {
+    return request.post(
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels/check_using`, data, config);
 };
 
 const updateMetaVertex = (graphspace, graph, name, data) => {
     return request.put(`/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels/${name}`, data);
 };
 
-const delMetaVertex = (graphspace, graph, data) => {
+const delMetaVertex = (graphspace, graph, data, config) => {
     // return request.delete(`/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels`, data);
 
     const {names} = data;
@@ -215,7 +220,8 @@ const delMetaVertex = (graphspace, graph, data) => {
     const skip_using = String(names.length !== 1);
 
     return request.delete(
-        `/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels?${str}&skip_using=${skip_using}`);
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/vertexlabels?${str}&skip_using=${skip_using}`,
+        undefined, config);
 };
 
 export {getMetaVertexList, addMetaVertex, updateMetaVertex, delMetaVertex, checkMetaVertex, getMetaVertex,
@@ -238,7 +244,7 @@ const updateMetaEdge = (graphspace, graph, name, data) => {
     return request.put(`/graphspaces/${graphspace}/graphs/${graph}/schema/edgelabels/${name}`, data);
 };
 
-const delMetaEdge = (graphspace, graph, data) => {
+const delMetaEdge = (graphspace, graph, data, config) => {
     // return request.delete(`/graphspaces/${graphspace}/graphs/${graph}/schema/edgelabels`, data);
 
     const {names} = data;
@@ -246,7 +252,8 @@ const delMetaEdge = (graphspace, graph, data) => {
     const skip_using = String(names.length !== 1);
 
     return request.delete(
-        `/graphspaces/${graphspace}/graphs/${graph}/schema/edgelabels?${str}&skip_using=${skip_using}`);
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/edgelabels?${str}&skip_using=${skip_using}`,
+        undefined, config);
 };
 
 export {getMetaEdgeList, getMetaEdge, addMetaEdge, updateMetaEdge, delMetaEdge};
