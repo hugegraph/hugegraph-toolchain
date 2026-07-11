@@ -64,6 +64,14 @@ public class JobManagerService {
         return this.mapper.selectById(id);
     }
 
+    public JobManager get(String graphSpace, String graph, int id) {
+        QueryWrapper<JobManager> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", graphSpace)
+             .eq("graph", graph);
+        return this.mapper.selectOne(query);
+    }
+
     public JobManager getTask(String jobName, String graphSpace, String graph) {
         QueryWrapper<JobManager> query = Wrappers.query();
         query.eq("job_name", jobName);
@@ -74,7 +82,11 @@ public class JobManagerService {
 
     public List<JobManager> list(String graphSpace, String graph,
                                  List<Integer> jobIds) {
-        return this.mapper.selectBatchIds(jobIds);
+        QueryWrapper<JobManager> query = Wrappers.query();
+        query.eq("graphspace", graphSpace)
+             .eq("graph", graph)
+             .in("id", jobIds);
+        return this.mapper.selectList(query);
     }
 
     public IPage<JobManager> list(String graphSpace, String graph,
@@ -188,6 +200,15 @@ public class JobManagerService {
         List<FileMapping> mappings = this.fileMappingService.listByJob(id);
         this.remove(id);
         this.deleteDiskFilesAfterCommit(mappings);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void deleteJob(String graphSpace, String graph, int id) {
+        JobManager job = this.get(graphSpace, graph, id);
+        if (job == null) {
+            throw new ExternalException("job.manager.not-exist.id", id);
+        }
+        this.deleteJob(id);
     }
 
     private void deleteDiskFilesAfterCommit(List<FileMapping> mappings) {

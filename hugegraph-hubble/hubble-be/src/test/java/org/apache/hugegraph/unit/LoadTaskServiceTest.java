@@ -19,6 +19,8 @@
 package org.apache.hugegraph.unit;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
+import java.util.Arrays;
 
 import org.junit.Test;
 
@@ -27,9 +29,31 @@ import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.LoadParameter;
 import org.apache.hugegraph.loader.executor.LoadOptions;
 import org.apache.hugegraph.service.load.LoadTaskService;
+import org.apache.hugegraph.mapper.load.LoadTaskMapper;
 import org.apache.hugegraph.testutil.Assert;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 public class LoadTaskServiceTest {
+
+    @Test
+    public void testListByIdsAppliesGraphScope() throws Exception {
+        LoadTaskService service = new LoadTaskService();
+        LoadTaskMapper mapper = Mockito.mock(LoadTaskMapper.class);
+        Field field = LoadTaskService.class.getDeclaredField("mapper");
+        field.setAccessible(true);
+        field.set(service, mapper);
+
+        service.list("space-a", "graph-a", 7, Arrays.asList(1, 2));
+
+        ArgumentCaptor<QueryWrapper> query =
+                ArgumentCaptor.forClass(QueryWrapper.class);
+        Mockito.verify(mapper).selectList(query.capture());
+        Assert.assertContains("job_id", query.getValue().getSqlSegment());
+        Mockito.verify(mapper, Mockito.never()).selectBatchIds(Mockito.any());
+    }
 
     @Test
     public void testLoadOptionsPreferBasicCredentialPassword()

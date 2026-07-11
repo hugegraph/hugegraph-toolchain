@@ -103,6 +103,15 @@ public class FileMappingService {
         return this.mapper.selectById(id);
     }
 
+    public FileMapping get(String graphSpace, String graph, int jobId, int id) {
+        QueryWrapper<FileMapping> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", graphSpace)
+             .eq("graph", graph)
+             .eq("job_id", jobId);
+        return this.mapper.selectOne(query);
+    }
+
     public FileMapping get(String graphSpace, String graph, int jobId,
                            String fileName) {
         QueryWrapper<FileMapping> query = Wrappers.query();
@@ -120,6 +129,15 @@ public class FileMappingService {
     public List<FileMapping> listByJob(int jobId) {
         QueryWrapper<FileMapping> query = Wrappers.query();
         query.eq("job_id", jobId);
+        return this.mapper.selectList(query);
+    }
+
+    public List<FileMapping> listByJob(String graphSpace, String graph,
+                                       int jobId) {
+        QueryWrapper<FileMapping> query = Wrappers.query();
+        query.eq("graphspace", graphSpace)
+             .eq("graph", graph)
+             .eq("job_id", jobId);
         return this.mapper.selectList(query);
     }
 
