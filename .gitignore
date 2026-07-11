@@ -108,6 +108,7 @@ go.env
 !.codex-task/GLOBAL-TODO.md
 .autonomous/
 .claude/
+superpowers/
 
 # Local Hubble runtime / extracted distributions
 /db*.db
