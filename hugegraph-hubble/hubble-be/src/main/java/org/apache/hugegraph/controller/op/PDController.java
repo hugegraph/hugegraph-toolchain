@@ -19,6 +19,8 @@
 package org.apache.hugegraph.controller.op;
 
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
+import org.apache.hugegraph.exception.ServerException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +35,14 @@ public class PDController extends BaseController {
     @GetMapping("status")
     public Object status() {
         HugeClient client = this.authClient(null, null);
-        return client.pdManager().status();
+        // TODO: Server 1.7.0 does not expose the /pd status REST API used by
+        // HugeClient. Keep this call real (do not synthesize health); remove
+        // this TODO only after Server provides and Hubble CI verifies it.
+        try {
+            return client.pdManager().status();
+        } catch (ServerException e) {
+            throw new ServerCapabilityUnavailableException(
+                    "server.capability.pd-status.unavailable", e);
+        }
     }
 }

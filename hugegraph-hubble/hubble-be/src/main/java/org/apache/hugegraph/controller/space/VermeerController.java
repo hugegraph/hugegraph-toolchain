@@ -39,9 +39,11 @@ import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.space.VermeerService;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.extern.log4j.Log4j2;
 
 @RestController
 @RequestMapping(Constant.API_VERSION + "vermeer")
+@Log4j2
 public class VermeerController extends BaseController {
 
     @Autowired
@@ -99,7 +101,8 @@ public class VermeerController extends BaseController {
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while waiting for the Vermeer load task", e);
         }
     }
 

@@ -136,18 +136,13 @@ const updateGraphStatistic = (graphspace, graph) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/statistics`);
 };
 
-// no-use
-const getGraphStorage = (graphspace, graph) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/storage`);
-};
-
 const cloneGraph = (graphspace, graph, params) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/clone`, params);
 };
 
 export {getGraphList, getGraph, addGraph, updateGraph, delGraph, getDefaultGraph,
     getGraphView, clearGraphData, setDefaultGraph, clearGraphDataAndSchema,
-    getGraphStatistic, updateGraphStatistic, getGraphStorage, cloneGraph};
+    getGraphStatistic, updateGraphStatistic, cloneGraph};
 
 // meta property
 const getMetaPropertyList = (graphspace, graph, params) => {

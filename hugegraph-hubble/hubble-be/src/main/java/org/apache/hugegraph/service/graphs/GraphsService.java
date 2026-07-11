@@ -130,8 +130,8 @@ public class GraphsService {
                 result.put("schemaview", schemaService.getSchemaView(
                         client.assignGraph(graphSpace, graph)));
             } catch (Exception e) {
-                e.printStackTrace();
-                log.info("Schema exception with graph '{}'", graph);
+                log.warn("Failed to load the schema summary for graph '{}'",
+                         graph, e);
             }
         }
 

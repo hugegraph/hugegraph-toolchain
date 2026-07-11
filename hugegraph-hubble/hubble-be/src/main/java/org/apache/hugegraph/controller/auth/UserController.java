@@ -198,14 +198,10 @@ public class UserController extends BaseController {
     }
 
     @DeleteMapping("super/{id}")
-    public void deleteSuper(@PathVariable("id") String id){
-        try {
-            UserEntity user = userService.getUser(this.authClient(null, null), id);
-            user.setSuperadmin(false);
-            userService.update(this.authClient(null, null), user);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void deleteSuper(@PathVariable("id") String id) {
+        UserEntity user = userService.getUser(this.authClient(null, null), id);
+        user.setSuperadmin(false);
+        userService.update(this.authClient(null, null), user);
     }
 
     private void updateUserAuthIfNeed(HugeClient client, UserEntity user,

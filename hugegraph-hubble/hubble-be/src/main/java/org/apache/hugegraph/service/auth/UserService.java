@@ -250,38 +250,62 @@ public class UserService extends AuthService{
     }
 
     public String addbatch(HugeClient client, MultipartFile csvFile) {
-        Map<String, Object> csv = readCsvByCsvReader(multipartFileToFile(csvFile));
-        List<Map<String, String>> createBatchBody = (List<Map<String, String>>) csv.get("data");
-        Map<String, List<Map<String, String>>> result =
-                client.auth().createBatch(createBatchBody);
-        List<Map<String, String>> resultList = result.get("result");
-        List<String> failedList = new ArrayList<>(createBatchBody.size());
-        for (Map<String, String> entry: resultList) {
-            if (!CREATE_SUCCESS.equals(entry.get("result"))) {
-                failedList.add(entry.get("user_name"));
+        File file = multipartFileToFile(csvFile);
+        try {
+            Map<String, Object> csv = readCsvByCsvReader(file);
+            List<Map<String, String>> createBatchBody =
+                    (List<Map<String, String>>) csv.get("data");
+            Map<String, List<Map<String, String>>> result =
+                    client.auth().createBatch(createBatchBody);
+            List<Map<String, String>> resultList = result.get("result");
+            List<String> failedList = new ArrayList<>(createBatchBody.size());
+            for (Map<String, String> entry : resultList) {
+                if (!CREATE_SUCCESS.equals(entry.get("result"))) {
+                    failedList.add(entry.get("user_name"));
+                }
+            }
+            if (!failedList.isEmpty()) {
+                throw new InternalException("auth.user.batch-create.failed",
+                                            failedList);
+            }
+            return "success";
+        } finally {
+            if (!file.delete()) {
+                log.warn("Failed to delete temporary user import file '{}'; " +
+                         "it will be removed by the operating system", file);
             }
         }
-        if (!failedList.isEmpty()) {
-            throw new RuntimeException("创建失败：" + failedList);
-        }
-        return "创建成功";
     }
 
     public File multipartFileToFile(MultipartFile multiFile) {
-        long currentTime=System.currentTimeMillis();
-        String fileName = multiFile.getOriginalFilename().concat(Long.toString(currentTime));
-        String prefix = fileName.substring(fileName.lastIndexOf("."));
+        File file = null;
         try {
-            File file = File.createTempFile(fileName, prefix);
+            String originalName = multiFile.getOriginalFilename();
+            String suffix = ".tmp";
+            if (originalName != null) {
+                int dot = originalName.lastIndexOf('.');
+                String candidate = dot >= 0 ? originalName.substring(dot) : "";
+                if (candidate.matches("\\.[A-Za-z0-9]{1,16}")) {
+                    suffix = candidate;
+                }
+            }
+            file = File.createTempFile("hubble-user-import-", suffix);
             multiFile.transferTo(file);
             return file;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to create a temporary file for user import", e);
+            if (file != null && file.exists() && !file.delete()) {
+                log.warn("Failed to delete incomplete user import file '{}'",
+                         file);
+            }
+            throw new InternalException("auth.user.import-file.failed", e);
         }
-        return null;
     }
 
     public Map<String, Object> readCsvByCsvReader(File file) {
+        if (file == null) {
+            throw new InternalException("auth.user.import-file.failed");
+        }
         Map<String, Object> mapData = new HashMap<>();
         String fileName = file.getName();
         mapData.put("sheetName", fileName);
@@ -311,7 +335,8 @@ public class UserService extends AuthService{
                 list.add(map);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to parse the user import CSV file", e);
+            throw new InternalException("auth.user.import-csv.failed", e);
         }
         mapData.put("data", list);
         return mapData;
@@ -414,7 +439,7 @@ public class UserService extends AuthService{
             return Response.builder()
                     .status(Constant.STATUS_BAD_REQUEST)
                     .message(e.getMessage())
-                    .cause(e.getCause())
+                    .cause(null)
                     .build();
         }
         // Must fetch user first to get the ID, otherwise updateUser sends

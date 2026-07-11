@@ -207,7 +207,7 @@
       "name": "Graph ID",
       "name_placeholder": "Lowercase letters, digits, underscore, max 48 chars",
       "nickname": "Display Name",
-      "nickname_placeholder": "Letters, digits, underscore, max 12 chars",
+      "nickname_placeholder": "Letters, digits, underscore, max 48 chars",
       "schema_placeholder": "Select a schema",
       "create_success": "Graph created",
       "update_success": "Graph updated",

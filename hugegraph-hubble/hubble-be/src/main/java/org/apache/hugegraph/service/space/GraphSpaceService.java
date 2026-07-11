@@ -88,8 +88,7 @@ public class GraphSpaceService {
                         graphsService.listGraphNames(client, gs, "").size());
             }
         } catch (Exception e) {
-            LOG.error("Failed to get saas metrics, caused by");
-            e.printStackTrace();
+            LOG.error("Failed to get SaaS metrics", e);
             throw e;
         }
 

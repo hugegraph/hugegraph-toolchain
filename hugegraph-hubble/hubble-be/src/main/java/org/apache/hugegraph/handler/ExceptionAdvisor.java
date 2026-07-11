@@ -25,9 +25,11 @@ import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.IllegalGremlinException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.exception.ParameterizedException;
+import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
 import org.apache.hugegraph.exception.UnauthorizedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -61,7 +63,7 @@ public class ExceptionAdvisor {
         return Response.builder()
                        .status(Constant.STATUS_INTERNAL_ERROR)
                        .message(message)
-                       .cause(e.getCause())
+                       .cause(null)
                        .build();
     }
 
@@ -74,7 +76,7 @@ public class ExceptionAdvisor {
         return Response.builder()
                        .status(e.status())
                        .message(message)
-                       .cause(e.getCause())
+                       .cause(null)
                        .build();
     }
 
@@ -86,7 +88,7 @@ public class ExceptionAdvisor {
         return Response.builder()
                        .status(Constant.STATUS_BAD_REQUEST)
                        .message(message)
-                       .cause(e.getCause())
+                       .cause(null)
                        .build();
     }
 
@@ -104,7 +106,7 @@ public class ExceptionAdvisor {
         return Response.builder()
                        .status(Constant.STATUS_BAD_REQUEST)
                        .message(message)
-                       .cause(e.getCause())
+                       .cause(null)
                        .build();
     }
 
@@ -117,7 +119,35 @@ public class ExceptionAdvisor {
         return Response.builder()
                        .status(Constant.STATUS_BAD_REQUEST)
                        .message(message)
-                       .cause(e.getCause())
+                       .cause(null)
+                       .build();
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Response exceptionHandler(
+            MissingServletRequestParameterException e) {
+        String message = this.handleMessage("request.parameter.required",
+                                            new Object[]{e.getParameterName()});
+        closeRequestClient();
+        return Response.builder()
+                       .status(Constant.STATUS_BAD_REQUEST)
+                       .message(message)
+                       .cause(null)
+                       .build();
+    }
+
+    @ExceptionHandler(ServerCapabilityUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public Response exceptionHandler(
+            ServerCapabilityUnavailableException e) {
+        log.warn("Required HugeGraph Server capability is unavailable", e);
+        String message = this.handleMessage(e.getMessage(), e.args());
+        closeRequestClient();
+        return Response.builder()
+                       .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                       .message(message)
+                       .cause(null)
                        .build();
     }
 
@@ -130,7 +160,7 @@ public class ExceptionAdvisor {
         return Response.builder()
                        .status(Constant.STATUS_ILLEGAL_GREMLIN)
                        .message(message)
-                       .cause(e.getCause())
+                       .cause(null)
                        .build();
     }
 
