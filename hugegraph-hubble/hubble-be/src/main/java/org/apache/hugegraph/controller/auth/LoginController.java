@@ -31,11 +31,15 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.entity.auth.UserEntity;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.ServerException;
 import com.google.common.collect.ImmutableMap;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -61,26 +65,22 @@ public class LoginController extends BaseController {
     UserService userService;
     @Autowired
     private HugeConfig config;
+    @Autowired
+    private LoginAttemptGuard loginAttemptGuard;
 
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
-        // TODO: Add account-aware throttling and security audit events before this
-        // endpoint is exposed to an untrusted network.
+        String address = this.getRequest().getRemoteAddr();
+        boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
+        this.loginAttemptGuard.checkAllowed(login.name(), address);
         // Set Expire: 1 Month
         login.expire(TOKEN_EXPIRE_SECONDS);
         try {
-            boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
-            LoginResult result;
+            LoginResult result = this.authenticate(login, pdEnabled, address);
             Object user;
             if (!pdEnabled) {
-                result = this.loginStandalone(login);
                 user = currentUser(login.name());
             } else {
-                try (HugeClient client =
-                             this.createLoginClient(login.name(),
-                                                    login.password())) {
-                    result = client.auth().login(login);
-                }
                 try (HugeClient client =
                              this.createLoginTokenClient(result.token())) {
                     client.assignGraph(PDHugeClientFactory.DEFAULT_GRAPHSPACE,
@@ -107,6 +107,44 @@ public class LoginController extends BaseController {
         }
     }
 
+    private LoginResult authenticate(Login login, boolean pdEnabled,
+                                     String address) {
+        try {
+            LoginResult result;
+            if (!pdEnabled) {
+                result = this.loginStandalone(login);
+            } else {
+                try (HugeClient client =
+                             this.createLoginClient(login.name(),
+                                                    login.password())) {
+                    result = client.auth().login(login);
+                }
+            }
+            this.loginAttemptGuard.reset(login.name(), address);
+            return result;
+        } catch (Throwable e) {
+            if (isAuthenticationFailure(e)) {
+                this.loginAttemptGuard.recordFailure(login.name(), address);
+            } else {
+                this.loginAttemptGuard.release(login.name(), address);
+            }
+            throw e;
+        }
+    }
+
+    private static boolean isAuthenticationFailure(Throwable error) {
+        if (error instanceof ServerException) {
+            int status = ((ServerException) error).status();
+            return status == HttpStatus.UNAUTHORIZED.value() ||
+                   status == HttpStatus.FORBIDDEN.value();
+        }
+        return error instanceof ExternalException &&
+               (((ExternalException) error).status() ==
+                HttpStatus.UNAUTHORIZED.value() ||
+                ((ExternalException) error).status() ==
+                HttpStatus.FORBIDDEN.value());
+    }
+
     protected LoginResult loginStandalone(Login login) {
         String endpoint = this.config.get(HubbleOptions.SERVER_URL) +
                           "/auth/login";
@@ -131,9 +169,15 @@ public class LoginController extends BaseController {
             try (OutputStream output = connection.getOutputStream()) {
                 output.write(MAPPER.writeValueAsBytes(body));
             }
-            if (connection.getResponseCode() >= 400) {
+            int status = connection.getResponseCode();
+            if (status == HttpStatus.UNAUTHORIZED.value() ||
+                status == HttpStatus.FORBIDDEN.value()) {
+                throw new ExternalException(status,
+                                            "graph-connection.username-or-password.incorrect");
+            }
+            if (status >= 400) {
                 throw new IOException("Standalone login failed: HTTP " +
-                                      connection.getResponseCode());
+                                      status);
             }
             Map<?, ?> response;
             try (InputStream input = connection.getInputStream()) {

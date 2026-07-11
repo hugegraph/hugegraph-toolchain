@@ -23,11 +23,13 @@ import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.IllegalGremlinException;
 import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.exception.LoginThrottledException;
 import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
 import org.apache.hugegraph.exception.UnauthorizedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -53,6 +55,21 @@ public class ExceptionAdvisor {
 
     @Autowired
     private MessageSourceHandler messageSourceHandler;
+
+    @ExceptionHandler(LoginThrottledException.class)
+    public ResponseEntity<Response> exceptionHandler(LoginThrottledException e) {
+        String message = this.handleMessage(e.getMessage(),
+                                            new Object[]{e.getRetrySeconds()});
+        Response response = Response.builder()
+                                    .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                                    .message(message)
+                                    .cause(null)
+                                    .build();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                             .header("Retry-After",
+                                     String.valueOf(e.getRetrySeconds()))
+                             .body(response);
+    }
 
     // FIXME: Map business failures to HTTP status codes only after auditing frontend
     // compatibility; clients currently depend on the status field in the JSON body.

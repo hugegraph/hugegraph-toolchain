@@ -49,6 +49,7 @@ import org.junit.runners.Suite;
     JobManagerServiceTest.class,
     K8sTokenEndpointSecurityTest.class,
     LoadTaskServiceTest.class,
+    LoginAttemptGuardTest.class,
     OltpAlgoControllerTest.class,
     OltpAlgoServiceTest.class,
     PriorityFixTest.class,

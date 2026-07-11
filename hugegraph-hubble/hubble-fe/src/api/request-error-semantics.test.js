@@ -21,6 +21,7 @@ const loadResponseHandlers = modulePath => {
 
     const responseHandlers = [];
     const messageError = jest.fn();
+    const modalWarning = jest.fn();
     const clearLogin = jest.fn();
     const instance = {
         interceptors: {
@@ -46,6 +47,9 @@ const loadResponseHandlers = modulePath => {
         message: {
             error: messageError,
         },
+        Modal: {
+            warning: modalWarning,
+        },
     }));
     jest.doMock('../i18n', () => ({
         t: key => key,
@@ -59,6 +63,7 @@ const loadResponseHandlers = modulePath => {
         resolve: responseHandlers[0].resolve,
         reject: responseHandlers[0].reject,
         messageError,
+        modalWarning,
         clearLogin,
         instance,
         request,
@@ -139,6 +144,41 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
         await expect(resolve(response)).rejects.toBe(response);
         expect(clearLogin).toHaveBeenCalledTimes(1);
         expect(window.location.href).toBe('/login?redirect=%2Fnavigation%3Ffrom%3Dtest');
+    });
+
+    it('shows a modal warning for throttled login attempts', () => {
+        const {resolve, modalWarning, messageError} = loadResponseHandlers(modulePath);
+        const response = {
+            status: 200,
+            data: {
+                status: 429,
+                message: 'Retry in 2 seconds',
+            },
+        };
+
+        expect(resolve(response)).toBe(response);
+        expect(modalWarning).toHaveBeenCalledWith(expect.objectContaining({
+            content: 'Retry in 2 seconds',
+        }));
+        expect(messageError).not.toHaveBeenCalled();
+    });
+
+    it('shows only one warning while repeated HTTP throttles are active', async () => {
+        const {reject, modalWarning, messageError} = loadResponseHandlers(modulePath);
+        const error = {
+            response: {
+                status: 429,
+                data: {
+                    status: 429,
+                    message: 'Retry in 5 seconds',
+                },
+            },
+        };
+
+        await expect(reject(error)).rejects.toBe(error);
+        await expect(reject(error)).rejects.toBe(error);
+        expect(modalWarning).toHaveBeenCalledTimes(1);
+        expect(messageError).not.toHaveBeenCalled();
     });
 
     it('lets an inline error owner suppress the duplicate business-error toast', () => {

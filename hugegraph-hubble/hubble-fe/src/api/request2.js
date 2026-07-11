@@ -24,6 +24,7 @@ import qs from 'qs';
 import i18n from '../i18n';
 import * as user from '../utils/user';
 import {withLanguageHeader} from './languageHeader';
+import {showThrottleWarning} from './throttleWarning';
 
 const isJsonResponse = headers => {
     const contentType = headers?.['content-type'] || headers?.['Content-Type'] || '';
@@ -89,6 +90,9 @@ instance.interceptors.response.use(
             redirectToLogin();
             return Promise.reject(response);
         }
+        else if (response.data?.status === 429) {
+            showThrottleWarning(response.data.message);
+        }
         else if (response.data?.status !== 200
                  && !response.config?.suppressBusinessErrorToast) {
             if (!_.isEmpty(response.data.message)) {
@@ -100,6 +104,11 @@ instance.interceptors.response.use(
     error => {
         if (isUnauthorizedError(error)) {
             redirectToLogin();
+            return Promise.reject(error);
+        }
+        if (error.response?.status === 429
+            || error.response?.data?.status === 429) {
+            showThrottleWarning(error.response?.data?.message);
             return Promise.reject(error);
         }
         if (!error.config?.suppressBusinessErrorToast) {
