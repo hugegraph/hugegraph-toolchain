@@ -105,7 +105,7 @@ describe('route guard', () => {
         expect(sessionStorage.getItem('redirect')).toBeNull();
     });
 
-    it.each(['/super', '/resource', '/role'])(
+    it.each(['/resource', '/role'])(
         'redirects unavailable legacy route %s to navigation',
         route => {
             sessionStorage.setItem('user_', JSON.stringify({

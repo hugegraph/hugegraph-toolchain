@@ -904,7 +904,7 @@ public class OltpAlgoService {
                     .collect(Collectors.toList());
             String ids = StringUtils.join(escapedIds, ",");
             GraphView graphView = new GraphView(vertices.values(), edges.values());
-            if (ids != "") {
+            if (!ids.isEmpty()) {
                 String gremlin = String.format("g.V(%s).limit(1000)", ids);
                 ResultSet resultSet = client.gremlin().gremlin(gremlin).execute();
                 for (Iterator<Result> iter = resultSet.iterator(); iter.hasNext();) {
@@ -1146,7 +1146,7 @@ public class OltpAlgoService {
                         .map(GremlinUtil::escapeId)
                         .collect(Collectors.toList());
                 String ids = StringUtils.join(escapedIds, ",");
-                if (ids != "") {
+                if (!ids.isEmpty()) {
                     String gremlin = String.format("g.V(%s).limit(1000)", ids);
                     ResultSet resultSet = client.gremlin().gremlin(gremlin).execute();
                     for (Iterator<Result> iter = resultSet.iterator(); iter.hasNext(); ) {

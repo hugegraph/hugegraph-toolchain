@@ -24,7 +24,6 @@ const ClearGraphConfirmModal = ({
     open,
     graphspace,
     graph,
-    mode,
     onCancel,
     onSuccess,
     onConfirm,
@@ -35,7 +34,7 @@ const ClearGraphConfirmModal = ({
     const [error, setError] = useState('');
     const pendingRef = useRef(false);
     const activeRequestRef = useRef(null);
-    const selectionKey = JSON.stringify([open, graphspace, graph, mode]);
+    const selectionKey = JSON.stringify([open, graphspace, graph]);
     const currentSelectionRef = useRef(selectionKey);
 
     useLayoutEffect(() => {
@@ -50,7 +49,7 @@ const ClearGraphConfirmModal = ({
             setPending(false);
             setError('');
         }
-    }, [open, graphspace, graph, mode]);
+    }, [open, graphspace, graph]);
 
     const handleConfirm = useCallback(async () => {
         if (pendingRef.current || confirmation !== graph) {
@@ -105,8 +104,6 @@ const ClearGraphConfirmModal = ({
         setConfirmation(event.target.value);
     }, []);
 
-    const dataOnly = mode === 'data';
-
     return (
         <Modal
             open={open}
@@ -132,18 +129,9 @@ const ClearGraphConfirmModal = ({
                 <Alert
                     type='warning'
                     showIcon
-                    message={t(dataOnly
-                        ? 'graph.clear_confirm.scope_data'
-                        : 'graph.clear_confirm.scope_schema_data')}
+                    message={t('graph.clear_confirm.scope_schema_data')}
                     description={t('graph.clear_confirm.irreversible')}
                 />
-                {dataOnly && (
-                    <Alert
-                        type='warning'
-                        showIcon
-                        message={t('graph.clear_confirm.schema_preservation_warning')}
-                    />
-                )}
                 {error && <Alert type='error' showIcon message={error} />}
                 <Typography.Text>
                     {t('graph.clear_confirm.input_label')}

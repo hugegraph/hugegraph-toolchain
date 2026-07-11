@@ -47,6 +47,16 @@ cleanup() {
     if [[ -n "${hubble_home}" && -x "${hubble_home}/bin/stop-hubble.sh" ]]; then
         "${hubble_home}/bin/stop-hubble.sh" >/dev/null 2>&1 || true
     fi
+    mkdir -p "${evidence_dir}/logs"
+    if [[ -f "${runtime_work}/hubble-live-smoke.log" ]]; then
+        cp "${runtime_work}/hubble-live-smoke.log" \
+            "${evidence_dir}/logs/hubble-live-smoke.log"
+    fi
+    if [[ -n "${hubble_home}" && \
+          -f "${hubble_home}/logs/hugegraph-hubble.log" ]]; then
+        cp "${hubble_home}/logs/hugegraph-hubble.log" \
+            "${evidence_dir}/logs/hugegraph-hubble.log"
+    fi
     rm -rf "${runtime_work}"
 }
 trap cleanup EXIT

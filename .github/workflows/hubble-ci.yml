@@ -23,6 +23,8 @@ on:
 
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
+  HUGEGRAPH_SERVER_COMMIT: 99936be5f41fccd193f120e01206e3cf3c73a050
+  HUGEGRAPH_SERVER_FETCH_REF: refs/heads/master
 
 jobs:
   hubble-ci:
@@ -40,12 +42,6 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 2
-
-      - name: Get HugeGraph Server PR 3008 commit id
-        id: get-commit
-        uses: ./.github/actions/get-hugegraph-commit
-        with:
-          server-pr-number: '3008'
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -94,8 +90,8 @@ jobs:
       - name: Cache HugeGraph Server
         uses: actions/cache@v6
         with:
-          path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}
+          path: ~/hugegraph-cache-${{ env.HUGEGRAPH_SERVER_COMMIT }}
+          key: ${{ runner.os }}-hugegraph-server-${{ env.HUGEGRAPH_SERVER_COMMIT }}
 
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
@@ -119,8 +115,8 @@ jobs:
 
       - name: Prepare env and service
         env:
-          COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
-          COMMIT_REF: ${{ steps.get-commit.outputs.fetch_ref }}
+          COMMIT_ID: ${{ env.HUGEGRAPH_SERVER_COMMIT }}
+          COMMIT_REF: ${{ env.HUGEGRAPH_SERVER_FETCH_REF }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="
@@ -183,6 +179,19 @@ jobs:
           HUBBLE_694_EVIDENCE_DIR=target/hubble-live-acceptance \
             hubble-dist/assembly/travis/verify-hubble-issue-694.sh \
             "${HUBBLE_TARBALL}" http://127.0.0.1:8080
+
+      - name: Upload Hubble smoke evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: hubble-smoke-java-${{ matrix.JAVA_VERSION }}-${{ github.run_attempt }}
+          path: |
+            hugegraph-hubble/target/hubble-dist-check.json
+            hugegraph-hubble/target/hubble-live-acceptance/**/*.json
+            hugegraph-hubble/target/hubble-live-acceptance/**/*.png
+            hugegraph-hubble/target/hubble-live-acceptance/**/*.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload coverage to Codecov
         uses: ./.github/actions/upload-coverage

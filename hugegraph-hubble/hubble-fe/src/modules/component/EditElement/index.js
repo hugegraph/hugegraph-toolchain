@@ -228,9 +228,9 @@ const EditElement = props => {
                 status,
             } = response;
             if (status === 200) {
-                const {NullableProps, nonNullableProps} = data;
+                const {nullableProps, nonNullableProps} = data;
                 setEdgeNonNullableProps(nonNullableProps);
-                setEdgeNullableProps(NullableProps);
+                setEdgeNullableProps(nullableProps);
             }
             if (status !== 200 && !edgePropertiessMessage) {
                 message.error(t('analysis.canvas.edit_element.get_edge_property_failed'));
@@ -249,9 +249,9 @@ const EditElement = props => {
                 status,
             } = response;
             if (status === 200) {
-                const {NullableProps, nonNullableProps, primaryKeys} = data;
+                const {nullableProps, nonNullableProps, primaryKeys} = data;
                 setVertexPrimaryKeys(primaryKeys);
-                setVertexNullableProps(NullableProps);
+                setVertexNullableProps(nullableProps);
                 setVertexNonNullableProps(nonNullableProps);
             }
             if (status !== 200 && !vertexPropertiessMessage) {

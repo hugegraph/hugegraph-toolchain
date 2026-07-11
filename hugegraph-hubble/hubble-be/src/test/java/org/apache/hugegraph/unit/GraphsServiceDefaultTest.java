@@ -30,6 +30,7 @@ import org.mockito.Mockito;
 
 import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.service.graphs.GraphsService;
 
 public class GraphsServiceDefaultTest {
@@ -59,6 +60,38 @@ public class GraphsServiceDefaultTest {
         order.verify(this.graphs).setDefault("target");
         order.verify(this.graphs).unSetDefault("old_a");
         order.verify(this.graphs).unSetDefault("old_b");
+    }
+
+    @Test
+    public void testClearGraphUsesExplicitDestructiveConfirmation() {
+        Mockito.when(this.graphs.getDefault()).thenReturn(
+                Collections.singletonMap("default_graph",
+                                         Collections.singletonList("default")));
+
+        this.service.clearGraph(this.client, "graph_a");
+
+        InOrder order = Mockito.inOrder(this.graphs);
+        order.verify(this.graphs).getDefault();
+        order.verify(this.graphs).clearGraph(
+              "graph_a", "I'm sure to delete all data");
+    }
+
+    @Test
+    public void testClearGraphRejectsDefaultGraph() {
+        Mockito.when(this.graphs.getDefault()).thenReturn(
+                Collections.singletonMap("default_graph",
+                                         Arrays.asList("other", "graph_a")));
+
+        try {
+            this.service.clearGraph(this.client, "graph_a");
+            Assert.fail("Expected default graph rejection");
+        } catch (ExternalException ignored) {
+            // Expected: default graphs must not be cleared.
+        }
+
+        Mockito.verify(this.graphs).getDefault();
+        Mockito.verify(this.graphs, Mockito.never())
+               .clearGraph(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test

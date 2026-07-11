@@ -17,7 +17,6 @@
  */
 
 import request from './request';
-import qs from 'qs';
 
 // login
 const login = data => {
@@ -165,8 +164,8 @@ const getPersonal = () => {
     return request.get('/auth/users/getpersonal');
 };
 
-const updatePersonal = params => {
-    return request.get('/auth/users/updatepersonal', {params});
+const updatePersonal = data => {
+    return request.put('/auth/users/personal', data);
 };
 
 export {getPersonal, updatePersonal};
@@ -180,37 +179,3 @@ const getVermeer = () => {
 };
 
 export {getDashboard, getVermeer};
-
-const getUUapList = params => {
-    return request.get('/uic/list', {params});
-};
-
-const getSuperUser = params => {
-    return request.get('/auth/users/super', {params});
-};
-
-const addSuperUser = data => {
-    return request.post('/auth/users/super',
-        qs.stringify(data),
-        {headers: {'Content-Type': 'application/x-www-form-urlencoded'}}
-    );
-};
-
-const addUuapUser = data => {
-    return request.post('/auth/users/uuap',
-        qs.stringify(data),
-        {headers: {'Content-Type': 'application/x-www-form-urlencoded'}}
-    );
-
-    // return request.post('/auth/users/uuap', data);
-};
-
-const removeSuperUser = username => {
-    return request.delete(`/auth/users/super/${username}`);
-};
-
-const getAccountsList = username => {
-    return request.get('/uic/accounts', {params: {username}});
-};
-
-export {getUUapList, getSuperUser, addSuperUser, addUuapUser, removeSuperUser, getAccountsList};

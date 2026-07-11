@@ -89,6 +89,7 @@ instance.interceptors.response.use(
     response => {
         if (response.status === 401 || response.data?.status === 401) {
             redirectToLogin();
+            return Promise.reject(response);
         }
         else if (response.data?.status !== 200
                  && !response.config?.suppressBusinessErrorToast) {
@@ -101,7 +102,7 @@ instance.interceptors.response.use(
     error => {
         if (isUnauthorizedError(error)) {
             redirectToLogin();
-            return {data: {status: 401, message: 'Unauthorized'}};
+            return Promise.reject(error);
         }
         if (!error.config?.suppressBusinessErrorToast) {
             const res = error.response?.data;

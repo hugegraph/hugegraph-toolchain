@@ -129,37 +129,6 @@ public class UserService extends AuthService {
         return PageUtil.page(results, pageNo, pageSize);
     }
 
-    public Object superQueryPage(HugeClient hugeClient, String query,
-                                 int pageNo, int pageSize) {
-        AuthManager auth = hugeClient.auth();
-        Map<String, Integer> countMap = new HashMap<>();
-        Map<String, List<String>> spaceMap = new HashMap<>();
-
-        List<UserEntity> results;
-        if (isPdEnabled()) {
-            results = hugeClient.auth().listUsers().stream()
-                    .filter((u) -> !"admin".equals(u.name()) &&
-                                   !"system".equals(u.name()) &&
-                                   isSuperAdmin(hugeClient, u.id().toString()))
-                    .sorted(Comparator.comparing(User::name))
-                    .map((u) -> convert(hugeClient, u))
-                    .collect(Collectors.toList());
-
-            List<Object> listMap = getSpaceAndSpacenum(hugeClient);
-            spaceMap = HubbleUtil.uncheckedCast(listMap.get(0));
-            countMap = HubbleUtil.uncheckedCast(listMap.get(1));
-            for (UserEntity user : results) {
-                user.setSpacenum(countMap.get(user.getName()));
-                user.setAdminSpaces(spaceMap.get(user.getName()));
-                user.setSuperadmin(isSuperAdmin(hugeClient, user.getId()));
-            }
-        } else {
-            // Non-PD mode: no manager/space APIs available
-            results = new ArrayList<>();
-        }
-        return PageUtil.page(results, pageNo, pageSize);
-    }
-
     public UserEntity get(HugeClient hugeClient, String userId) {
         AuthManager auth = hugeClient.auth();
         User user = auth.getUser(userId);

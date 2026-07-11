@@ -37,8 +37,6 @@
         <app.host>localhost</app.host>
         <app.port>36320</app.port>
         <es.version>7.16.1</es.version>
-        <!-- Unified version for pd/store/server components (separate from toolchain revision) -->
-        <hugegraph.core.version>1.7.0</hugegraph.core.version>
     </properties>
 
     <dependencies>
@@ -108,7 +106,6 @@
         <dependency>
             <groupId>org.apache.hugegraph</groupId>
             <artifactId>hugegraph-common</artifactId>
-            <version>${hugegraph.common.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.logging.log4j</groupId>
@@ -135,7 +132,6 @@
         <dependency>
             <groupId>org.apache.hugegraph</groupId>
             <artifactId>hg-pd-client</artifactId>
-            <version>${hugegraph.core.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.logging.log4j</groupId>
@@ -239,7 +235,6 @@
         <dependency>
             <groupId>org.apache.hugegraph</groupId>
             <artifactId>hugegraph-core</artifactId>
-            <version>${hugegraph.core.version}</version>
             <scope>compile</scope>
             <exclusions>
                 <!-- Hubble only uses server configuration types. The store

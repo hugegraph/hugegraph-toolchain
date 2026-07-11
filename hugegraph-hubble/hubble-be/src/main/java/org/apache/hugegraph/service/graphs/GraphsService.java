@@ -30,6 +30,7 @@ import org.apache.hugegraph.api.graph.GraphMetricsAPI;
 //import org.apache.hugegraph.client.api.graph.GraphMetricsAPI;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.query.GremlinController;
+import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.GraphConnection;
 import org.apache.hugegraph.entity.enums.AsyncTaskStatus;
@@ -279,17 +280,15 @@ public class GraphsService {
         client.graphs().update(graph, nickname);
     }
 
-    public void truncate(HugeClient client, String graph,
-                         boolean isClearSchema, boolean isClearData) {
-        // TODO client do not support clear Schema field. Check here
-        if (isClearSchema) {
-            client.graphs().clearGraph(graph,"I'm sure to delete all data");
-        }
-        // TODO: Replace this temporary facade after Server exposes and verifies a
-        // data-only clear operation that preserves schema.
-        else if (isClearData) {
-            client.graphs().clearGraph(graph, "I'm sure to delete all data");
-        }
+    public void clearGraph(HugeClient client, String graph) {
+        // TODO: Add data-only clearing as soon as Server provides a verified
+        // operation that preserves schema. This operation clears both.
+        GraphsManager graphs = client.graphs();
+        Map<String, Object> response = graphs.getDefault();
+        Set<String> defaults = defaultGraphs(response.get("default_graph"));
+        Ex.check(!defaults.contains(graph),
+                 "The default graph can't be cleared");
+        graphs.clearGraph(graph, "I'm sure to delete all data");
     }
 
     public void setDefault(HugeClient client, String graph) {
@@ -648,7 +647,7 @@ public class GraphsService {
             this.create(client, "红楼梦", GRAPH_HLM, null);
         } else {
             this.update(client, "红楼梦", GRAPH_HLM);
-            this.truncate(client, GRAPH_HLM, true, false);
+            this.clearGraph(client, GRAPH_HLM);
         }
 
         GremlinQuery query = new GremlinQuery(GREMLIN_LOAD_HLM);
@@ -662,7 +661,7 @@ public class GraphsService {
             this.create(client, "新冠患者轨迹追溯", GRAPH_COVID19, null);
         } else {
             this.update(client, "新冠患者轨迹追溯", GRAPH_COVID19);
-            this.truncate(client, GRAPH_COVID19, true, false);
+            this.clearGraph(client, GRAPH_COVID19);
         }
 
         // todo load data

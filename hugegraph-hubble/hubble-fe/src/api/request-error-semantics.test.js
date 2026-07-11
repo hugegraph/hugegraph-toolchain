@@ -108,7 +108,7 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
         expect(messageError).toHaveBeenCalledWith('request.error');
     });
 
-    it('keeps the existing 401 sentinel response and redirects to login', () => {
+    it('rejects HTTP 401 and redirects to login', async () => {
         const {reject, clearLogin} = loadResponseHandlers(modulePath);
         const error = {
             response: {
@@ -120,14 +120,24 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
             },
         };
 
-        expect(reject(error)).toEqual({
+        await expect(reject(error)).rejects.toBe(error);
+        expect(clearLogin).toHaveBeenCalledTimes(1);
+        expect(sessionStorage.getItem('redirect')).toBe('/navigation?from=test');
+        expect(window.location.href).toBe('/login?redirect=%2Fnavigation%3Ffrom%3Dtest');
+    });
+
+    it('rejects business 401 and redirects to login', async () => {
+        const {resolve, clearLogin} = loadResponseHandlers(modulePath);
+        const response = {
+            status: 200,
             data: {
                 status: 401,
                 message: 'Unauthorized',
             },
-        });
+        };
+
+        await expect(resolve(response)).rejects.toBe(response);
         expect(clearLogin).toHaveBeenCalledTimes(1);
-        expect(sessionStorage.getItem('redirect')).toBe('/navigation?from=test');
         expect(window.location.href).toBe('/login?redirect=%2Fnavigation%3Ffrom%3Dtest');
     });
 

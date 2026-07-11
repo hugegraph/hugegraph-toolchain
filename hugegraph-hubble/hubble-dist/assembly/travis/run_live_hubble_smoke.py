@@ -79,17 +79,24 @@ def server_json(method, server_url, path, body=None, timeout=10):
                    timeout=timeout)
 
 
+def is_hubble_readiness_response(response):
+    if not isinstance(response, dict) or response.get("status") != 200:
+        return False
+    data = response.get("data")
+    return (isinstance(data, dict) and
+            isinstance(data.get("name"), str) and bool(data["name"]) and
+            isinstance(data.get("version"), str) and bool(data["version"]))
+
+
 def wait_for_health(hubble_url, deadline_seconds):
     deadline = time.time() + deadline_seconds
     last_error = None
     while time.time() < deadline:
         try:
-            response = request("GET", f"{hubble_url}/actuator/health", timeout=3)
-            if isinstance(response, dict) and response.get("status") == "UP":
+            response = request("GET", f"{hubble_url}/about", timeout=3)
+            if is_hubble_readiness_response(response):
                 return response
-            if isinstance(response, str) and '"UP"' in response:
-                return {"status": "UP", "raw": response}
-            return {"status": "HTTP_200", "raw": response}
+            last_error = RuntimeError(f"Unexpected /about response: {response}")
         except Exception as exc:  # noqa: BLE001 - smoke tool should report final error
             last_error = exc
         time.sleep(1)
@@ -98,8 +105,8 @@ def wait_for_health(hubble_url, deadline_seconds):
 
 def is_healthy(hubble_url):
     try:
-        response = request("GET", f"{hubble_url}/actuator/health", timeout=2)
-        return response is not None
+        response = request("GET", f"{hubble_url}/about", timeout=2)
+        return is_hubble_readiness_response(response)
     except Exception:  # noqa: BLE001 - preflight only needs a boolean
         return False
 
@@ -179,8 +186,11 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
 
 def run_hubble_only_checks(hubble_url):
     checks = []
-    health = request("GET", f"{hubble_url}/actuator/health")
-    checks.append({"name": "hubble-health", "status": "passed", "detail": health})
+    readiness = request("GET", f"{hubble_url}/about")
+    if not is_hubble_readiness_response(readiness):
+        raise RuntimeError(f"Unexpected Hubble /about response: {readiness}")
+    checks.append({"name": "hubble-readiness", "status": "passed",
+                   "detail": readiness})
     root = request("GET", f"{hubble_url}/")
     if '<div id="root"></div>' not in root:
         raise RuntimeError("Hubble root did not serve React root")
@@ -286,9 +296,12 @@ def run_analysis_boundary_checks(hubble_url, graph_space, graph_name):
         "GET",
         f"{base}/cypher?cypher={urllib.parse.quote('MATCH (n) RETURN n LIMIT 1')}"
     )
+    if cypher_status not in (200, 400):
+        raise RuntimeError(
+            f"analysis-cypher-boundary failed: status {cypher_status}")
     checks.append({
         "name": "analysis-cypher-boundary",
-        "status": "passed",
+        "status": "passed" if cypher_status == 200 else "skipped",
         "http_or_business_status": cypher_status,
         "classification": ("hubble-api-available"
                            if cypher_status == 200 else
@@ -300,9 +313,12 @@ def run_analysis_boundary_checks(hubble_url, graph_space, graph_name):
         "worker": 1,
         "params": {}
     })
+    if olap_status not in (200, 400):
+        raise RuntimeError(
+            f"analysis-olap-boundary failed: status {olap_status}")
     checks.append({
         "name": "analysis-olap-boundary",
-        "status": "passed",
+        "status": "passed" if olap_status == 200 else "skipped",
         "http_or_business_status": olap_status,
         "classification": ("hubble-api-available"
                            if olap_status == 200 else

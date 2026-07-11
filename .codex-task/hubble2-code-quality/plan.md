@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Execute coherent dependent tasks in the current session. Use parallel agents only for genuinely independent workstreams. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在保持 Hubble 现有业务语义、公开 API 和用户行为稳定的前提下，清理明确的前后端质量问题，定位并改善构建/CI 慢点，修复 server-core 升级故障，并为核心 API 补齐最小有效测试。
+**Goal:** 在默认保持 Hubble 业务语义、公开 API 和用户行为稳定的前提下，清理明确的前后端质量问题，定位并改善构建/CI 慢点，修复 server-core 升级故障，并为核心 API 补齐最小有效测试。2026-07-12 用户确认 Hubble 2.0 尚未发布、无需保留旧契约，因此旧 review 暴露的不合理 destructive/auth/JSON 契约按显式批准直接迁移，不提供 legacy facade。
 
 **Architecture:** 工作分为基线、低风险质量修复、CI/构建性能、server-core 兼容性、核心 API 测试与最终门禁六个阶段。`todo.md` 是唯一实时状态源，`progress.md` 保存跨会话 checkpoint，日期 evidence 保存命令、耗时、日志与 CI URL，`lessons.md` 只保存结束反思和待审批规则候选。
 
@@ -15,6 +15,7 @@
 - lint/code-style 修复优先采用不改变控制流、数据流、公开 API 和运行语义的最小改动。
 - 禁止用 `CI=false`、禁用规则、跳过必需测试、弱化断言、忽略退出码或伪造响应获得绿色结果。
 - 依赖升级、公开 API/序列化契约变化、CI 门禁删除或大范围工作流重构必须先记录方案、收益、风险和回滚方式，并暂停等待用户批准。
+- 2026-07-12 已批准的例外仅限 `todo.md` 的 DEC-REV-01..05；不得据此扩大到未列出的业务语义或依赖升级。
 - 所有生产代码、测试逻辑、构建或 CI 改动在最终完成前必须由未参与实现的独立只读 reviewer 审查；修复 finding 后复审受影响范围。
 
 ---
