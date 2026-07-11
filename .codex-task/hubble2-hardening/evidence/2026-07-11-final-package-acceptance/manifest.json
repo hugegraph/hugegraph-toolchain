@@ -1,9 +1,0 @@
-{
-  "status": "passed",
-  "hubbleUrl": "http://127.0.0.1:38088",
-  "serverUrl": "http://127.0.0.1:8080",
-  "graphspace": "DEFAULT",
-  "graph": "hugegraph",
-  "runtime": ".codex-task/hubble2-hardening/evidence/2026-07-11-final-package-acceptance/live-hubble-smoke.json",
-  "ui": ".codex-task/hubble2-hardening/evidence/2026-07-11-final-package-acceptance/ui-full-acceptance.json"
-}

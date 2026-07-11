@@ -685,7 +685,6 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
             <Form
                 form={form}
                 labelCol={{span: 5}}
-                preserve={false}
                 initialValues={{
                     batch_size: 500,
                     split: ',',
