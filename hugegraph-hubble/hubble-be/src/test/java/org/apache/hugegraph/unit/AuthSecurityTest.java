@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -58,6 +59,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.exception.LoginThrottledException;
 import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
 import org.apache.hugegraph.exception.UnauthorizedException;
@@ -66,6 +68,7 @@ import org.apache.hugegraph.handler.ExceptionAdvisor;
 import org.apache.hugegraph.handler.LoginInterceptor;
 import org.apache.hugegraph.handler.MessageSourceHandler;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.structure.auth.Login;
 import org.apache.hugegraph.structure.auth.LoginResult;
@@ -303,6 +306,27 @@ public class AuthSecurityTest {
                                                         UnauthorizedException.class);
         ResponseStatus status = method.getAnnotation(ResponseStatus.class);
         Assert.assertEquals(HttpStatus.UNAUTHORIZED, status.value());
+    }
+
+    @Test
+    public void testLoginThrottleUsesHttp429AndRetryAfter() {
+        ExceptionAdvisor advisor = new ExceptionAdvisor();
+        MessageSourceHandler messageSource =
+                Mockito.mock(MessageSourceHandler.class);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(),
+                                              Mockito.<Object[]>any()))
+               .thenReturn("retry later");
+        ReflectionTestUtils.setField(advisor, "messageSourceHandler",
+                                     messageSource);
+
+        ResponseEntity<Response> response = advisor.exceptionHandler(
+                new LoginThrottledException(5L));
+
+        Assert.assertEquals(HttpStatus.TOO_MANY_REQUESTS,
+                            response.getStatusCode());
+        Assert.assertEquals("5", response.getHeaders().getFirst("Retry-After"));
+        Assert.assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(),
+                            response.getBody().getStatus());
     }
 
     @Test
@@ -592,6 +616,8 @@ public class AuthSecurityTest {
         Assert.assertNull(request.getSession().getAttribute(
                           Constant.USERNAME_KEY));
         Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
+        Mockito.verify(controller.attemptGuard)
+               .recordFailure("admin", "127.0.0.1");
     }
 
     @Test
@@ -616,7 +642,8 @@ public class AuthSecurityTest {
         controller.userClient = userClient;
         UserService users = Mockito.mock(UserService.class);
         Mockito.when(users.getUser(userClient, "admin"))
-               .thenThrow(new RuntimeException("expected validation failure"));
+               .thenThrow(new ExternalException(HttpStatus.UNAUTHORIZED.value(),
+                                                "expected validation failure"));
         ReflectionTestUtils.setField(controller, "userService", users);
         Login login = new Login();
         login.name("admin");
@@ -631,6 +658,8 @@ public class AuthSecurityTest {
 
         Mockito.verify(loginClient).close();
         Mockito.verify(userClient).close();
+        Mockito.verify(controller.attemptGuard, Mockito.never())
+               .recordFailure(Mockito.anyString(), Mockito.anyString());
         Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
     }
 
@@ -688,6 +717,13 @@ public class AuthSecurityTest {
         private HugeClient loginClient;
         private HugeClient userClient;
         private String validationToken;
+        private LoginAttemptGuard attemptGuard;
+
+        private TestLoginController() {
+            this.attemptGuard = Mockito.mock(LoginAttemptGuard.class);
+            ReflectionTestUtils.setField(this, "loginAttemptGuard",
+                                         this.attemptGuard);
+        }
 
         public LoginResult standalone(Login login) {
             return this.loginStandalone(login);
@@ -696,7 +732,8 @@ public class AuthSecurityTest {
         @Override
         protected LoginResult loginStandalone(Login login) {
             if (this.failStandalone) {
-                throw new RuntimeException("expected login failure");
+                throw new ExternalException(HttpStatus.UNAUTHORIZED.value(),
+                                            "expected login failure");
             }
             if (this.connection != null || this.useNetwork) {
                 return super.loginStandalone(login);
