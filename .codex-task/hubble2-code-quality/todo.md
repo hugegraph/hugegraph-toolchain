@@ -27,12 +27,12 @@
 
 ## Phase 2：lint 与 code-style
 
-- [ ] **CQ-LINT-01** 修复 FE JS/JSX 明确 lint 问题并完成 scoped/full 验证。
-- [ ] **CQ-LINT-02** 修复 FE TypeScript 明确 lint/type 问题并完成 scoped/full 验证。
+- [x] **CQ-LINT-01** 329 个 JS/JSX 文件显式 ESLint 0 warning/error；`yarn lint` 已接入真实 CI。
+- [x] **CQ-LINT-02** 修复唯一 TS 文件缺少 parser services 的配置阻塞及 36 个机械 lint error；全量 330 文件 0 warning/error。
 - [x] **CQ-LINT-03** Hubble BE checkstyle 由 128 项降为 0，javac unchecked warning 由 49 项降为 0，并清理本项目 deprecation warning；compile、119 unit、checkstyle 均通过。
 - [ ] **CQ-LINT-04** 复核所有行为敏感 warning，确保已拆批、补测或提交用户决策。
 - [x] **CQ-LINT-05** React Router warning 6 -> 0；第三方 source-map/act/defaultProps warning 已隔离并登记依赖升级决策。证据：[`evidence/2026-07-11-phase2-quality.md`](evidence/2026-07-11-phase2-quality.md)。
-- [ ] **CQ-LINT-06** 评估 checkstyle “报告问题但 exit 0”的可诊断性；不擅自强化/删除 CI 门禁。
+- [x] **CQ-LINT-06** 定位 severity 阈值错配；仅对当前 0 diagnostics 的 Hubble BE 启用 info 级失败，mutation A/B 证明 1 violation 时 exit 1。全仓 15 条 debt 不扩入本目标。
 
 ## Phase 3：构建与 CI 性能
 
@@ -63,5 +63,6 @@
 
 ## 用户决策项
 
-- **DEC-FE-01（待决策）**：是否批准最小 FE 依赖/lockfile 升级，以清除 52 条第三方 source-map warning、`act`/`defaultProps` warning，并将 Maven production build 从 `CI=false` 恢复为真实门禁。风险：依赖行为/产物变化；回滚：独立 commit 回退；建议：批准小批次升级并用 Jest、production build、package/API acceptance 全量验证。
+- **DEC-FE-01（待决策）**：是否批准精确 pin `react`/`react-dom` 18.2.0，以清除 18.3 的迁移期 Jest warning，并恢复 Maven production build 的 `CI=true`。风险低；回滚为独立 commit；验证为 148 Jest、production build、关键 UI、package/audit/API。
+- **DEC-FE-02（待决策）**：是否接受 52 条已定位的第三方发布制品 source-map warning。兼容世代内无可证明有效的升级：X6 major 仍缺源、Dagre override 有布局风险、Antd major 会改变 UI。建议接受并保留计数证据；不关闭 source map、不做 loader 过滤、不 patch 第三方包。
 - **DEC-CI-02（暂缓）**：FE build 去重、release audit 去重、Maven cache 合并仍属收益/等价性未充分证明的 workflow 重构，不实施。

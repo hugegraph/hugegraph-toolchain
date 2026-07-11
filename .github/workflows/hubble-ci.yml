@@ -103,6 +103,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           yarn install --frozen-lockfile --network-timeout 600000 --prefer-offline --ignore-engines
+          yarn lint
           yarn i18n:check
           node --test ../hubble-dist/assembly/travis/ui_auth.test.js
 

@@ -44,6 +44,15 @@ module.exports = {
         'react',
         '@typescript-eslint',
     ],
+    'overrides': [
+        {
+            'files': ['*.ts', '*.tsx'],
+            'parserOptions': {
+                'project': './tsconfig.eslint.json',
+                'tsconfigRootDir': __dirname,
+            },
+        },
+    ],
     'rules': {
     },
 };
