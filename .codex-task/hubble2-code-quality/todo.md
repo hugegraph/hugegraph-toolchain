@@ -5,17 +5,20 @@
 - 初始化日期：2026-07-11
 - 当前分支：`hubble2`
 - 审计日期/HEAD：2026-07-11 / `b66848d308d58e6899cab7eb92589f1789b62259`
-- 工作树边界：26 个 fresh audit 前已存在的 Hubble BE Java 修改，`+150/-57`
+- 完整本地门禁覆盖的产品实现 SHA：`10c0e8fa4f18694f8f848212ed1da52ef36d80a4`
+- 独立 review checkpoint：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`；相对实现 SHA 仅新增 SOT/evidence 文档
+- fresh audit 工作树边界：26 个审计前已存在的 Hubble BE Java 修改，`+150/-57`
 - 初始/审计后 TODO 数：25 / 30
-- 状态：fresh audit、server-core 依赖解析恢复及 BE lint/compile 清理已完成
-- 当前阶段：Phase 3 / Phase 5；等待 FE 第三方 warning 决策
+- 当前范围内 CQ：24/30 完成；另有 10 项 FUTURE，不计入本轮完成率
+- 状态：本地实现与最终门禁已完成；独立审查及最终真实 CI 证据待完成
+- 当前阶段：Phase 6 最终门禁与独立审查
 
 ## Phase 0：基线与所有权
 
 - [x] **CQ-BASE-01** 记录 HEAD、工作树已有改动、文件所有权和环境版本。证据：[`evidence/2026-07-11-fresh-audit.md`](evidence/2026-07-11-fresh-audit.md)。
 - [x] **CQ-BASE-02** 枚举 FE/BE lint、compile/code-style warning 并分类；确认 checkstyle 当前不会因已报告问题失败。证据：fresh audit。
 - [x] **CQ-BASE-03** 完成本地分段基线：FE build/Jest/lint、BE compile/unit、Client+Loader install、Hubble package、精确 Server cold/cache-hit 均有当前数据。
-- [ ] **CQ-BASE-04** 当前 HEAD 真实 Hubble CI step/cache/重复工作基线；旧 run 仅保留历史对照。
+- [ ] **CQ-BASE-04** 当前 HEAD 真实 Hubble CI step/cache/重复工作基线；旧 run 仅保留历史对照。GitHub quota 排队不阻塞本地门禁、文档收口或 reviewer，仅延迟最终 CI 证据。
 - [x] **CQ-BASE-05** 稳定复现 server-core 依赖错误并固定当前 HEAD/版本/日志；旧失败 run 日志已过期不可用。证据：fresh audit。
 - [x] **CQ-BASE-06** 建立认证、Graph/GraphSpace、Schema、Gremlin、Datasource/Loader/Task 覆盖初表。证据：fresh audit。
 
@@ -55,7 +58,7 @@
 
 ## Phase 6：最终门禁与审查
 
-- [ ] **CQ-FINAL-01** 新鲜运行完整 FE/BE、联动、package/audit 门禁并保存耗时与退出码。
+- [x] **CQ-FINAL-01** 新鲜运行完整 FE/BE、联动、package/audit 门禁并保存耗时与退出码。证据：[`evidence/2026-07-12-final-local-gates.md`](evidence/2026-07-12-final-local-gates.md)。
 - [ ] **CQ-FINAL-02** 确认必需 Hubble CI 在最终 head 真实通过。
 - [ ] **CQ-FINAL-03** 独立只读 reviewer 完成最终 diff 审查并记录 reviewer identity/result。
 - [ ] **CQ-FINAL-04** 修复 actionable findings，完成受影响范围复审且无未解决高严重度问题。

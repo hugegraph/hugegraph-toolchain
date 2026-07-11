@@ -9,11 +9,11 @@
 - 本轮应用：按共享验证面批处理，完整 build/package 仅在阶段边界和最终 diff 冻结后运行。
 - 不适用情况：公共契约变化、难定位回归或高风险修改必须提前拆批并扩大验证。
 
-### 2. 固定 Java 11 并复用 mvnd 可显著缩短本地 Maven 反馈
+### 2. 历史 mvnd 复用经验在本轮工具合同下失效
 
 - 证据来源：历史最终门禁中 Hubble BE 约 13 秒、Client UnitTestSuite 约 4 秒、Client+Loader install 约 37 秒；完整 Hubble package 仍接近 2 分钟。
-- 本轮应用：同一阶段固定 `JAVA_HOME` 与 daemon，记录 cold/warm 数据，避免相邻命令主动停止 daemon。
-- 不适用情况：复现 CI 原生 Maven 行为、daemon 异常或怀疑 daemon 状态影响结果时使用 `mvn` 对照。
+- 本轮结论：当前 mvnd agent 要求 Java 17，与项目 Java 11 合同冲突；统一使用 Java 11 + Maven 3.9.11，并单独记录 cold/warm 数据。
+- 不适用情况：只有后续 mvnd 明确支持当前 Java 合同，且与 CI 原生 Maven 做过等价性验证后，才可重新评估 daemon 复用。
 
 ### 3. 性能优化必须保留真实门禁
 
