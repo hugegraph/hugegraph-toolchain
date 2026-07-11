@@ -35,6 +35,12 @@ jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: key => ({
         'analysis.query.gremlin_tab': 'Gremlin',
         'analysis.query.cypher_tab': 'Cypher',
+        'analysis.query.text2gql_tab': 'Natural language',
+        'analysis.query.text2gql_title': 'Natural-language graph query',
+        'analysis.query.text2gql_description': 'This preview is not connected.',
+        'analysis.query.text2gql_placeholder': 'Describe the graph question',
+        'analysis.query.text2gql_badge': 'Coming soon',
+        'analysis.query.text2gql_privacy': 'Nothing is sent or executed.',
     })[key] || key}),
 }));
 
@@ -44,6 +50,35 @@ beforeAll(() => {
         addListener: jest.fn(),
         removeListener: jest.fn(),
     }));
+});
+
+it('shows a same-level Text2GQL preview with no executable control', () => {
+    const onTabsChange = jest.fn();
+    const {rerender} = render(
+        <QueryBar
+            activeTab='Gremlin'
+            onTabsChange={onTabsChange}
+            codeEditorContent=''
+            setCodeEditorContent={jest.fn()}
+        />
+    );
+
+    fireEvent.click(screen.getByRole('tab', {name: /Natural language/}));
+    expect(onTabsChange).toHaveBeenCalledWith('Text2GQL');
+
+    rerender(
+        <QueryBar
+            activeTab='Text2GQL'
+            onTabsChange={onTabsChange}
+            codeEditorContent=''
+            setCodeEditorContent={jest.fn()}
+        />
+    );
+    expect(screen.getByRole('textbox', {
+        name: 'Natural-language graph query',
+    })).toBeDisabled();
+    expect(screen.getByText('Nothing is sent or executed.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /run|execute/i})).not.toBeInTheDocument();
 });
 
 it('does not transfer an open favorite popover when query tabs change', () => {

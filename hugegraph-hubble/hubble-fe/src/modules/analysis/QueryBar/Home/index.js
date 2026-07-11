@@ -22,13 +22,13 @@
 
 import React, {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Tabs} from 'antd';
+import {Alert, Input, Tabs, Tag} from 'antd';
 import CodeEditor from '../../../../components/CodeEditor';
 import {ANALYSIS_TYPE} from '../../../../utils/constants';
 import ContentCommon from '../ContentCommon';
 import c from './index.module.scss';
 
-const {GREMLIN, CYPHER} = ANALYSIS_TYPE;
+const {GREMLIN, CYPHER, TEXT2GQL} = ANALYSIS_TYPE;
 
 const isFavoritePopoverOpen = (visible, activeTab, tabKey) => {
     return visible && activeTab === tabKey;
@@ -106,6 +106,36 @@ const QueryBar = props => {
                         lang={'cypher'}
                     />
                 </ContentCommon>
+            ),
+        },
+        {
+            label: (
+                <span>
+                    {t('analysis.query.text2gql_tab')}
+                    <Tag color='blue'>
+                        {t('analysis.query.text2gql_badge')}
+                    </Tag>
+                </span>
+            ),
+            key: TEXT2GQL,
+            children: (
+                <div className={c.text2gqlPlaceholder}>
+                    <Alert
+                        showIcon
+                        type='info'
+                        message={t('analysis.query.text2gql_title')}
+                        description={t('analysis.query.text2gql_description')}
+                    />
+                    {/* TODO(text2gql): connect a reviewed backend contract before
+                        enabling input, generation, or execution. */}
+                    <Input.TextArea
+                        aria-label={t('analysis.query.text2gql_title')}
+                        placeholder={t('analysis.query.text2gql_placeholder')}
+                        disabled
+                        rows={5}
+                    />
+                    <p>{t('analysis.query.text2gql_privacy')}</p>
+                </div>
             ),
         },
     ];

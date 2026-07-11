@@ -94,6 +94,7 @@ export const ANALYSIS_TYPE = {
     GREMLIN: 'Gremlin',
     ALGORITHM: 'Algorithms',
     CYPHER: 'Cypher',
+    TEXT2GQL: 'Text2GQL',
     ASYNC_CYPHER: 'Async_Cypher',
     ASYNC_GREMLIN: 'Async_Gremlin',
 };
