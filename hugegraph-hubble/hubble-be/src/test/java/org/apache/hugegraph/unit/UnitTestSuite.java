@@ -47,9 +47,11 @@ import org.junit.runners.Suite;
     MessageSourceHandlerTest.class,
     SchemaControllerSecurityTest.class,
     JobManagerServiceTest.class,
+    K8sTokenEndpointSecurityTest.class,
     LoadTaskServiceTest.class,
     OltpAlgoControllerTest.class,
     OltpAlgoServiceTest.class,
+    PriorityFixTest.class,
     QueryServiceTest.class,
     UrlUtilTest.class
 })

@@ -26,20 +26,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.exception.InternalException;
 import com.google.common.collect.ImmutableMap;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
-@RestController
-@RequestMapping(Constant.API_VERSION + "k8s/token")
+// SECURITY: This controller is intentionally not registered or mapped. Do not expose
+// Kubernetes credentials through Hubble without a privileged authorization design.
 public class K8sTokenController  extends BaseController {
 
     @Autowired
@@ -54,7 +50,6 @@ public class K8sTokenController  extends BaseController {
         return null;
     }
 
-    @GetMapping
     public Object getK8sToken() {
 
         Path configDir = fileDir();
@@ -78,7 +73,6 @@ public class K8sTokenController  extends BaseController {
         throw new InternalException("k8s.token.file.not-exist");
     }
 
-    @GetMapping("dir")
     public Object getK8sToken1() {
 
         Path configDir = fileDir();

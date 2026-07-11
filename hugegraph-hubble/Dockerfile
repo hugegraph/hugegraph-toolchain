@@ -40,5 +40,7 @@ FROM eclipse-temurin:11-jre-jammy
 COPY --from=build /pkg/hugegraph-hubble/apache-hugegraph-hubble-*/ /hubble
 WORKDIR /hubble/
 
+# SECURITY: This is a plain HTTP port. Do not publish it to an untrusted network;
+# production/public deployments must put Hubble behind HTTPS and block bypasses.
 EXPOSE 8088
 ENTRYPOINT ["./bin/start-hubble.sh", "-f"]

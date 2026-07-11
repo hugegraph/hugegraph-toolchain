@@ -52,10 +52,15 @@ const GraphStatistics = props => {
 
     useEffect(
         () => {
-            graph.on('node:mouseenter', evt => {
+            if (!graph) {
+                return undefined;
+            }
+            const handleNodeMouseEnter = evt => {
                 const {id, statistics} = evt.item.getModel();
                 setSelectedNode({id, statistics});
-            });
+            };
+            graph.on('node:mouseenter', handleNodeMouseEnter);
+            return () => graph.off('node:mouseenter', handleNodeMouseEnter);
         },
         [graph]
     );

@@ -20,7 +20,6 @@ package org.apache.hugegraph.handler;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.exception.ServerException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.IllegalGremlinException;
 import org.apache.hugegraph.exception.InternalException;
@@ -55,10 +54,13 @@ public class ExceptionAdvisor {
     @Autowired
     private MessageSourceHandler messageSourceHandler;
 
+    // FIXME: Map business failures to HTTP status codes only after auditing frontend
+    // compatibility; clients currently depend on the status field in the JSON body.
+
     @ExceptionHandler(InternalException.class)
     @ResponseStatus(HttpStatus.OK)
     public Response exceptionHandler(InternalException e) {
-        log.info("Log InternalException: ", e);
+        log.warn("Internal request failure");
         String message = this.handleMessage(e.getMessage(), e.args());
         closeRequestClient();
         return Response.builder()
@@ -71,7 +73,7 @@ public class ExceptionAdvisor {
     @ExceptionHandler(ExternalException.class)
     @ResponseStatus(HttpStatus.OK)
     public Response exceptionHandler(ExternalException e) {
-        log.info("Log ExternalException: ", e);
+        log.debug("External request failure: {}", e.getMessage());
         String message = this.handleMessage(e.getMessage(), e.args());
         closeRequestClient();
         return Response.builder()
@@ -96,12 +98,7 @@ public class ExceptionAdvisor {
     @ExceptionHandler(ServerException.class)
     @ResponseStatus(HttpStatus.OK)
     public Response exceptionHandler(ServerException e) {
-        String logMessage = "Log ServerException: \n" + e.exception() + "\n";
-        if (e.trace() != null) {
-            logMessage += StringUtils.join(
-                    HubbleUtil.<List<String>>uncheckedCast(e.trace()), "\n");
-        }
-        log.info(logMessage);
+        log.warn("HugeGraph Server request failed");
 
         String message = this.handleMessage(e.getMessage(), null);
         closeRequestClient();
@@ -115,7 +112,7 @@ public class ExceptionAdvisor {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.OK)
     public Response exceptionHandler(Exception e) {
-        log.info("Log Exception: ", e);
+        log.error("Unexpected request failure", e);
         String message = this.handleMessage(e.getMessage(), null);
         closeRequestClient();
         return Response.builder()
@@ -156,7 +153,7 @@ public class ExceptionAdvisor {
     @ExceptionHandler(IllegalGremlinException.class)
     @ResponseStatus(HttpStatus.OK)
     public Response exceptionHandler(IllegalGremlinException e) {
-        log.info("Log IllegalGremlinException: ", e);
+        log.debug("Illegal Gremlin request: {}", e.getMessage());
         String message = this.handleMessage(e.getMessage(), e.args());
         closeRequestClient();
         return Response.builder()
@@ -169,7 +166,7 @@ public class ExceptionAdvisor {
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Response exceptionHandler(UnauthorizedException e) {
-        log.info("Log UnauthorizedException: ", e);
+        log.debug("Unauthorized request: {}", e.getMessage());
         String message = e.getMessage();
         closeRequestClient();
         return Response.builder()

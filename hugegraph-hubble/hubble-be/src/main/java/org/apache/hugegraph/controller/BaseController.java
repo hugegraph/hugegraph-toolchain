@@ -108,6 +108,8 @@ public abstract class BaseController {
     }
 
     protected void setCredentialPassword(String password) {
+        // TODO: Stop retaining the plaintext login password after Vermeer migrates to
+        // token/service credentials and Loader/Ingest token-only paths are verified.
         setSession(Constant.CREDENTIAL_PASSWORD_KEY, password);
         setSession(Constant.CREDENTIAL_EXPIRES_AT_KEY,
                    System.currentTimeMillis() + Constant.CREDENTIAL_TTL_MILLIS);

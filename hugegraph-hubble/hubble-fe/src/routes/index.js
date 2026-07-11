@@ -42,6 +42,7 @@ import {
     shouldUseNonPdDefaultGraphspace,
 } from '../utils/productMode';
 import * as user from '../utils/user';
+import RouteErrorBoundary from '../components/RouteErrorBoundary';
 
 const LOGIN_PATH = '/login';
 
@@ -208,4 +209,10 @@ const RouteList = ({element}) => {
     );
 };
 
-export default RouteList;
+const SafeRouteList = props => (
+    <RouteErrorBoundary>
+        <RouteList {...props} />
+    </RouteErrorBoundary>
+);
+
+export default SafeRouteList;
