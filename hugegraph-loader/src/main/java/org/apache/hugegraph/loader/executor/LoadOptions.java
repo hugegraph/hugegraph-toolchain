@@ -439,7 +439,8 @@ public final class LoadOptions implements Cloneable {
                      options.maxConnections, batchThreads);
         }
 
-        if (maxConnPerRoute == DEFAULT_MAX_CONNECTIONS_PER_ROUTE && maxConnPerRoute < batchThreads * 2) {
+        if (maxConnPerRoute == DEFAULT_MAX_CONNECTIONS_PER_ROUTE &&
+            maxConnPerRoute < batchThreads * 2) {
             options.maxConnectionsPerRoute = batchThreads * 2;
             LOG.info("Auto adjusted max-conn-per-route to {} based on batch-insert-threads({})",
                      options.maxConnectionsPerRoute, batchThreads);
