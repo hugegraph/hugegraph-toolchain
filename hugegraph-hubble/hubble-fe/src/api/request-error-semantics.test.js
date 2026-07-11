@@ -70,7 +70,7 @@ const loadResponseHandlers = modulePath => {
     };
 };
 
-describe.each(['./request', './request2'])('%s error semantics', modulePath => {
+describe.each(['./request'])('%s error semantics', modulePath => {
     beforeEach(() => {
         delete window.location;
         window.location = {

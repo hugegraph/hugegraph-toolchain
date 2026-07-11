@@ -81,7 +81,8 @@ public class ComputerService {
                 entity.setAlgorithm(input.get("algorithm").toString());
                 entity.setInput(input.get("params").toString());
             } catch (SerializeException e) {
-                log.info("load task.input error", e);
+                log.warn("Failed to parse computer task input: {}",
+                         e.getMessage());
             }
         }
         return entity;
