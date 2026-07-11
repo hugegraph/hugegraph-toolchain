@@ -1,0 +1,192 @@
+{
+  "analysis": {
+    "name": "Business Analysis",
+    "query": {
+      "name": "Graph Query",
+      "placeholder": "Enter a query statement"
+    },
+    "algorithm": {
+      "name": "Graph Algorithm",
+      "placeholder": "Algorithm Query",
+      "common": {
+        "instance_num": "Instance Count",
+        "input_limit_edges_per_vertex": "Max Outgoing Edges",
+        "max_iter_step": "Max Iterations",
+        "worker_num": "Worker Threads",
+        "sample_rate": "Edge sample rate. This algorithm grows exponentially and requires high compute capacity, so choose a practical sample rate for an approximate result.",
+        "weight_property": "Weight Property Name",
+        "property_filter": "Vertex/Edge Property Filter",
+        "min_ring_length": "Minimum ring length to output",
+        "max_ring_length": "Maximum ring length to output",
+        "max_step": "Max Iteration Steps",
+        "request_memory": "Minimum Memory Required per Compute Node",
+        "JVM_memory": "JVM memory size, 32 GB by default",
+        "source": "Source Vertex ID",
+        "query_tooltip": "OLAP algorithms can be used only after the selected graph data is loaded."
+      },
+      "mode": {
+        "OLTP": "OLTP Algorithm",
+        "OLAP": "OLAP Algorithm"
+      },
+      "capacity_item": {
+        "tooltip": "Maximum number of vertices visited during traversal"
+      },
+      "direction_item": {
+        "tooltip": "Traversal direction from the vertex"
+      },
+      "label_item": {
+        "tooltip": "Edge type. Leave empty to include all edge labels."
+      },
+      "max_degree_item": {
+        "tooltip": "Maximum adjacent edges traversed from a single vertex during the query"
+      },
+      "max_depth_item": {
+        "tooltip": "Number of steps"
+      },
+      "nearest_item": {
+        "tooltip": "When nearest is true, the shortest path length from the source vertex to the result vertex is depth and no shorter path exists. When nearest is false, there is a path with length depth from the source vertex to the result vertex, but it may not be shortest and may contain cycles.",
+        "placeholder": "Shortest path length"
+      },
+      "olap": {
+        "betweenness_centrality": {
+          "desc": "Betweenness Centrality estimates how likely a node is to act as a bridge on paths between other nodes. Higher values indicate stronger bridge behavior, such as common followed accounts in a social network.",
+          "sample_rate": "Edge Sample Rate",
+          "sample_rate_long": "Edge sample rate. This algorithm grows exponentially and requires high compute capacity, so choose a practical sample rate for an approximate result.",
+          "use_endpoint": "Include the last vertex in computation"
+        },
+        "closeness_centrality": {
+          "desc": "Computes the reciprocal of the shortest distance from a node to all other reachable nodes, accumulates the values, and normalizes the result. It is used to calculate closeness centrality for each node and supports directed and undirected graphs.",
+          "weight_property": "Weight Property Name",
+          "sample_rate": "Edge Sample Rate",
+          "wf_improved": "Use the Wasserman and Faust closeness centrality formula"
+        },
+        "cluster_coefficient": {
+          "desc": "Clustering coefficient computes the local clustering coefficient for each vertex. Global clustering coefficient is not available yet.",
+          "minimum_edges_use_superedge_cache": "Use memory to reduce message volume. If memory is insufficient, change 100 to 1000, but the clustering coefficient job may not complete."
+        },
+        "degree_centrality": {
+          "desc": "Computes degree centrality for each node and supports directed and undirected graphs.",
+          "direction": "Direction: in/out/both for incoming, outgoing, or both directions"
+        },
+        "filtered_rings_detection": {
+          "desc": "Filtered Rings Detection detects rings in the graph. Each ring path is recorded by the vertex with the smallest ID in the ring. Vertex and edge property filters can be specified to selectively propagate paths."
+        },
+        "filter_subgraph_matching": {
+          "desc": "Filter Subgraph Matching accepts a query graph with property filters and matches all subgraphs that are isomorphic to the query graph.",
+          "query_graph_config": "Query graph configuration as a JSON array string"
+        },
+        "k_core": {
+          "desc": "K-Core marks all vertices whose degree is K.",
+          "k": "K value for the K-Core algorithm. Optional, with a default value.",
+          "degree_k": "Minimum degree threshold"
+        },
+        "label_propagation_algorithm": {
+          "desc": "Label Propagation Algorithm is a graph clustering algorithm commonly used in social networks."
+        },
+        "links": {
+          "desc": "Links tracing starts from a set of source vertices, propagates according to specified rules, stops when the end condition is met, and records the resulting paths.",
+          "analyze_config": "Link propagation condition configuration"
+        },
+        "louvain": {
+          "desc": "Louvain is a modularity-based community detection algorithm. Because of its algorithm characteristics, it runs with only one worker instance."
+        },
+        "computer_item": {
+          "computer_cpu": "Master Max CPU",
+          "worker_cpu": "Worker Max CPU",
+          "master_request_memory": "Master Minimum Memory. Allocation fails if the minimum is not met.",
+          "worker_request_memory": "Worker Minimum Memory. Allocation fails if the minimum is not met.",
+          "master_memory": "Master Max Memory. The task is terminated by Kubernetes if this limit is exceeded.",
+          "worker_memory": "Worker Max Memory. The task is terminated by Kubernetes if this limit is exceeded."
+        },
+        "item": {
+          "PAGE_RANK": "PageRank",
+          "WEAKLY_CONNECTED_COMPONENT": "Weakly Connected Component",
+          "DEGREE_CENTRALIT": "Degree Centrality",
+          "CLOSENESS_CENTRALITY": "Closeness Centrality",
+          "TRIANGLE_COUNT": "Triangle Count",
+          "K_NEIGHBOR": "K-neighbor (GET, Basic)",
+          "K_OUT": "K-out API (GET, Basic)",
+          "SAME_NEIGHBORS": "Same Neighbors",
+          "RINGS": "Rings",
+          "SHORTEST_PATH": "Shortest Path",
+          "ALLPATHS": "Find All Paths (POST, Advanced)",
+          "JACCARD_SIMILARITY": "Jaccard Similarity (GET)",
+          "CROSSPOINTS": "Crosspoints",
+          "RINGS_DETECTION": "Rings Detection",
+          "FILTERED_RINGS_DETECTION": "Filtered Rings Detection",
+          "LINKS": "Links",
+          "CLUSTER_COEFFICIENT": "Cluster Coefficient",
+          "BETWEENNESS_CENTRALITY": "Betweenness Centrality",
+          "LABEL_PROPAGATION_ALGORITHM": "Label Propagation Algorithm",
+          "LOUVAIN": "Louvain",
+          "FILTER_SUBGRAPH_MATCHING": "Filter SubGraph Matching",
+          "K_CORE": "K-Core",
+          "PERSONAL_PAGE_RANK": "PersonalPageRank",
+          "KOUT_POST": "K-out API (POST, Advanced)",
+          "KNEIGHBOR_POST": "K-neighbor API (POST, Advanced)",
+          "JACCARD_SIMILARITY_POST": "Jaccard Similarity (POST)",
+          "RANK_API": "rank API",
+          "NEIGHBOR_RANK_API": "Neighbor Rank API",
+          "FINDSHORTESTPATH": "Find Shortest Path",
+          "FINDSHORTESTPATHWITHWEIGHT": "Find Weighted Shortest Path",
+          "SINGLESOURCESHORTESTPATH": "Find Shortest Paths from One Vertex",
+          "MULTINODESSHORTESTPATH": "Find Shortest Paths for Specified Vertices",
+          "CUSTOMIZEDPATHS": "Customized Path Query",
+          "TEMPLATEPATHS": "Template Path Query",
+          "CUSTOMIZED_CROSSPOINTS": "Customized Crosspoints",
+          "RAYS": "Rays",
+          "PATHS": "Find All Paths (GET, Basic)",
+          "FUSIFORM_SIMILARITY": "Fusiform Similarity",
+          "ADAMIC_ADAR": "Adamic Adar",
+          "RESOURCE_ALLOCATION": "Resource Allocation",
+          "SAME_NEIGHBORS_BATCH": "Same Neighbors Batch",
+          "EGONET": "Egonet",
+          "SSSP": "SSSP (Single Source Shortest Path)"
+        },
+        "page_rank": {
+          "desc": "PageRank ranks web pages or graph nodes by computing relationships through links, reflecting node relevance and importance.",
+          "alpha": "Weight coefficient, also known as damping factor",
+          "l1": "Convergence precision. It is the upper bound of the accumulated absolute changes between two iterations. The algorithm stops when the value is below this threshold.",
+          "damping": "Damping factor, the percentage propagated to the next node",
+          "diff": "Convergence precision. It is the upper bound of the accumulated absolute changes between two iterations. The algorithm stops when the value is below this threshold."
+        },
+        "personal_page_bank": {
+          "desc": "PersonalPageRank is a personalized recommendation algorithm that computes relevance and importance from links between pages or graph nodes.",
+          "source": "Source Vertex",
+          "alpha": "Weight coefficient, also known as damping factor",
+          "l1": "Convergence Precision",
+          "use_id_fixlength": "When true, the system uses auto-increment ID calculation",
+          "use_id_fixlength_query": "Whether to use auto-increment ID calculation"
+        },
+        "ring_detection": {
+          "desc": "Rings Detection detects rings in the graph. Each ring path is recorded by the vertex with the smallest ID in the ring."
+        },
+        "SSSPVermeer": {
+          "desc": "Single Source Shortest Path computes the shortest distance from one vertex to all other vertices."
+        },
+        "triangle_count": {
+          "desc": "Triangle Count computes the number of triangles that each vertex participates in.",
+          "limit_edges_in_one_vertex": "Max Outgoing Edges",
+          "minimum_edges_use_superedge_cache": "Use memory to reduce message volume. If memory is insufficient, change 100 to 1000, but the triangle count job may not complete."
+        },
+        "weakly_connected_component": {
+          "desc": "Weakly Connected Component computes all connected subgraphs in an undirected graph and outputs the weakly connected component ID for each vertex."
+        }
+      },
+      "oltp": {
+        "adamic_adar": {
+          "desc": "Adamic-Adar is commonly used in social networks to estimate how closely two vertices are related based on the density of their common neighbors.",
+          "vertex": "Source Vertex",
+          "other": "Target Vertex",
+          "direction": "Direction from the source vertex to the target vertex. The reverse direction is target to source. BOTH ignores direction.",
+          "label": "Leave empty to include all edge labels",
+          "max_degree": "Maximum adjacent edges traversed from a single vertex during the query",
+          "select_direction": "Traversal direction from the vertex"
+        }
+      }
+    },
+    "async_task": {
+      "name": "Task Management"
+    }
+  }
+}

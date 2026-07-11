@@ -69,6 +69,12 @@ public class UserAPI extends AuthAPI {
         return result.readList(this.type(), User.class);
     }
 
+    public User getByName(String name) {
+        Map<String, Object> params = ImmutableMap.of("name", name);
+        RestResult result = this.client.get(this.path(), params);
+        return result.readObject(User.class);
+    }
+
     public User update(User user) {
         String id = formatEntityId(user.id());
         RestResult result = this.client.put(this.path(), id, user);

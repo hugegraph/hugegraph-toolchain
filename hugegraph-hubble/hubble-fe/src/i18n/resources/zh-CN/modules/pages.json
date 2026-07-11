@@ -1,0 +1,470 @@
+{
+  "common": {
+    "action": {
+      "create": "创建",
+      "save": "保存",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消",
+      "confirm": "确认",
+      "add": "添加",
+      "search": "搜索",
+      "reset": "重置",
+      "view": "查看",
+      "detail": "详情",
+      "upload": "上传",
+      "download": "下载",
+      "refresh": "刷新",
+      "submit": "提交",
+      "back": "返回",
+      "close": "关闭",
+      "apply": "应用",
+      "assign_permission": "分配权限",
+      "set_default": "设为默认",
+      "schema_manage": "schema管理",
+      "init": "初始化",
+      "clone": "克隆"
+    },
+    "label": {
+      "default": "默认",
+      "unlimited": "未限制",
+      "unknown": "未知",
+      "yes": "是",
+      "no": "否",
+      "view_mode": "图模式",
+      "list_mode": "列表模式",
+      "loading": "加载中..."
+    },
+    "verify": {
+      "yes": "是",
+      "no": "否"
+    },
+    "msg": {
+      "success": "操作成功",
+      "create_success": "创建成功",
+      "update_success": "更新成功",
+      "delete_success": "删除成功",
+      "set_success": "设置成功",
+      "init_success": "初始化成功",
+      "upload_success": "上传成功",
+      "upload_fail": "上传失败",
+      "enable_success": "启动成功",
+      "enable_fail": "启动失败",
+      "disable_success": "暂停成功",
+      "disable_fail": "暂停失败",
+      "delete_fail": "删除失败",
+      "select_one": "请至少选择一项"
+    },
+    "confirm": {
+      "delete": "确定删除?",
+      "delete_irrecoverable": "删除后不可恢复"
+    },
+    "form": {
+      "required": "此项为必填项",
+      "max_12": "字符长度最多12位",
+      "max_48": "字符长度最多48位",
+      "max_128": "最多字符128位"
+    }
+  },
+  "graphspace": {
+    "title": "图空间管理",
+    "create": "创建图空间",
+    "search_placeholder": "请输入图空间名称",
+    "set_default_confirm": "确认更改图空间的默认设置?",
+    "delete_confirm": "确定删除?",
+    "delete_content": "删除空间后不可恢复",
+    "col": {
+      "name": "名称",
+      "auth": "是否开启鉴权",
+      "description": "描述",
+      "graph_service": "图服务",
+      "compute_task": "计算任务",
+      "storage_limit": "最大存储空间限制",
+      "operation": "操作"
+    },
+    "auth_yes": "是",
+    "auth_no": "否",
+    "unit": {
+      "cpu": "核",
+      "memory": "G",
+      "unlimited": "未限制"
+    },
+    "form": {
+      "title_edit": "编辑图空间",
+      "title_create": "创建图空间",
+      "id": "图空间ID",
+      "name": "图空间名称",
+      "auth": "是否开启鉴权",
+      "max_graph": "最大图数",
+      "max_role": "最大角色数",
+      "graph_service": "图服务：",
+      "compute_task": "计算任务：",
+      "storage": "存储服务：",
+      "cpu": "cpu资源:",
+      "memory": "内存资源:",
+      "k8s_namespace": "k8s命名空间",
+      "operator_image": "Operator镜像地址",
+      "algorithm_image": "算法镜像地址",
+      "storage_limit": "最大存储空间限制:",
+      "admin": "图空间管理员",
+      "admin_placeholder": "选择图空间管理员",
+      "description": "描述",
+      "description_placeholder": "图空间描述，可选",
+      "cpu_placeholder": "核",
+      "memory_placeholder": "G",
+      "id_placeholder": "以字母开头,只能包含小写字母、数字、_, 最长48位",
+      "name_placeholder": "只能包含中文、字母、数字、_，最长12位",
+      "k8s_placeholder": "以字母开头,只能包含小写字母、数字、-,最长48位",
+      "image_format_error": "请输入正确的镜像地址格式(ie: example.com/org_1/xx_img:1.0.0)!",
+      "id_rule": "以字母开头,只能包含小写字母、数字、_, 最长48位",
+      "k8s_rule": "以字母开头,只能包含小写字母、数字、-,最长48位"
+    },
+    "card": {
+      "enter": "进入图空间",
+      "vertex": "顶点",
+      "edge": "边",
+      "daily_update": "点边数每日更新",
+      "last_update": "本次数据更新于 {{date}}",
+      "graph_id": "图ID：{{name}}",
+      "auth_label": "是否鉴权：",
+      "max_graph": "最大图数：",
+      "cpu": "cpu资源：{{val}}",
+      "memory": "内存资源：{{val}}",
+      "storage": "最大存储空间限制：",
+      "used": "已使用：",
+      "set_default": "默认图空间",
+      "created": "创建"
+    }
+  },
+  "graph": {
+    "title": "图管理",
+    "create": "创建图",
+    "search_placeholder": "请输入图名称",
+    "col": {
+      "name": "图名称",
+      "auth": "是否开启鉴权",
+      "description": "描述",
+      "creator": "创建者",
+      "create_time": "创建时间",
+      "operation": "操作"
+    },
+    "menu": {
+      "enter_analysis": "进入图分析平台",
+      "meta_config": "元数据配置",
+      "clear_schema_data": "清空schema+数据",
+      "clear_data": "清空数据",
+      "set_default": "设为默认",
+      "view_schema": "查看schema",
+      "clone": "克隆图"
+    },
+    "form": {
+      "title_create": "创建图",
+      "title_edit": "编辑图",
+      "name": "图ID",
+      "name_placeholder": "只能包含小写字母、数字、_，最长48位",
+      "nickname": "图名",
+      "nickname_placeholder": "只能包含中文、字母、数字、_，最长12位",
+      "auth": "是否开启鉴权",
+      "description": "描述",
+      "description_placeholder": "图描述，可选"
+    },
+    "detail": {
+      "title": "详情",
+      "name": "图名称",
+      "nickname": "图昵称",
+      "auth": "是否鉴权",
+      "graphspace": "所属图空间",
+      "creator": "创建者",
+      "create_time": "创建时间",
+      "last_update": "最近更新时间：",
+      "update_data": "数据更新"
+    }
+  },
+  "account": {
+    "title": "账号管理",
+    "create": "创建账号",
+    "delete_confirm": "确定要删除账号 {{name}}吗？",
+    "col": {
+      "id": "账号ID",
+      "name": "账号名",
+      "remark": "备注",
+      "resource": "资源权限",
+      "create_time": "创建时间",
+      "is_superadmin": "是否为超级管理员",
+      "permission": "管理权限"
+    },
+    "form": {
+      "title_detail": "查看账号",
+      "title_edit": "编辑账号",
+      "title_auth": "分配权限",
+      "title_create": "创建账号",
+      "id": "账号ID",
+      "id_placeholder": "用户登录",
+      "name": "账号名",
+      "name_placeholder": "账号名设置后可更改",
+      "is_superadmin": "是否为超级管理员",
+      "remark": "备注",
+      "remark_placeholder": "输入账号备注",
+      "default_password": "默认密码",
+      "default_password_placeholder": "123456（创建后可前往个人中心更改）",
+      "permission": "管理权限"
+    }
+  },
+  "my": {
+    "title": "个人中心",
+    "col": {
+      "id": "账号ID",
+      "name": "账号名",
+      "is_superadmin": "是否为超级管理员",
+      "remark": "备注",
+      "permission": "管理权限",
+      "create_time": "创建时间"
+    },
+    "edit": {
+      "title": "更改密码",
+      "old_password": "旧密码",
+      "new_password": "新密码",
+      "confirm_password": "确认密码"
+    }
+  },
+  "role": {
+    "title": "角色管理",
+    "create": "创建角色",
+    "delete_confirm": "确定删除角色{{name}}吗？",
+    "col": {
+      "name": "角色名称",
+      "description": "描述",
+      "operation": "操作"
+    },
+    "form": {
+      "title_create": "创建角色",
+      "title_edit": "编辑角色",
+      "name": "角色名称",
+      "description": "描述",
+      "permissions": "权限"
+    },
+    "auth": {
+      "title": "分配权限",
+      "graphspace": "图空间",
+      "graph": "图",
+      "permission": "权限"
+    }
+  },
+  "resource": {
+    "title": "资源管理",
+    "create": "创建资源",
+    "col": {
+      "name": "资源名称",
+      "type": "类型",
+      "graphspace": "图空间",
+      "graph": "图",
+      "operation": "操作"
+    },
+    "form": {
+      "title_create": "创建资源",
+      "title_edit": "编辑资源",
+      "name": "资源名称",
+      "type": "资源类型",
+      "graphspace": "图空间",
+      "graph": "图"
+    }
+  },
+  "task": {
+    "title": "数据导入",
+    "search_placeholder": "请输入任务名称",
+    "pause": "暂停",
+    "execute": "执行",
+    "edit_title_create": "创建任务",
+    "edit_title_edit": "编辑任务",
+    "col": {
+      "name": "任务名称",
+      "source_type": "源数据类型",
+      "target_space": "目标图空间",
+      "target_graph": "目标图",
+      "sync_type": "同步类型",
+      "status": "状态",
+      "create_time": "创建时间",
+      "operation": "操作"
+    },
+    "statistic": {
+      "total": "总任务",
+      "running": "运行中",
+      "success": "已完成",
+      "failed": "失败"
+    },
+    "detail": {
+      "title": "任务详情",
+      "success": "完成",
+      "failed": "失败",
+      "running": "运行中"
+    },
+    "view": {
+      "title": "查看任务",
+      "name": "任务名称",
+      "source_type": "源数据类型",
+      "target_space": "目标图空间",
+      "target_graph": "目标图",
+      "sync_type": "同步类型"
+    },
+    "edit": {
+      "name": "任务名称",
+      "graphspace": "图空间",
+      "graph": "图",
+      "source": "数据源",
+      "source_type": "源数据类型",
+      "select_graphspace": "请选择图空间",
+      "select_graph": "请选择图",
+      "select_source": "请选择数据源",
+      "select_source_type": "请选择源数据类型"
+    }
+  },
+  "datasource": {
+    "title": "数据源管理",
+    "create": "新增数据源",
+    "search_placeholder": "请输入数据源名称",
+    "col": {
+      "name": "数据源名称",
+      "type": "数据源类型",
+      "host": "主机",
+      "port": "端口",
+      "username": "用户名",
+      "operation": "操作"
+    },
+    "form": {
+      "upload": "上传文件",
+      "no_compress": "无"
+    }
+  },
+  "schema": {
+    "title": "元数据管理",
+    "tab": {
+      "property": "属性",
+      "vertex": "顶点类型",
+      "edge": "边类型",
+      "vertex_index": "顶点索引",
+      "edge_index": "边索引"
+    },
+    "property": {
+      "create": "创建属性",
+      "col": {
+        "name": "属性名称",
+        "type": "数据类型",
+        "cardinality": "基数",
+        "operation": "操作"
+      },
+      "form": {
+        "name": "属性名称：",
+        "type": "数据类型：",
+        "cardinality": "基数："
+      }
+    },
+    "vertex": {
+      "create": "创建顶点类型",
+      "delete_confirm": "确认删除此顶点类型？",
+      "delete_warning": "删除后无法恢复，请谨慎操作",
+      "delete_task_note": "删除元数据耗时较久，详情可在任务管理中查看",
+      "col": {
+        "name": "顶点类型名称",
+        "id_strategy": "ID策略",
+        "properties": "关联属性",
+        "primary_keys": "主键属性",
+        "label_index": "类型索引",
+        "property_index": "属性索引",
+        "operation": "操作"
+      },
+      "form": {
+        "title_create": "创建顶点类型",
+        "title_edit": "编辑顶点类型",
+        "name": "顶点类型名称：",
+        "id_strategy": "ID策略：",
+        "style": "顶点样式：",
+        "display_fields": "顶点展示内容",
+        "label_index": "类型索引",
+        "property_index": "属性索引",
+        "properties": "关联属性"
+      }
+    },
+    "edge": {
+      "delete_confirm": "确认删除此边类型？",
+      "delete_warning": "删除后无法恢复，请谨慎操作",
+      "delete_task_note": "删除元数据耗时较久，详情可在任务管理中查看",
+      "col": {
+        "name": "边类型名称",
+        "type": "边类型",
+        "source": "起点类型",
+        "target": "终点类型",
+        "properties": "关联属性",
+        "sort_keys": "区分键",
+        "label_index": "类型索引",
+        "property_index": "属性索引",
+        "operation": "操作"
+      },
+      "type": {
+        "NORMAL": "普通类型",
+        "PARENT": "父类型",
+        "SUB": "子类型",
+        "parent_label": "父边："
+      },
+      "form": {
+        "title_create": "创建边",
+        "title_edit": "编辑边",
+        "name": "边类型名称：",
+        "type": "类型：",
+        "type_normal": "普通类型",
+        "type_parent": "父边类型",
+        "type_sub": "子边类型",
+        "parent": "父边类型：",
+        "parent_placeholder": "请选择父边",
+        "style": "顶点样式：",
+        "source": "起点类型",
+        "target": "终点类型",
+        "multi_link": "允许多次连接",
+        "properties": "关联属性",
+        "sort_keys": "区分键",
+        "display_fields": "边展示内容",
+        "label_index": "类型索引",
+        "property_index": "属性索引"
+      }
+    },
+    "index": {
+      "vertex_title": "顶点索引",
+      "edge_title": "边索引",
+      "create": "创建索引",
+      "col": {
+        "name": "索引名称",
+        "type": "索引类型",
+        "fields": "属性",
+        "operation": "操作"
+      }
+    },
+    "image_view": {
+      "vertex": "顶点类型",
+      "edge": "边类型"
+    }
+  },
+  "navigation_page": {
+    "title": "导航",
+    "step1": "创建数据",
+    "step2": "业务分析",
+    "step3": "系统管理",
+    "step4": "业务管理",
+    "create_graph": "创建图",
+    "create_schema": "创建Schema",
+    "load_data": "数据入库",
+    "graph_query": "图语言分析",
+    "graph_algorithm": "图算法分析",
+    "graph_manage": "图空间管理",
+    "data_manage": "数据管理",
+    "account_manage": "账号管理",
+    "role_manage": "角色管理",
+    "resource_manage": "资源管理",
+    "task_manage": "任务管理",
+    "datasource_manage": "数据源管理"
+  },
+  "login": {
+    "submit": "登录",
+    "username": "用户名",
+    "password": "密码",
+    "title": "登录 HugeGraph"
+  }
+}

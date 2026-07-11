@@ -1,0 +1,19 @@
+{
+  "common" : {
+    "verify" : {
+      "ok": "OK",
+      "cancel": "Cancel",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "status": {
+      "new": "New",
+      "running": "Running",
+      "success": "Completed",
+      "cancelling": "Stopping",
+      "cancelled": "Stopped",
+      "failed": "Failed",
+      "undefined": "Unknown"
+    }
+  }
+}
