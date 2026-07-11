@@ -234,12 +234,12 @@ client := hugegraph.NewClient("http://localhost:8080", "hugegraph")
 **Purpose**: Web-based graph management and visualization platform
 
 **Key Features**:
-- Schema management with visual editor
-- Data loading interface
-- Graph visualization and exploration
-- Gremlin query console
-- Multi-graph workspace management
-- User authentication and authorization
+- Multi-graph workspace & connection management
+- Interactive schema management with graphical editor
+- Comprehensive data loading dashboard
+- Dynamic graph visualization with path and topology canvas
+- Built-in Gremlin query console & algorithm explorer
+- Fine-grained user authentication & multi-language localization (i18n)
 
 **Technology Stack**: Spring Boot + React + TypeScript + MobX + Ant Design
 

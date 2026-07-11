@@ -4,7 +4,7 @@ This file provides guidance to AI coding assistants (Claude Code, Cursor, GitHub
 
 ## Project Overview
 
-Apache HugeGraph Toolchain - a multi-module Maven project providing utilities for the HugeGraph graph database. Current version: 1.7.0.
+Apache HugeGraph Toolchain - a multi-module Maven project providing utilities for the HugeGraph graph database. It relies on the Java Client to power loaders, CLI tools, and the modernized Hubble platform.
 
 ## Build Commands
 
@@ -129,22 +129,6 @@ hugegraph-loader, hugegraph-tools, hugegraph-hubble, hugegraph-spark-connector
 | hubble-fe | `hugegraph-hubble/hubble-fe/src` | React/TypeScript |
 | tools | `hugegraph-tools/src/main/java` | `org.apache.hugegraph` |
 | spark | `hugegraph-spark-connector/src/main/scala` | `org.apache.hugegraph.spark` |
-
-## Running Applications
-
-### Hubble (Web UI on port 8088)
-```bash
-cd hugegraph-hubble/apache-hugegraph-hubble-*/bin
-./start-hubble.sh      # Background
-./start-hubble.sh -f   # Foreground
-./stop-hubble.sh       # Stop
-```
-
-### Loader
-```bash
-cd hugegraph-loader/apache-hugegraph-loader-*
-./bin/hugegraph-loader.sh [options]
-```
 
 ## Docker
 

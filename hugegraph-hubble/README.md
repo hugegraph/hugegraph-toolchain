@@ -7,6 +7,49 @@
 hugegraph-hubble is a graph management and analysis platform that provides features:
 graph data load, schema management, graph relationship analysis, and graphical display.
 
+## Functional Modules Overview
+
+```mermaid
+graph TD
+    Hubble["HugeGraph-Hubble Platform"]
+
+    Hubble --> Conn["1. Workspace Management<br>(Multi-Graph Connections)"]
+    Hubble --> Schema["2. Visual Schema Designer<br>(Vertex, Edge & Index Types)"]
+    Hubble --> Load["3. Guided Data Importer<br>(Source Mapping & Task Monitor)"]
+    Hubble --> Analyze["4. Graph Analysis & Visualization<br>(Gremlin Console & Visual Exploration)"]
+    Hubble --> System["5. System Administration<br>(Async Tasks & Access Control)"]
+```
+
+<details>
+<summary>ASCII diagram (for terminals/editors)</summary>
+
+```
+             ┌──────────────────────────────────────────┐
+             │       HugeGraph-Hubble Platform          │
+             └────────────────────┬─────────────────────┘
+                                  │
+      ┌───────────────────────────┼───────────────────────────┐
+      ▼                           ▼                           ▼
+┌──────────────┐            ┌──────────────┐            ┌──────────────┐
+│  Workspace   │            │Visual Schema │            │ Guided Data  │
+│  Management  │            │   Designer   │            │   Importer   │
+│  - Connect   │            │  - Vertex    │            │  - Sources   │
+│  - Switch    │            │  - Edge      │            │  - Mapping   │
+│  - Card View │            │  - Index     │            │  - Monitor   │
+└──────────────┘            └──────────────┘            └──────────────┘
+      │                                                       │
+      └───────────────────────────┬───────────────────────────┘
+                                  │
+                                  ▼
+                    ┌──────────────────────────┐
+                    │Graph Analysis & Explorer │
+                    │ - Gremlin Console        │
+                    │ - Algorithm Execution    │
+                    │ - Topology Exploration   │
+                    └──────────────────────────┘
+```
+</details>
+
 ## Features
 
 - Graph connection management, supporting to easily switch graph to operate
@@ -16,13 +59,13 @@ graph data load, schema management, graph relationship analysis, and graphical d
 
 ## Quick Start
 
-There are three ways to get HugeGraph-Loader:
+There are three ways to get HugeGraph-Hubble:
 
 - Download the Toolchain binary package
 - Source code compilation
 - Use Docker image (Convenient for Test/Dev)
 
-And you can find more details in the [doc](https://hugegraph.apache.org/docs/quickstart/hugegraph-loader/#2-get-hugegraph-loader)
+And you can find more details in the [doc](https://hugegraph.apache.org/docs/quickstart/hugegraph-hubble/#2-deploy)
 
 ### 1. Download the Toolchain binary package
 
