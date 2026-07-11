@@ -310,6 +310,8 @@ public final class GremlinUtil {
     }
 
     public static String optimizeLimit(String gremlin, int limit) {
+        // FIXME: Do not treat suffix matching as a resource-safety boundary. Decide on
+        // server-side timeout/result/byte limits without changing aggregation semantics.
         String[] rawLines = StringUtils.split(gremlin, "\n");
         List<String> newLines = new ArrayList<>(rawLines.length);
         for (String rawLine : rawLines) {

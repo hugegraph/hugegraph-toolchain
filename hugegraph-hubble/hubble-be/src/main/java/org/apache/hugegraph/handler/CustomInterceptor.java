@@ -34,6 +34,8 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.util.PageUtil;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -53,6 +55,8 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
+        validatePage(request, "page_no", false);
+        validatePage(request, "page_size", true);
         String url = request.getRequestURI();
         if (!CHECK_API_PATTERN.matcher(url).matches()) {
             setHugeClientToRequest(request);
@@ -71,6 +75,36 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
         //LicenseVerifier.instance().verifyIfNeeded(); // TODO C Remove Licence
         setHugeClientToRequest(request);
         return true;
+    }
+
+    private void validatePage(HttpServletRequest request, String name,
+                              boolean size) {
+        String value = request.getParameter(name);
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        try {
+            int number = Integer.parseInt(value);
+            boolean invalid = size ? number != -1 &&
+                                     (number < 1 || number > PageUtil.MAX_PAGE_SIZE) :
+                                     number < 1;
+            if (invalid) {
+                throw new ExternalException("Invalid pagination parameter: %s", name);
+            }
+        } catch (NumberFormatException e) {
+            throw new ExternalException("Invalid pagination parameter: %s", name);
+        }
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request,
+                                HttpServletResponse response,
+                                Object handler, Exception exception) {
+        Object value = request.getAttribute("hugeClient");
+        if (value instanceof HugeClient) {
+            ((HugeClient) value).close();
+            request.removeAttribute("hugeClient");
+        }
     }
 
     public void setHugeClientToRequest(HttpServletRequest request) {

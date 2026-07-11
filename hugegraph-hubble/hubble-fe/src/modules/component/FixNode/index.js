@@ -34,21 +34,27 @@ const FixNode = () => {
 
 
     useEffect(() => {
-        graph?.on('node:click', evt => {
+        if (!graph) {
+            return undefined;
+        }
+        const handleNodeClick = evt => {
             const {item} = evt;
             setFixState(true);
             setSelectedNode(item);
-        });
-
-        graph?.on('edge:click', evt => {
+        };
+        const clearSelection = () => {
             setSelectedNode();
             setFixState(false);
-        });
+        };
 
-        graph?.on('canvas:click', evt => {
-            setSelectedNode();
-            setFixState(false);
-        });
+        graph.on('node:click', handleNodeClick);
+        graph.on('edge:click', clearSelection);
+        graph.on('canvas:click', clearSelection);
+        return () => {
+            graph.off('node:click', handleNodeClick);
+            graph.off('edge:click', clearSelection);
+            graph.off('canvas:click', clearSelection);
+        };
     },
     [graph]);
 

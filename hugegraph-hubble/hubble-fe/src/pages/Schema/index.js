@@ -50,7 +50,7 @@ const Schema = () => {
     const [pagination, setPagination] = useState({current: 1, pageSize: 10});
     const [query, setQuery] = useState('');
     const [graphspaceInfo, setGraphspaceInfo] = useState({});
-    const [loading] = useState(false);
+    const [loadingCount, setLoadingCount] = useState(0);
     const {graphspace} = useParams();
     const navigate = useNavigate();
     const {current} = pagination;
@@ -133,6 +133,7 @@ const Schema = () => {
     ];
 
     useEffect(() => {
+        setLoadingCount(value => value + 1);
         api.manage.getGraphSpace(graphspace, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 setGraphspaceInfo(res.data);
@@ -140,10 +141,12 @@ const Schema = () => {
             }
 
             message.error(t('common.msg.load_failed'));
-        }).catch(() => message.error(t('common.msg.load_failed')));
+        }).catch(() => message.error(t('common.msg.load_failed')))
+            .finally(() => setLoadingCount(value => Math.max(0, value - 1)));
     }, [graphspace, t]);
 
     useEffect(() => {
+        setLoadingCount(value => value + 1);
         api.manage.getSchemaList(graphspace, {
             query,
             page_no: current,
@@ -154,12 +157,13 @@ const Schema = () => {
                 return;
             }
             message.error(t('common.msg.load_failed'));
-        }).catch(() => message.error(t('common.msg.load_failed')));
+        }).catch(() => message.error(t('common.msg.load_failed')))
+            .finally(() => setLoadingCount(value => Math.max(0, value - 1)));
     }, [graphspace, refresh, current, query, t]);
 
     return (
         <>
-            <Spin spinning={loading}>
+            <Spin spinning={loadingCount > 0}>
                 <PageHeader
                     ghost={false}
                     onBack={handleBack}

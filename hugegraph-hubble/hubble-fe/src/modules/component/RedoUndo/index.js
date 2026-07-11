@@ -37,7 +37,10 @@ const RedoUndo = props => {
 
     useEffect(
         () => {
-            graph?.on('stackchange', evt => {
+            if (!graph) {
+                return undefined;
+            }
+            const handleStackChange = evt => {
                 const {undoStack, redoStack} = evt;
                 const undoStackLen = undoStack.length;
                 const redoStackLen = redoStack.length;
@@ -53,7 +56,9 @@ const RedoUndo = props => {
                 else {
                     setRedoState(true);
                 }
-            });
+            };
+            graph.on('stackchange', handleStackChange);
+            return () => graph.off('stackchange', handleStackChange);
         },
         [graph]
     );

@@ -64,6 +64,8 @@ public class LoginController extends BaseController {
 
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
+        // TODO: Add account-aware throttling and security audit events before this
+        // endpoint is exposed to an untrusted network.
         // Set Expire: 1 Month
         login.expire(TOKEN_EXPIRE_SECONDS);
         try {
@@ -185,6 +187,8 @@ public class LoginController extends BaseController {
         return ImmutableMap.of("level", level);
     }
 
+    // FIXME: Change logout to POST and add CSRF/Origin protection after coordinating
+    // the API change with the frontend; explicitly harden the session cookie as well.
     @GetMapping("/logout")
     public void logout() {
         this.clearAuthSession();

@@ -137,6 +137,9 @@ public class EditElementHistoryController extends BaseController {
                           defaultValue = "10") int pageSize,
             @RequestParam(name = "gremlin_query",
                           required = true) String gremlinQuery) {
+        // FIXME: Push range/limit and an explicit total-count strategy to the server;
+        // collecting the complete Gremlin result defeats pagination and risks OOM.
+        PageUtil.checkPositivePage(pageNo, pageSize);
         GremlinResult gremlin =
                 gremlinService.gremlin(graphSpace, graph,
                                        new GremlinQuery(gremlinQuery));
@@ -155,8 +158,8 @@ public class EditElementHistoryController extends BaseController {
 
         List<Element> mergedElements =
                 mergeEditHistory(this.authClient(graphSpace, graph), histories,
-                                 elements);
-        return PageUtil.page(mergedElements, pageNo, pageSize);
+                                 subElements);
+        return PageUtil.newPage(mergedElements, pageNo, pageSize, elements.size());
     }
 
     private List<Element> mergeEditHistory(HugeClient client,
@@ -196,8 +199,9 @@ public class EditElementHistoryController extends BaseController {
 
     private List<GraphElement> getSubList(List<GraphElement> elements,
                                           int pageNo, int pageSize) {
-        int start = Math.min((pageNo - 1) * pageSize, elements.size());
-        int end = Math.min(pageNo * pageSize, elements.size());
+        long offset = (long) (pageNo - 1) * pageSize;
+        int start = (int) Math.min(offset, elements.size());
+        int end = (int) Math.min(offset + pageSize, elements.size());
         return elements.subList(start, end);
     }
 
