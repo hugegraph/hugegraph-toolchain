@@ -8,7 +8,7 @@
 - 工作树边界：26 个 fresh audit 前已存在的 Hubble BE Java 修改，`+150/-57`
 - 初始/审计后 TODO 数：25 / 30
 - 状态：fresh audit、server-core 依赖解析恢复及 BE lint/compile 清理已完成
-- 当前阶段：Phase 2
+- 当前阶段：Phase 3 / Phase 5；等待 FE 第三方 warning 决策
 
 ## Phase 0：基线与所有权
 
@@ -31,13 +31,13 @@
 - [ ] **CQ-LINT-02** 修复 FE TypeScript 明确 lint/type 问题并完成 scoped/full 验证。
 - [x] **CQ-LINT-03** Hubble BE checkstyle 由 128 项降为 0，javac unchecked warning 由 49 项降为 0，并清理本项目 deprecation warning；compile、119 unit、checkstyle 均通过。
 - [ ] **CQ-LINT-04** 复核所有行为敏感 warning，确保已拆批、补测或提交用户决策。
-- [ ] **CQ-LINT-05** 清理本项目 Jest 可控 warning，并将第三方 source-map/defaultProps warning 与依赖升级决策隔离。
+- [x] **CQ-LINT-05** React Router warning 6 -> 0；第三方 source-map/act/defaultProps warning 已隔离并登记依赖升级决策。证据：[`evidence/2026-07-11-phase2-quality.md`](evidence/2026-07-11-phase2-quality.md)。
 - [ ] **CQ-LINT-06** 评估 checkstyle “报告问题但 exit 0”的可诊断性；不擅自强化/删除 CI 门禁。
 
 ## Phase 3：构建与 CI 性能
 
-- [ ] **CQ-PERF-01** 输出本地与 CI 慢点根因、关键路径和证据化优先级。
-- [ ] **CQ-PERF-02** 实施并验证低风险性能优化，记录相同条件 before/after。
+- [x] **CQ-PERF-01** 已量化 Compile、Prepare、重复 FE build 与 Server package；Server package 为稳定高价值慢点。
+- [ ] **CQ-PERF-02** 已实施精确 Server SHA tarball cache 并完成静态/cache-hit 验证；待至少 3 次同条件 warm CI 中位数 before/after。
 - [ ] **CQ-PERF-03** 将高风险或收益不确定方案记录为用户决策项，不擅自实施。
 
 ## Phase 4：server-core 运行兼容
@@ -48,10 +48,10 @@
 
 ## Phase 5：核心 API 测试
 
-- [ ] **CQ-TEST-01** 完成核心读写/高频 API 覆盖矩阵和最小测试选择说明。
-- [ ] **CQ-TEST-02** 为入选核心路径补充关键成功合同测试。
-- [ ] **CQ-TEST-03** 为入选核心路径补充最重要失败、权限或边界合同测试。
-- [ ] **CQ-TEST-04** 验证新增测试具有 RED/GREEN 证据且不重复既有覆盖。
+- [x] **CQ-TEST-01** 完成核心 API 覆盖矩阵；仅 Schema view 存在最小关键缺口。
+- [x] **CQ-TEST-02** 新增 Schema view 成功映射合同。
+- [x] **CQ-TEST-03** 新增缺失 property key 的现有失败合同。
+- [x] **CQ-TEST-04** mutation RED 1 failure、GREEN targeted 2/2、full BE 121/121；未重复既有覆盖。证据：Phase 2 evidence。
 
 ## Phase 6：最终门禁与审查
 
@@ -63,4 +63,5 @@
 
 ## 用户决策项
 
-当前无。仅在发现高风险 CI/依赖/API/行为改动候选后登记，必须包含收益证据、风险、回滚方式和建议。
+- **DEC-FE-01（待决策）**：是否批准最小 FE 依赖/lockfile 升级，以清除 52 条第三方 source-map warning、`act`/`defaultProps` warning，并将 Maven production build 从 `CI=false` 恢复为真实门禁。风险：依赖行为/产物变化；回滚：独立 commit 回退；建议：批准小批次升级并用 Jest、production build、package/API acceptance 全量验证。
+- **DEC-CI-02（暂缓）**：FE build 去重、release audit 去重、Maven cache 合并仍属收益/等价性未充分证明的 workflow 重构，不实施。
