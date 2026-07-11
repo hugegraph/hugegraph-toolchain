@@ -28,7 +28,6 @@ import GraphSpace from '../pages/GraphSpace';
 import Meta from '../pages/Meta';
 import GraphDetail from '../pages/GraphDetail';
 import My from '../pages/My';
-// import Super from '../pages/Super';
 import Account from '../pages/Account';
 import Navigation from '../pages/Navigation';
 import Error404 from '../pages/Error404';
@@ -144,7 +143,6 @@ const RouteList = ({element}) => {
                 <Route path="/task/detail/:taskid" element={<TaskDetail />} />
 
                 <Route path='/my' element={<My />} />
-                <Route path='/super' element={<Navigate to='/navigation' replace />} />
                 <Route path='/resource' element={<Navigate to='/navigation' replace />} />
                 <Route path='/role' element={<Navigate to='/navigation' replace />} />
                 <Route

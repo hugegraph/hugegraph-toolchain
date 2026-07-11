@@ -116,16 +116,10 @@ const getDefaultGraph = (graphspace, config) => {
     return config ? request.get(path, config) : request.get(path);
 };
 
-const clearGraphData = (graphspace, graph) => {
-    // TODO: Replace this temporary facade after Server exposes and verifies a
-    // data-only clear operation that preserves schema.
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/truncate`, {
-        params: {clear_schema: false, clear_data: true},
-    });
-};
-
 const clearGraphDataAndSchema = (graphspace, graph) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/truncate`, {params: {clear_schema: true}});
+    // TODO: Add a distinct data-only action as soon as Server provides a
+    // verified API that preserves schema; this endpoint intentionally clears both.
+    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/clear`);
 };
 
 const getGraphStatistic = (graphspace, graph, config) => {
@@ -141,7 +135,7 @@ const cloneGraph = (graphspace, graph, params) => {
 };
 
 export {getGraphList, getGraph, addGraph, updateGraph, delGraph, getDefaultGraph,
-    getGraphView, clearGraphData, setDefaultGraph, clearGraphDataAndSchema,
+    getGraphView, setDefaultGraph, clearGraphDataAndSchema,
     getGraphStatistic, updateGraphStatistic, cloneGraph};
 
 // meta property

@@ -38,6 +38,16 @@ test('updates a graph with PUT JSON on the canonical route', () => {
     );
 });
 
+test('clears graph data and schema with POST on the canonical route', () => {
+    manage.clearGraphDataAndSchema('DEFAULT', 'g');
+
+    expect(request.post).toHaveBeenCalledWith(
+        '/graphspaces/DEFAULT/graphs/g/clear'
+    );
+    expect(request.get).not.toHaveBeenCalled();
+    expect(manage.clearGraphData).toBeUndefined();
+});
+
 test('reads the default graph from the canonical route', () => {
     manage.getDefaultGraph('DEFAULT');
     expect(request.get).toHaveBeenCalledWith(

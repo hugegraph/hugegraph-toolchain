@@ -43,6 +43,8 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 }
 
                 message.error(res.message);
+            }).catch(() => {
+                setLoading(false);
             });
         });
     }, [form, onCancel, refresh]);

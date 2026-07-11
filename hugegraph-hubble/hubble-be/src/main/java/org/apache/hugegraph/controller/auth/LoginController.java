@@ -19,6 +19,7 @@
 package org.apache.hugegraph.controller.auth;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -52,6 +53,8 @@ import org.apache.hugegraph.structure.auth.LoginResult;
 public class LoginController extends BaseController {
 
     private static final int TOKEN_EXPIRE_SECONDS = 60 * 60 * 24 * 30;
+    private static final int CONNECT_TIMEOUT_MILLIS = 5000;
+    private static final int READ_TIMEOUT_MILLIS = 30000;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
@@ -63,43 +66,55 @@ public class LoginController extends BaseController {
     public Object login(@RequestBody Login login) {
         // Set Expire: 1 Month
         login.expire(TOKEN_EXPIRE_SECONDS);
-        LoginResult result;
-        HugeClient client = null;
-        if (!this.config.get(HubbleOptions.PD_ENABLED)) {
-            result = this.loginStandalone(login);
-        } else {
-            client = this.hugeClientPoolService.createTempBasicClient(
-                    login.name(), login.password());
-            result = client.auth().login(login);
-        }
-        this.setUser(login.name());
-        this.setCredentialPassword(login.password());
-        this.setToken(result.token());
-        if (client != null) {
-            client.close();
-        }
-        clearRequestHugeClient();
+        try {
+            boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
+            LoginResult result;
+            Object user;
+            if (!pdEnabled) {
+                result = this.loginStandalone(login);
+                user = currentUser(login.name());
+            } else {
+                try (HugeClient client =
+                             this.createLoginClient(login.name(),
+                                                    login.password())) {
+                    result = client.auth().login(login);
+                }
+                try (HugeClient client =
+                             this.createLoginTokenClient(result.token())) {
+                    client.assignGraph(PDHugeClientFactory.DEFAULT_GRAPHSPACE,
+                                       null);
+                    UserEntity entity = this.userService.getUser(client,
+                                                                 login.name());
+                    entity.setSuperadmin(
+                            this.userService.isSuperAdmin(client));
+                    user = entity;
+                }
+            }
 
-        if (!this.config.get(HubbleOptions.PD_ENABLED)) {
-            return currentUser(login.name());
+            this.getRequest().getSession();
+            this.getRequest().changeSessionId();
+            this.setUser(login.name());
+            this.setCredentialPassword(login.password());
+            this.setToken(result.token());
+            return user;
+        } catch (Throwable e) {
+            this.clearAuthSession();
+            throw e;
+        } finally {
+            this.clearRequestHugeClient();
         }
-
-        client = this.authClient(PDHugeClientFactory.DEFAULT_GRAPHSPACE, null);
-        UserEntity u = userService.getUser(client, login.name());
-        u.setSuperadmin(userService.isSuperAdmin(client));
-        client.close();
-
-        return u;
     }
 
     protected LoginResult loginStandalone(Login login) {
         String endpoint = this.config.get(HubbleOptions.SERVER_URL) +
                           "/auth/login";
+        HttpURLConnection connection = null;
         try {
-            HttpURLConnection connection = (HttpURLConnection) new URL(endpoint)
-                                           .openConnection();
+            connection = this.openConnection(new URL(endpoint));
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+            connection.setReadTimeout(READ_TIMEOUT_MILLIS);
             connection.setRequestProperty("Content-Type",
                                           "application/json;charset=UTF-8");
             String auth = login.name() + ":" + login.password();
@@ -118,14 +133,34 @@ public class LoginController extends BaseController {
                 throw new IOException("Standalone login failed: HTTP " +
                                       connection.getResponseCode());
             }
-            Map<?, ?> response = MAPPER.readValue(connection.getInputStream(),
-                                                 Map.class);
+            Map<?, ?> response;
+            try (InputStream input = connection.getInputStream()) {
+                response = MAPPER.readValue(input, Map.class);
+            }
             LoginResult result = new LoginResult();
             result.token(String.valueOf(response.get("token")));
             return result;
         } catch (IOException e) {
             throw new RuntimeException("Failed to login HugeGraph Server", e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
+    }
+
+    protected HttpURLConnection openConnection(URL endpoint)
+                                               throws IOException {
+        return (HttpURLConnection) endpoint.openConnection();
+    }
+
+    protected HugeClient createLoginClient(String username, String password) {
+        return this.hugeClientPoolService.createTempBasicClient(username,
+                                                                password);
+    }
+
+    protected HugeClient createLoginTokenClient(String token) {
+        return this.hugeClientPoolService.createTempTokenClient(token);
     }
 
     private static UserEntity currentUser(String username) {

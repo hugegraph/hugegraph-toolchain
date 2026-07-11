@@ -148,7 +148,7 @@ public class GraphService {
                 client);
         HashMap<String, Object> vertexPropertiesMap = new HashMap<>();
         vertexPropertiesMap.put("nonNullableProps", vlEntity.getNonNullableProps());
-        vertexPropertiesMap.put("NullableProps", vlEntity.getNullableProps());
+        vertexPropertiesMap.put("nullableProps", vlEntity.getNullableProps());
         vertexPropertiesMap.put("primaryKeys", vlEntity.getPrimaryKeys());
         return vertexPropertiesMap;
     }
@@ -158,7 +158,7 @@ public class GraphService {
                 client);
         HashMap<String, Object> edgePropertiesMap = new HashMap<>();
         edgePropertiesMap.put("nonNullableProps", elEntity.getNonNullableProps());
-        edgePropertiesMap.put("NullableProps", elEntity.getNullableProps());
+        edgePropertiesMap.put("nullableProps", elEntity.getNullableProps());
         edgePropertiesMap.put("sortKeys", elEntity.getSortKeys());
         return edgePropertiesMap;
     }

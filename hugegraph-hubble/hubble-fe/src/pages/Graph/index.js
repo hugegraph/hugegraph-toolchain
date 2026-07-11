@@ -100,12 +100,10 @@ const Graph = () => {
         setEditLayer(true);
     };
 
-    const clearData = graph => {
-        setClearSelection({graph, mode: 'data'});
-    };
-
     const clearSchema = graph => {
-        setClearSelection({graph, mode: 'schema-data'});
+        // TODO: Restore a separate data-only action as soon as Server provides
+        // a verified API that preserves schema.
+        setClearSelection({graph});
     };
 
     const handleClearSuccess = useCallback(() => {
@@ -119,9 +117,7 @@ const Graph = () => {
     }, []);
 
     const handleClearConfirm = useCallback(() => {
-        return clearSelection?.mode === 'data'
-            ? api.manage.clearGraphData(graphspace, clearSelection.graph)
-            : api.manage.clearGraphDataAndSchema(graphspace, clearSelection.graph);
+        return api.manage.clearGraphDataAndSchema(graphspace, clearSelection.graph);
     }, [clearSelection, graphspace]);
 
     const showSchema = graph => {
@@ -281,8 +277,8 @@ const Graph = () => {
                             {t('graph.menu.meta_config')}
                         </Link>
                         {(row.default)
-                            ? <span className={style.disable}>{t('graph.menu.clear_data')}</span>
-                            : <a onClick={() => clearSchema(row.name)}>{t('graph.menu.clear_data')}</a>}
+                            ? <span className={style.disable}>{t('graph.menu.clear_schema_data')}</span>
+                            : <a onClick={() => clearSchema(row.name)}>{t('graph.menu.clear_schema_data')}</a>}
                         {(row.graphspace === 'neizhianli')
                             ? <span className={style.disable}>{t('common.action.delete')}</span>
                             : <a onClick={() => deleteGraph(row.name)}>{t('common.action.delete')}</a>}
@@ -315,17 +311,13 @@ const Graph = () => {
         },
         {
             key: '2',
-            label: item.isDefault
+            label: item.default
                 ? <span className={style.disable}>{t('graph.menu.clear_schema_data')}</span>
                 : <a onClick={() => clearSchema(item.name)}>{t('graph.menu.clear_schema_data')}</a>,
         },
-        {
-            key: '3',
-            label: <a onClick={() => clearData(item.name)}>{t('graph.menu.clear_data')}</a>,
-        },
         graphDefaultMutationEnabled && {
             key: '4',
-            label: item.isDefault
+            label: item.default
                 ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
                 : <a onClick={() => handleSetDefault(item.name)}>{t('graph.menu.set_default')}</a>,
         },
@@ -520,7 +512,6 @@ const Graph = () => {
                     open={Boolean(clearSelection)}
                     graphspace={graphspace}
                     graph={clearSelection?.graph || ''}
-                    mode={clearSelection?.mode || 'data'}
                     onCancel={handleClearCancel}
                     onSuccess={handleClearSuccess}
                     onConfirm={handleClearConfirm}

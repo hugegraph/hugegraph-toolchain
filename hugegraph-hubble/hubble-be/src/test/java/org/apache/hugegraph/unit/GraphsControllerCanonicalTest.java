@@ -28,9 +28,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.util.NestedServletException;
 
 import org.apache.hugegraph.controller.graphs.GraphsController;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.testutil.Assert;
 
@@ -92,6 +94,45 @@ public class GraphsControllerCanonicalTest {
 
         Mockito.verify(this.graphsService)
                .update(this.client, "GraphNick", "graph_a");
+    }
+
+    @Test
+    public void testCanonicalClearGraphUsesPostAndClearsSchemaAndData()
+           throws Exception {
+        this.mvc.perform(post("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/clear")
+                         .with(this.withClient))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.graphsService).clearGraph(this.client, "graph_a");
+    }
+
+    @Test
+    public void testCanonicalClearGraphPropagatesDefaultGraphRejection()
+           throws Exception {
+        Mockito.doThrow(new ExternalException("Can't clear default graph"))
+               .when(this.graphsService).clearGraph(this.client, "graph_a");
+
+        try {
+            this.mvc.perform(
+                    post("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/clear")
+                    .with(this.withClient));
+            org.junit.Assert.fail("Expected default graph rejection");
+        } catch (NestedServletException e) {
+            Assert.assertInstanceOf(ExternalException.class, e.getCause());
+        }
+
+        Mockito.verify(this.graphsService).clearGraph(this.client, "graph_a");
+    }
+
+    @Test
+    public void testLegacyGetClearGraphRouteIsNotSuccessful()
+           throws Exception {
+        this.mvc.perform(get("/api/v1.3/graphspaces/DEFAULT/graphs/graph_a/truncate")
+                         .with(this.withClient)
+                         .param("clear_schema", "true"))
+                .andExpect(status().is4xxClientError());
+
+        Mockito.verifyZeroInteractions(this.graphsService);
     }
 
     @Test

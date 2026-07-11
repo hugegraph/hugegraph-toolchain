@@ -26,9 +26,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.PasswordEntity;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.service.auth.UserService;
-import org.apache.hugegraph.util.HubbleUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hugegraph.exception.UnauthorizedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,7 +39,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -50,8 +47,6 @@ public class UserController extends BaseController {
 
     @Autowired
     UserService userService;
-
-    Logger logger = LoggerFactory.getLogger(getClass());
 
     @GetMapping("list")
     public Object list() {
@@ -120,11 +115,17 @@ public class UserController extends BaseController {
         userService.updateAdminSpace(client, username, adminspaces);
     }
 
-    @GetMapping("updatepersonal")
-    public void updatepersonal(@RequestParam(name = "nickname") String nickname,
-                               @RequestParam(name = "description", required = false,
-                                       defaultValue = "") String description) {
-        userService.updatePersonal(this.authClient(null, null), getUser(), nickname, description);
+    @PutMapping("personal")
+    public void updatePersonal(@RequestBody PersonalProfile profile) {
+        String username = this.getUser();
+        if (username == null) {
+            throw new UnauthorizedException();
+        }
+        this.checkParamsNotEmpty("nickname", profile.getNickname(), true);
+        String description = profile.getDescription() == null ? "" :
+                             profile.getDescription();
+        userService.updatePersonal(this.authClient(null, null), username,
+                                   profile.getNickname(), description);
     }
 
     @GetMapping("getpersonal")
@@ -133,100 +134,25 @@ public class UserController extends BaseController {
                 getUser());
     }
 
-    @GetMapping("super")
-    public Object getSuperList(@RequestParam(name = "page_no", required = false,
-            defaultValue = "1") int pageNo,
-                               @RequestParam(name = "page_size", required = false,
-                                       defaultValue = "10") int pageSize) {
-        return userService.superQueryPage(this.authClient(null, null), "", pageNo, pageSize);
-    }
+    public static class PersonalProfile {
 
-    @PostMapping("super")
-    public void addSuper(@RequestParam(name = "usernames", required = true) String usernames,
-                         @RequestParam(name = "nicknames", required = false) String nicknames,
-                         @RequestParam(name = "description", required = false) String description) {
-        List<String> usernameList = Arrays.asList(usernames.split(","));
-        List<String> nicknameList = Arrays.asList(nicknames.split(","));
+        private String nickname;
+        private String description;
 
-        for (int i = 0; i < usernameList.size(); i++) {
-            String username = usernameList.get(i);
-            String nickname = nicknameList.get(i);
-            this.updateUserAuth(username, nickname, description, null, true);
-        }
-    }
-
-    @PostMapping("uuap")
-    public void addUuap(@RequestParam(name = "usernames", required = true) String usernames,
-                        @RequestParam(name = "nicknames", required = false) String nicknames,
-                        @RequestParam(name = "description", required = false) String description,
-                        @RequestParam(name = "adminSpaces", required = false) String adminSpaces) {
-        List<String> usernameList = Arrays.asList(usernames.split(","));
-        List<String> nicknameList = Arrays.asList(nicknames.split(","));
-        List<String> adminSpacesList = null;
-
-        if (adminSpaces != null) {
-            adminSpacesList = Arrays.asList(adminSpaces.split(","));
+        public String getNickname() {
+            return this.nickname;
         }
 
-        for (int i = 0; i < usernameList.size(); i++) {
-            String username = usernameList.get(i);
-            String nickname = nicknameList.get(i);
-            this.updateUserAuth(username, nickname, description, adminSpacesList, false);
+        public void setNickname(String nickname) {
+            this.nickname = nickname;
         }
-    }
 
-    private void updateUserAuth(String username, String nickname, String description,
-                                List<String> adminspaces, boolean isAdmin) {
-        UserEntity user = null;
-        try {
-            user = userService.getUser(this.authClient(null, null), username);
-        } catch (Exception e) {
-            logger.error(String.format("user '%s' not exist", username), e);
+        public String getDescription() {
+            return this.description;
         }
-        HugeClient client = this.authClient(null, null);
 
-        // 不存在则先创建, 存在则直接设置权限
-        if (user == null) {
-            UserEntity userData = new UserEntity();
-            userData.setName(username);
-            userData.setPassword(HubbleUtil.md5Secret(username));
-            userData.setNickname(nickname);
-            userData.setSuperadmin(isAdmin);
-            userData.setDescription(description);
-            if (adminspaces != null && !adminspaces.isEmpty()) {
-                userData.setAdminSpaces(adminspaces);
-                userService.add(this.authClient(null, null), userData);
-            }
-            logger.info(String.format(
-                    "user not exist, have been created [%s], super admin =[%s]",
-                    username, isAdmin));
-        } else {
-            updateUserAuthIfNeed(client, user, isAdmin, adminspaces);
-        }
-    }
-
-    @DeleteMapping("super/{id}")
-    public void deleteSuper(@PathVariable("id") String id) {
-        UserEntity user = userService.getUser(this.authClient(null, null), id);
-        user.setSuperadmin(false);
-        userService.update(this.authClient(null, null), user);
-    }
-
-    private void updateUserAuthIfNeed(HugeClient client, UserEntity user,
-                                      boolean isAdmin, List<String> adminSpaces) {
-        // 判断是否为超级管理员
-        if (isAdmin && !userService.isSuperAdmin(client, user.getId())) {
-            client.auth().addSuperAdmin(user.getId());
-        }
-        if (adminSpaces != null && !adminSpaces.isEmpty()) {
-            for (String space : adminSpaces) {
-                try {
-                    client.auth().addSpaceAdmin(user.getId(), space);
-                } catch (Exception e) {
-                    logger.warn(String.format("user '%s' add space '%s' error",
-                                              user.getId(), space), e);
-                }
-            }
+        public void setDescription(String description) {
+            this.description = description;
         }
     }
 

@@ -27,11 +27,8 @@ const mockMessages = {
     'graph.clear_confirm.title': mockClearMessages.title,
     'graph.clear_confirm.graphspace': mockClearMessages.graphspace,
     'graph.clear_confirm.graph': mockClearMessages.graph,
-    'graph.clear_confirm.scope_data': mockClearMessages.scope_data,
     'graph.clear_confirm.scope_schema_data': mockClearMessages.scope_schema_data,
     'graph.clear_confirm.irreversible': mockClearMessages.irreversible,
-    'graph.clear_confirm.schema_preservation_warning':
-        mockClearMessages.schema_preservation_warning,
     'graph.clear_confirm.input_label': mockClearMessages.input_label,
     'graph.clear_confirm.input_placeholder': mockClearMessages.input_placeholder,
     'graph.clear_confirm.confirm': mockClearMessages.confirm,
@@ -66,7 +63,6 @@ const renderModal = (props = {}) => {
         open: true,
         graphspace: 'DEFAULT',
         graph: 'hugegraph',
-        mode: 'data',
         onCancel: jest.fn(),
         onSuccess: jest.fn(),
         onConfirm: jest.fn(),
@@ -89,30 +85,15 @@ const createDeferred = () => {
     return {promise, resolve, reject};
 };
 
-test.each([
-    ['data', 'Deletion scope: graph data only', true],
-    [
-        'schema-data',
-        'Deletion scope: graph data, property keys, vertex labels, edge labels, and indexes',
-        false,
-    ],
-])('requires exact graph-name confirmation in %s mode', async (mode, scope, warnsSchema) => {
-    renderModal({mode});
+test('requires exact graph-name confirmation for schema-and-data clear', async () => {
+    renderModal();
 
     expect(screen.getByText('GraphSpace: DEFAULT')).toBeInTheDocument();
     expect(screen.getByText('Graph: hugegraph')).toBeInTheDocument();
-    expect(screen.getByText(scope)).toBeInTheDocument();
+    expect(screen.getByText(
+        'Deletion scope: graph data, property keys, vertex labels, edge labels, and indexes'
+    )).toBeInTheDocument();
     expect(screen.getByText('This operation is irreversible.')).toBeInTheDocument();
-    if (warnsSchema) {
-        expect(screen.getByText(
-            'No verified dedicated Server operation currently guarantees schema preservation.'
-        )).toBeInTheDocument();
-    }
-    else {
-        expect(screen.queryByText(
-            'No verified dedicated Server operation currently guarantees schema preservation.'
-        )).not.toBeInTheDocument();
-    }
 
     const input = screen.getByPlaceholderText('Graph name');
     const confirm = screen.getByRole('button', {name: 'Clear graph'});
@@ -132,9 +113,6 @@ test('provides explicit schema-and-data scope in both locales', () => {
     );
     expect(zhPages.graph.clear_confirm.scope_schema_data).toBe(
         '删除范围：图数据、属性键、顶点类型、边类型和索引'
-    );
-    expect(zhPages.graph.clear_confirm.schema_preservation_warning).toBe(
-        '当前尚无经过验证、可保证保留 schema 的专用 Server 操作。'
     );
 });
 
@@ -218,7 +196,7 @@ test('resets confirmation and errors when opened for a new graph', async () => {
     userEvent.click(screen.getByRole('button', {name: 'Clear graph'}));
     expect(await screen.findByText('boom')).toBeInTheDocument();
 
-    rerender(<ClearGraphConfirmModal {...props} graph='new-graph' mode='schema-data' />);
+    rerender(<ClearGraphConfirmModal {...props} graph='new-graph' />);
 
     expect(screen.getByPlaceholderText('Graph name')).toHaveValue('');
     expect(screen.queryByText('boom')).not.toBeInTheDocument();
@@ -268,7 +246,6 @@ test('ignores stale failure and finally after reopening for a newer graph reques
             {...props}
             open
             graph='graph-b'
-            mode='schema-data'
             onConfirm={onConfirmB}
         />
     );

@@ -19,10 +19,14 @@
 package org.apache.hugegraph.unit;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -49,7 +53,7 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.IngestionProxyServlet;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.controller.auth.LoginController;
-import org.apache.hugegraph.controller.auth.UserController;
+import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.ExternalException;
@@ -353,19 +357,6 @@ public class AuthSecurityTest {
     }
 
     @Test
-    public void testDeleteSuperPropagatesMutationFailure() {
-        HugeClient client = Mockito.mock(HugeClient.class);
-        UserService userService = Mockito.mock(UserService.class);
-        TestUserController controller = new TestUserController(client);
-        ReflectionTestUtils.setField(controller, "userService", userService);
-        Mockito.when(userService.getUser(client, "user-id"))
-               .thenThrow(new RuntimeException("server rejected mutation"));
-
-        assertThrows(RuntimeException.class,
-                     () -> controller.deleteSuper("user-id"));
-    }
-
-    @Test
     public void testMissingServerCapabilityUsesHttp503WithoutCause()
            throws Exception {
         RequestContextHolder.setRequestAttributes(
@@ -491,6 +482,7 @@ public class AuthSecurityTest {
         server.start();
         try {
             TestLoginController controller = new TestLoginController();
+            controller.useNetwork = true;
             HugeConfig config = Mockito.mock(HugeConfig.class);
             Mockito.when(config.get(HubbleOptions.SERVER_URL))
                    .thenReturn("http://127.0.0.1:" +
@@ -510,6 +502,157 @@ public class AuthSecurityTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    public void testLoginCommitsAuthAndRotatesSessionAfterValidation()
+           throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        String oldSessionId = request.getSession().getId();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestLoginController controller = new TestLoginController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        setField(controller, "config", config);
+        Login login = new Login();
+        login.name("admin");
+        login.password("pa");
+
+        controller.login(login);
+
+        Assert.assertNotEquals(oldSessionId, request.getSession().getId());
+        Assert.assertEquals("admin", request.getSession().getAttribute(
+                            Constant.USERNAME_KEY));
+        Assert.assertEquals("server-token", request.getSession().getAttribute(
+                            Constant.TOKEN_KEY));
+    }
+
+    @Test
+    public void testPdLoginValidatesUserWithFreshLoginToken()
+           throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "old-token");
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestLoginController controller = new TestLoginController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        setField(controller, "config", config);
+
+        LoginResult loginResult = new LoginResult();
+        loginResult.token("server-token");
+        AuthManager auth = Mockito.mock(AuthManager.class);
+        Mockito.when(auth.login(Mockito.any())).thenReturn(loginResult);
+        HugeClient loginClient = Mockito.mock(HugeClient.class);
+        Mockito.when(loginClient.auth()).thenReturn(auth);
+        controller.loginClient = loginClient;
+
+        HugeClient userClient = Mockito.mock(HugeClient.class);
+        controller.userClient = userClient;
+        UserService users = Mockito.mock(UserService.class);
+        UserEntity entity = new UserEntity();
+        Mockito.when(users.getUser(userClient, "admin")).thenReturn(entity);
+        ReflectionTestUtils.setField(controller, "userService", users);
+        Login login = new Login();
+        login.name("admin");
+        login.password("pa");
+
+        controller.login(login);
+
+        Assert.assertEquals("server-token", controller.validationToken);
+        Mockito.verify(userClient).close();
+        Assert.assertEquals("server-token", request.getSession().getAttribute(
+                            Constant.TOKEN_KEY));
+    }
+
+    @Test
+    public void testLoginFailureClearsExistingAuthentication() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "old-user");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "old-token");
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestLoginController controller = new TestLoginController();
+        controller.failStandalone = true;
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        setField(controller, "config", config);
+        Login login = new Login();
+        login.name("admin");
+        login.password("pa");
+
+        try {
+            controller.login(login);
+            Assert.fail("Expected login failure");
+        } catch (RuntimeException ignored) {
+            // Expected.
+        }
+
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.USERNAME_KEY));
+        Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
+    }
+
+    @Test
+    public void testPdLoginClosesClientsWhenUserValidationFails()
+           throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestLoginController controller = new TestLoginController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        setField(controller, "config", config);
+
+        LoginResult loginResult = new LoginResult();
+        loginResult.token("server-token");
+        AuthManager auth = Mockito.mock(AuthManager.class);
+        Mockito.when(auth.login(Mockito.any())).thenReturn(loginResult);
+        HugeClient loginClient = Mockito.mock(HugeClient.class);
+        Mockito.when(loginClient.auth()).thenReturn(auth);
+        HugeClient userClient = Mockito.mock(HugeClient.class);
+        controller.loginClient = loginClient;
+        controller.userClient = userClient;
+        UserService users = Mockito.mock(UserService.class);
+        Mockito.when(users.getUser(userClient, "admin"))
+               .thenThrow(new RuntimeException("expected validation failure"));
+        ReflectionTestUtils.setField(controller, "userService", users);
+        Login login = new Login();
+        login.name("admin");
+        login.password("pa");
+
+        try {
+            controller.login(login);
+            Assert.fail("Expected user validation failure");
+        } catch (RuntimeException ignored) {
+            // Expected.
+        }
+
+        Mockito.verify(loginClient).close();
+        Mockito.verify(userClient).close();
+        Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
+    }
+
+    @Test
+    public void testStandaloneLoginConfiguresTimeoutsAndDisconnects()
+           throws Exception {
+        TestLoginController controller = new TestLoginController();
+        controller.connection = new StubHttpURLConnection(
+                new URL("http://unused/auth/login"));
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.SERVER_URL))
+               .thenReturn("http://unused");
+        setField(controller, "config", config);
+        Login login = new Login();
+        login.name("admin");
+        login.password("pa");
+
+        controller.standalone(login);
+
+        Assert.assertTrue(controller.connection.getConnectTimeout() > 0);
+        Assert.assertTrue(controller.connection.getReadTimeout() > 0);
+        Assert.assertTrue(controller.connection.disconnected);
     }
 
     private static class TestIngestionProxyServlet
@@ -539,22 +682,98 @@ public class AuthSecurityTest {
 
     private static class TestLoginController extends LoginController {
 
+        private boolean failStandalone;
+        private boolean useNetwork;
+        private StubHttpURLConnection connection;
+        private HugeClient loginClient;
+        private HugeClient userClient;
+        private String validationToken;
+
         public LoginResult standalone(Login login) {
             return this.loginStandalone(login);
         }
-    }
 
-    private static class TestUserController extends UserController {
-
-        private final HugeClient client;
-
-        private TestUserController(HugeClient client) {
-            this.client = client;
+        @Override
+        protected LoginResult loginStandalone(Login login) {
+            if (this.failStandalone) {
+                throw new RuntimeException("expected login failure");
+            }
+            if (this.connection != null || this.useNetwork) {
+                return super.loginStandalone(login);
+            }
+            LoginResult result = new LoginResult();
+            result.token("server-token");
+            return result;
         }
 
         @Override
-        protected HugeClient authClient(String graphSpace, String graph) {
-            return this.client;
+        protected HttpURLConnection openConnection(URL endpoint)
+                                               throws IOException {
+            if (this.useNetwork) {
+                return super.openConnection(endpoint);
+            }
+            if (this.connection == null) {
+                this.connection = new StubHttpURLConnection(endpoint);
+            }
+            return this.connection;
+        }
+
+        @Override
+        protected HugeClient createLoginClient(String username,
+                                               String password) {
+            return this.loginClient != null ? this.loginClient :
+                   super.createLoginClient(username, password);
+        }
+
+        @Override
+        protected HugeClient createLoginTokenClient(String token) {
+            if (this.userClient == null) {
+                return super.createLoginTokenClient(token);
+            }
+            this.validationToken = token;
+            return this.userClient;
+        }
+    }
+
+    private static class StubHttpURLConnection extends HttpURLConnection {
+
+        private final ByteArrayOutputStream request = new ByteArrayOutputStream();
+        private boolean disconnected;
+
+        protected StubHttpURLConnection(URL url) {
+            super(url);
+        }
+
+        @Override
+        public void disconnect() {
+            this.disconnected = true;
+        }
+
+        @Override
+        public boolean usingProxy() {
+            return false;
+        }
+
+        @Override
+        public void connect() {
+            // No-op test connection.
+        }
+
+        @Override
+        public OutputStream getOutputStream() {
+            return this.request;
+        }
+
+        @Override
+        public int getResponseCode() {
+            return Constant.STATUS_OK;
+        }
+
+        @Override
+        public ByteArrayInputStream getInputStream() {
+            return new ByteArrayInputStream(
+                    "{\"token\":\"server-token\"}".getBytes(
+                            StandardCharsets.UTF_8));
         }
     }
 

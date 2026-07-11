@@ -99,7 +99,8 @@
 
     <properties>
         <revision>1.8.0</revision>
-        <hugegraph.common.version>1.7.0</hugegraph.common.version>
+        <!-- Unified release line for HugeGraph common, server/core, PD and store artifacts -->
+        <hugegraph.version>1.7.0</hugegraph.version>
         <release.name>${project.artifactId}</release.name>
         <final.name>apache-${release.name}-${project.version}</final.name>
         <assembly.dir>${project.basedir}/assembly</assembly.dir>
@@ -154,7 +155,37 @@
             <dependency>
                 <groupId>org.apache.hugegraph</groupId>
                 <artifactId>hugegraph-common</artifactId>
-                <version>${hugegraph.common.version}</version>
+                <version>${hugegraph.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hugegraph</groupId>
+                <artifactId>hugegraph-core</artifactId>
+                <version>${hugegraph.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hugegraph</groupId>
+                <artifactId>hugegraph-server</artifactId>
+                <version>${hugegraph.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hugegraph</groupId>
+                <artifactId>hg-pd-client</artifactId>
+                <version>${hugegraph.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hugegraph</groupId>
+                <artifactId>hg-pd-common</artifactId>
+                <version>${hugegraph.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hugegraph</groupId>
+                <artifactId>hg-pd-grpc</artifactId>
+                <version>${hugegraph.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hugegraph</groupId>
+                <artifactId>hg-store-common</artifactId>
+                <version>${hugegraph.version}</version>
             </dependency>
             <!-- test -->
             <dependency>

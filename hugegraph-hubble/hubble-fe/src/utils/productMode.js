@@ -42,7 +42,6 @@ const isPdOnlyPath = pathname => {
         || pathname.startsWith('/account')
         || pathname.startsWith('/resource')
         || pathname.startsWith('/role')
-        || pathname.startsWith('/super')
         || /^\/graphspace\/[^/]+\/schema(?:\/|$)/.test(pathname);
 };
 

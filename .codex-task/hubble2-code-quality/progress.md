@@ -2,16 +2,17 @@
 
 ## 当前 checkpoint
 
-- 更新时间：2026-07-12 00:10 +08:00
-- 当前阶段：Phase 6 延迟 CI 取证
+- 更新时间：2026-07-12 02:00 +08:00
+- 当前阶段：Phase 6B review remediation 最终门禁
 - 当前分支：`hubble2`
 - 目标状态：active
 - 唯一实时状态源：[`todo.md`](todo.md)
 - 执行合同：[`plan.md`](plan.md)
 - 完整本地门禁覆盖的产品实现 SHA：`10c0e8fa4f18694f8f848212ed1da52ef36d80a4`
 - 独立整体 review checkpoint：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`
-- 最新代码 checkpoint：`e2c6926ec4ff4965d494ce0aeb99eb9a9cb245fe`；依赖清单修复已独立复审
-- 当前工作树：clean（生成物均 ignored）
+- 最新已推送代码 checkpoint：`e76544c70055f7fcb97c1c499f7ceee463e77696`
+- 最终候选/真实 CI SHA：`a56fb6c1ebb27c717568bf1e0baba1cb94afa3c0`
+- 当前工作树：旧 review remediation 的 FE/BE/CI/测试和 SOT 修改，尚未提交；无用户未确认的 API/依赖升级混入
 
 ## 已完成
 
@@ -40,6 +41,10 @@
 
 ## 最近验证
 
+- 2026-07-12 remediation 稳定工作树：JDK 11 Hubble BE unit 133/133，checkstyle 0，JaCoCo 无 class mismatch，18.14s。
+- FE full Jest 41 suites / 153 tests，lint 0 warning，i18n zh/en 各 1584；smoke Python regression 5/5；actionlint 1.7.12 和 `git diff --check` 通过。
+- `e76544c7` 上一阶段真实 PR checks 全部通过：Hubble、Client、Loader、Tools、Spark、Go、license header/dependency、triage。
+
 - FE `yarn lint`：exit 0，4.94s，330 files 0 warning/error；Jest：40 suites / 148 tests，exit 0，6.50s，console warning 0。
 - FE `CI=true yarn build`：exit 0，47.47s；仅保留已接受的 52 条第三方 source-map warning，以及已转未来任务的 Browserslist/bundle 提示。
 - BE clean compile：成功，265 source files；本项目 unchecked/deprecation warning 为 0，剩余输出为外部发布 POM/仓库元数据 warning。
@@ -48,9 +53,14 @@
 - Client/Loader linked install：exit 0，49.26s；shade 的历史依赖重复 warning 不属于本轮 Hubble 源码 warning。
 - Hubble package：exit 0，126.73s；distribution audit 423 JAR / 275 license / 43 FE license / 10 native-bearing。
 - CI 等价 sidecar audit：SHA-512、临时 GPG detached signature、`--require-sidecars` 均 exit 0。
-- PR #4 在 review checkpoint `03be1bd7`：部分轻量 job 已通过，Hubble 等 job 因 GitHub quota 仍 pending；最终完成以届时实际 PR head 的真实 CI 为准。
+- PR #4 最终候选 `a56fb6c1`：全部 checks 通过。Hubble 11m12s；dependency license 12m28s；Client 12m13s；Loader 6m26s；Tools 4m57s；Spark 4m59s；Go 4m48s。
+- Hubble 真实 CI：Compile 3m23s、Prepare 4m13s、release audit 1m、unit 28s、API 30s；Server SHA `3bd990d8...` cache 2.7s 命中，121 tests 与 runtime/UI acceptance 全部通过。
 
 ## 阻塞与决策
+
+- 历史 review 已在 `e76544c7` 完整复核：清图/认证/API/readiness/algorithm/artifact findings 仍真实并已按用户 D1=A、D2=B、D3=A、D4=A、D5=A 实施；TrueLicense、Server tree 不一致和 legacy 残留结论已证明过期。
+- 当前清图只提供诚实的 Schema+数据操作；data-only 对用户有高价值，FE/BE TODO 与 FUTURE-SERVER-01 明确要求 Server 支持后第一时间恢复。
+- Server CI 已固定 master 合入 commit `99936be5...`；其 tree 与此前验证的 PR head 相同。
 
 - server-core 发布 POM 阻塞已用 Hubble 最小排除解除；精确 Server package、Hubble package 与完整本地 acceptance 已证明运行兼容，仅最终 HEAD 真实 CI 待补。
 - DEC-FE-01/02 已获用户批准：本轮精确 pin React/ReactDOM 18.2.0、恢复 `CI=true`，并以限定来源/数量接受 52 条第三方 source-map warning。
@@ -62,11 +72,13 @@
 - 合并重复 FE build/release scan 属门禁编排重构（DEC-CI-02），未实施。
 - `check-dependency-license` 失败根因为受控 third-party inventory 落后于当前 runtime snapshot；使用仓库生成器得到 516 项并更新（31 add/2 remove），同一检查脚本本地 exit 0。该提交未改依赖声明或版本。
 - 独立 reviewer `/root/final_reviewer` 完整覆盖 `b66848d..03be1bd7`；唯一 Important 为 SOT SHA 语义，修复后 re-review resolved。后续依赖清单提交亦 re-review，无新增 finding。
+- 最终绿色 CI 有两类非失败 annotation 待 DEC-CI-03：GitHub Actions Node 20 runtime 弃用，以及 SkyWalking Eyes 内部 setup-go cache path restore。消除前者需多项 action major 升级；后者需第三方 pin/替换/fork 调查，均不得未经批准实施。
 
 ## 下一动作
 
-1. 等待 GitHub quota 恢复，补届时实际 PR head 的 Hubble CI、license checker 与 cache 交叉验证。
-2. CI 通过后仅更新最终证据并结束 goal；不再实施 FUTURE-VIS 或 DEC-CI-02 项。
+1. 运行 Client/Loader 联动、Hubble production build/package/distribution audit 与必要 live acceptance。
+2. 提交并推送代码阶段，等待新 HEAD 真实 CI；quota 排队期间继续证据整理。
+3. 冻结最终 diff，创建未参与实现的独立 reviewer；修复后 re-review，再收口 progress/lessons。
 
 ## 恢复入口
 
