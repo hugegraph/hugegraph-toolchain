@@ -14,7 +14,7 @@
 
 - [x] **CQ-BASE-01** 记录 HEAD、工作树已有改动、文件所有权和环境版本。证据：[`evidence/2026-07-11-fresh-audit.md`](evidence/2026-07-11-fresh-audit.md)。
 - [x] **CQ-BASE-02** 枚举 FE/BE lint、compile/code-style warning 并分类；确认 checkstyle 当前不会因已报告问题失败。证据：fresh audit。
-- [ ] **CQ-BASE-03** 完成本地 cold/warm 分段耗时基线：FE build/Jest 已采样；BE compile/test/package 待依赖解析恢复后补采。
+- [x] **CQ-BASE-03** 完成本地分段基线：FE build/Jest/lint、BE compile/unit、Client+Loader install、Hubble package、精确 Server cold/cache-hit 均有当前数据。
 - [ ] **CQ-BASE-04** 当前 HEAD 真实 Hubble CI step/cache/重复工作基线；旧 run 仅保留历史对照。
 - [x] **CQ-BASE-05** 稳定复现 server-core 依赖错误并固定当前 HEAD/版本/日志；旧失败 run 日志已过期不可用。证据：fresh audit。
 - [x] **CQ-BASE-06** 建立认证、Graph/GraphSpace、Schema、Gremlin、Datasource/Loader/Task 覆盖初表。证据：fresh audit。
@@ -30,21 +30,21 @@
 - [x] **CQ-LINT-01** 329 个 JS/JSX 文件显式 ESLint 0 warning/error；`yarn lint` 已接入真实 CI。
 - [x] **CQ-LINT-02** 修复唯一 TS 文件缺少 parser services 的配置阻塞及 36 个机械 lint error；全量 330 文件 0 warning/error。
 - [x] **CQ-LINT-03** Hubble BE checkstyle 由 128 项降为 0，javac unchecked warning 由 49 项降为 0，并清理本项目 deprecation warning；compile、119 unit、checkstyle 均通过。
-- [ ] **CQ-LINT-04** 复核所有行为敏感 warning，确保已拆批、补测或提交用户决策。
+- [x] **CQ-LINT-04** 本项目 lint/Jest warning 清零；52 条第三方 source-map warning 已按来源/数量获用户接受；peer/build-stack 债务明确转入未来任务。
 - [x] **CQ-LINT-05** React Router warning 6 -> 0；第三方 source-map/act/defaultProps warning 已隔离并登记依赖升级决策。证据：[`evidence/2026-07-11-phase2-quality.md`](evidence/2026-07-11-phase2-quality.md)。
 - [x] **CQ-LINT-06** 定位 severity 阈值错配；仅对当前 0 diagnostics 的 Hubble BE 启用 info 级失败，mutation A/B 证明 1 violation 时 exit 1。全仓 15 条 debt 不扩入本目标。
 
 ## Phase 3：构建与 CI 性能
 
 - [x] **CQ-PERF-01** 已量化 Compile、Prepare、重复 FE build 与 Server package；Server package 为稳定高价值慢点。
-- [ ] **CQ-PERF-02** 已实施精确 Server SHA tarball cache 并完成静态/cache-hit 验证；待至少 3 次同条件 warm CI 中位数 before/after。
-- [ ] **CQ-PERF-03** 将高风险或收益不确定方案记录为用户决策项，不擅自实施。
+- [x] **CQ-PERF-02** 精确 Server SHA cache 本地 before/after：cold 165.26s；3 次 hit 0.41/0.40/0.35s，中位数 0.40s，约节省 99.76%；真实 CI quota 后补交叉验证。
+- [x] **CQ-PERF-03** 高风险/收益不确定方案已记录并获边界决策；核心可视化栈升级明确排除在当前 goal 外。
 
 ## Phase 4：server-core 运行兼容
 
-- [ ] **CQ-COMPAT-04** 在依赖解析恢复后确认是否存在 Java API/二进制/运行兼容错误。
-- [ ] **CQ-COMPAT-05** 为真实运行兼容错误添加最小复现并实施范围内修复；若无则保存否证。
-- [ ] **CQ-COMPAT-06** 完成 Hubble package/API acceptance 与真实 CI 兼容验证。
+- [x] **CQ-COMPAT-04** 精确 PR #3008 Server tree package、Hubble package 及完整 live acceptance 未发现 Java API/二进制/运行兼容错误。
+- [x] **CQ-COMPAT-05** 保存无真实运行兼容错误的否证；首次连接拒绝已证明为 daemon session 生命周期并经 foreground 有限恢复排除。
+- [ ] **CQ-COMPAT-06** 本地 Hubble package/API/UI acceptance 已通过；真实 CI 因 GitHub quota queued，待额度恢复后补证。
 
 ## Phase 5：核心 API 测试
 
@@ -63,6 +63,21 @@
 
 ## 用户决策项
 
-- **DEC-FE-01（待决策）**：是否批准精确 pin `react`/`react-dom` 18.2.0，以清除 18.3 的迁移期 Jest warning，并恢复 Maven production build 的 `CI=true`。风险低；回滚为独立 commit；验证为 148 Jest、production build、关键 UI、package/audit/API。
-- **DEC-FE-02（待决策）**：是否接受 52 条已定位的第三方发布制品 source-map warning。兼容世代内无可证明有效的升级：X6 major 仍缺源、Dagre override 有布局风险、Antd major 会改变 UI。建议接受并保留计数证据；不关闭 source map、不做 loader 过滤、不 patch 第三方包。
+- **DEC-FE-01（已批准，2026-07-11）**：精确 pin `react`/`react-dom` 18.2.0，以清除 18.3 的迁移期 Jest warning，并恢复 Maven production build 的 `CI=true`。验证范围：148 Jest、production build、关键 UI、package/audit/API。
+- **DEC-FE-02（已接受，2026-07-11）**：接受当前精确识别的 52 条第三方发布制品 source-map warning（X6 38、Dagre 10、Antd 4）。仅接受当前来源与数量；不关闭 source map、不做 loader 过滤、不 patch 第三方包；新增、增量或来源变化必须重新调查。
 - **DEC-CI-02（暂缓）**：FE build 去重、release audit 去重、Maven cache 合并仍属收益/等价性未充分证明的 workflow 重构，不实施。
+
+## 未来任务：核心可视化技术栈现代化（明确不属于当前 task/goal）
+
+> 前置条件：先交付并冻结本 goal 的稳定可用基线。以下任务只记录后续方向，本轮禁止实施、混入 commit 或用作当前完成条件。
+
+- [ ] **FUTURE-VIS-01** 建立 Antd、X6、Graphin/G6、Dagre、React 及构建链的版本/维护状态/安全/兼容矩阵，确定目标技术栈与分阶段迁移顺序。
+- [ ] **FUTURE-VIS-02** 固化核心页面视觉与交互基线：登录、导航、GraphSpace、Schema、图查询、图详情、ER 图编辑、菜单/工具栏、表格/弹窗及错误态；保存截图、关键 DOM/交互和可访问性证据。
+- [ ] **FUTURE-VIS-03** 为图可视化建立布局与数据合同：节点/边数量、位置稳定性、缩放/拖拽/选择、菜单/工具栏、复杂图性能及异常/空图边界，避免升级只验证“能渲染”。
+- [ ] **FUTURE-VIS-04** 分离升级 React 测试生态与 UI/图组件：先升级 Testing Library/类型/测试设施，再按独立批次迁移 Antd major、X6/Graphin/G6、Dagre；每批可单独回滚。
+- [ ] **FUTURE-VIS-05** Antd major 迁移需审计组件 API、CSS token、DOM、主题、表格/表单/弹窗行为和视觉差异，并完成真实浏览器回归。
+- [ ] **FUTURE-VIS-06** X6/Graphin/G6/Dagre 迁移需验证图模型转换、布局输出、事件语义、插件/React shape、序列化兼容和大图性能，禁止仅以 build/test 通过收口。
+- [ ] **FUTURE-VIS-07** 清理兼容层、废弃 API、旧 polyfill、重复图工具和过期构建配置；每项删除必须有无调用证据和回滚点。
+- [ ] **FUTURE-VIS-08** 输出同条件 before/after：bundle、首屏/交互耗时、布局耗时、内存、warning/debt 数量及浏览器兼容；达不到收益或稳定性门槛则不合并。
+- [ ] **FUTURE-VIS-09** 清理当前 Yarn peer-dependency 债务：Graphin/lodash-es、Testing Library/types、react-json-view/flux、CRA Babel、vis-network peers、Ecomfe lint/stylelint peers；先证明真实消费路径，不以盲目补包换静默。
+- [ ] **FUTURE-VIS-10** 现代化 Browserslist/CRA/build toolchain，更新浏览器数据策略并评估替代已停止演进的 CRA；同时制定 2.14 MB 主 bundle 的 code-splitting 与性能预算。

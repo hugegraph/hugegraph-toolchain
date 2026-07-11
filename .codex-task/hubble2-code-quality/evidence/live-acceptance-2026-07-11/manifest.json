@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "hubbleUrl": "http://127.0.0.1:8088",
+  "serverUrl": "http://127.0.0.1:8080",
+  "graphspace": "DEFAULT",
+  "graph": "hugegraph",
+  "runtime": "/Users/imbajin/github/graph/toolchain/.codex-task/hubble2-code-quality/evidence/live-acceptance-2026-07-11/live-hubble-smoke.json",
+  "ui": "/Users/imbajin/github/graph/toolchain/.codex-task/hubble2-code-quality/evidence/live-acceptance-2026-07-11/ui-full-acceptance.json"
+}

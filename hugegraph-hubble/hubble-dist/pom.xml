@@ -127,7 +127,7 @@
                         <configuration>
                             <arguments>build</arguments>
                             <environmentVariables>
-                                <CI>false</CI>
+                                <CI>true</CI>
                                 <NODE_OPTIONS>--max-old-space-size=4096</NODE_OPTIONS>
                             </environmentVariables>
                         </configuration>
@@ -147,7 +147,7 @@
                                 <!-- TODO: change to assembly plugin in future  -->
                                 <echo file="${top.level.dir}/dist.sh">
                                     cd ${hubble-fe.dir} || exit 1
-                                    export CI=false
+                                    export CI=true
 
                                     cd ${top.level.dir} &amp;&amp; pwd
                                     rm -rf ${final.name}/ui
