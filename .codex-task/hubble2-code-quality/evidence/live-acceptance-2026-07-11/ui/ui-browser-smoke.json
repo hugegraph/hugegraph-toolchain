@@ -1,0 +1,122 @@
+{
+  "hubbleUrl": "http://127.0.0.1:8088",
+  "authenticatedUser": "admin",
+  "authLevel": "ADMIN",
+  "results": [
+    {
+      "route": "/graphspace",
+      "screenshot": "/Users/imbajin/github/graph/toolchain/.codex-task/hubble2-code-quality/evidence/live-acceptance-2026-07-11/ui/graphspace.png",
+      "matchedApis": [
+        {
+          "requiredApi": "/api/v1.3/graphspaces",
+          "entries": [
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces?create_time=&query=&page_no=1&page_size=11",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "rawI18nKeyFound": false,
+      "routeTextMatched": true,
+      "notFoundPage": false,
+      "requestCount": 2
+    },
+    {
+      "route": "/gremlin",
+      "screenshot": "/Users/imbajin/github/graph/toolchain/.codex-task/hubble2-code-quality/evidence/live-acceptance-2026-07-11/ui/gremlin.png",
+      "matchedApis": [
+        {
+          "requiredApi": "/api/v1.3/graphspaces/list",
+          "entries": [
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces/list",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            },
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces/list",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "rawI18nKeyFound": false,
+      "routeTextMatched": true,
+      "notFoundPage": false,
+      "requestCount": 40
+    },
+    {
+      "route": "/algorithms",
+      "screenshot": "/Users/imbajin/github/graph/toolchain/.codex-task/hubble2-code-quality/evidence/live-acceptance-2026-07-11/ui/algorithms.png",
+      "matchedApis": [
+        {
+          "requiredApi": "/api/v1.3/graphspaces/list",
+          "entries": [
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces/list",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            },
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces/list",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "rawI18nKeyFound": false,
+      "routeTextMatched": true,
+      "notFoundPage": false,
+      "requestCount": 40
+    },
+    {
+      "route": "/asyncTasks",
+      "screenshot": "/Users/imbajin/github/graph/toolchain/.codex-task/hubble2-code-quality/evidence/live-acceptance-2026-07-11/ui/asyncTasks.png",
+      "matchedApis": [
+        {
+          "requiredApi": "/api/v1.3/graphspaces/list",
+          "entries": [
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces/list",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            },
+            {
+              "method": "GET",
+              "url": "http://127.0.0.1:8088/api/v1.3/graphspaces/list",
+              "httpStatus": 200,
+              "ok": true,
+              "businessStatus": 200
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "rawI18nKeyFound": false,
+      "routeTextMatched": true,
+      "notFoundPage": false,
+      "requestCount": 12
+    }
+  ],
+  "consoleErrors": [],
+  "status": "passed"
+}

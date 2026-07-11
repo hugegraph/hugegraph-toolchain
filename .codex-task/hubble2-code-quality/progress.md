@@ -3,7 +3,7 @@
 ## 当前 checkpoint
 
 - 更新时间：2026-07-11 23:20 +08:00
-- 当前阶段：Phase 3/5 收口；等待 FE 第三方 warning 决策
+- 当前阶段：Phase 6 前最终实现与验证
 - 当前分支：`hubble2`
 - 目标状态：active
 - 唯一实时状态源：[`todo.md`](todo.md)
@@ -49,15 +49,19 @@
 ## 阻塞与决策
 
 - server-core 发布 POM 阻塞已用 Hubble 最小排除解除；尚需 package/真实 CI 证明运行兼容。
-- Maven FE package 仍显式 `CI=false`；临时 `CI=true` package/audit 已通过，但 warning 不会自动变成失败。恢复真实配置及 pin React 待 DEC-FE-01。
-- 52 条 source-map warning 已证明无法由兼容世代的最小升级清除，待 DEC-FE-02 明确接受或另行授权高风险方案。
+- DEC-FE-01/02 已获用户批准：本轮精确 pin React/ReactDOM 18.2.0、恢复 `CI=true`，并以限定来源/数量接受 52 条第三方 source-map warning。
+- Antd/X6/Graphin/G6/Dagre 等核心可视化栈现代化已登记为未来任务，明确不属于当前 task/goal；稳定版本冻结后再积极迁移和重构。
+- 当前唯一构建执行器为 Yarn；删除无消费路径且与精确 pin 冲突的 `package-lock.json`。既有 peer-dependency、Browserslist 与 bundle 债务纳入未来现代化任务，本轮不补包、不升级核心图组件。
+- React/ReactDOM 18.2 稳定批次已完成：lint 0、Jest 148/148 且控制台 warning 归零、`CI=true` build 通过、浏览器登录页正常、Maven package/distribution audit 通过。
+- 精确 PR #3008 Server SHA 隔离构建通过；完整 runtime/UI acceptance 在一次环境生命周期恢复后通过，未发现 server-core 运行兼容错误。
+- Server cache 本地 before/after 已收口：165.26s cold vs 0.40s hit 中位数，约节省 99.76%，未削弱 SHA 校验或 miss 源码构建。
 - 合并重复 FE build/release scan 属门禁编排重构（DEC-CI-02），未实施。
 
 ## 下一动作
 
-1. 监控 `66e36594` 的真实 Hubble CI，保存 cache miss、package/audit/API 证据。
-2. 根据 DEC-FE-01 决策恢复 `CI=true` production build，并完成 FE/package 回归。
-3. 获取 3 次 warm-cache CI 中位数，冻结实现后执行独立 review/re-review。
+1. 运行最终新鲜本地 FE/BE/联动/release sidecar 门禁并保存退出码。
+2. GitHub quota 恢复后补最终 HEAD Hubble CI 与 cache 交叉验证；不作为当前本地推进 blocker。
+3. 冻结实现后执行独立 review，修复 actionable findings 并 re-review。
 
 ## 恢复入口
 

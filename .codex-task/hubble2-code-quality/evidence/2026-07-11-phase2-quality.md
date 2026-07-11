@@ -66,3 +66,27 @@
 - Dagre 10 条：传递依赖 0.0.11；越界 override 0.0.12/13 无清 warning 证据，且有布局行为风险。
 - Antd 4 条：4.24.16 已是 4.x 末版；升级 5/6 才避开旧 map，但会改变 CSS/DOM/API/视觉，不符合稳定目标。
 - 推荐决策：批准 React 18.2 精确 pin；52 条 source-map warning 登记为已诊断的外部发布制品缺陷并由用户明确接受。禁用 source map、过滤 loader、patch `node_modules` 均不采用。
+
+## 用户决策后的稳定实现
+
+- 用户批准精确 pin React/ReactDOM 18.2.0，并接受限定来源/数量的 52 条第三方 source-map warning。
+- `dbf7090d`：package/lock 只改变 React、ReactDOM 与 scheduler 解析；删除仓库和 CI 无消费路径的 npm lockfile，Yarn 保持唯一构建执行器。
+- 实装版本：React 18.2.0、ReactDOM 18.2.0；frozen offline install exit 0。
+- `yarn lint`：330 files，0 warning/error，5.20s。
+- Jest：40 suites / 148 tests，0 warning，6.09s；18.3 的 `act/defaultProps` warning 归零。
+- `CI=true yarn build`：exit 0，47.73s；第三方 source-map warning 精确保持 X6 38、Dagre 10、Antd 4；主 bundle 2.14 MB（较前一构建 +53 B）。
+- Browser：本地 1280px 登录页正常渲染，无横向溢出，用户名/密码/登录控件存在；浏览器控制台 0 error/warning。
+- Maven `CI=true` package：exit 0，123.93s；distribution audit 通过（423 JAR、275 license files、43 FE license files、10 native-bearing JAR）。
+- Antd/X6/Graphin/G6/Dagre、peer dependency、Browserslist/CRA 与 bundle 现代化全部登记为未来计划，明确不属于当前 task/goal。
+
+## 精确 Server SHA 本地兼容与性能
+
+- CI baseline：Apache HugeGraph Server PR #3008 head `3bd990d8b58e81cb61e3b85c287d34243836f181`；其 Git tree 与 merge commit `99936be5` 完全一致。
+- 为保护 `/Users/imbajin/github/graph/server` 的既有脏工作树，从该精确 SHA `git archive` 到临时目录构建；43-module package exit 0，165.26s。
+- Server tarball SHA-256：`1d76f3ab8afe45ccd36dcd2eb6fbc84e9d947c4db6bb7ef87291799a8a5757d9`。
+- 同一 397 MB、同一 SHA cache 连续 hit：0.41s / 0.40s / 0.35s，中位数 0.40s；相对 cold build 165.26s 节省 164.86s（约 99.76%）。cache miss 仍执行源码构建与 checkout SHA 校验，未削弱兼容门禁。
+- 首次 acceptance 因 daemon 随执行 session 退出导致 Server 8080 不再监听；Hubble health/静态路由 7 项已通过，但 login 连接拒绝。该失败分类为环境生命周期，不是产品断言失败。
+- 有限恢复：使用同一 tarball foreground session 保持 Server 生命周期后重试一次，完整 acceptance 通过。证据目录：`evidence/live-acceptance-2026-07-11/`。
+- Runtime：27 checks；登录/ADMIN、Server login、GraphSpace、Schema view、Job/Async、Property/Vertex/Edge schema、CSV upload/file mapping/loader、3 vertices/2 edges、direct shortest-path、Cypher/OLAP boundary 均符合合同。
+- UI：GraphSpace、Gremlin、Algorithms、AsyncTasks API/页面检查通过，console errors 为空；中英文切换通过，无 raw i18n key/404。
+- `hubble-shortestpath-string-id-followup` 仍按既有 acceptance 合同标记为已知 follow-up；本轮 direct shortest-path 数据合同已通过，该 follow-up 不由本稳定化 goal 扩展修复。
