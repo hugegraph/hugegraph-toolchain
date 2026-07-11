@@ -119,7 +119,6 @@ const SameNeighbors = props => {
                     highlightName={currentAlgorithm === SAME_NEIGHBORS}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

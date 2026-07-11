@@ -125,7 +125,6 @@ const PageRankVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

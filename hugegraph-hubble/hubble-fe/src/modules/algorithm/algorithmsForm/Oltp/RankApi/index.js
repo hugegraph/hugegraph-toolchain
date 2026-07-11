@@ -131,7 +131,6 @@ const RankApi = props => {
                     highlightName={currentAlgorithm === RANK_API}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

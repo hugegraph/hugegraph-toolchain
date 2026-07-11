@@ -26,12 +26,16 @@ import {
     Modal,
 } from 'antd';
 import {useCallback, useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import TableHeader from '../../components/TableHeader';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import {getUser} from '../../utils/user';
 
+const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
+
 const Account = () => {
+    const {t} = useTranslation();
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [op, setOp] = useState('detail');
     const [detail, setDetail] = useState({});
@@ -73,16 +77,16 @@ const Account = () => {
 
     const handleDelete = row => {
         Modal.confirm({
-            title: `确定要删除账号 ${row.user_name}吗？`,
+            title: t('account.delete_confirm', {name: row.user_name}),
             onOk: () => {
-                api.auth.delUser(row.id).then(res => {
+                return api.auth.delUser(row.id, PAGE_ERROR_CONFIG).then(res => {
                     if (res.status === 200) {
-                        message.success('删除成功');
+                        message.success(t('common.msg.delete_success'));
                         setRefresh(value => !value);
                         return;
                     }
-                    message.error(res.message);
-                });
+                    message.error(t('common.msg.operation_failed'));
+                }).catch(() => message.error(t('common.msg.operation_failed')));
             },
         });
     };
@@ -93,42 +97,42 @@ const Account = () => {
 
     const columns = [
         {
-            title: '账号ID',
+            title: t('account.col.id'),
             dataIndex: 'user_name',
         },
         {
-            title: '账号名',
+            title: t('account.col.name'),
             dataIndex: 'user_nickname',
         },
         {
-            title: '备注',
+            title: t('account.col.remark'),
             dataIndex: 'user_description',
             ellipsis: {showTitle: false},
             render: val => <Tooltip title={val} placement='bottomLeft'>{val}</Tooltip>,
         },
         {
-            title: '资源权限',
+            title: t('account.col.resource'),
             dataIndex: 'spacenum',
             width: 120,
         },
         {
-            title: '创建时间',
+            title: t('account.col.create_time'),
             dataIndex: 'user_create',
             align: 'center',
             width: 200,
         },
         {
-            title: '操作',
+            title: t('common.operation'),
             width: 300,
             align: 'center',
             render: row => (
                 <Space>
-                    <a onClick={() => showDetail(row)}>详情</a>
-                    {<a onClick={() => showEdit(row)}>编辑</a>}
-                    <a onClick={() => showAuth(row)}>分配权限</a>
+                    <a onClick={() => showDetail(row)}>{t('common.action.detail')}</a>
+                    {<a onClick={() => showEdit(row)}>{t('common.action.edit')}</a>}
+                    <a onClick={() => showAuth(row)}>{t('common.action.assign_permission')}</a>
                     {row.user_name !== 'admin'
                         && row.user_name !== getUser().id
-                        && <a onClick={() => handleDelete(row)}>删除</a>}
+                        && <a onClick={() => handleDelete(row)}>{t('common.action.delete')}</a>}
                 </Space>
             ),
         },
@@ -142,29 +146,29 @@ const Account = () => {
             query: '',
             page_no: current,
             page_size: pageSize,
-        }).then(res => {
+        }, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 setData(res.data.records);
                 setPagination(value => ({...value, total: res.data.total}));
                 return;
             }
 
-            message.error(res.message);
-        });
-    }, [refresh, current, pageSize]);
+            message.error(t('common.msg.load_failed'));
+        }).catch(() => message.error(t('common.msg.load_failed')));
+    }, [refresh, current, pageSize, t]);
 
     return (
         <>
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title={'账号管理'}
+                title={t('account.title')}
             />
 
             <div className='container'>
                 <TableHeader>
                     <Space>
-                        <Button onClick={showAdd} type='primary'>创建账号</Button>
+                        <Button onClick={showAdd} type='primary'>{t('account.create')}</Button>
                     </Space>
                 </TableHeader>
 

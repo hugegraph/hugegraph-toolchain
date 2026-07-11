@@ -136,7 +136,6 @@ const KCoreVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

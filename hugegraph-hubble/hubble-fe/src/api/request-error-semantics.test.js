@@ -16,7 +16,7 @@
  * under the License.
  */
 
-const loadResponseRejectHandler = modulePath => {
+const loadResponseHandlers = modulePath => {
     jest.resetModules();
 
     const responseHandlers = [];
@@ -54,11 +54,14 @@ const loadResponseRejectHandler = modulePath => {
         clearLogin,
     }));
 
-    require(modulePath);
+    const request = require(modulePath).default;
     return {
+        resolve: responseHandlers[0].resolve,
         reject: responseHandlers[0].reject,
         messageError,
         clearLogin,
+        instance,
+        request,
     };
 };
 
@@ -82,7 +85,7 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
     });
 
     it('keeps non-401 HTTP errors rejected after showing the error message', async () => {
-        const {reject, messageError} = loadResponseRejectHandler(modulePath);
+        const {reject, messageError} = loadResponseHandlers(modulePath);
         const error = {
             response: {
                 status: 500,
@@ -98,7 +101,7 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
     });
 
     it('keeps network errors rejected after showing the fallback message', async () => {
-        const {reject, messageError} = loadResponseRejectHandler(modulePath);
+        const {reject, messageError} = loadResponseHandlers(modulePath);
         const error = new Error('Network Error');
 
         await expect(reject(error)).rejects.toBe(error);
@@ -106,7 +109,7 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
     });
 
     it('keeps the existing 401 sentinel response and redirects to login', () => {
-        const {reject, clearLogin} = loadResponseRejectHandler(modulePath);
+        const {reject, clearLogin} = loadResponseHandlers(modulePath);
         const error = {
             response: {
                 status: 401,
@@ -126,5 +129,51 @@ describe.each(['./request', './request2'])('%s error semantics', modulePath => {
         expect(clearLogin).toHaveBeenCalledTimes(1);
         expect(sessionStorage.getItem('redirect')).toBe('/navigation?from=test');
         expect(window.location.href).toBe('/login?redirect=%2Fnavigation%3Ffrom%3Dtest');
+    });
+
+    it('lets an inline error owner suppress the duplicate business-error toast', () => {
+        const {resolve, messageError} = loadResponseHandlers(modulePath);
+        const response = {
+            status: 200,
+            config: {suppressBusinessErrorToast: true},
+            data: {
+                status: 400,
+                message: 'internal implementation details',
+            },
+        };
+
+        expect(resolve(response)).toBe(response);
+        expect(messageError).not.toHaveBeenCalled();
+    });
+
+    it('lets an inline error owner suppress the duplicate transport-error toast', async () => {
+        const {reject, messageError} = loadResponseHandlers(modulePath);
+        const error = {
+            config: {suppressBusinessErrorToast: true},
+            response: {
+                status: 500,
+                data: {message: 'connection refused'},
+            },
+        };
+
+        await expect(reject(error)).rejects.toBe(error);
+        expect(messageError).not.toHaveBeenCalled();
+    });
+
+    it('forwards page-owned error controls through PUT and DELETE', async () => {
+        const {instance, request} = loadResponseHandlers(modulePath);
+        const config = {suppressBusinessErrorToast: true};
+        instance.put.mockResolvedValue({data: {status: 200}});
+        instance.delete.mockResolvedValue({data: {status: 200}});
+
+        await request.put('/resource', {name: 'value'}, config);
+        await request.delete('/resource', {name: 'value'}, config);
+
+        expect(instance.put).toHaveBeenCalledWith(
+            '/resource', {name: 'value'}, config
+        );
+        expect(instance.delete).toHaveBeenCalledWith(
+            '/resource', {params: {name: 'value'}, ...config}
+        );
     });
 });

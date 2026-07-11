@@ -126,7 +126,6 @@ const ClusterCoefficient = props => {
                     highlightName={currentAlgorithm === CLUSTER_COEFFICIENT}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

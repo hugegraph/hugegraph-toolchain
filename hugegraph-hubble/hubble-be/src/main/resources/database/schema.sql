@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS `execute_history` (
     `content` TEXT NOT NULL,
     `text` TEXT NOT NULL,
     `execute_status` TINYINT NOT NULL,
+    `failure_reason` VARCHAR(64) DEFAULT NULL,
     `async_status` TINYINT NOT NULL DEFAULT 0,
     `duration` LONG NOT NULL,
     `create_time` DATETIME(6) NOT NULL,

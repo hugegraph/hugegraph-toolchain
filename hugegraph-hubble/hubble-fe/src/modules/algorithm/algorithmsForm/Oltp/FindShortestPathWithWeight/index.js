@@ -124,7 +124,6 @@ const FindShortestPathWithWeight = props => {
                     highlightName={currentAlgorithm === FINDSHORTESTPATHWITHWEIGHT}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

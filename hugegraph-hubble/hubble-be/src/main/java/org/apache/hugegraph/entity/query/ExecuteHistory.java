@@ -85,6 +85,11 @@ public class ExecuteHistory implements Identifiable, Mergeable {
     @JsonProperty("status")
     private ExecuteStatus status;
 
+    @TableField(value = "failure_reason")
+    @MergeProperty
+    @JsonProperty("failure_reason")
+    private String failureReason;
+
     @TableField(value = "async_status")
     @MergeProperty
     @JsonProperty("async_status")
@@ -114,6 +119,15 @@ public class ExecuteHistory implements Identifiable, Mergeable {
                           ExecuteType type, String content, String text,
                           ExecuteStatus status, AsyncTaskStatus asyncStatus,
                           Long duration, Date createTime) {
+        this(id, graphspace, graph, asyncId, type, content, text, status,
+             null, asyncStatus, duration, createTime);
+    }
+
+    public ExecuteHistory(Integer id, String graphspace, String graph,
+                          Long asyncId, ExecuteType type, String content,
+                          String text, ExecuteStatus status,
+                          String failureReason, AsyncTaskStatus asyncStatus,
+                          Long duration, Date createTime) {
         this.id = id;
         this.graphspace = graphspace;
         this.graph = graph;
@@ -122,6 +136,7 @@ public class ExecuteHistory implements Identifiable, Mergeable {
         this.content = content;
         this.text = text;
         this.status = status;
+        this.failureReason = failureReason;
         this.asyncStatus = asyncStatus;
         this.duration = duration;
         this.createTime = createTime;

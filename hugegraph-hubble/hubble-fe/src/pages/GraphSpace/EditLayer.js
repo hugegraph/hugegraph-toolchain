@@ -18,17 +18,19 @@
 
 import {Modal, Form, Input, Select, message, Switch, InputNumber, Space, Typography} from 'antd';
 import {useState, useEffect, useMemo, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../api/index';
 import * as rules from '../../utils/rules';
 
 const {Option} = Select;
+const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 
-const MyFormItem = ({label, children}) => {
+const MyFormItem = ({label, unit, children}) => {
     return (
         <Form.Item label={label} colon={false} required>
             <Space>
                 {children}
-                <span className='spanFontSize'>{label === 'cpu资源' ? '核' : 'G'}</span>
+                <span className='spanFontSize'>{unit}</span>
             </Space>
         </Form.Item>
     );
@@ -38,6 +40,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
     const [form] = Form.useForm();
     const [userList, setUserList] = useState([]);
     const [loading, setLoading] = useState(false);
+    const {t} = useTranslation();
 
     const defaultValues = {
         max_graph_number: 100,
@@ -50,7 +53,6 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
         description: '',
     };
 
-    // 是否禁用
     const isDisabled = useMemo(() => {
         if (Object.keys(detail).length !== 0) {
             return true;
@@ -58,7 +60,6 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
         return false;
     }, [detail]);
 
-    // 完成提交
     const onFinish = useCallback(() => {
         form.validateFields().then(values => {
             setLoading(true);
@@ -66,45 +67,50 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
             const thenCallBack = res => {
                 setLoading(false);
                 if (res && res.status === 200) {
-                    message.success('操作成功');
+                    message.success(t('common.msg.success'));
                     refresh();
                     onCancel();
+                    return;
                 }
+                message.error(t('common.msg.operation_failed'));
+            };
+            const catchCallback = () => {
+                setLoading(false);
+                message.error(t('common.msg.operation_failed'));
             };
 
             if (isDisabled) {
-                api.manage.updateGraphSpace(detail.name, values).then(thenCallBack);
+                api.manage.updateGraphSpace(detail.name, values, PAGE_ERROR_CONFIG)
+                    .then(thenCallBack).catch(catchCallback);
             }
             else {
-                api.manage.addGraphSpace(values).then(thenCallBack);
+                api.manage.addGraphSpace(values, PAGE_ERROR_CONFIG)
+                    .then(thenCallBack).catch(catchCallback);
             }
         });
-    }, [detail.name, isDisabled, onCancel, refresh, form]);
+    }, [detail.name, isDisabled, onCancel, refresh, form, t]);
 
-    // 验证
     const serviceValidator = (_, value) => {
         if (value === 'DEFAULT') {
             return Promise.resolve();
         }
         let res = /^[a-z][a-z0-9_]{0,47}$/.test(value);
         if (!res) {
-            return Promise.reject('以字母开头,只能包含小写字母、数字、_, 最长48位');
+            return Promise.reject(t('graphspace.form.id_rule'));
         }
 
         return Promise.resolve();
     };
 
-    // 验证
     const k8sValidator = (_, value) => {
         let res = /^[a-z][a-z0-9\-]{0,47}$/.test(value);
         if (value && !res) {
-            return Promise.reject('以字母开头,只能包含小写字母、数字、-,最长48位');
+            return Promise.reject(t('graphspace.form.k8s_rule'));
         }
 
         return Promise.resolve();
     };
 
-    // 管理员
     const userSelect = useMemo(
         () => userList.map(item => (<Option key={item.id}>{item.user_name}</Option>)),
         [userList]
@@ -116,14 +122,16 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
         }
         form.resetFields();
 
-        api.auth.getUserList().then(res => {
+        api.auth.getUserList(undefined, PAGE_ERROR_CONFIG).then(res => {
             if (res && res.status === 200) {
                 setUserList(res.data.users);
+                return;
             }
-        });
+            message.error(t('common.msg.load_failed'));
+        }).catch(() => message.error(t('common.msg.load_failed')));
 
         if (detail.name) {
-            api.manage.getGraphSpace(detail.name).then(res => {
+            api.manage.getGraphSpace(detail.name, PAGE_ERROR_CONFIG).then(res => {
                 if (res.status === 200) {
                     form.setFieldsValue({
                         ...res.data,
@@ -131,17 +139,21 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                                              || res.data['internal_'
                                                          + 'algorithm_image_url'],
                     });
+                    return;
                 }
-            });
+                message.error(t('common.msg.load_failed'));
+            }).catch(() => message.error(t('common.msg.load_failed')));
         }
-    }, [visible, form, detail.name]);
+    }, [visible, form, detail.name, t]);
 
     return (
         <Modal
-            title={isDisabled ? '编辑图空间' : '创建图空间'}
+            title={t(isDisabled ? 'graphspace.form.title_edit' : 'graphspace.form.title_create')}
             open={visible}
             onCancel={onCancel}
-            okText={Object.keys(detail).length === 0 ? '创建' : '保存'}
+            okText={t(Object.keys(detail).length === 0
+                ? 'common.action.create'
+                : 'common.action.save')}
             loading={loading}
             onOk={onFinish}
             width={600}
@@ -160,34 +172,34 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
 
                 <Form.Item
                     name="name"
-                    label="图空间ID"
+                    label={t('graphspace.form.id')}
                     rules={
                         [
-                            {required: true, message: '此项为必填项'},
-                            {max: 48, message: '字符长度最多48位'},
+                            {required: true, message: t('common.form.required')},
+                            {max: 48, message: t('common.form.max_48')},
                             {validator: serviceValidator},
                         ]
                     }
                 >
-                    <Input disabled={isDisabled} placeholder='以字母开头,只能包含小写字母、数字、_, 最长48位' />
+                    <Input disabled={isDisabled} placeholder={t('graphspace.form.id_placeholder')} />
                 </Form.Item>
 
                 <Form.Item
                     name="nickname"
-                    label="图空间名称"
+                    label={t('graphspace.form.name')}
                     rules={
                         [
-                            {required: true, message: '此项为必填项'},
-                            {max: 12, message: '字符长度最多12位'},
+                            {required: true, message: t('common.form.required')},
+                            {max: 12, message: t('common.form.max_12')},
                             rules.isPropertyName,
                         ]
                     }
                 >
-                    <Input placeholder='只能包含中文、字母、数字、_，最长12位' />
+                    <Input placeholder={t('graphspace.form.name_placeholder')} />
                 </Form.Item>
 
                 <Form.Item
-                    label="是否开启鉴权"
+                    label={t('graphspace.form.auth')}
                     name="auth"
                     valuePropName="checked"
                 >
@@ -196,117 +208,105 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
 
                 <Form.Item
                     name="max_graph_number"
-                    label="最大图数"
+                    label={t('graphspace.form.max_graph')}
                     rules={
                         [
-                            {required: true, message: '此项为必填项'},
+                            {required: true, message: t('common.form.required')},
                         ]
                     }
                 >
                     <InputNumber precision={0} min={1} />
                 </Form.Item>
 
-                {/* <Form.Item
-                    name="max_role_number"
-                    label="最大角色数"
-                    rules={
-                        [
-                            {required: true, message: '此项为必填项'},
-                        ]
-                    }
-                >
-                    <InputNumber precision={0} min={1} />
-                </Form.Item> */}
-
-                <Typography.Title level={5}>图服务：</Typography.Title>
-                <MyFormItem label='cpu资源:'>
+                <Typography.Title level={5}>{t('graphspace.form.graph_service')}</Typography.Title>
+                <MyFormItem label={t('graphspace.form.cpu')} unit={t('graphspace.unit.cpu')}>
                     <Form.Item
                         name="cpu_limit"
                         noStyle
                         rules={
                             [
-                                {required: true, message: '此项为必填项'},
+                                {required: true, message: t('common.form.required')},
                             ]
                         }
                     >
-                        <InputNumber placeholder='核' precision={0} min={1} />
+                        <InputNumber placeholder={t('graphspace.form.cpu_placeholder')} precision={0} min={1} />
                     </Form.Item>
                 </MyFormItem>
 
-                <MyFormItem label="内存资源:">
+                <MyFormItem label={t('graphspace.form.memory')} unit={t('graphspace.unit.memory')}>
                     <Form.Item
                         name="memory_limit"
                         noStyle
                         rules={
                             [
-                                {required: true, message: '此项为必填项'},
+                                {required: true, message: t('common.form.required')},
                             ]
                         }
                     >
-                        <InputNumber placeholder='G' precision={0} min={1} />
+                        <InputNumber placeholder={t('graphspace.form.memory_placeholder')} precision={0} min={1} />
                     </Form.Item>
                 </MyFormItem>
 
                 <Form.Item
                     name="oltp_namespace"
-                    label="k8s命名空间"
+                    label={t('graphspace.form.k8s_namespace')}
                     rules={
                         [
                             {validator: k8sValidator},
                         ]
                     }
                 >
-                    <Input disabled={isDisabled} placeholder='以字母开头,只能包含小写字母、数字、-,最长48位' />
+                    <Input disabled={isDisabled} placeholder={t('graphspace.form.k8s_placeholder')} />
                 </Form.Item>
 
-                <Typography.Title level={5}>计算任务：</Typography.Title>
-                <MyFormItem label="cpu资源:">
+                <Typography.Title level={5}>{t('graphspace.form.compute_task')}</Typography.Title>
+                <MyFormItem label={t('graphspace.form.cpu')} unit={t('graphspace.unit.cpu')}>
                     <Form.Item
                         name="compute_cpu_limit"
                         noStyle
                         rules={
                             [
-                                {required: true, message: '此项为必填项'},
+                                {required: true, message: t('common.form.required')},
                             ]
                         }
                     >
-                        <InputNumber placeholder='核' precision={0} min={1} />
+                        <InputNumber placeholder={t('graphspace.form.cpu_placeholder')} precision={0} min={1} />
                     </Form.Item>
                 </MyFormItem>
 
-                <MyFormItem label="内存资源:">
+                <MyFormItem label={t('graphspace.form.memory')} unit={t('graphspace.unit.memory')}>
                     <Form.Item
                         name="compute_memory_limit"
                         noStyle
                         rules={
                             [
-                                {required: true, message: '此项为必填项'},
+                                {required: true, message: t('common.form.required')},
                             ]
                         }
                     >
-                        <InputNumber placeholder='G' precision={0} min={1} />
+                        <InputNumber placeholder={t('graphspace.form.memory_placeholder')} precision={0} min={1} />
                     </Form.Item>
                 </MyFormItem>
 
                 <Form.Item
                     name="olap_namespace"
-                    label="k8s命名空间"
+                    label={t('graphspace.form.k8s_namespace')}
                     rules={
                         [
                             {validator: k8sValidator},
                         ]
                     }
                 >
-                    <Input disabled={isDisabled} placeholder='以字母开头,只能包含小写字母、数字、-,最长48位' />
+                    <Input disabled={isDisabled} placeholder={t('graphspace.form.k8s_placeholder')} />
                 </Form.Item>
 
                 <Form.Item
                     name="operator_image_path"
-                    label="Operator镜像地址"
+                    label={t('graphspace.form.operator_image')}
                     rules={[
                         {
                             pattern: /^[a-zA-Z0-9\-\.]+\/[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+(\:[a-z0-9\.]+)*$/,
-                            message: '请输入正确的镜像地址格式(ie: example.com/org_1/xx_img:1.0.0)!',
+                            message: t('graphspace.form.image_format_error'),
                         },
                     ]}
                     extra='ie: example.com/org_1/xx_img:1.0.0'
@@ -316,30 +316,35 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
 
                 <Form.Item
                     name="algorithm_image_url"
-                    label="算法镜像地址"
+                    label={t('graphspace.form.algorithm_image')}
                     extra='ie: example.com/org_1/xx_img:1.0.0'
                     rules={[
                         {
                             pattern: /^[a-zA-Z0-9\-\.]+\/[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+(\:[a-z0-9\.]+)*$/,
-                            message: '请输入正确的镜像地址格式(ie: example.com/org_1/xx_img:1.0.0)!',
+                            message: t('graphspace.form.image_format_error'),
                         },
                     ]}
                 >
                     <Input />
                 </Form.Item>
 
-                <Typography.Title level={5}>存储服务：</Typography.Title>
-                <MyFormItem label="最大存储空间限制:">
+                <Typography.Title level={5}>{t('graphspace.form.storage')}</Typography.Title>
+                <MyFormItem label={t('graphspace.form.storage_limit')} unit={t('graphspace.unit.memory')}>
                     <Form.Item
                         name="storage_limit"
                         noStyle
                         rules={
                             [
-                                {required: true, message: '此项为必填项'},
+                                {required: true, message: t('common.form.required')},
                             ]
                         }
                     >
-                        <InputNumber style={{width: 200}} placeholder='G' precision={0} min={1} />
+                        <InputNumber
+                            style={{width: 200}}
+                            placeholder={t('graphspace.form.memory_placeholder')}
+                            precision={0}
+                            min={1}
+                        />
                     </Form.Item>
                 </MyFormItem>
 
@@ -347,13 +352,13 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
 
                 <Form.Item
                     name="graphspace_admin"
-                    label="图空间管理员"
+                    label={t('graphspace.form.admin')}
                 >
                     <Select
                         mode="multiple"
                         allowClear
                         style={{width: '100%'}}
-                        placeholder="选择图空间管理员"
+                        placeholder={t('graphspace.form.admin_placeholder')}
                     >
                         {userList.length ? userSelect : null}
                     </Select>
@@ -361,25 +366,15 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
 
                 <Form.Item
                     name="description"
-                    label="描述"
+                    label={t('graphspace.form.description')}
                     rules={
                         [
-                            {max: 128, message: '最多字符128位'},
+                            {max: 128, message: t('common.form.max_128')},
                         ]
                     }
                 >
-                    <Input.TextArea placeholder='图空间描述，可选' />
+                    <Input.TextArea placeholder={t('graphspace.form.description_placeholder')} />
                 </Form.Item>
-                {/* <Form.Item {...tailLayout}>
-                    <Space>
-                        <Button type="primary" htmlType="submit" loading={loading}>
-                            {Object.keys(detail).length === 0 ? '创建' : '保存'}
-                        </Button>
-                        <Button htmlType="button" onClick={onCancel}>
-                            取消
-                        </Button>
-                    </Space>
-                </Form.Item> */}
             </Form>
         </Modal>
     );

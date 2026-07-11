@@ -23,56 +23,56 @@ import {useNavigate, useParams} from 'react-router-dom';
 import * as api from '../../api';
 import {StatusField} from '../../components/Status';
 
-const columns = [
+const createColumns = t => [
     {
-        title: '执行实例ID',
+        title: t('task.detail.job_id'),
         dataIndex: 'job_id',
         render: val => val.toString(),
     },
     {
-        title: '导入条数',
+        title: t('task.detail.import_count'),
         dataIndex: 'job_metrics',
         align: 'right',
         render: val => val?.total_count,
     },
     {
-        title: 'Create Time',
+        title: t('task.detail.create_time'),
         dataIndex: 'create_time',
         align: 'center',
     },
     {
-        title: '平均速率',
+        title: t('task.detail.average_rate'),
         dataIndex: 'job_metrics',
         align: 'right',
         render: (val, row) => {
             if (val) {
                 const rate = row.job_status?.toLowerCase() === 'running' ? val.cur_rate : val.avg_rate;
-                return `${rate} 条/s`;
+                return t('task.detail.records_per_second', {rate});
             }
 
             return '-';
         },
     },
     {
-        title: '导入时长',
+        title: t('task.detail.duration'),
         dataIndex: 'job_metrics',
         align: 'right',
         render: val => {
             if (val) {
-                return `${val.total_time / 1000}s`;
+                return t('task.detail.seconds', {seconds: val.total_time / 1000});
             }
 
             return '-';
         },
     },
     {
-        title: 'Status',
+        title: t('task.detail.status'),
         dataIndex: 'job_status',
         align: 'center',
         render: val => <StatusField status={val} />,
     },
     {
-        title: '其它',
+        title: t('task.detail.other'),
         width: 400,
         align: 'center',
         dataIndex: 'job_message',
@@ -82,6 +82,7 @@ const columns = [
 
 const TaskDetail = () => {
     const {t} = useTranslation();
+    const columns = createColumns(t);
     const [data, setData] = useState([]);
     const {taskid} = useParams();
     const navigate = useNavigate();

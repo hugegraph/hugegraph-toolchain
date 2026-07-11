@@ -129,7 +129,6 @@ const WeaklyConnectedComponentVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

@@ -140,7 +140,6 @@ const CustomizedPaths = props => {
                     highlightName={currentAlgorithm === CUSTOMIZEDPATHS}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

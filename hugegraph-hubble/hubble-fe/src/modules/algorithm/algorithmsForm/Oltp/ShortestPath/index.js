@@ -120,7 +120,6 @@ const ShortestPath = props => {
                     highlightName={currentAlgorithm === SHORTEST_PATH}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

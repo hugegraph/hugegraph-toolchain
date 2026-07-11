@@ -119,7 +119,6 @@ const KneighborGet = props => {
                     highlightName={currentAlgorithm === K_NEIGHBOR}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

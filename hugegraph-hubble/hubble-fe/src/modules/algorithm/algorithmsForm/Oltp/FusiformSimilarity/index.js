@@ -123,7 +123,6 @@ const FusiformSimilarity = props => {
                     highlightName={currentAlgorithm === FUSIFORM_SIMILARITY}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

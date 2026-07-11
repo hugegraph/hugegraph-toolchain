@@ -19,6 +19,10 @@
 import {render, screen} from '@testing-library/react';
 import GraphSpaceCard from './Card';
 
+jest.mock('react-i18next', () => ({
+    useTranslation: () => ({t: key => key}),
+}));
+
 jest.mock('react-router-dom', () => {
     const router = jest.requireActual('react-router-dom');
     const React = require('react');
@@ -47,11 +51,15 @@ jest.mock('antd', () => {
         ),
         Dropdown: {
             ...antd.Dropdown,
-            Button: ({children, overlay}) => React.createElement(
+            Button: ({children, menu}) => React.createElement(
                 React.Fragment,
                 null,
                 children,
-                overlay
+                menu.items.map(({key, label}) => React.createElement(
+                    React.Fragment,
+                    {key},
+                    label
+                ))
             ),
         },
     };
@@ -94,6 +102,6 @@ test('does not expose a default GraphSpace mutation action', () => {
         />
     );
 
-    expect(screen.queryByText('设为默认')).not.toBeInTheDocument();
+    expect(screen.queryByText('common.action.set_default')).not.toBeInTheDocument();
     expect(handleSetDefault).not.toHaveBeenCalled();
 });

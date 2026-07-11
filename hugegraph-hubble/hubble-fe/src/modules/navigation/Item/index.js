@@ -59,6 +59,7 @@ const Item = props => {
                 url,
                 disabled = false,
                 reason = '',
+                onClick,
             } = item;
             const content = (
                 <div className={style.item} key={title}>
@@ -66,7 +67,7 @@ const Item = props => {
                         block
                         type={'primary'}
                         data-url={url}
-                        onClick={onItemClick}
+                        onClick={onClick || onItemClick}
                         disabled={disabled}
                         title={reason}
                     >

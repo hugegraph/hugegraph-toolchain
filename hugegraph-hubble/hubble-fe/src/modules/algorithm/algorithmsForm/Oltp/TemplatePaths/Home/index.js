@@ -141,7 +141,6 @@ const TemplatePaths = props => {
                     highlightName={currentAlgorithm === TEMPLATEPATHS}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

@@ -64,6 +64,9 @@ import lombok.NoArgsConstructor;
         "/{graph}/gremlin-query")
 public class GremlinQueryController extends GremlinController {
 
+    static final String GREMLIN_EXECUTION_FAILED =
+            "GREMLIN_EXECUTION_FAILED";
+
     private static final Logger LOG =
             LoggerFactory.getLogger(GremlinQueryController.class);
 
@@ -151,6 +154,7 @@ public class GremlinQueryController extends GremlinController {
             return result;
         } catch (Throwable e) {
             status = ExecuteStatus.FAILED;
+            history.setFailureReason(GREMLIN_EXECUTION_FAILED);
             throw e;
         } finally {
             timer.stop();
@@ -193,6 +197,10 @@ public class GremlinQueryController extends GremlinController {
             return result;
         } catch (Throwable e) {
             status = ExecuteStatus.ASYNC_TASK_FAILED;
+            // TODO: Persist an async failure reason only after the Server Task
+            // DTO exposes a stable, sanitized reason code. Depending on task
+            // status alone cannot distinguish submission from execution
+            // failures; remove this TODO when that Server capability exists.
             throw e;
         } finally {
             timer.stop();

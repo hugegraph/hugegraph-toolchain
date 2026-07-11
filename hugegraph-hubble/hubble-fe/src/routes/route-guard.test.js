@@ -19,6 +19,7 @@
 import {render, screen} from '@testing-library/react';
 import {MemoryRouter, Outlet} from 'react-router-dom';
 import RouteList from './index';
+import {isPdEnabled} from '../utils/config';
 
 jest.mock('../pages/Datasource', () => () => <div>datasource page</div>);
 jest.mock('../pages/Task', () => () => <div>task page</div>);
@@ -76,6 +77,7 @@ describe('route guard', () => {
     beforeEach(() => {
         localStorage.clear();
         sessionStorage.clear();
+        isPdEnabled.mockReturnValue(false);
     });
 
     it('redirects unauthenticated business route visits to login with the current URL', () => {
@@ -117,4 +119,37 @@ describe('route guard', () => {
             expect(screen.queryByText('not found page')).toBeNull();
         }
     );
+
+    it.each([
+        ['/graphspace', 'graphspace page'],
+        ['/account', 'account page'],
+        ['/graphspace/SPACE/schema', 'schema page'],
+    ])('allows PD-only route %s when PD mode is enabled', (route, page) => {
+        isPdEnabled.mockReturnValue(true);
+        sessionStorage.setItem('user_', JSON.stringify({
+            id: 'admin',
+            user_nickname: 'admin',
+        }));
+
+        renderRoutes(route);
+
+        expect(screen.getByText(page)).toBeTruthy();
+        expect(screen.queryByText('not found page')).toBeNull();
+    });
+
+    it.each([
+        ['/graphspace', 'graph page'],
+        ['/account', 'my page'],
+        ['/graphspace/SPACE/schema', 'graph page'],
+    ])('uses the non-PD fallback for %s', (route, page) => {
+        sessionStorage.setItem('user_', JSON.stringify({
+            id: 'admin',
+            user_nickname: 'admin',
+        }));
+
+        renderRoutes(route);
+
+        expect(screen.getByText(page)).toBeTruthy();
+        expect(screen.queryByText('not found page')).toBeNull();
+    });
 });

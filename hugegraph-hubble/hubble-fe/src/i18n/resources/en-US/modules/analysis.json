@@ -24,6 +24,7 @@
       "no_data": "No data",
       "loading": "Loading data...",
       "run_failed": "Run failed",
+      "run_failed_action": "Query failed. Review the statement and try again.",
       "submitting_task": "Submitting async task...",
       "submit_failed": "Submit failed",
       "import_failed": "Import failed",
@@ -383,6 +384,9 @@
         "RUNNING": "Running",
         "FAILED": "Failed",
         "ASYNC_TASK_FAILED": "Submit Failed"
+      },
+      "failure_reason": {
+        "GREMLIN_EXECUTION_FAILED": "Query failed. Review the statement and try again."
       },
       "action": {
         "favorite": "Favorite",

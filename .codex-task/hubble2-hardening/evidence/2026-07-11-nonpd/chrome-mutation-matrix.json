@@ -1,0 +1,72 @@
+{
+  "date": "2026-07-11",
+  "mode": "non-PD / RocksDB",
+  "hubble_url": "http://127.0.0.1:18088",
+  "server_url": "http://127.0.0.1:8080",
+  "server_sha": "99936be5f41fccd193f120e01206e3cf3c73a050",
+  "hubble_package_sha256": "df94a648448ec3b65f631c811a4f2ab83bf67de357f0aab3c49ac545f5227e14",
+  "language": "English",
+  "entries": [
+    {
+      "area": "Graph",
+      "operation": "nickname update and restore",
+      "status": "PASS",
+      "evidence": "graph-edit-english-run7.png",
+      "backend_check": "Hubble graph API returned the updated nickname and then the restored value"
+    },
+    {
+      "area": "Graph",
+      "operation": "create / set-default / delete",
+      "status": "PRODUCT_UNREACHABLE",
+      "reason": "The non-PD product route exposes the fixed DEFAULT/hugegraph connection and has no graph create, default, clone, or delete control. No direct API call is substituted for Chrome evidence."
+    },
+    {
+      "area": "Meta",
+      "operation": "property and vertex type create/delete",
+      "status": "PASS",
+      "fixture": [
+        "h2_import_name",
+        "h2_import_vertex"
+      ],
+      "result": "Both tabs returned No data after Chrome deletion and refresh"
+    },
+    {
+      "area": "Datasource and Task/import",
+      "operation": "upload CSV, configure mapping, run once, inspect result",
+      "status": "PASS",
+      "fixture": {
+        "datasource": "h2_file_run10",
+        "task": "h2_import_run10",
+        "vertex_id": "1001",
+        "vertex_label": "h2_import_vertex"
+      },
+      "chrome_result": "Task execution 33 finished SUCCEED; detail reported Imported Records=2 and no render or English-language failure",
+      "backend_check": "GET /graphs/hugegraph/graph/vertices/%221001%22 returned HTTP 200 with h2_import_name=chrome-fixture",
+      "screenshot": "screenshots/task-import-success-run10.jpg"
+    },
+    {
+      "area": "Gremlin",
+      "operation": "delete imported vertex",
+      "status": "PASS",
+      "statement": "g.V('1001').drop().iterate()",
+      "chrome_result": "Execution Records showed Success",
+      "backend_check": "The same Server REST vertex lookup returned HTTP 404 and Vertex '1001' does not exist"
+    },
+    {
+      "area": "Fixture cleanup",
+      "operation": "remove datasource, vertex type, property and imported data",
+      "status": "PASS_WITH_RETAINED_HISTORY",
+      "result": "Datasource list and both Meta tabs returned No data; Server vertex lookup returned 404. The completed run-once task remains as immutable Hubble execution history because its grey delete action has no product click handler."
+    },
+    {
+      "area": "Clear",
+      "operation": "clear data and clear all modes",
+      "status": "EXTERNAL_CAPABILITY_LIMIT",
+      "evidence": "See the non-PD Chrome Clear Data section in ../2026-07-11-hubble2-hardening-run.md",
+      "result": "Both product choices currently call Server clearGraph and remove data plus schema; data-only clear is not available in the tested Server contract."
+    }
+  ],
+  "unexpected_404": 0,
+  "fatal_console_errors": 0,
+  "render_failures": 0
+}

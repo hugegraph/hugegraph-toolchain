@@ -31,6 +31,7 @@ const GraphDetail = () => {
     const [loading, setLoading] = useState({graph: true, graphspace: true});
     const [statistic, setStatistic] = useState({});
     const [statisticError, setStatisticError] = useState(false);
+    const [pageError, setPageError] = useState(false);
     const {graphspace, graph} = useParams();
     const navigate = useNavigate();
     const {t} = useTranslation();
@@ -61,26 +62,37 @@ const GraphDetail = () => {
             return;
         }
 
-        api.manage.getGraphSpace(graphspace).then(res => {
+        const inlineErrorConfig = {suppressBusinessErrorToast: true};
+        api.manage.getGraphSpace(graphspace, inlineErrorConfig).then(res => {
             if (res.status === 200) {
                 setGraphspaceInfo(res.data);
                 setLoading(l => ({...l, graphspace: false}));
                 return;
             }
+            setPageError(true);
+            setLoading(l => ({...l, graphspace: false}));
+        }).catch(() => {
+            setPageError(true);
+            setLoading(l => ({...l, graphspace: false}));
+        });
 
-        }).catch(() => {});
-
-        api.manage.getGraph(graphspace, graph).then(res => {
+        api.manage.getGraph(graphspace, graph, inlineErrorConfig).then(res => {
             if (res.status === 200) {
                 setGraphInfo(res.data);
                 setLoading(l => ({...l, graph: false}));
                 return;
             }
 
+            setPageError(true);
             setGraphInfo({});
-        }).catch(() => {});
+            setLoading(l => ({...l, graph: false}));
+        }).catch(() => {
+            setPageError(true);
+            setGraphInfo({});
+            setLoading(l => ({...l, graph: false}));
+        });
 
-        api.manage.getGraphStatistic(graphspace, graph).then(res => {
+        api.manage.getGraphStatistic(graphspace, graph, inlineErrorConfig).then(res => {
             if (res.status === 200) {
                 setStatistic(res.data);
                 setStatisticError(false);
@@ -92,6 +104,9 @@ const GraphDetail = () => {
         });
     }, [graphspace, graph]);
 
+    const pageTitle = `${graphspaceInfo.nickname ?? graphspace} - `
+                      + `${graphIno.nickname ?? graph} - ${t('graph.detail.title')}`;
+
     return (
         <Spin spinning={loading.graph || loading.graphspace}>
             {!loading.graph && !loading.graphspace && (
@@ -99,72 +114,85 @@ const GraphDetail = () => {
                     <PageHeader
                         ghost={false}
                         onBack={handleBack}
-                        title={`${graphspaceInfo.nickname} - ${graphIno.nickname} - ${t('graph.detail.title')}`}
+                        title={pageTitle}
                     />
 
                     <div className={'container'}>
                         <>
-                            {statisticError && (
+                            {pageError ? (
+                                <Alert
+                                    type='error'
+                                    showIcon
+                                    message={t('graph.detail.unavailable')}
+                                />
+                            ) : statisticError && (
                                 <Alert
                                     type='warning'
                                     showIcon
                                     message={t('graph.detail.statistics_unavailable')}
                                 />
                             )}
-                            <Row justify='end' className={style.top}>
-                                <Col>
-                                    <Space>
-                                        <span>{t('graph.detail.last_update')}{statistic.update_time ?? '--/--'}</span>
-                                        <Button type='primary' onClick={handleUpdate}>
-                                            {t('graph.detail.update_data')}
-                                        </Button>
-                                    </Space>
-                                </Col>
-                            </Row>
+                            {!pageError && (
+                                <Row justify='end' className={style.top}>
+                                    <Col>
+                                        <Space>
+                                            <span>
+                                                {t('graph.detail.last_update')}
+                                                {statistic.update_time ?? '--/--'}
+                                            </span>
+                                            <Button type='primary' onClick={handleUpdate}>
+                                                {t('graph.detail.update_data')}
+                                            </Button>
+                                        </Space>
+                                    </Col>
+                                </Row>
+                            )}
 
-                            <Row gutter={[10, 10]}>
-                                <Col span={12}>
-                                    <div>
-                                        <Row className={style.type}>
-                                            <Col span={6} className={style.vertex}>
-                                                <img width={20} src={vertexSvg} />
-                                                <span>{t('graph.detail.vertex_total')}</span>
-                                            </Col>
-                                            <Col span={18}>{statistic.vertex_count ?? 0}</Col>
-                                        </Row>
-                                        <Table
-                                            columns={[
-                                                {title: t('graph.detail.vertex_type'), dataIndex: 'key'},
-                                                {title: t('graph.detail.count'), dataIndex: 'num'},
-                                            ]}
-                                            dataSource={formatList(statistic.vertices)}
-                                            className={style.card}
-                                            pagination={false}
-                                        />
-                                    </div>
-                                </Col>
+                            {!pageError && (
+                                <Row gutter={[10, 10]}>
+                                    <Col span={12}>
+                                        <div>
+                                            <Row className={style.type}>
+                                                <Col span={6} className={style.vertex}>
+                                                    <img width={20} src={vertexSvg} />
+                                                    <span>{t('graph.detail.vertex_total')}</span>
+                                                </Col>
+                                                <Col span={18}>{statistic.vertex_count ?? 0}</Col>
+                                            </Row>
+                                            <Table
+                                                columns={[
+                                                    {title: t('graph.detail.vertex_type'), dataIndex: 'key'},
+                                                    {title: t('graph.detail.count'), dataIndex: 'num'},
+                                                ]}
+                                                dataSource={formatList(statistic.vertices)}
+                                                className={style.card}
+                                                pagination={false}
+                                            />
+                                        </div>
+                                    </Col>
 
-                                <Col span={12}>
-                                    <div>
-                                        <Row className={style.type}>
-                                            <Col span={6} className={style.edge}>
-                                                <img width={20} src={edgeSvg} />
-                                                {t('graph.detail.edge_total')}
-                                            </Col>
-                                            <Col span={18}>{statistic.edge_count ?? 0}</Col>
-                                        </Row>
-                                        <Table
-                                            columns={[
-                                                {title: t('graph.detail.edge_type'), dataIndex: 'key'},
-                                                {title: t('graph.detail.count'), dataIndex: 'num'},
-                                            ]}
-                                            dataSource={formatList(statistic.edges)}
-                                            pagination={false}
-                                            className={style.card}
-                                        />
-                                    </div>
-                                </Col>
-                            </Row>
+                                    <Col span={12}>
+                                        <div>
+                                            <Row className={style.type}>
+                                                <Col span={6} className={style.edge}>
+                                                    <img width={20} src={edgeSvg} />
+                                                    {t('graph.detail.edge_total')}
+                                                </Col>
+                                                <Col span={18}>{statistic.edge_count ?? 0}</Col>
+                                            </Row>
+                                            <Table
+                                                columns={[
+                                                    {title: t('graph.detail.edge_type'), dataIndex: 'key'},
+                                                    {title: t('graph.detail.count'), dataIndex: 'num'},
+                                                ]}
+                                                dataSource={formatList(statistic.edges)}
+                                                pagination={false}
+                                                className={style.card}
+                                            />
+                                        </div>
+                                    </Col>
+                                </Row>
+                            )}
                         </>
                     </div>
                 </>

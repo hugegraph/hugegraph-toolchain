@@ -1,0 +1,54 @@
+{
+  "date": "2026-07-11",
+  "status": "passed",
+  "toolchainBranch": "hubble2",
+  "package": {
+    "path": "hugegraph-hubble/target/apache-hugegraph-hubble-1.8.0.tar.gz",
+    "sha256": "7f735a2c6a20223a89534ba1fe8c06006fbdf9f3c8dd521daf3d25f5f5653368",
+    "frontendAsset": "main.e159790d.js"
+  },
+  "environment": {
+    "hubbleUrl": "http://127.0.0.1:38089",
+    "pdEnabled": true,
+    "pdPeers": "127.0.0.1:18686",
+    "pdServer": "127.0.0.1:18620",
+    "dashboardAddress": "127.0.0.1:8092",
+    "dashboardStub": "isolated Python HTTP server"
+  },
+  "chrome": {
+    "browser": "user Chrome via chrome skill",
+    "language": "en-US",
+    "cases": [
+      {
+        "name": "reachable-dashboard",
+        "action": "Click Cluster Management",
+        "result": "A synchronously created tab navigated to http://127.0.0.1:8092/ after the probe succeeded",
+        "visibleErrorCount": 0,
+        "status": "passed"
+      },
+      {
+        "name": "unreachable-dashboard",
+        "action": "Stop the isolated stub and click Cluster Management",
+        "result": "The temporary blank tab closed and the Hubble page remained usable",
+        "visibleMessages": [
+          "Dashboard is unavailable. Check dashboard.address and service health."
+        ],
+        "visibleMessageCount": 1,
+        "status": "passed"
+      },
+      {
+        "name": "popup-blocked",
+        "action": "Temporarily force window.open() to return null through tab-scoped CDP, then click Cluster Management",
+        "result": "No Dashboard probe was issued and the page displayed one actionable message",
+        "dashboardProbeCount": 0,
+        "visibleMessages": [
+          "The Dashboard window was blocked. Allow pop-ups and retry."
+        ],
+        "visibleMessageCount": 1,
+        "temporaryPageOverrideRestored": true,
+        "screenshot": "popup-blocked.png",
+        "status": "passed"
+      }
+    ]
+  }
+}

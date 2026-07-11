@@ -1,5 +1,17 @@
 {
   "common": {
+    "add_success": "添加成功",
+    "batch_delete": "批量删除",
+    "create": "创建",
+    "delete": "删除",
+    "delete_success": "删除成功",
+    "edit": "编辑",
+    "no": "否",
+    "operation": "操作",
+    "refresh": "刷新",
+    "select_at_least_one": "请至少选择一项",
+    "update_success": "更新成功",
+    "yes": "是",
     "action": {
       "create": "创建",
       "save": "保存",
@@ -56,6 +68,8 @@
       "disable_success": "暂停成功",
       "disable_fail": "暂停失败",
       "delete_fail": "删除失败",
+      "operation_failed": "操作失败，请检查服务连接后重试。",
+      "load_failed": "数据加载失败，请检查服务连接后重试。",
       "select_one": "请至少选择一项"
     },
     "confirm": {
@@ -143,7 +157,19 @@
     "title": "图管理",
     "create": "创建图",
     "search_placeholder": "请输入图名称",
+    "unavailable": "图列表暂不可用，请检查 Server 连接后重试。",
     "set_default_confirm": "确认更改图的默认设置?",
+    "set_default": {
+      "setting": "设置中...",
+      "success": "设置成功"
+    },
+    "delete_confirm": {
+      "title": "确定删除图吗?",
+      "irreversible": "删除后无法恢复",
+      "deleting": "删除中",
+      "success": "删除成功",
+      "failed": "删除失败"
+    },
     "clear_confirm": {
       "title": "确认清空图",
       "graphspace": "GraphSpace：{{graphspace}}",
@@ -182,9 +208,27 @@
       "name_placeholder": "只能包含小写字母、数字、_，最长48位",
       "nickname": "图名",
       "nickname_placeholder": "只能包含中文、字母、数字、_，最长12位",
+      "schema_placeholder": "请选择schema",
+      "create_success": "创建成功",
+      "update_success": "更新成功",
       "auth": "是否开启鉴权",
       "description": "描述",
       "description_placeholder": "图描述，可选"
+    },
+    "clone": {
+      "title": "克隆图",
+      "success": "克隆成功",
+      "name": "克隆图ID",
+      "name_duplicate": "不可以和原图ID重复",
+      "nickname_label": "克隆图名称",
+      "nickname": "{{nickname}}复制",
+      "nickname_duplicate": "不可以和原图名称重复",
+      "graphspace": "存储图空间",
+      "content": "克隆内容",
+      "schema": "克隆schema",
+      "schema_data": "克隆schema+数据",
+      "required_disk": "所需硬盘为",
+      "estimated_time": "预计复制时间"
     },
     "detail": {
       "title": "详情",
@@ -198,6 +242,7 @@
       "update_data": "数据更新",
       "update_success": "已发起更新，请稍后刷新页面查看结果。",
       "statistics_unavailable": "统计数据暂不可用，请稍后重试。",
+      "unavailable": "图详情暂不可用，请检查 Server 后重试。",
       "vertex_total": "点总数",
       "edge_total": "边总数",
       "vertex_type": "点类型",
@@ -352,7 +397,16 @@
       "title": "任务详情",
       "success": "完成",
       "failed": "失败",
-      "running": "运行中"
+      "running": "运行中",
+      "job_id": "执行实例 ID",
+      "import_count": "导入条数",
+      "create_time": "创建时间",
+      "average_rate": "平均速率",
+      "records_per_second": "{{rate}} 条/s",
+      "duration": "导入时长",
+      "seconds": "{{seconds}} 秒",
+      "status": "状态",
+      "other": "其它"
     },
     "view": {
       "title": "查看任务",
@@ -500,7 +554,33 @@
     }
   },
   "schema": {
+    "delete_failed": "删除失败，请检查 Server 连接后重试。",
     "title": "元数据管理",
+    "name_placeholder": "允许出现中英文、数字、下划线",
+    "delete_irreversible": "删除后无法恢复，请谨慎操作。",
+    "delete_task_hint": "删除元数据耗时较久，详情可在任务管理中查看",
+    "col": {
+      "label_index": "类型索引",
+      "properties": "关联属性",
+      "property_indexes": "属性索引"
+    },
+    "validation": {
+      "duplicate_index": "索引名称不可重复",
+      "duplicate_property": "属性不可重复"
+    },
+    "common": {
+      "add_success": "添加成功",
+      "batch_delete": "批量删除",
+      "delete_warning": "删除后无法恢复，请谨慎操作。",
+      "name_placeholder": "允许出现中英文、数字、下划线"
+    },
+    "options": {
+      "size_tiny": "超小", "size_small": "小", "size_normal": "中", "size_big": "大", "size_huge": "超大",
+      "line_thick": "粗", "line_fine": "细",
+      "id_primary": "主键ID", "id_auto": "自动生成", "id_string": "自定义字符串", "id_number": "自定义数字", "id_uuid": "自定义UUID",
+      "required": "非空", "nullable": "允许空",
+      "index_secondary": "二级索引", "index_range": "范围索引", "index_search": "全文索引", "index_unique": "唯一索引"
+    },
     "tab": {
       "property": "属性",
       "vertex": "顶点类型",
@@ -510,6 +590,8 @@
     },
     "property": {
       "create": "创建属性",
+      "delete_confirm": "确认删除此属性？",
+      "in_use": "属性数据 {{names}} 正在使用中，不可删除",
       "col": {
         "name": "属性名称",
         "type": "数据类型",
@@ -524,6 +606,12 @@
     },
     "vertex": {
       "create": "创建顶点类型",
+      "edit": "编辑顶点类型",
+      "id": "顶点ID",
+      "in_use": "顶点数据 {{names}} 正在使用中，不可删除",
+      "select_properties_first": "请先选择关联属性",
+      "style": "顶点样式：",
+      "display_fields": "顶点展示内容",
       "delete_confirm": "确认删除此顶点类型？",
       "delete_warning": "删除后无法恢复，请谨慎操作",
       "delete_task_note": "删除元数据耗时较久，详情可在任务管理中查看",
@@ -549,6 +637,13 @@
       }
     },
     "edge": {
+      "create": "创建边类型",
+      "edit": "编辑边类型",
+      "display_fields": "边展示内容",
+      "link_multi_times": "允许多次连接",
+      "parent": "父边类型：",
+      "select_parent": "请选择父边",
+      "style": "边样式：",
       "delete_confirm": "确认删除此边类型？",
       "delete_warning": "删除后无法恢复，请谨慎操作",
       "delete_task_note": "删除元数据耗时较久，详情可在任务管理中查看",
@@ -564,6 +659,9 @@
         "operation": "操作"
       },
       "type": {
+        "normal": "普通类型",
+        "parent": "父边类型",
+        "sub": "子边类型",
         "NORMAL": "普通类型",
         "PARENT": "父类型",
         "SUB": "子类型",
@@ -603,7 +701,39 @@
     },
     "image_view": {
       "vertex": "顶点类型",
-      "edge": "边类型"
+      "edge": "边类型",
+      "view_properties": "查看属性"
+    }
+  },
+  "schema_template": {
+    "title": "{{name}} - Schema 模板管理",
+    "create": "创建 Schema 模板",
+    "search_placeholder": "请输入 Schema 模板名称",
+    "delete_confirm": "确定要删除 {{name}} 吗？",
+    "delete_success": "删除成功",
+    "delete_failed": "删除失败",
+    "create_duplicate": "Schema 模板 {{name}} 已存在，请使用其他名称。",
+    "create_failed": "无法创建 Schema 模板，请检查输入后重试。",
+    "update_failed": "无法更新 Schema 模板，请检查输入后重试。",
+    "create_success": "新增成功",
+    "update_success": "编辑成功",
+    "action": {
+      "view": "查看",
+      "edit": "编辑",
+      "create": "创建",
+      "delete": "删除"
+    },
+    "column": {
+      "name": "Schema 模板名称",
+      "created_at": "创建时间",
+      "updated_at": "更新时间",
+      "creator": "创建人",
+      "operation": "操作"
+    },
+    "form": {
+      "name": "Schema 模板名称",
+      "name_placeholder": "请输入 Schema 名称",
+      "schema_placeholder": "请输入 Schema"
     }
   },
   "navigation_page": {
@@ -630,7 +760,8 @@
     "node_manage": "节点运维",
     "alert_manage": "报警管理",
     "dashboard_checking": "正在检查 Dashboard 可用性……",
-    "dashboard_unavailable": "Dashboard 不可用，请检查 dashboard.address 配置和服务健康状态。"
+    "dashboard_unavailable": "Dashboard 不可用，请检查 dashboard.address 配置和服务健康状态。",
+    "dashboard_popup_blocked": "Dashboard 窗口被拦截，请允许弹出式窗口后重试。"
   },
   "login": {
     "submit": "登录",

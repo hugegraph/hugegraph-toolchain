@@ -125,7 +125,6 @@ const DegreeCentrality = props => {
                     highlightName={currentAlgorithm === DEGREE_CENTRALIT}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

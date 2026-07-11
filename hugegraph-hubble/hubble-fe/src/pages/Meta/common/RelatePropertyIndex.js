@@ -18,6 +18,7 @@
 
 import {Form, Select, Input, Space} from 'antd';
 import {useCallback, useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {indexTypeOptions} from './config';
 
 const IndexTypeSelect = ({index, onChange}) => {
@@ -36,6 +37,7 @@ const PropertyFieldsSelect = ({options, type}) => {
 };
 
 const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit, primaryKeys}) => {
+    const {t} = useTranslation();
     const [plist, setPlist] = useState([]);
     const [showList, setShowList] = useState([]);
     const textEnum = ['TEXT', 'BOOLEAN', 'UUID', 'BLOB'];
@@ -78,7 +80,7 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                 }
 
                 if (existName.includes(item.name)) {
-                    return Promise.reject(new Error('索引名称不可重复'));
+                    return Promise.reject(new Error(t('schema.validation.duplicate_index')));
                 }
 
                 existName.push(item.name);
@@ -102,7 +104,7 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                             <Form.Item
                                 className="form_attr_select"
                             >
-                                <Input placeholder='索引名' value={item.name} disabled />
+                                <Input placeholder={t('schema.index.col.name')} value={item.name} disabled />
                             </Form.Item>
                             <Form.Item
                                 className="form_attr_select"
@@ -132,7 +134,11 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                             [...(getFieldValue('remove_property_indexes') ?? []), item.name]);
                                     };
 
-                                    return <a onClick={() => handleRemove(item, index)}>删除</a>;
+                                    return (
+                                        <a onClick={() => handleRemove(item, index)}>
+                                            {t('common.action.delete')}
+                                        </a>
+                                    );
                                 }}
                             </Form.Item>
                         </Space>
@@ -153,7 +159,7 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                             key={[field.key, 'name']}
                                             name={[field.name, 'name']}
                                         >
-                                            <Input placeholder='索引名' />
+                                            <Input placeholder={t('schema.index.col.name')} />
                                         </Form.Item>
                                         <Form.Item
                                             className="form_attr_select"
@@ -174,14 +180,16 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                             remove(index);
                                         }}
                                         >
-                                            删除
+                                            {t('common.action.delete')}
                                         </a>
                                     </Space>
                                 );
                             }
                             )}
                             <Form.ErrorList errors={errors} />
-                            <div className="form_attr_add" onClick={() => add()}>+新增</div>
+                            <div className="form_attr_add" onClick={() => add()}>
+                                +{t('common.action.add')}
+                            </div>
                         </>
                     )}
                 </Form.List>
@@ -203,7 +211,7 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                         key={[field.key, 'name']}
                                         name={[field.name, 'name']}
                                     >
-                                        <Input placeholder='索引名' />
+                                        <Input placeholder={t('schema.index.col.name')} />
                                     </Form.Item>
                                     <Form.Item
                                         className="form_attr_select"
@@ -224,14 +232,16 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                         remove(index);
                                     }}
                                     >
-                                        删除
+                                        {t('common.action.delete')}
                                     </a>
                                 </Space>
                             );
                         }
                         )}
                         <Form.ErrorList errors={errors} />
-                        <div className="form_attr_add" onClick={() => add()}>+新增</div>
+                        <div className="form_attr_add" onClick={() => add()}>
+                            +{t('common.action.add')}
+                        </div>
                     </>
                 )}
             </Form.List>

@@ -39,6 +39,7 @@ import org.junit.runners.Suite;
     GraphServiceImportTest.class,
     GraphMetricsControllerTest.class,
     GraphsControllerCanonicalTest.class,
+    GremlinHistoryFailureTest.class,
     HubbleOptionsTest.class,
     IngestControllerTest.class,
     LangChainControllerSecurityTest.class,

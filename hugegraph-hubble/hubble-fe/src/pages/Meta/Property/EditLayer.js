@@ -24,9 +24,11 @@ import {
     dataTypeOptions,
     cardinalityOptions,
 } from '../common/config';
+import {useTranslation} from 'react-i18next';
 
 
 const EditPropertyLayer = ({visible, onCancle, graphspace, graph, refresh}) => {
+    const {t} = useTranslation();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
@@ -39,18 +41,18 @@ const EditPropertyLayer = ({visible, onCancle, graphspace, graph, refresh}) => {
                 if (res.status === 200) {
                     refresh();
                     onCancle();
-                    message.success('添加成功');
+                    message.success(t('schema.common.add_success'));
                     return;
                 }
 
                 message.error(res.message);
             });
         });
-    }, [form, graph, graphspace, onCancle, refresh]);
+    }, [form, graph, graphspace, onCancle, refresh, t]);
 
     return (
         <Modal
-            title='创建'
+            title={t('schema.property.create')}
             open={visible}
             onCancel={onCancle}
             onOk={onFinish}
@@ -65,16 +67,26 @@ const EditPropertyLayer = ({visible, onCancle, graphspace, graph, refresh}) => {
                 initialValues={{data_type: 'TEXT', cardinality: 'SINGLE'}}
             >
                 <Form.Item
-                    label='属性名称'
+                    label={t('schema.property.form.name')}
                     name='name'
                     rules={[rules.required(), rules.isPropertyName, {type: 'string', max: 128}]}
                 >
-                    <Input placeholder='允许出现中英文、数字、下划线' max={128} />
+                    <Input placeholder={t('schema.common.name_placeholder')} max={128} />
                 </Form.Item>
-                <Form.Item label='数据类型' name='data_type' rules={[rules.required()]} wrapperCol={{span: 6}}>
+                <Form.Item
+                    label={t('schema.property.form.type')}
+                    name='data_type'
+                    rules={[rules.required()]}
+                    wrapperCol={{span: 6}}
+                >
                     <Select options={dataTypeOptions} />
                 </Form.Item>
-                <Form.Item label='基数' name='cardinality' rules={[rules.required()]} wrapperCol={{span: 6}}>
+                <Form.Item
+                    label={t('schema.property.form.cardinality')}
+                    name='cardinality'
+                    rules={[rules.required()]}
+                    wrapperCol={{span: 6}}
+                >
                     <Select options={cardinalityOptions} />
                 </Form.Item>
             </Form>

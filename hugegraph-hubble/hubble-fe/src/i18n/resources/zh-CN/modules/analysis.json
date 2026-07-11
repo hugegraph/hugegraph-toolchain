@@ -24,6 +24,7 @@
       "no_data": "暂无数据结果",
       "loading": "数据加载中...",
       "run_failed": "运行失败",
+      "run_failed_action": "查询失败，请检查语句后重试。",
       "submitting_task": "提交异步任务中...",
       "submit_failed": "提交失败",
       "import_failed": "导入失败",
@@ -383,6 +384,9 @@
         "RUNNING": "运行中",
         "FAILED": "失败",
         "ASYNC_TASK_FAILED": "提交失败"
+      },
+      "failure_reason": {
+        "GREMLIN_EXECUTION_FAILED": "查询失败，请检查语句后重试。"
       },
       "action": {
         "favorite": "收藏",

@@ -183,7 +183,12 @@ public class RestClient extends AbstractRestClient {
 
     @Override
     protected void checkStatus(okhttp3.Response response, int... statuses) {
-        boolean match = false;
+        // HugeGraph Server returns 200 with the updated resource for some
+        // successful DELETE operations, while hugegraph-common only passes
+        // 202/204 as the expected DELETE statuses.
+        boolean deleteOk = response.code() == 200 &&
+                           "DELETE".equals(response.request().method());
+        boolean match = deleteOk;
         for (int status : statuses) {
             if (status == response.code()) {
                 match = true;

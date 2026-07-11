@@ -214,7 +214,6 @@ const AllPaths = props => {
                     highlightName={currentAlgorithm === ALLPATHS}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

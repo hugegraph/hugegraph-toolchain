@@ -131,7 +131,6 @@ const AdamicAdar = props => {
                     highlightName={currentAlgorithm === ADAMIC_ADAR}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

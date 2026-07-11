@@ -51,6 +51,18 @@ const statusColor =  {
     ASYNC_TASK_FAILED: 'volcano',
 };
 
+const FAILURE_REASON_KEYS = new Set([
+    'GREMLIN_EXECUTION_FAILED',
+]);
+
+export function failureReasonDescription(rowData, t) {
+    if (rowData.status !== 'FAILED'
+        || !FAILURE_REASON_KEYS.has(rowData.failure_reason)) {
+        return null;
+    }
+    return t(`analysis.logs.failure_reason.${rowData.failure_reason}`);
+}
+
 function getRowKey(item) {
     return item.id;
 }
@@ -205,13 +217,19 @@ const ExecuteLog = props => {
             title: t('analysis.logs.column.status'),
             dataIndex: 'status',
             width: '10%',
-            render: status => {
+            render: (status, rowData) => {
+                const failureReason = failureReasonDescription(rowData, t);
                 return (
-                    <Space>
-                        <Tag color={statusColor[status]} key={status}>
-                            {statusDesc(status)}
-                        </Tag>
-                    </Space>
+                    <>
+                        <Space>
+                            <Tag color={statusColor[status]} key={status}>
+                                {statusDesc(status)}
+                            </Tag>
+                        </Space>
+                        {failureReason && (
+                            <div className={c.breakWord}>{failureReason}</div>
+                        )}
+                    </>
                 );
             },
         },

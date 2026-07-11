@@ -117,7 +117,6 @@ const JaccardSimilarityGet = props => {
                     highlightName={currentAlgorithm === JACCARD_SIMILARITY}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

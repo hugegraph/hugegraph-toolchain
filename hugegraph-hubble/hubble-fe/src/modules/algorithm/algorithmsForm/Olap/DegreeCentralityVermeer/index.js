@@ -138,7 +138,6 @@ const DegreeCentralityVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

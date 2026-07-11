@@ -118,7 +118,6 @@ const Crosspoints = props => {
                     highlightName={currentAlgorithm === CROSSPOINTS}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}

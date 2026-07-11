@@ -18,6 +18,7 @@
 
 import {Modal, Form, Input, Select, Row, Col, Checkbox, message, Spin, Radio} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
 import {
@@ -28,9 +29,9 @@ import {InputColorSelect} from '../../../components/ColorSelect';
 import RelateProperty from '../common/RelateProperty';
 import RelatePropertyIndex from '../common/RelatePropertyIndex';
 
-const defaultDisplayFields = {label: '边类型', value: '~id'};
-
 const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, propertyList, vertexList}) => {
+    const {t} = useTranslation();
+    const defaultDisplayFields = {label: t('schema.edge.col.type'), value: '~id'};
     const [form] = Form.useForm();
     const [linkMulti, setLinkMulti] = useState(false);
     const [selectedPropertyList, setSelectedPropertyList] = useState([]);
@@ -72,7 +73,7 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
         api.manage.addMetaEdge(graphspace, graph, data).then(res => {
             setLoading(false);
             if (res.status === 200) {
-                message.success('添加成功');
+                message.success(t('common.add_success'));
                 onCancle();
                 refresh();
                 return;
@@ -80,7 +81,7 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
 
             message.error(res.message);
         });
-    }, [graphspace, graph, onCancle, refresh]);
+    }, [graphspace, graph, onCancle, refresh, t]);
 
     const updateEdge = useCallback((name, data) => {
         const {style, append_properties, remove_property_indexes, append_property_indexes} = data;
@@ -94,7 +95,7 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
         }).then(res => {
             setLoading(false);
             if (res.status === 200) {
-                message.success('更新成功');
+                message.success(t('common.update_success'));
                 onCancle();
                 refresh();
                 return;
@@ -102,7 +103,7 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
 
             message.error(res.message);
         });
-    }, [graph, graphspace, onCancle, refresh]);
+    }, [graph, graphspace, onCancle, refresh, t]);
 
     const handleEdgeLabelType = useCallback(e => {
         setEdgeLabelType(e.target.value);
@@ -178,7 +179,7 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
 
     return (
         <Modal
-            title={name ? '编辑边' : '创建边'}
+            title={name ? t('schema.edge.edit') : t('schema.edge.create')}
             open={visible}
             onCancel={onCancle}
             onClose={onCancle}
@@ -203,15 +204,15 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
                         edgelabel_type: 'NORMAL',
                     }}
                 >
-                    <Form.Item label='边类型名称：' name='name' rules={[rules.required()]}>
-                        <Input placeholder='允许出现中英文、数字、下划线' disabled={!!name} />
+                    <Form.Item label={t('schema.edge.col.name')} name='name' rules={[rules.required()]}>
+                        <Input placeholder={t('schema.name_placeholder')} disabled={!!name} />
                     </Form.Item>
-                    <Form.Item label='类型：' name='edgelabel_type' rules={[rules.required()]}>
+                    <Form.Item label={t('schema.edge.col.type')} name='edgelabel_type' rules={[rules.required()]}>
                         <Radio.Group
                             options={[
-                                {label: '普通类型', value: 'NORMAL'},
-                                {label: '父边类型', value: 'PARENT'},
-                                {label: '子边类型', value: 'SUB'},
+                                {label: t('schema.edge.type.normal'), value: 'NORMAL'},
+                                {label: t('schema.edge.type.parent'), value: 'PARENT'},
+                                {label: t('schema.edge.type.sub'), value: 'SUB'},
                             ]}
                             optionType='button'
                             onChange={handleEdgeLabelType}
@@ -220,13 +221,13 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
                     </Form.Item>
                     {edgeLabelType === 'SUB' && (
                         <Form.Item
-                            label='父边类型：'
+                            label={t('schema.edge.parent')}
                             name='parent_label'
                             rules={[rules.required()]}
                             wrapperCol={{span: 8}}
                         >
                             <Select
-                                placeholder='请选择父边'
+                                placeholder={t('schema.edge.select_parent')}
                                 options={parentEdgeLabelList.map(item => ({
                                     label: item.name,
                                     value: item.name,
@@ -237,7 +238,7 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
                     )}
                     {edgeLabelType !== 'PARENT' && (
                         <>
-                            <Form.Item label='顶点样式：'>
+                            <Form.Item label={t('schema.edge.style')}>
                                 <Row gutter={[12, 24]}>
                                     <Col>
                                         <Form.Item
@@ -286,16 +287,28 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
                                     </Col>
                                 </Row>
                             </Form.Item>
-                            <Form.Item label='起点类型' name='source_label' rules={[rules.required()]}>
+                            <Form.Item
+                                label={t('schema.edge.col.source')}
+                                name='source_label'
+                                rules={[rules.required()]}
+                            >
                                 <Select options={vertexList} disabled={!!name} />
                             </Form.Item>
-                            <Form.Item label='终点类型' name='target_label' rules={[rules.required()]}>
+                            <Form.Item
+                                label={t('schema.edge.col.target')}
+                                name='target_label'
+                                rules={[rules.required()]}
+                            >
                                 <Select options={vertexList} disabled={!!name} />
                             </Form.Item>
-                            <Form.Item label='允许多次连接' name='link_multi_times' valuePropName='checked'>
+                            <Form.Item
+                                label={t('schema.edge.link_multi_times')}
+                                name='link_multi_times'
+                                valuePropName='checked'
+                            >
                                 <Checkbox onChange={handleLinkMulti} disabled={!!name} />
                             </Form.Item>
-                            <Form.Item label='关联属性' required={linkMulti === 'PRIMARY_KEY'}>
+                            <Form.Item label={t('schema.col.properties')} required={linkMulti === 'PRIMARY_KEY'}>
                                 <RelateProperty
                                     propertyList={propertyList}
                                     selectProperty={selectProperty}
@@ -305,7 +318,11 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
                                 />
                             </Form.Item>
                             {linkMulti && (
-                                <Form.Item label='区分键' name='sort_keys' rules={[rules.required()]}>
+                                <Form.Item
+                                    label={t('schema.edge.col.sort_keys')}
+                                    name='sort_keys'
+                                    rules={[rules.required()]}
+                                >
                                     <Select
                                         options={selectedPropertyList.filter(item => !item.nullable)}
                                         mode='multiple'
@@ -313,17 +330,25 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
                                     />
                                 </Form.Item>
                             )}
-                            <Form.Item label='边展示内容' name={['style', 'display_fields']} rules={[rules.required()]}>
+                            <Form.Item
+                                label={t('schema.edge.display_fields')}
+                                name={['style', 'display_fields']}
+                                rules={[rules.required()]}
+                            >
                                 <Select
                                     // eslint-disable-next-line max-len
                                     options={selectedPropertyList.filter(item => !item.nullable).concat(defaultDisplayFields)}
                                     mode='multiple'
                                 />
                             </Form.Item>
-                            <Form.Item label='类型索引' name='open_label_index' valuePropName='checked'>
+                            <Form.Item
+                                label={t('schema.col.label_index')}
+                                name='open_label_index'
+                                valuePropName='checked'
+                            >
                                 <Checkbox disabled={!!name} />
                             </Form.Item>
-                            <Form.Item label='属性索引'>
+                            <Form.Item label={t('schema.col.property_indexes')}>
                                 <RelatePropertyIndex
                                     selectedPropertyList={selectedPropertyList}
                                     propertyList={propertyList}

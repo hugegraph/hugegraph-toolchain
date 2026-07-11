@@ -124,7 +124,6 @@ const LabelPropagationAlgorithm = props => {
                     highlightName={currentAlgorithm === LABEL_PROPAGATION_ALGORITHM}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

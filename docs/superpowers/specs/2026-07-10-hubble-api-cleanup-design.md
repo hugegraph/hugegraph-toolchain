@@ -117,6 +117,22 @@ request must not close the dialog or clear the user's confirmation input.
 Success handling must not depend on a response body when the backend returns an
 empty successful response.
 
+## Dashboard Address and Health Boundary
+
+`dashboard.address` remains the shared Vermeer/Dashboard host-and-port value;
+it does not contain a scheme, path, credentials, query, or fragment. The
+existing `server.protocol` option supplies `http` or `https`. Hubble's
+`GET /api/v1.3/dashboard` returns both values after configuration validation
+and performs no outbound health request.
+
+The browser constructs the external origin from those two fields. It does not
+probe the configured address during page load. A reachability probe is allowed
+only after the user explicitly clicks a Dashboard operation, uses no
+credentials or referrer, has a bounded timeout, and either opens the requested
+external page or reports one localized actionable failure. This preserves
+private and loopback deployment support without turning passive navigation
+rendering into an arbitrary network request.
+
 ## Testing and Acceptance
 
 Backend MockMvc coverage verifies:

@@ -129,6 +129,7 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertEquals("graphspaces/DEFAULT/graphs/test-graph/default",
                             pathCaptor.getValue());
         Assert.assertTrue(((Map<?, ?>) bodyCaptor.getValue()).isEmpty());
+        Mockito.verify(mockResult).readObject(Map.class);
     }
 
     @Test
@@ -152,6 +153,7 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertEquals("graphspaces/DEFAULT/graphs/test-graph/default",
                             pathCaptor.getValue());
         Assert.assertTrue(paramsCaptor.getValue().isEmpty());
+        Mockito.verify(mockResult).readObject(Map.class);
     }
 
     @Test

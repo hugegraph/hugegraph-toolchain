@@ -218,7 +218,6 @@ const Egonet = props => {
                     highlightName={currentAlgorithm === EGONET}
                 />
             }
-            {...props}
         >
             <Form
                 form={egonetForm}

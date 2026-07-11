@@ -119,7 +119,6 @@ const Rays = props => {
                     highlightName={currentAlgorithm === RAYS}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

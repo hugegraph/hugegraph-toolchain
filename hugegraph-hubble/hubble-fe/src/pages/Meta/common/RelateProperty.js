@@ -17,9 +17,11 @@
  */
 
 import {Space, Form, Select} from 'antd';
+import {useTranslation} from 'react-i18next';
 import {attrOptions} from './config';
 
 const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, isEdit}) => {
+    const {t} = useTranslation();
     const checkDuplicate = () => ({
         validator(_, value) {
             const existName = exist.map(item => item.name);
@@ -33,7 +35,7 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                 }
 
                 if (existName.includes(item.name)) {
-                    return Promise.reject(new Error('属性不可重复'));
+                    return Promise.reject(new Error(t('schema.validation.duplicate_property')));
                 }
 
                 existName.push(item.name);
@@ -100,12 +102,14 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                         removeProperty();
                                     }}
                                     >
-                                        删除
+                                        {t('common.action.delete')}
                                     </a>
                                 </Space>
                             ))}
                             <Form.ErrorList errors={errors} />
-                            <div className="form_attr_add" onClick={() => add()}>+新增</div>
+                            <div className="form_attr_add" onClick={() => add()}>
+                                +{t('common.action.add')}
+                            </div>
                         </>
                     )}
                 </Form.List>
@@ -144,12 +148,14 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                     removeProperty();
                                 }}
                                 >
-                                    删除
+                                    {t('common.action.delete')}
                                 </a>
                             </Space>
                         ))}
                         <Form.ErrorList errors={errors} />
-                        <div className="form_attr_add" onClick={() => add()}>+新增</div>
+                        <div className="form_attr_add" onClick={() => add()}>
+                            +{t('common.action.add')}
+                        </div>
                     </>
                 )}
             </Form.List>

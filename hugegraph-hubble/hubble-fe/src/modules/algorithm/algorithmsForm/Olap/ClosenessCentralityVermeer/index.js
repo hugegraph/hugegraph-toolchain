@@ -136,7 +136,6 @@ const ClosenessCentralityVermeer = props => {
                 />
             }
             forceRender
-            {...props}
         >
             <Form
                 form={form}

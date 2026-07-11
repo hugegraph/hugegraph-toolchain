@@ -123,7 +123,6 @@ const RingsDetection = props => {
                     highlightName={currentAlgorithm === RINGS_DETECTION}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

@@ -33,6 +33,7 @@ import {
     Spin,
 } from 'antd';
 import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {EditLayer} from './EditLayer';
 import TableHeader from '../../components/TableHeader';
 import {Link} from 'react-router-dom';
@@ -41,7 +42,11 @@ import GraphSpaceCard from './Card';
 import style from './index.module.scss';
 import * as api from '../../api/index';
 
-const showText = (val, suffix, empty) => (val > 99999 ? (empty === undefined ? '未限制' : empty) : `${val}${suffix}`);
+const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
+
+const showText = (val, suffix, unlimited, empty) => (
+    val > 99999 ? (empty === undefined ? unlimited : empty) : `${val}${suffix}`
+);
 
 const GraphSpace = () => {
     const [data, setData] = useState([]);
@@ -53,6 +58,7 @@ const GraphSpace = () => {
     const [graphspacename, setGraphspacename] = useState('');
     const [pagination, setPagination] = useState({toatal: 0, current: 1, pageSize: 11});
     const [loading, setLoading] = useState(false);
+    const {t} = useTranslation();
 
     const handleCreate = useCallback(() => {
         setEditLayer(true);
@@ -76,20 +82,20 @@ const GraphSpace = () => {
 
     const deleteGraphspace = useCallback(graphspace => {
         Modal.confirm({
-            title: '确定删除?',
-            content: '删除空间后不可恢复',
+            title: t('graphspace.delete_confirm'),
+            content: t('graphspace.delete_content'),
             onOk: () => {
-                api.manage.delGraphSpace(graphspace).then(res => {
+                return api.manage.delGraphSpace(graphspace, PAGE_ERROR_CONFIG).then(res => {
                     if (res.status === 200) {
-                        message.success('删除成功');
+                        message.success(t('common.msg.delete_success'));
                         setRefresh(value => !value);
                         return;
                     }
-                    message.error(res.message);
-                });
+                    message.error(t('common.msg.operation_failed'));
+                }).catch(() => message.error(t('common.msg.operation_failed')));
             },
         });
-    }, []);
+    }, [t]);
 
     const handlePage = useCallback(current => {
         setPagination({...pagination, current});
@@ -112,15 +118,16 @@ const GraphSpace = () => {
     const handleRefresh = useCallback(() => setRefresh(value => !value), []);
 
     const handleInit = useCallback(() => {
-        api.manage.initBuiltin({init_space: true, init_hlm: true, init_covid19: true}).then(res => {
+        api.manage.initBuiltin({init_space: true, init_hlm: true, init_covid19: true},
+            PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
-                message.success('初始化成功');
+                message.success(t('common.msg.init_success'));
                 setRefresh(value => !value);
                 return;
             }
-            message.error(res.message);
-        });
-    }, []);
+            message.error(t('common.msg.operation_failed'));
+        }).catch(() => message.error(t('common.msg.operation_failed')));
+    }, [t]);
 
     const hideEditLayer = useCallback(() => {
         setEditLayer(false);
@@ -128,69 +135,73 @@ const GraphSpace = () => {
 
     const columns = [
         {
-            title: '名称',
+            title: t('graphspace.col.name'),
             render: row => (
                 <>
                     <Link to={`/graphspace/${row.name}`}>{row.nickname}</Link>
-                    {row.default && <span className={style.default}>默认</span>}
+                    {row.default && <span className={style.default}>{t('common.label.default')}</span>}
                 </>
             ),
         },
         {
-            title: '是否开启鉴权',
+            title: t('graphspace.col.auth'),
             dataIndex: 'auth',
             width: 120,
             align: 'center',
-            render: val => (val ? '是' : '否'),
+            render: val => t(val ? 'graphspace.auth_yes' : 'graphspace.auth_no'),
         },
         {
-            title: '描述',
+            title: t('graphspace.col.description'),
             dataIndex: 'description',
             ellipsis: true,
         },
         {
-            title: '图服务',
+            title: t('graphspace.col.graph_service'),
             dataIndex: 'cpu_limit',
             // eslint-disable-next-line max-len
-            render: (_, row) => `${showText(row.cpu_limit, '核')}/${showText(row.memory_limit, 'G')}/${row.oltp_namespace}`,
+            render: (_, row) => `${showText(row.cpu_limit, t('graphspace.unit.cpu'), t('graphspace.unit.unlimited'))}/${showText(row.memory_limit, t('graphspace.unit.memory'), t('graphspace.unit.unlimited'))}/${row.oltp_namespace}`,
             ellipsis: true,
         },
         {
-            title: '计算任务',
+            title: t('graphspace.col.compute_task'),
             dataIndex: 'task',
             // eslint-disable-next-line max-len
-            render: (_, row) => `${showText(row.compute_cpu_limit, '核')}/${showText(row.compute_memory_limit, 'G')}/${row.olap_namespace}`,
+            render: (_, row) => `${showText(row.compute_cpu_limit, t('graphspace.unit.cpu'), t('graphspace.unit.unlimited'))}/${showText(row.compute_memory_limit, t('graphspace.unit.memory'), t('graphspace.unit.unlimited'))}/${row.olap_namespace}`,
             ellipsis: true,
         },
         {
-            title: '最大存储空间限制',
+            title: t('graphspace.col.storage_limit'),
             dataIndex: 'storage_limit',
             width: 150,
             align: 'center',
-            render: val => showText(val, 'G'),
+            render: val => showText(val, t('graphspace.unit.memory'), t('graphspace.unit.unlimited')),
         },
         {
-            title: '操作',
+            title: t('graphspace.col.operation'),
             width: 280,
             align: 'center',
             render: row => {
                 return (
                     row.name === 'neizhianli' ? (
                         <Space wrap>
-                            <Link to={`/graphspace/${row.name}/schema`}>schema管理</Link>
-                            <a onClick={handleInit}>初始化</a>
+                            <Link to={`/graphspace/${row.name}/schema`}>
+                                {t('common.action.schema_manage')}
+                            </Link>
+                            <a onClick={handleInit}>{t('common.action.init')}</a>
                         </Space>
                     ) : (
                         <Space wrap>
                             {(row.default)
-                                ? <span className={style.disable}>编辑</span>
-                                : <a onClick={() => editGraphspace(row)}>编辑</a>
+                                ? <span className={style.disable}>{t('common.action.edit')}</span>
+                                : <a onClick={() => editGraphspace(row)}>{t('common.action.edit')}</a>
                             }
                             {(row.default)
-                                ? <span className={style.disable}>删除</span>
-                                : <a onClick={() => deleteGraphspace(row.name)}>删除</a>
+                                ? <span className={style.disable}>{t('common.action.delete')}</span>
+                                : <a onClick={() => deleteGraphspace(row.name)}>{t('common.action.delete')}</a>
                             }
-                            <Link to={`/graphspace/${row.name}/schema`}>schema管理</Link>
+                            <Link to={`/graphspace/${row.name}/schema`}>
+                                {t('common.action.schema_manage')}
+                            </Link>
                         </Space>
                     )
                 );
@@ -206,12 +217,17 @@ const GraphSpace = () => {
             query: graphspacename,
             page_no: pagination.current,
             page_size: pagination.pageSize,
-        }).then(res => {
+        }, PAGE_ERROR_CONFIG).then(res => {
             setLoading(false);
             if (res.status === 200) {
                 setData(res.data.records);
                 setPagination({...pagination, total: res.data.total});
+                return;
             }
+            message.error(t('common.msg.load_failed'));
+        }).catch(() => {
+            setLoading(false);
+            message.error(t('common.msg.load_failed'));
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refresh, listType, dateData, graphspacename, pagination.current]);
@@ -221,7 +237,7 @@ const GraphSpace = () => {
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title="图空间管理"
+                title={t('graphspace.title')}
             >
                 <Row justify='space-between'>
                     <Col>
@@ -230,14 +246,17 @@ const GraphSpace = () => {
                     <Col>
                         <Space>
                             <Radio.Group
-                                options={[{label: '图模式', value: 'image'}, {label: '列表模式', value: 'list'}]}
+                                options={[
+                                    {label: t('common.label.view_mode'), value: 'image'},
+                                    {label: t('common.label.list_mode'), value: 'list'},
+                                ]}
                                 optionType='button'
                                 buttonStyle='solid'
                                 defaultValue={'image'}
                                 onChange={handleListType}
                             />
                             <Input.Search
-                                placeholder='请输入图空间名称'
+                                placeholder={t('graphspace.search_placeholder')}
                                 onSearch={handleSearch}
                                 allowClear
                             />
@@ -254,7 +273,7 @@ const GraphSpace = () => {
                                 <Row gutter={[10, 10]} justify='start'>
                                     <Col span={8} key='add'>
                                         <Card className={style.add_card} onClick={handleCreate}>
-                                            <Space><PlusOutlined />创建图空间</Space>
+                                            <Space><PlusOutlined />{t('graphspace.create')}</Space>
                                         </Card>
                                     </Col>
 
@@ -286,7 +305,9 @@ const GraphSpace = () => {
                         ) : (
                             <>
                                 <TableHeader>
-                                    <Button onClick={createGraphspace} type='primary'>创建图空间</Button>
+                                    <Button onClick={createGraphspace} type='primary'>
+                                        {t('graphspace.create')}
+                                    </Button>
                                 </TableHeader>
                                 <Table
                                     columns={columns}

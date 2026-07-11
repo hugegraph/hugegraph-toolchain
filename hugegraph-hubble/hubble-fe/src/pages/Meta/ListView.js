@@ -22,35 +22,37 @@ import VertexTable from './Vertex';
 import EdgeTable from './Edge';
 import VertexIndexTable from './VertexIndex';
 import EdgeIndexTable from './EdgeIndex';
+import {useTranslation} from 'react-i18next';
 
 const ListView = () => {
+    const {t} = useTranslation();
     return (
         <Tabs
             defaultActiveKey='1'
             destroyInactiveTabPane
             items={[
                 {
-                    label: '属性',
+                    label: t('schema.tab.property'),
                     key: '1',
                     children: <PropertyTable />,
                 },
                 {
-                    label: '顶点类型',
+                    label: t('schema.tab.vertex'),
                     key: '2',
                     children: <VertexTable />,
                 },
                 {
-                    label: '边类型',
+                    label: t('schema.tab.edge'),
                     key: '3',
                     children: <EdgeTable />,
                 },
                 {
-                    label: '顶点索引',
+                    label: t('schema.tab.vertex_index'),
                     key: '4',
                     children: <VertexIndexTable />,
                 },
                 {
-                    label: '边索引',
+                    label: t('schema.tab.edge_index'),
                     key: '5',
                     children: <EdgeIndexTable />,
                 },

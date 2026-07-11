@@ -22,6 +22,7 @@ import ImageView from './ImageView';
 import ListView from './ListView';
 import {useParams, useNavigate} from 'react-router-dom';
 import * as api from '../../api';
+import {useTranslation} from 'react-i18next';
 
 const Meta = () => {
     const [viewType, setViewType] = useState('list');
@@ -29,6 +30,7 @@ const Meta = () => {
     const [graphspaceInfo, setGraphspaceInfo] = useState(false);
     const {graphspace, graph} = useParams();
     const navigate = useNavigate();
+    const {t} = useTranslation();
 
     const handlePageBack = useCallback(() => {
         // navigate(`/graphspace/${graphspace}`);
@@ -71,12 +73,15 @@ const Meta = () => {
                 <PageHeader
                     ghost={false}
                     onBack={handlePageBack}
-                    title={`${graphspaceInfo.nickname} - ${graphIno.nickname} - 元数据管理`}
+                    title={`${graphspaceInfo.nickname} - ${graphIno.nickname} - ${t('schema.title')}`}
                 >
                     <Row justify='space-between'>
                         <Col>
                             <Radio.Group
-                                options={[{label: '列表模式', value: 'list'}, {label: '图模式', value: 'image'}]}
+                                options={[
+                                    {label: t('common.label.list_mode'), value: 'list'},
+                                    {label: t('common.label.view_mode'), value: 'image'},
+                                ]}
                                 optionType='button'
                                 buttonStyle='solid'
                                 defaultValue={'list'}

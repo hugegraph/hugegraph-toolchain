@@ -129,7 +129,6 @@ const Links = props => {
                     highlightName={currentAlgorithm === LINKS}
                 />
             }
-            {...props}
         >
             <Form
                 form={form}

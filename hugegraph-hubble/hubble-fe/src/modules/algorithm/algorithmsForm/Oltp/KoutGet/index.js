@@ -125,7 +125,6 @@ const KoutGet = props => {
                     highlightName={currentAlgorithm === K_OUT}
                 />
             }
-            {...props}
         >
             <Form
                 form={crosspointsForm}
