@@ -27,8 +27,13 @@ import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.space.VermeerService;
 import org.apache.hugegraph.util.E;
+import org.apache.hugegraph.util.HubbleUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -51,10 +56,8 @@ public class VermeerAlgoController extends BaseController {
         String vGraph = vermeerService.convert2VG(graphspace, graph);
         HugeClient client = this.authClient(null, null);
 
-        Map<String, Object> graphInfo =
-                (Map<String, Object>) client.vermeer()
-                        .getGraphInfoByName(vGraph)
-                        .get("graph");
+        Map<String, Object> graphInfo = HubbleUtil.uncheckedCast(
+                client.vermeer().getGraphInfoByName(vGraph).get("graph"));
         E.checkArgument(graphInfo != null && !graphInfo.isEmpty(),
                 "graph not loaded");
 

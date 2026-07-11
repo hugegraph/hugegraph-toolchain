@@ -184,8 +184,9 @@ public class SchemaController extends BaseController {
     }
 
     @GetMapping("graphview")
-    public SchemaService.SchemaView displayInSchemaView(@PathVariable("graphspace") String graphSpace,
-                                          @PathVariable("graph") String graph) {
+    public SchemaService.SchemaView displayInSchemaView(
+            @PathVariable("graphspace") String graphSpace,
+            @PathVariable("graph") String graph) {
         HugeClient client = this.authClient(graphSpace, graph);
         return schemaService.getSchemaView(client);
     }
@@ -320,7 +321,6 @@ public class SchemaController extends BaseController {
         // All append property should be nullable
         checkProperties(service, entity.getAppendProperties(), true, client);
     }
-
 
     @Data
     @NoArgsConstructor

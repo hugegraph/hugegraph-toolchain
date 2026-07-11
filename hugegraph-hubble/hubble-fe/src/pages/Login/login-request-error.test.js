@@ -50,7 +50,13 @@ jest.mock('react-i18next', () => ({
 
 const submitLoginForm = async () => {
     render(
-        <MemoryRouter initialEntries={['/login?redirect=%2Fnavigation']}>
+        <MemoryRouter
+            initialEntries={['/login?redirect=%2Fnavigation']}
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
             <Login />
         </MemoryRouter>
     );

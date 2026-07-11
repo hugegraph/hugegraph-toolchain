@@ -36,8 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @date 2024/3/20
- * @desc PrometheusService.class 作用为请求prometheus上存储的指标数据
+ * Requests metrics data stored by Prometheus.
  */
 
 @Slf4j
@@ -104,17 +103,19 @@ public class PrometheusService {
         map.put("end", to);
         map.put("step", step);
         RestResult result = getClient().get(Q_RANGE_PATH, map);
-        return extractDistribution(result.readObject(Map.class));
+        return extractDistribution(
+                HubbleUtil.uncheckedCast(result.readObject(Map.class)));
 
     }
 
-    private List<List<Object>> extractDistribution(Map map) {
+    private List<List<Object>> extractDistribution(Map<String, Object> map) {
         List<List<Object>> values = null;
         try {
-            Map<String, Object> map1 = (Map) map.get("data");
-            List list = (List) map1.get("result");
-            Map<String, Object> map2 = (Map) list.get(0);
-            values = (List<List<Object>>) map2.get("values");
+            Map<String, Object> map1 =
+                    HubbleUtil.uncheckedCast(map.get("data"));
+            List<Object> list = HubbleUtil.uncheckedCast(map1.get("result"));
+            Map<String, Object> map2 = HubbleUtil.uncheckedCast(list.get(0));
+            values = HubbleUtil.uncheckedCast(map2.get("values"));
         } catch (Exception e) {
             log.error("extract distribution from prometheus response error");
         }
@@ -162,30 +163,7 @@ public class PrometheusService {
                         .replaceAll("%29", ")")
                         .replaceAll("\\+", "%20");
     }
-// TODO re-evaluate this change
-//    private static class MetricsClient extends AbstractRestClient {
-//        public MetricsClient(String url, int timeout) {
-//            super(url, timeout);
-//        }
-//
-//        @Override
-//        protected void checkStatus(Response response, Response.Status... statuses) {
-//
-//        }
-//
-//    }
 
-    //private static class MetricsClient extends AbstractRestClient {
-    //    public MetricsClient(String url, int timeout) {
-    //        super(url, timeout);
-    //    }
-    //
-    //    @Override
-    //    protected void checkStatus(jakarta.ws.rs.core.Response response,
-    //                               jakarta.ws.rs.core.Response.Status... statuses) {
-    //
-    //    }
-    //}
     private static class MetricsClient extends AbstractRestClient {
 
         public MetricsClient(String url, int timeout) {

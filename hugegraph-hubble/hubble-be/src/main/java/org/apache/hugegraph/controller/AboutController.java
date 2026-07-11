@@ -29,7 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 //import org.apache.hugegraph.license.LicenseVerifier; // TODO C Remove Licence
 
-
 @RestController
 @RequestMapping("about")
 public class AboutController extends BaseController {

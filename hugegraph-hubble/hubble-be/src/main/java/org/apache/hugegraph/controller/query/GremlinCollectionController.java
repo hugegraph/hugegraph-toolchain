@@ -93,8 +93,9 @@ public class GremlinCollectionController extends GremlinController {
         }
 
         if (!StringUtils.isEmpty(type)) {
-            Ex.check(ExecuteType.GREMLIN.name().equals(type) || ExecuteType.CYPHER.name().equals(type)
-                            || ExecuteType.ALGORITHM.name().equals(type),
+            Ex.check(ExecuteType.GREMLIN.name().equals(type) ||
+                     ExecuteType.CYPHER.name().equals(type) ||
+                     ExecuteType.ALGORITHM.name().equals(type),
                     "common.type.invalid", type);
         }
 
@@ -118,7 +119,7 @@ public class GremlinCollectionController extends GremlinController {
         newEntity.setCreateTime(HubbleUtil.nowDate());
         this.checkEntityUnique(newEntity, true);
         // The service is an singleton object
-        synchronized(this.service) {
+        synchronized (this.service) {
             Ex.check(this.service.count() < LIMIT,
                      "gremlin-collection.reached-limit", LIMIT);
             this.service.save(newEntity);
@@ -186,9 +187,9 @@ public class GremlinCollectionController extends GremlinController {
         // NOTE: Full table scan may slow, it's better to use index
         GremlinCollection oldEntity = this.service.getByName(graphSpace, graph,
                                                              name, type);
-        Ex.check(newEntity.getType().equals(ExecuteType.GREMLIN.name())
-                || newEntity.getType().equals(ExecuteType.CYPHER.name()) ||
-                newEntity.getType().equals(ExecuteType.ALGORITHM.name()) ,
+        Ex.check(newEntity.getType().equals(ExecuteType.GREMLIN.name()) ||
+                newEntity.getType().equals(ExecuteType.CYPHER.name()) ||
+                newEntity.getType().equals(ExecuteType.ALGORITHM.name()),
                 "gremlin-collection.type.invalid", newEntity.getType());
         if (creating) {
             Ex.check(oldEntity == null, "gremlin-collection.exist.name", name);

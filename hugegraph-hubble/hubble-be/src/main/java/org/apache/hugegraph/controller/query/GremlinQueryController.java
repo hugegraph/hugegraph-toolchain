@@ -75,7 +75,6 @@ public class GremlinQueryController extends GremlinController {
     @Autowired
     private ExecuteHistoryService historyService;
 
-
     @GetMapping
     public Map<String, String> execute(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph) {
@@ -110,8 +109,6 @@ public class GremlinQueryController extends GremlinController {
         return this.executeGremlin(graphSpace, graph, query);
     }
 
-
-
     /*
     * 用户对大模型生成的gremlin评价
     */
@@ -128,7 +125,6 @@ public class GremlinQueryController extends GremlinController {
                  text2Gremlin.getScore());
         return ImmutableMap.of("text2gremlin-report", "success");
     }
-
 
     private GremlinResult executeGremlin(String graphSpace, String graph,
                                          GremlinQuery query) {
@@ -164,8 +160,6 @@ public class GremlinQueryController extends GremlinController {
             this.historyService.update(history);
         }
     }
-
-
 
     @PostMapping("async-task")
     public Map<String, Object> executeAsyncTask(
@@ -256,7 +250,6 @@ public class GremlinQueryController extends GremlinController {
             }
         }
     }
-
 
     @Data
     @Builder

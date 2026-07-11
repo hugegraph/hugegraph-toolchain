@@ -327,7 +327,11 @@ public class FileMappingService {
             throw new InternalException("Failed to read header and sample " +
                                         "data from file '%s'", file);
         } finally {
-            IOUtils.closeQuietly(reader);
+            try {
+                reader.close();
+            } catch (IOException ignored) {
+                log.debug("Failed to close file mapping reader", ignored);
+            }
         }
 
         setting.setColumnNames(Arrays.asList(columnNames));

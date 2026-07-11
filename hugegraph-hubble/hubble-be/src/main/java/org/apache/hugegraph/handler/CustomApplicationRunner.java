@@ -41,7 +41,8 @@ public class CustomApplicationRunner implements ApplicationRunner {
         String serverId = this.config.get(HubbleOptions.SERVER_ID);
         ServerInfo serverInfo = new ServerInfo(serverId);
         log.info("The server info has been inited");
-        //this.installLicense(serverInfo, "9662b261c388fc5923ace0ebe2a34b02"); // TODO C Remove Licence
+        // this.installLicense(serverInfo,
+        //                     "9662b261c388fc5923ace0ebe2a34b02");
     }
 
     private void installLicense(ServerInfo serverInfo, String md5) {

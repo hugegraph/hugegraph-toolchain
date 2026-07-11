@@ -57,7 +57,7 @@ public class LoadTask implements Runnable {
 
     @TableField(exist = false)
     @JsonIgnore
-    private transient final Lock lock = new ReentrantLock();
+    private final transient Lock lock = new ReentrantLock();
 
     @TableField(exist = false)
     @JsonIgnore

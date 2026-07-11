@@ -112,7 +112,6 @@ public class GraphSpaceMetricsController extends BaseController {
                                                         schemaCount);
     }
 
-
     private void mergeEvCount(
             Map<String, GraphMetricsAPI.TypeCount> merged,
             GraphMetricsAPI.TypeCounts evCount) {
@@ -123,7 +122,7 @@ public class GraphSpaceMetricsController extends BaseController {
             GraphMetricsAPI.TypeCount gsTypeCount = merged.get(k);
             if (gsTypeCount == null) {
                 merged.put(k, v);
-            }else {
+            } else {
                 // 部分图没有数据,continue
                 if (v == null) {
                     continue;

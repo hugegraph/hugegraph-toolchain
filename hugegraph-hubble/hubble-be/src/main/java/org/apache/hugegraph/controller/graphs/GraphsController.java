@@ -32,6 +32,7 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.entity.graphs.GraphStatisticsEntity;
 import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.service.space.VermeerService;
+import org.apache.hugegraph.util.HubbleUtil;
 import org.apache.hugegraph.structure.constant.GraphReadMode;
 import com.google.common.collect.ImmutableMap;
 
@@ -93,9 +94,8 @@ public class GraphsController extends BaseController {
             HugeClient client = this.authClient(graphspace, null);
             List<Map<String, Object>> graphinfos;
             try {
-                graphinfos = (List<Map<String, Object>>) client.vermeer()
-                                                               .getGraphsInfo()
-                                                               .get("graphs");
+                graphinfos = HubbleUtil.uncheckedCast(
+                        client.vermeer().getGraphsInfo().get("graphs"));
             } catch (ServerException e) {
                 log.info("Failed to connect to the Vermeer service",
                          e.cause());
@@ -135,9 +135,9 @@ public class GraphsController extends BaseController {
             try {
                 HugeClient client = this.authClient(graphspace, null);
 
-                graphInfo = (Map<String, Object>) client.vermeer()
-                                                        .getGraphInfoByName(prefix + graph)
-                                                        .get("graph");
+                graphInfo = HubbleUtil.uncheckedCast(
+                        client.vermeer().getGraphInfoByName(prefix + graph)
+                              .get("graph"));
             } catch (ServerException e) {
                 // if dashboard enables vermeer but server sets wrong vermeer 
                 // address, return null
@@ -213,11 +213,7 @@ public class GraphsController extends BaseController {
             @PathVariable("graphspace") String graphspace,
             @PathVariable("graph") String graph) {
         HugeClient client = this.authClient(graphspace, graph);
-//        RestClient pdClient = getPdClient();
         graphsService.postStatistics(null, client, graphspace, graph);
-//        if (pdClient != null) {
-//            pdClient.close();
-//        }
     }
 
     @GetMapping("{graph}/statistics")
@@ -225,13 +221,9 @@ public class GraphsController extends BaseController {
             @PathVariable("graphspace") String graphspace,
             @PathVariable("graph") String graph) {
         HugeClient client = this.authClient(graphspace, graph);
-//        RestClient pdClient = getPdClient();
         GraphStatisticsEntity result =
                 graphsService.getStatistics(client, graphspace,
                                             graph);
-//        if (pdClient != null) {
-//            pdClient.close();
-//        }
         return result;
     }
 
@@ -257,6 +249,7 @@ public class GraphsController extends BaseController {
         this.graphsService.update(this.authClient(graphspace, null),
                                   request.getNickname(), graph);
     }
+
     @DeleteMapping("{graph}")
     public void delete(@PathVariable("graphspace") String graphspace,
                        @PathVariable("graph") String graph,
@@ -287,7 +280,6 @@ public class GraphsController extends BaseController {
         gremlinCollectionService.deleteByGraph(graphspace, graph);
         jobManagerService.removeByGraph(graphspace, graph);
     }
-
 
     @GetMapping("{graph}/truncate")
     public void truncate(@PathVariable("graphspace") String graphspace,
@@ -323,20 +315,22 @@ public class GraphsController extends BaseController {
 
     @PutMapping("{graph}/graph_read_mode")
     public void graphReadMode(@PathVariable("graphspace") String graphspace,
-                                @PathVariable("graph") String graph,
-                                @RequestBody String mode) {
-        this.graphsService.graphReadMode(this.authClient(graphspace, graph), graph, mode);
+                              @PathVariable("graph") String graph,
+                              @RequestBody String mode) {
+        this.graphsService.graphReadMode(this.authClient(graphspace, graph),
+                                         graph, mode);
     }
 
     @GetMapping("{graph}/graph_read_mode")
-    public Map<String, String> graphReadMode(@PathVariable("graphspace") String graphspace,
-                                               @PathVariable("graph") String graph) {
+    public Map<String, String> graphReadMode(
+            @PathVariable("graphspace") String graphspace,
+            @PathVariable("graph") String graph) {
         Map<String, String> status = new HashMap<>();
-        GraphReadMode graphMode = this.graphsService.graphReadMode(this.authClient(graphspace, graph), graph);
+        GraphReadMode graphMode = this.graphsService.graphReadMode(
+                this.authClient(graphspace, graph), graph);
         if ("all".equals(graphMode.string())) {
             status.put("status", "0");
-        }
-        else if ("oltp_only".equals(graphMode.string())) {
+        } else if ("oltp_only".equals(graphMode.string())) {
             status.put("status", "1");
         }
         return status;

@@ -209,7 +209,6 @@ public final class HugeClientPoolService {
                 DEFAULT_SERVICE);
         String defaultCacheKey = String.format(CACHE_KEY_FORMAT, DEFAULT_GRAPHSPACE,
                 DEFAULT_SERVICE);
-        ;
         if (!CollectionUtils.isEmpty(urls)) {
             Collections.shuffle(urls);
             // 设置默认URL缓存
@@ -223,7 +222,7 @@ public final class HugeClientPoolService {
             return realtimeurls;
         } else {
 
-            List<String> cacheKeys = new ArrayList();
+            List<String> cacheKeys = new ArrayList<>();
             cacheKeys.add(String.format(CACHE_KEY_FORMAT, graphSpace, service));
             cacheKeys.add(String.format(CACHE_KEY_FORMAT, graphSpace, null));
             cacheKeys.add(defaultCacheKey);

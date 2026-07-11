@@ -172,7 +172,6 @@ public class EditElementHistoryController extends BaseController {
         client.schema().getEdgeLabels()
               .forEach(el -> elMap.put(el.name(), el));
 
-
         for (GraphElement e : elements) {
             Element.ElementBuilder eBuilder =
                     Element.builder()
@@ -202,7 +201,6 @@ public class EditElementHistoryController extends BaseController {
         return elements.subList(start, end);
     }
 
-
     private List<GraphElement> collectElements(GremlinResult gremlin) {
         List<GraphElement> elements = new ArrayList<>();
         if (gremlin.getType().isEmpty()) {
@@ -221,17 +219,15 @@ public class EditElementHistoryController extends BaseController {
         return elements;
     }
 
-
     private boolean hasNoConditions(String optionPersons,
                                   String optionTimeFrom,
                                   String optionTimeTo,
                                   String optionTypes,
                                   String elementId) {
-        return optionPersons.isEmpty() && optionTimeFrom.isEmpty()
-               && optionTimeTo.isEmpty() && optionTypes.isEmpty() &&
+        return optionPersons.isEmpty() && optionTimeFrom.isEmpty() &&
+               optionTimeTo.isEmpty() && optionTypes.isEmpty() &&
                elementId.isEmpty();
     }
-
 
     @Data
     @Builder

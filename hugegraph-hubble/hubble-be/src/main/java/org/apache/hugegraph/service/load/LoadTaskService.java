@@ -30,7 +30,13 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.GraphConnection;
 import org.apache.hugegraph.entity.enums.LoadStatus;
-import org.apache.hugegraph.entity.load.*;
+import org.apache.hugegraph.entity.load.EdgeMapping;
+import org.apache.hugegraph.entity.load.FileMapping;
+import org.apache.hugegraph.entity.load.FileSetting;
+import org.apache.hugegraph.entity.load.ListFormat;
+import org.apache.hugegraph.entity.load.LoadParameter;
+import org.apache.hugegraph.entity.load.LoadTask;
+import org.apache.hugegraph.entity.load.VertexMapping;
 import org.apache.hugegraph.entity.schema.EdgeLabelEntity;
 import org.apache.hugegraph.entity.schema.VertexLabelEntity;
 import org.apache.hugegraph.exception.ExternalException;
@@ -58,8 +64,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
@@ -266,7 +277,8 @@ public class LoadTaskService {
                  errorFiles.length);
         File errorFile = errorFiles[0];
         try {
-            return FileUtils.readFileToString(errorFile);
+            return FileUtils.readFileToString(errorFile,
+                                              Charset.defaultCharset());
         } catch (IOException e) {
             throw new InternalException("Failed to read error file %s",
                                         e, errorFile);

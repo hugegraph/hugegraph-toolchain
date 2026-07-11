@@ -28,7 +28,13 @@ import org.apache.hugegraph.api.gremlin.GremlinRequest;
 //import org.apache.hugegraph.client.api.gremlin.GremlinRequest;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
-import org.apache.hugegraph.entity.query.*;
+import org.apache.hugegraph.entity.query.AdjacentQuery;
+import org.apache.hugegraph.entity.query.GraphView;
+import org.apache.hugegraph.entity.query.GremlinQuery;
+import org.apache.hugegraph.entity.query.GremlinResult;
+import org.apache.hugegraph.entity.query.JsonView;
+import org.apache.hugegraph.entity.query.TableView;
+import org.apache.hugegraph.entity.query.TypedResult;
 import org.apache.hugegraph.entity.query.GremlinResult.Type;
 import org.apache.hugegraph.entity.schema.VertexLabelEntity;
 import org.apache.hugegraph.exception.ExternalException;
@@ -51,7 +57,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -456,9 +471,9 @@ public class QueryService {
                 // value
                 sb.append(this.checkConditionOperator(condition.getOperator()))
                   .append("(")
-                  .append(GremlinUtil.escape(
-                          this.checkConditionValue(condition.getValue())))
-                  .append(")");
+                  .append(GremlinUtil.escape(this.checkConditionValue(
+                          condition.getValue())))
+                    .append(")");
                 sb.append(")");
             }
         }

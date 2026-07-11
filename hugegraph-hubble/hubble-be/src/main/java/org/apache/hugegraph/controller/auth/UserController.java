@@ -30,7 +30,15 @@ import org.apache.hugegraph.util.HubbleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
@@ -75,7 +83,6 @@ public class UserController extends BaseController {
         userService.addbatch(client, csvfile);
     }
 
-
     @GetMapping("{id}")
     public Object get(@PathVariable("id") String id) {
         return userService.get(this.authClient(null, null),
@@ -117,8 +124,9 @@ public class UserController extends BaseController {
     public void updatepersonal(@RequestParam(name = "nickname") String nickname,
                                @RequestParam(name = "description", required = false,
                                        defaultValue = "") String description) {
-        userService.updatePersonal(this.authClient(null, null), getUser() , nickname , description);
+        userService.updatePersonal(this.authClient(null, null), getUser(), nickname, description);
     }
+
     @GetMapping("getpersonal")
     public Object getpersonal() {
         return userService.getpersonal(this.authClient(null, null),

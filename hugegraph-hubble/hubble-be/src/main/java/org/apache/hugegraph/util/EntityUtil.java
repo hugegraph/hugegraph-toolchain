@@ -31,8 +31,8 @@ public final class EntityUtil {
         Class<?> clazz = oldEntity.getClass();
         T entity;
         try {
-            entity = (T) clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
+            entity = (T) clazz.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
             throw new InternalException("reflect.new-instance.failed", e,
                                         clazz.getName());
         }

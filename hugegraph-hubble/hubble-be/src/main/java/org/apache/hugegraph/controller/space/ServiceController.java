@@ -66,7 +66,7 @@ public class ServiceController extends BaseController {
                             @RequestParam(name = "page_size", required = false,
                                     defaultValue = "10") int pageSize) {
         checkPdMode();
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             return oltpService.queryPage(client, query, pageNo, pageSize);
         } catch (Throwable t) {
             throw t;
@@ -77,7 +77,7 @@ public class ServiceController extends BaseController {
     public Object get(@PathVariable("graphspace") String graphspace,
                       @PathVariable("service") String service) {
         checkPdMode();
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             return oltpService.get(client, service);
         } catch (Throwable t) {
             throw t;
@@ -91,15 +91,15 @@ public class ServiceController extends BaseController {
         checkPdMode();
         // return serviceEntity;
         // TODO url or routetype
-        if (serviceEntity.getDepleymentType()
-                == OLTPService.DepleymentType.MANUAL) {
+        if (serviceEntity.getDepleymentType() ==
+            OLTPService.DepleymentType.MANUAL) {
             serviceEntity.setRouteType(null);
         } else {
             serviceEntity.setRouteType("NodePort");
             serviceEntity.setUrls(null);
         }
 
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             return oltpService.create(client, serviceEntity);
         } catch (Throwable t) {
             throw t;
@@ -120,7 +120,7 @@ public class ServiceController extends BaseController {
         serviceEntity.setRouteType("NodePort");
         serviceEntity.setUrls(null);
 
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             return oltpService.update(client, serviceEntity);
         } catch (Throwable t) {
             throw t;
@@ -136,7 +136,7 @@ public class ServiceController extends BaseController {
                                              "'DEFAULT' under the graphspace " +
                                              "named 'DEFAULT'!");
         }
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             oltpService.delete(client, service);
         } catch (Throwable t) {
             throw t;
@@ -148,7 +148,7 @@ public class ServiceController extends BaseController {
                        @PathVariable("service") String service) {
 
         checkPdMode();
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             oltpService.start(client, service);
         } catch (Throwable t) {
             throw t;
@@ -160,7 +160,7 @@ public class ServiceController extends BaseController {
                       @PathVariable("service") String service) {
 
         checkPdMode();
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             oltpService.stop(client, service);
         } catch (Throwable t) {
             throw t;
@@ -170,7 +170,7 @@ public class ServiceController extends BaseController {
     @GetMapping("options/list")
     public Object configOptions(@PathVariable("graphspace") String graphspace) {
         checkPdMode();
-        try (HugeClient client = defaultClient(graphspace, null);){
+        try (HugeClient client = defaultClient(graphspace, null);) {
             List<String> fields = oltpService.configOptionList(client);
 
             return ImmutableMap.of("options", fields);

@@ -37,7 +37,8 @@
         <app.host>localhost</app.host>
         <app.port>36320</app.port>
         <es.version>7.16.1</es.version>
-        <hubble.hugegraph.core.version>1.5.0</hubble.hugegraph.core.version>
+        <!-- Unified version for pd/store/server components (separate from toolchain revision) -->
+        <hugegraph.core.version>1.7.0</hugegraph.core.version>
     </properties>
 
     <dependencies>
@@ -134,7 +135,7 @@
         <dependency>
             <groupId>org.apache.hugegraph</groupId>
             <artifactId>hg-pd-client</artifactId>
-            <version>1.5.0</version>
+            <version>${hugegraph.core.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.logging.log4j</groupId>
@@ -238,8 +239,16 @@
         <dependency>
             <groupId>org.apache.hugegraph</groupId>
             <artifactId>hugegraph-core</artifactId>
-            <version>${hubble.hugegraph.core.version}</version>
+            <version>${hugegraph.core.version}</version>
             <scope>compile</scope>
+            <exclusions>
+                <!-- Hubble only uses server configuration types. The store
+                     dependency pulls a broken 1.7.0 hugegraph-struct POM. -->
+                <exclusion>
+                    <groupId>org.apache.hugegraph</groupId>
+                    <artifactId>hg-store-common</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -326,11 +335,11 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                    <compilerArguments>
-                        <Xmaxerrs>500</Xmaxerrs>
-                    </compilerArguments>
                     <compilerArgs>
+                        <arg>-Xmaxerrs</arg>
+                        <arg>500</arg>
                         <arg>-Xlint:unchecked</arg>
+                        <arg>-Xlint:deprecation</arg>
                         <arg>--add-modules=java.base</arg>
                     </compilerArgs>
                 </configuration>

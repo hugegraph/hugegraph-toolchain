@@ -27,7 +27,11 @@ import org.apache.hugegraph.entity.op.LogEntity;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.service.op.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -86,7 +90,7 @@ public class LogController extends BaseController {
                            "attachment;filename=" + fileName);
         try {
             OutputStream os = response.getOutputStream();
-            for(LogEntity logEntity : logService.export(logReq)) {
+            for (LogEntity logEntity : logService.export(logReq)) {
                 os.write((logEntity.getMessage() + "\n")
                                  .getBytes(StandardCharsets.UTF_8));
             }

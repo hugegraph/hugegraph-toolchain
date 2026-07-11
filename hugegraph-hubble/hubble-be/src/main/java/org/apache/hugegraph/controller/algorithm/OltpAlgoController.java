@@ -19,7 +19,6 @@
 package org.apache.hugegraph.controller.algorithm;
 
 import lombok.extern.log4j.Log4j2;
-import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.api.traverser.NeighborRankAPI;
 import org.apache.hugegraph.api.traverser.PersonalRankAPI;
 // TODO fix import
@@ -28,12 +27,43 @@ import org.apache.hugegraph.api.traverser.PersonalRankAPI;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
-import org.apache.hugegraph.entity.algorithm.*;
-import org.apache.hugegraph.entity.query.*;
+import org.apache.hugegraph.entity.algorithm.AdamicadarEntity;
+import org.apache.hugegraph.entity.algorithm.AllShortestPathsEntity;
+import org.apache.hugegraph.entity.algorithm.CrossPointsEntity;
+import org.apache.hugegraph.entity.algorithm.JaccardSimilarityEntity;
+import org.apache.hugegraph.entity.algorithm.KneighborEntity;
+import org.apache.hugegraph.entity.algorithm.KoutEntity;
+import org.apache.hugegraph.entity.algorithm.PathsEntity;
+import org.apache.hugegraph.entity.algorithm.RaysEntity;
+import org.apache.hugegraph.entity.algorithm.ResourceallocationEntity;
+import org.apache.hugegraph.entity.algorithm.RingsEntity;
+import org.apache.hugegraph.entity.algorithm.SameNeighborsEntity;
+import org.apache.hugegraph.entity.algorithm.ShortestPathEntity;
+import org.apache.hugegraph.entity.algorithm.SingleSourceShortestPathEntity;
+import org.apache.hugegraph.entity.algorithm.WeightedShortestPathEntity;
+import org.apache.hugegraph.entity.query.EgonetView;
+import org.apache.hugegraph.entity.query.FusiformsimilarityView;
+import org.apache.hugegraph.entity.query.GremlinResult;
+import org.apache.hugegraph.entity.query.JaccardsimilarityView;
+import org.apache.hugegraph.entity.query.RanksView;
 import org.apache.hugegraph.service.algorithm.OltpAlgoService;
-import org.apache.hugegraph.structure.traverser.*;
+import org.apache.hugegraph.structure.traverser.CrosspointsRequest;
+import org.apache.hugegraph.structure.traverser.CustomizedPathsRequest;
+import org.apache.hugegraph.structure.traverser.EgonetRequest;
+import org.apache.hugegraph.structure.traverser.FusiformSimilarityRequest;
+import org.apache.hugegraph.structure.traverser.KneighborRequest;
+import org.apache.hugegraph.structure.traverser.KoutRequest;
+import org.apache.hugegraph.structure.traverser.MultiNodeShortestPathRequest;
+import org.apache.hugegraph.structure.traverser.PathsRequest;
+import org.apache.hugegraph.structure.traverser.SameNeighborsBatchRequest;
+import org.apache.hugegraph.structure.traverser.SingleSourceJaccardSimilarityRequest;
+import org.apache.hugegraph.structure.traverser.TemplatePathsRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
@@ -126,9 +156,10 @@ public class OltpAlgoController extends BaseController {
     }
 
     @PostMapping("jaccardSimilarity_post")
-    public JaccardsimilarityView jaccardSimilarityPost(@PathVariable("graphspace") String graphSpace,
-                                                       @PathVariable("graph") String graph,
-                                                       @RequestBody SingleSourceJaccardSimilarityRequest body) {
+    public JaccardsimilarityView jaccardSimilarityPost(
+            @PathVariable("graphspace") String graphSpace,
+            @PathVariable("graph") String graph,
+            @RequestBody SingleSourceJaccardSimilarityRequest body) {
         HugeClient client = this.authClient(graphSpace, graph);
         return this.service.jaccardSimilarityPost(client, body);
     }
@@ -173,9 +204,10 @@ public class OltpAlgoController extends BaseController {
     }
 
     @PostMapping("singlesourceshortestpath")
-    public GremlinResult singleSourceShortestPath(@PathVariable("graphspace") String graphSpace,
-                                                  @PathVariable("graph") String graph,
-                                                  @RequestBody SingleSourceShortestPathEntity body) {
+    public GremlinResult singleSourceShortestPath(
+            @PathVariable("graphspace") String graphSpace,
+            @PathVariable("graph") String graph,
+            @RequestBody SingleSourceShortestPathEntity body) {
         HugeClient client = this.authClient(graphSpace, graph);
         return this.service.singleSourceShortestPath(client, body);
     }

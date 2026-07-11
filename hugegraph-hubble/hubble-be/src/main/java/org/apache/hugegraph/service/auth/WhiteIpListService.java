@@ -29,7 +29,7 @@ import java.util.Map;
 
 @Log4j2
 @Service
-public class WhiteIpListService extends AuthService{
+public class WhiteIpListService extends AuthService {
     public Map<String, Object> get(HugeClient client) {
         WhiteIpListManager whiteIpListManager = client.whiteIpListManager();
         Map<String, Object> whiteIpList = whiteIpListManager.list();

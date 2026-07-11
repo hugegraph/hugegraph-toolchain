@@ -49,17 +49,6 @@ public class OlapAlgoService {
             params.putAll(body.getParams());
         }
         long taskid = client.computer().create(body.getAlgorithm(), body.getWorker(), params);
-//        String graphSpace = client.getGraphSpaceName();
-//        String graph = client.getGraphName();
-//        Date createTime = HubbleUtil.nowDate();
-//        // Insert execute history
-//        ExecuteStatus status = ExecuteStatus.SUCCESS;
-//        ExecuteHistory history;
-//        history = new ExecuteHistory(null, graphSpace, graph, 0L,
-//                ExecuteType.ALGORITHM,
-//                body.toString(), status,
-//                AsyncTaskStatus.UNKNOWN, -1L, createTime);
-//        this.historyService.save(history);
         return OlapView.builder().taskId(taskid).build();
     }
 }

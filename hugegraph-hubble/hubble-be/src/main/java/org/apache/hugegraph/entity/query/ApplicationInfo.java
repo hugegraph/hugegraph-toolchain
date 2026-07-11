@@ -28,44 +28,44 @@ import org.apache.hugegraph.common.AppType;
 import org.apache.hugegraph.common.Mergeable;
 import org.apache.hugegraph.util.JsonUtil;
 
-
 @Data
 @Builder
 @TableName("app_info")
 public class ApplicationInfo implements Mergeable {
-        // graph_name in mysql {idc}-{graph_space}-{graph} (eg:bddwd-DEFAULT-graph)
-        @TableField(value = "graph_name")
-        @MergeProperty
-        @JsonProperty("graph_name")
-        private String graphName;
 
-        @TableField(value = "app_name")
-        @MergeProperty
-        @JsonProperty("app_name")
-        private String appName;
+    // graph_name in mysql {idc}-{graph_space}-{graph} (eg:bddwd-DEFAULT-graph)
+    @TableField(value = "graph_name")
+    @MergeProperty
+    @JsonProperty("graph_name")
+    private String graphName;
 
-        @TableField(value = "app_type")
-        @MergeProperty
-        @JsonProperty("app_type")
-        private AppType appType;
+    @TableField(value = "app_name")
+    @MergeProperty
+    @JsonProperty("app_name")
+    private String appName;
 
-        @TableField(value = "count_query")
-        @MergeProperty
-        @JsonProperty("count_query")
-        private String countQuery;
+    @TableField(value = "app_type")
+    @MergeProperty
+    @JsonProperty("app_type")
+    private AppType appType;
 
-        @TableField(value = "distribution_query")
-        @MergeProperty
-        @JsonProperty("distribution_query")
-        private String distributionQuery;
+    @TableField(value = "count_query")
+    @MergeProperty
+    @JsonProperty("count_query")
+    private String countQuery;
 
-        @TableField(value = "description")
-        @MergeProperty
-        @JsonProperty("description")
-        private String description;
+    @TableField(value = "distribution_query")
+    @MergeProperty
+    @JsonProperty("distribution_query")
+    private String distributionQuery;
 
-        @Override
-        public String toString() {
-                return JsonUtil.toJson(this);
-        }
+    @TableField(value = "description")
+    @MergeProperty
+    @JsonProperty("description")
+    private String description;
+
+    @Override
+    public String toString() {
+        return JsonUtil.toJson(this);
+    }
 }

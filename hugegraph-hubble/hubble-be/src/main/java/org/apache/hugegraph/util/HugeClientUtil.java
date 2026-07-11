@@ -28,8 +28,7 @@ import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.ServerException;
 import org.springframework.web.util.UriComponentsBuilder;
 
-
-import  org.apache.hugegraph.rest.ClientException;
+import org.apache.hugegraph.rest.ClientException;
 import com.google.common.collect.ImmutableSet;
 
 public final class HugeClientUtil {

@@ -18,7 +18,6 @@
 
 package org.apache.hugegraph.common;
 
-
 import org.apache.hugegraph.type.define.SerialEnum;
 
 public enum AppType implements SerialEnum {

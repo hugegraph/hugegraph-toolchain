@@ -55,7 +55,15 @@ import org.apache.hugegraph.util.PageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -98,10 +106,10 @@ public class GraphsService {
     public Map<String, Object> get(HugeClient client, String graphSpace,
                                    String graph,
                                    Map<String, String> vermeerInfo) {
-//        long storage = getStorage(pdClient, graphSpace, graph);
+        // long storage = getStorage(pdClient, graphSpace, graph);
         Map<String, Object> info = new HashMap<>();
         info.putAll(client.graphs().getGraph(graph));
-//        info.put("storage", storage);
+        // info.put("storage", storage);
         // Ensure nickname/graphspace fields exist for frontend display
         info.putIfAbsent("nickname", graph);
         info.putIfAbsent("graphspace", graphSpace);
@@ -124,7 +132,7 @@ public class GraphsService {
                 sortedGraphsProfile(client, graphSpace, query, createTime,
                                     isVermeerEnabled, vermeerInfo);
 
-        for(Map<String, Object> result : results) {
+        for (Map<String, Object> result : results) {
             String graph = result.get("name").toString();
             try {
                 result.put("schemaview", schemaService.getSchemaView(
@@ -153,7 +161,7 @@ public class GraphsService {
             info.put("pd.peers", "");
             if (vermeerInfo.containsKey(name)) {
                 Map<String, Object> brief =
-                        (Map<String, Object>) vermeerInfo.get(name);
+                        HubbleUtil.uncheckedCast(vermeerInfo.get(name));
                 info.put("status", brief.get("status").toString());
                 info.put("last_load_time",
                          brief.get("last_load_time").toString());
@@ -343,9 +351,9 @@ public class GraphsService {
     public void graphReadMode(HugeClient client, String graph, String mode) {
         this.checkReadMode(mode);
         // open(0) means mode equal all, close(1) means mode equal OLTP_ONLY
-        if ("0".equals(mode)) {client.graphs().readMode(graph, GraphReadMode.ALL);
-        }
-        else if ("1".equals(mode)){
+        if ("0".equals(mode)) {
+            client.graphs().readMode(graph, GraphReadMode.ALL);
+        } else if ("1".equals(mode)) {
             client.graphs().readMode(graph, GraphReadMode.OLTP_ONLY);
         }
     }
@@ -370,8 +378,10 @@ public class GraphsService {
         String path = String.format("v1/graph/%s/%s/g", graphSpace, graph);
         Map<String, Object> result;
         try {
-            result = pdClient.get(path).readObject(Map.class);
-            Map<String, Object> data = (Map<String, Object>) result.get("data");
+            result = HubbleUtil.uncheckedCast(
+                    pdClient.get(path).readObject(Map.class));
+            Map<String, Object> data =
+                    HubbleUtil.uncheckedCast(result.get("data"));
             if (data.containsKey("dataSize")) {
                 long dataSize = Long.valueOf(data.get("dataSize").toString());
                 return dataSize;
@@ -398,21 +408,9 @@ public class GraphsService {
         return graphSpace + "-" + graph;
     }
 
-    public GraphStatisticsEntity getStatistics( // RestClient pdClient,
-                                               HugeClient client,
+    public GraphStatisticsEntity getStatistics(HugeClient client,
                                                String graphSpace,
                                                String graph) {
-//        long storage = getStorage(pdClient, graphSpace, graph);
-//        boolean isBig = isBigStorage(storage);
-//        GraphStatisticsEntity result;
-//        if (isBig) {
-//            result = getLastStatistics(client, graphSpace, graph);
-//        } else {
-//            this.graphStatistics.clear();
-//            result = postSmallStatistics(client, graphSpace, graph);
-//        }
-//        result.setStorage(storage);
-
         GraphStatisticsEntity result;
         this.graphStatistics.clear();
         result = postSmallStatistics(client, graphSpace, graph);
@@ -433,12 +431,12 @@ public class GraphsService {
             String graphKey = getStatisticsKey(graphSpace, graph);
             if (this.graphStatistics.containsKey(graphKey)) {
                 Map<String, Object> graphCache =
-                        (Map<String, Object>) this.graphStatistics.get(graphKey);
+                        this.graphStatistics.get(graphKey);
                 if (graphCache.get(RUNNING_TASKS) != null) {
                     List<String> idPairs =
-                            (List<String>) graphCache.get(RUNNING_TASKS);
+                            HubbleUtil.uncheckedCast(graphCache.get(RUNNING_TASKS));
                     idPairs.add(idPair);
-                    return ;
+                    return;
                 }
             }
             List<String> idPairs = new ArrayList<>();
@@ -460,11 +458,10 @@ public class GraphsService {
             return GraphStatisticsEntity.emptyEntity();
         }
 
-        Map<String, Object> graphCache =
-                (Map<String, Object>) this.graphStatistics.get(graphKey);
+        Map<String, Object> graphCache = this.graphStatistics.get(graphKey);
         if (graphCache.get(RUNNING_TASKS) != null) {
             List<String> idPairs =
-                    (List<String>) graphCache.get(RUNNING_TASKS);
+                    HubbleUtil.uncheckedCast(graphCache.get(RUNNING_TASKS));
             List<Long> idList = new ArrayList<>(idPairs.size() * 2);
             for (String idPair: idPairs) {
                 String[] idVE = idPair.split("-");
@@ -538,18 +535,16 @@ public class GraphsService {
         taskV = asyncTaskService.get(client,
                                      Integer.valueOf(
                                              String.valueOf(taskV.id())));
-        List<Map<String, Object>> results =
-                (List<Map<String, Object>>)
-                        JsonUtil.fromJson(taskV.result().toString(),
-                                          List.class);
+        List<Map<String, Object>> results = HubbleUtil.uncheckedCast(
+                JsonUtil.fromJson(taskV.result().toString(), List.class));
         result.setVertices(results.get(0));
         result.setVertexCount(getCountFromLabels(results.get(0)));
 
         taskE = asyncTaskService.get(client,
                                      Integer.valueOf(
                                              String.valueOf(taskE.id())));
-        results = (List<Map<String, Object>>)
-                JsonUtil.fromJson(taskE.result().toString(), List.class);
+        results = HubbleUtil.uncheckedCast(
+                JsonUtil.fromJson(taskE.result().toString(), List.class));
         result.setEdges(results.get(0));
         result.setEdgeCount(getCountFromLabels(results.get(0)));
         result.setUpdateTime(HubbleUtil.dateFormat());
@@ -568,13 +563,13 @@ public class GraphsService {
                                                GREMLIN_STATISTICS_EDGE);
         if (vertexResult.data() != null && vertexResult.data().size() != 0) {
             Map<String, Object> vertices =
-                    (Map<String, Object>) vertexResult.data().get(0);
+                    HubbleUtil.uncheckedCast(vertexResult.data().get(0));
             result.setVertices(vertices);
             result.setVertexCount(getCountFromLabels(vertices));
         }
         if (edgeResult.data() != null && edgeResult.data().size() != 0) {
             Map<String, Object> edges =
-                    (Map<String, Object>) edgeResult.data().get(0);
+                    HubbleUtil.uncheckedCast(edgeResult.data().get(0));
             result.setEdges(edges);
             result.setEdgeCount(getCountFromLabels(edges));
         }
@@ -589,7 +584,6 @@ public class GraphsService {
         }
         return count.toString();
     }
-
 
     public long executeAsyncTask(HugeClient client, String graphSpace,
                                  String graph, GremlinQuery query) {

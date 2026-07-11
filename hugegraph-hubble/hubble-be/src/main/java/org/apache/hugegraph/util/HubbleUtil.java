@@ -39,11 +39,21 @@ public final class HubbleUtil {
     }
 
     public static final Pattern HOST_PATTERN =
-        Pattern.compile("(([0-9]{1,3}\\.){3}[0-9]{1,3}|" + "([0-9A-Za-z_!~*'()-]+\\.)*[0-9A-Za-z_!~*'()-]+)$");
+        Pattern.compile("(([0-9]{1,3}\\.){3}[0-9]{1,3}|" +
+                        "([0-9A-Za-z_!~*'()-]+\\.)*[0-9A-Za-z_!~*'()-]+)$");
     private static final String DF = "yyyy-MM-dd HH:mm:ss";
 
     private static final String M_FORMAT = "yyyyMMdd'T'HHmmssSSS";
     public static final DateFormat DATE_FORMAT = new SimpleDateFormat(DF);
+
+    /**
+     * Isolates casts required by legacy client APIs that return raw JSON
+     * containers. Callers remain responsible for using the documented type.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T uncheckedCast(Object value) {
+        return (T) value;
+    }
 
     public static String dateFormat() {
         return DATE_FORMAT.format(new Date());
@@ -88,8 +98,6 @@ public final class HubbleUtil {
         return (new SimpleDateFormat("yyyyMMdd").format(cal.getTime()));
     }
 
-
-
     /**
      * 获取当前时间往前推7天的时间戳数组(单位/秒)
      * @return 包含前7天时间戳和当前时间戳的数组
@@ -118,7 +126,6 @@ public final class HubbleUtil {
                           currentTimestamp / 1000};
     }
 
-
     public static long[] getTimestampsBefore24Hours(String time) {
         Date date = null;
         try {
@@ -143,7 +150,6 @@ public final class HubbleUtil {
         return new long[]{cal.getTimeInMillis() / 1000, timestamp / 1000};
     }
 
-
     /**
      * 获取给定日期所在周的周一和周日的时间戳数组(单位/秒)
      * @param date 给定日期
@@ -162,7 +168,6 @@ public final class HubbleUtil {
         long endOfWeek = cal.getTimeInMillis();
         return new long[]{startOfWeek / 1000, endOfWeek / 1000};
     }
-
 
     /**
      * 获取给定日期所在月份的第一天和最后一天的时间戳数组(单位/秒)

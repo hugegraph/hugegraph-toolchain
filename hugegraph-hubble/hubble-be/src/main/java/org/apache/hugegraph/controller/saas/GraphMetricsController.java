@@ -37,7 +37,11 @@ import org.apache.hugegraph.util.E;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -55,7 +59,6 @@ public class GraphMetricsController extends BaseController {
             GraphMetricsController.class);
 
     public static final SafeDateFormat SAFE_DATE_FORMAT = new SafeDateFormat("yyyyMMdd");
-
 
     @GetMapping("schema")
     public Object schemaMetrics(@PathVariable("graphspace") String graphSpace,
@@ -77,14 +80,14 @@ public class GraphMetricsController extends BaseController {
                                 client.schema().getIndexLabels().size());
 
         GraphMetricsAPI.TypeCounts rangeTypeCount =
-                client.graph().getTypeCounts(dateRange.get(0), dateRange.get(dateRange.size() - 1));
+                client.graph().getTypeCounts(dateRange.get(0),
+                                             dateRange.get(dateRange.size() - 1));
 
         SchemaCount<Double> schemaWeekRate =
                 weeklyGrowthRate(rangeTypeCount.getTypeCounts(), dateRange, schemaCount);
 
         return new SchemaMetrics(schemaWeekRate, schemaCount);
     }
-
 
     /**
      * @return 返回当前日期前14天的日期列表
@@ -100,7 +103,6 @@ public class GraphMetricsController extends BaseController {
         HugeClient client = this.authClient(graphSpace, graph);
         return getEvCount(client, graphSpace, graph, from, to);
     }
-
 
     /**
      * 统计单种类型顶点或者边的日增长率及其存量数据增长率
@@ -128,7 +130,7 @@ public class GraphMetricsController extends BaseController {
         // 校验schema存不存在
         HugeClient client = this.authClient(graphSpace, graph);
         boolean schemaExisted = false;
-        if("vertex".equals(type)) {
+        if ("vertex".equals(type)) {
             schemaExisted = client.schema().getVertexLabel(schema) != null;
         } else {
             schemaExisted = client.schema().getEdgeLabel(schema) != null;
@@ -149,7 +151,7 @@ public class GraphMetricsController extends BaseController {
             GraphMetricsAPI.TypeCount v = entry.getValue();
             if (v == null) {
                 itemCounts.add(new ItemCount(k, null, 0L));
-            }else {
+            } else {
                 itemCounts.add(new ItemCount(k, v.getDatetime(),
                                              getEleCount(type, schema, v)));
             }
@@ -221,7 +223,8 @@ public class GraphMetricsController extends BaseController {
         return list.toArray(new Long[3]);
     }
 
-    private Long getEleCount(String type, String schema, GraphMetricsAPI.TypeCount typeCount) {
+    private Long getEleCount(String type, String schema,
+                             GraphMetricsAPI.TypeCount typeCount) {
         if (typeCount == null) {
             return 0L;
         }
@@ -241,7 +244,6 @@ public class GraphMetricsController extends BaseController {
 
         return countMap.get(schema);
     }
-
 
     /**
      * 计算周增长率
@@ -306,7 +308,7 @@ public class GraphMetricsController extends BaseController {
         E.checkArgument(num2 != null, "num2 can't be null");
         E.checkArgument(num1 >= 0, "num1 must be non-negative");
         E.checkArgument(num2 >= 0, "num2 must be non-negative");
-        if(num1 == 0 && num2 == 0){
+        if (num1 == 0 && num2 == 0) {
             return 0.0;
         }
         if (num1 == 0) {
@@ -317,7 +319,8 @@ public class GraphMetricsController extends BaseController {
         }
         // 保留两位小数
         DecimalFormat decimalFormat = new DecimalFormat("#.##");
-        String formattedResult = decimalFormat.format((num2 - num1) / ((double) num1));
+        String formattedResult =
+                decimalFormat.format((num2 - num1) / ((double) num1));
         return Double.parseDouble(formattedResult);
     }
 
@@ -341,7 +344,6 @@ public class GraphMetricsController extends BaseController {
         }
         return dateList.stream().sorted().collect(Collectors.toList());
     }
-
 
     @Data
     @NoArgsConstructor
@@ -394,7 +396,7 @@ public class GraphMetricsController extends BaseController {
             this.edges = mergeItem(typeCount.getEdges());
             this.updateTime = typeCount.getDatetime();
             this.verticesCount = mergeCount(typeCount.getVertices());
-            this.edgesCount = mergeCount( typeCount.getEdges());
+            this.edgesCount = mergeCount(typeCount.getEdges());
         }
 
         private List<Item> mergeItem(Map<String, Long> evTypeCount) {
@@ -437,14 +439,13 @@ public class GraphMetricsController extends BaseController {
     public static class ItemCount {
         @JsonProperty("date")
         private String date;
-        
+
         @JsonProperty("update_time")
         private String updateTime;
 
         @JsonProperty("count")
         private Long count;
     }
-
 
     @Data
     @NoArgsConstructor
@@ -457,7 +458,6 @@ public class GraphMetricsController extends BaseController {
         @JsonProperty("item_count")
         private SchemaCount<Integer> itemCount;
     }
-
 
     @Data
     @NoArgsConstructor

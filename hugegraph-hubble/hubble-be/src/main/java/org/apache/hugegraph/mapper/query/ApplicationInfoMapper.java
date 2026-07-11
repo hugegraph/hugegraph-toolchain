@@ -36,8 +36,9 @@ public interface ApplicationInfoMapper extends BaseMapper<ApplicationInfo> {
                                  @Param("appName") String appName,
                                  @Param("appType") String appType);
 
-    @Insert("INSERT INTO app_info (graph_name, app_name, app_type, count_query, distribution_query) " +
-            "VALUES (#{graphName}, #{appName}, #{appType}, #{countQuery}, #{distributionQuery})")
+    @Insert("INSERT INTO app_info (graph_name, app_name, app_type, " +
+            "count_query, distribution_query) VALUES (#{graphName}, " +
+            "#{appName}, #{appType}, #{countQuery}, #{distributionQuery})")
     int insertAppInfo(ApplicationInfo appInfo);
 
     @Update("UPDATE `app_info` SET graph_name = #{graphName}, " +

@@ -75,11 +75,11 @@ public class HStoreController extends BaseController {
     /**
      *
      * @return the status of sotre cluster
-     * 	"Cluster_OK": "正常",
-     * 	"Batch_import_Mode": "单副本入库模式"
-     * 	"Partition_Split": "数据分裂中"
-     * 	"Cluster_Not_Ready": "集群未就绪"
-     * 	"Cluster_Fault": "集群异常"
+     *     "Cluster_OK": "正常",
+     *     "Batch_import_Mode": "单副本入库模式"
+     *     "Partition_Split": "数据分裂中"
+     *     "Cluster_Not_Ready": "集群未就绪"
+     *     "Cluster_Fault": "集群异常"
      */
     @GetMapping("status")
     public Object status() {
@@ -121,7 +121,7 @@ public class HStoreController extends BaseController {
 
         List<String> successNodes = new ArrayList<>();
 
-        for(String nodeId: nodes) {
+        for (String nodeId: nodes) {
             try {
                 client.hStoreManager().nodeStartup(nodeId);
             } catch (RuntimeException e) {
@@ -150,7 +150,7 @@ public class HStoreController extends BaseController {
 
         List<String> successNodes = new ArrayList<>();
 
-        for(String nodeId: nodes) {
+        for (String nodeId: nodes) {
             try {
                 client.hStoreManager().nodeShutdown(nodeId);
             } catch (RuntimeException e) {

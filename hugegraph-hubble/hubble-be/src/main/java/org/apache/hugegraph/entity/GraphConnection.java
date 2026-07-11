@@ -39,7 +39,7 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 @JsonIgnoreProperties({"protocol", "truststore_file", "truststore_password",
-        "password", "token"})
+                       "password", "token"})
 @TableName(value = "graph_connection", autoResultMap = true)
 public class GraphConnection implements Identifiable, Mergeable {
 

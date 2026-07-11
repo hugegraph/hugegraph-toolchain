@@ -35,14 +35,12 @@ public interface EditElementHistoryMapper extends
     @Select("SELECT * FROM `edit_history` LIMIT #{limit}")
     List<ElementEditHistory> queryByLimit(@Param("limit") int limit);
 
-
     @Select("SELECT * FROM `edit_history` WHERE graphspace = #{graphspace} " +
             "AND graph = #{graph} AND element_id = #{elementId}")
     List<ElementEditHistory> queryByElementId(
             @Param("graphspace") String graphspace,
             @Param("graph") String graph,
             @Param("elementId") String elementId);
-
 
     @Select("<script>" +
             "SELECT * FROM `edit_history` WHERE graphspace = #{graphspace} AND graph = #{graph} " +
@@ -58,16 +56,16 @@ public interface EditElementHistoryMapper extends
 
     // 批量插入方法
     @Insert({
-            "<script>",
-            "INSERT INTO edit_history (graphspace, graph, element_id, label, " +
-            "property_num, option_type, option_time, option_person, content)",
-            "VALUES",
-            "<foreach collection='list' item='item' separator=','>",
-            "(#{item.graphspace}, #{item.graph}, #{item.elementId}, #{item" +
-            ".label}, #{item.propertyNum}, #{item.optionType}, #{item" +
-            ".optionTime}, #{item.optionPerson}, #{item.content})",
-            "</foreach>",
-            "</script>"
+        "<script>",
+        "INSERT INTO edit_history (graphspace, graph, element_id, label, " +
+        "property_num, option_type, option_time, option_person, content)",
+        "VALUES",
+        "<foreach collection='list' item='item' separator=','>",
+        "(#{item.graphspace}, #{item.graph}, #{item.elementId}, #{item" +
+        ".label}, #{item.propertyNum}, #{item.optionType}, #{item" +
+        ".optionTime}, #{item.optionPerson}, #{item.content})",
+        "</foreach>",
+        "</script>"
     })
     int insertBatch(@Param("list") List<ElementEditHistory> list);
 }
