@@ -55,7 +55,8 @@ export const isCurrentJobUploadSizeExceeded = (
   );
 
   return (
-    getCurrentJobUploadSize(uploadedFiles, localUploadTasks) + selectedFileSize >
+    getCurrentJobUploadSize(uploadedFiles, localUploadTasks) +
+      selectedFileSize >
     totalLimit
   );
 };

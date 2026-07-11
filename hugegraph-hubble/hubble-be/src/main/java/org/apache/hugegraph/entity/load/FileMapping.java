@@ -30,7 +30,6 @@ import org.apache.hugegraph.handler.EdgeMappingTypeHandler;
 import org.apache.hugegraph.handler.VertexMappingTypeHandler;
 import org.apache.hugegraph.util.HubbleUtil;
 import org.apache.hugegraph.util.SerializeUtil;
-
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -61,6 +60,14 @@ public class FileMapping {
     @TableField("conn_id")
     @JsonIgnore
     private Integer connId;
+
+    @TableField("graphspace")
+    @JsonIgnore
+    private String graphSpace;
+
+    @TableField("graph")
+    @JsonIgnore
+    private String graph;
 
     @TableField(value = "job_id")
     @MergeProperty
@@ -121,14 +128,36 @@ public class FileMapping {
         return this.totalSize;
     }
 
+    public FileMapping(String graphSpace, String graph, String name,
+                       String path) {
+        this(graphSpace, graph, name, path, HubbleUtil.nowDate());
+    }
+
     public FileMapping(int connId, String name, String path) {
         this(connId, name, path, HubbleUtil.nowDate());
     }
 
-    public FileMapping(int connId, String name, String path,
-                       Date lastAccessTime) {
+    public FileMapping(int connId, String name, String path, Date lastAccessTime) {
         this.id = null;
         this.connId = connId;
+        this.graphSpace = null;
+        this.graph = null;
+        this.name = name;
+        this.path = path;
+        this.fileSetting = new FileSetting();
+        this.vertexMappings = new LinkedHashSet<>();
+        this.edgeMappings = new LinkedHashSet<>();
+        this.loadParameter = new LoadParameter();
+        this.createTime = lastAccessTime;
+        this.updateTime = lastAccessTime;
+    }
+
+    public FileMapping(String graphSpace, String graph, String name, String path,
+                       Date lastAccessTime) {
+        this.id = null;
+        this.connId = null;
+        this.graphSpace = graphSpace;
+        this.graph = graph;
         this.name = name;
         this.path = path;
         this.fileSetting = new FileSetting();

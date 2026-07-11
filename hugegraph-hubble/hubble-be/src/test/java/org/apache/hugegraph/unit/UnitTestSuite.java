@@ -23,9 +23,11 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        EntityUtilTest.class,
-        FileUtilTest.class
+    FileUploadControllerTest.class,
+    FileUtilTest.class,
+    HubbleOptionsTest.class,
+    OltpAlgoControllerTest.class,
+    OltpAlgoServiceTest.class
 })
 public class UnitTestSuite {
-
 }

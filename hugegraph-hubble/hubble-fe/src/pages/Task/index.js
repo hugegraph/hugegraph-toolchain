@@ -1,0 +1,357 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {
+    Button,
+    Row,
+    Col,
+    PageHeader,
+    Input,
+    Modal,
+    Table,
+    Space,
+    Tooltip,
+    message,
+    Badge,
+    Spin,
+} from 'antd';
+import {
+    EditOutlined,
+    DeleteOutlined,
+    FileTextOutlined,
+    PauseOutlined,
+    CaretRightOutlined,
+    LineChartOutlined,
+} from '@ant-design/icons';
+import {useState, useEffect, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
+import style from './index.module.scss';
+import EditLayer from './components/EditLayer';
+import ViewLayer from './components/ViewLayer';
+import TopStatistic from './components/TopStatistic';
+import {useNavigate, Link} from 'react-router-dom';
+import * as api from '../../api';
+import {StatusField} from '../../components/Status';
+import {sourceType, syncType} from './config';
+import TableHeader from '../../components/TableHeader';
+
+const DetailTip = ({row}) => {
+    const {t} = useTranslation();
+    const {job_summary} = row;
+
+    return (
+        <Link to={`/task/detail/${row.task_id}`}>
+            <Tooltip
+                title={(
+                    <div className={style.task_detail}>
+                        <div>{t('task.detail.title')}</div>
+                        <Space>
+                            <Badge
+                                status="success"
+                                text={<span>{t('task.detail.success')}: {job_summary?.success_count ?? 0}</span>}
+                            />
+                            <Badge
+                                status="error"
+                                text={<span>{t('task.detail.failed')}: {job_summary?.failed_count ?? 0}</span>}
+                            />
+                            <Badge
+                                status="processing"
+                                text={<span>{t('task.detail.running')}: {job_summary?.running_count ?? 0}</span>}
+                            />
+                        </Space>
+                    </div>)
+                }
+            >
+                <LineChartOutlined />
+            </Tooltip>
+        </Link>
+    );
+};
+
+const RunningText = ({status, onClick, data}) => {
+    const {t} = useTranslation();
+    const handleClick = useCallback(() => {
+        onClick(data);
+    }, [onClick, data]);
+
+    return status === 'enable' ? (
+        <Tooltip title={t('task.pause')}><PauseOutlined onClick={handleClick} /></Tooltip>
+    ) : (
+        <Tooltip title={t('task.execute')}><CaretRightOutlined onClick={handleClick} /></Tooltip>
+    );
+};
+
+const Task = () => {
+    const {t} = useTranslation();
+    const [data, setData] = useState([]);
+    const [searchName, setSearchName] = useState('');
+    const [editLayer, setEditLayer] = useState(false);
+    const [viewLayer, setViewLayer] = useState(false);
+    const [refresh, setRefresh] = useState(false);
+    const [detail, setDetail] = useState({});
+    const [pagination, setPagination] = useState({pageSize: 10, current: 1});
+    const [metricsData, setMetricsData] = useState({});
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const search = useCallback(val => {
+        setSearchName(val);
+        setPagination({...pagination, current: 1});
+    }, [pagination]);
+
+    const handleTable = useCallback(newPagination => {
+        setPagination(newPagination);
+    }, []);
+
+    const enableTask = useCallback(id => {
+        api.manage.enableTask(id).then(res => {
+            if (res.status === 200) {
+                setRefresh(!refresh);
+                message.success(t('common.msg.enable_success'));
+
+                return;
+            }
+
+            message.error(t('common.msg.enable_fail'));
+        });
+    }, [refresh]);
+
+    const disableTask = useCallback(id => {
+        api.manage.disableTask(id).then(res => {
+            if (res.status === 200) {
+                setRefresh(!refresh);
+                message.success(t('common.msg.disable_success'));
+
+                return;
+            }
+
+            message.error(t('common.msg.disable_fail'));
+        });
+    }, [refresh]);
+
+    const deleteTask = id => {
+        setLoading(true);
+        api.manage.deleteTask(id).then(res => {
+            setLoading(false);
+            if (res.status === 200) {
+                setRefresh(!refresh);
+                message.success(t('common.msg.delete_success'));
+
+                return;
+            }
+
+            message.error(t('common.msg.delete_fail'));
+        });
+    };
+
+    const editTask = row => {
+        setDetail(row);
+        setEditLayer(true);
+    };
+
+    const viewTask = row => {
+        setDetail(row);
+        setViewLayer(true);
+    };
+
+    const handleBack = useCallback(() => {
+        navigate('/task/edit');
+    }, [navigate]);
+
+    const handleRefresh = useCallback(() => {
+        setRefresh(!refresh);
+    }, [refresh]);
+
+    const handleHideEditLayer = useCallback(() => setEditLayer(false), []);
+
+    const handleHideViewLayer = useCallback(() => setViewLayer(false), []);
+
+    const rowKey = useCallback(record => record.task_id, []);
+
+    const columns = [
+        {
+            title: t('task.col.name'),
+            dataIndex: 'task_name',
+        },
+        {
+            title: t('task.col.source_type'),
+            dataIndex: 'ingestion_mapping',
+            render: val => {
+                const {structs} = val ?? {};
+                if (!structs?.length) {
+                    return t('common.label.unknown');
+                }
+                const type = structs[0]?.input?.type;
+                return sourceType.find(item => item.value === type)?.label ?? t('common.label.unknown');
+            },
+        },
+        {
+            title: t('task.col.target_space'),
+            dataIndex: 'ingestion_option',
+            render: val => val.graphspace,
+        },
+        {
+            title: t('task.col.target_graph'),
+            dataIndex: 'ingestion_option',
+            render: val => val.graph,
+        },
+        {
+            title: t('task.col.create_time'),
+            dataIndex: 'create_time',
+        },
+        {
+            title: t('account.col.id'),
+            dataIndex: 'creator',
+        },
+        {
+            title: t('task.col.status'),
+            dataIndex: 'last_metrics',
+            align: 'center',
+            width: 120,
+            render: val => <StatusField status={val} />,
+        },
+        {
+            title: t('task.col.sync_type'),
+            dataIndex: 'task_schedule_type',
+            render: val => {
+                return syncType.find(item => item.value === val)?.label ?? val;
+            },
+        },
+        {
+            title: t('graphspace.col.operation'),
+            align: 'center',
+            width: 160,
+            render: row => {
+                return (
+                    <Space>
+                        <DetailTip row={row} />
+                        <a onClick={() => viewTask(row)}><FileTextOutlined /></a>
+                        {row.task_schedule_status  === 'DISABLE'
+                            ? <a onClick={() => editTask(row)}><EditOutlined /></a>
+                            : <EditOutlined style={{color: '#8c8c8c'}} />}
+                        {/* <a>{row.task_schedule_status === 'ENABLE'
+                            ? (
+                                <Tooltip title={t('task.pause')}>
+                                    <PauseOutlined onClick={() => disableTask(row.task_id)} />
+                                </Tooltip>
+                            )
+                            : (
+                                <Tooltip title={t('task.execute')}>
+                                    <CaretRightOutlined onClick={() => enableTask(row.task_id)} />
+                                </Tooltip>)}
+                        </a> */}
+                        <a>{row.task_schedule_status === 'ENABLE'
+                            ? <RunningText status='enable' data={row.task_id} onClick={disableTask} />
+                            : <RunningText data={row.task_id} onClick={enableTask} />}
+                        </a>
+                        {row.task_schedule_status === 'DISABLE'
+                            ? (
+                                <a
+                                    onClick={() => Modal.confirm({
+                                        title: t('common.confirm.delete'),
+                                        content: t('common.confirm.delete_irrecoverable'),
+                                        onOk: () => deleteTask(row.task_id),
+                                    })}
+                                >
+                                    <DeleteOutlined />
+                                </a>
+                            )
+                            : <DeleteOutlined style={{color: '#8c8c8c'}} />}
+                    </Space>
+                );
+            },
+        },
+    ];
+
+    useEffect(() => {
+        api.manage.getTaskList({
+            query: searchName,
+            page_no: pagination.current,
+        }).then(res => {
+            if (res.status === 200) {
+                setData(res.data.records);
+                setPagination({...pagination, total: res.data.total, pageSize: res.data.size});
+                return;
+            }
+
+            message.error(res.message);
+        });
+
+        api.manage.getMetricsTask().then(res => {
+            if (res.status === 200) {
+                // console.log(res);
+                setMetricsData(res.data);
+                return;
+            }
+
+            message.error(res.message);
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchName, refresh, pagination.current]);
+
+    useEffect(() => {
+        let id = setInterval(() => {
+            setRefresh(val => !val);
+        }, 12000);
+
+        return () => clearInterval(id);
+    }, []);
+
+    return (
+        <>
+            <PageHeader
+                ghost={false}
+                onBack={false}
+                title={t('task.title')}
+            >
+                <TopStatistic data={metricsData} />
+                <Row justify='end' style={{paddingTop: 16}}>
+                    <Col><Input.Search placeholder={t('task.search_placeholder')} onSearch={search} /></Col>
+                </Row>
+            </PageHeader>
+
+            <div className='container'>
+                <Spin spinning={loading}>
+                    <TableHeader>
+                        <Button type='primary' onClick={handleBack}>创建任务</Button>
+                    </TableHeader>
+                    <Table
+                        columns={columns}
+                        rowKey={rowKey}
+                        dataSource={data}
+                        pagination={pagination}
+                        onChange={handleTable}
+                    />
+                </Spin>
+                <EditLayer
+                    visible={editLayer}
+                    data={detail}
+                    onCancel={handleHideEditLayer}
+                    refresh={handleRefresh}
+                />
+                <ViewLayer
+                    visible={viewLayer}
+                    task_id={detail.task_id}
+                    onCancel={handleHideViewLayer}
+                />
+            </div>
+        </>
+    );
+};
+
+export default Task;

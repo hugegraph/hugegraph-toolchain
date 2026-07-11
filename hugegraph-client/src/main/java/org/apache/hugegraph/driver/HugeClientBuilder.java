@@ -54,7 +54,8 @@ public class HugeClientBuilder {
 
     public HugeClientBuilder(String url, String graphSpace, String graph) {
         this.url = url;
-        this.graphSpace = graphSpace;
+        this.graphSpace = (graphSpace == null || graphSpace.isEmpty()) ? 
+                          DEFAULT_GRAPHSPACE : graphSpace;
         this.graph = graph;
         this.username = "";
         this.password = "";
@@ -89,7 +90,8 @@ public class HugeClientBuilder {
     }
 
     public HugeClientBuilder configGraphSpace(String graphSpace) {
-        this.graphSpace = graphSpace;
+        this.graphSpace = (graphSpace == null || graphSpace.isEmpty()) ? 
+                          DEFAULT_GRAPHSPACE : graphSpace;
         return this;
     }
 

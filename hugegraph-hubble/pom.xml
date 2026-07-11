@@ -42,6 +42,7 @@
     </modules>
 
     <properties>
+        <top.level.dir>${project.basedir}/..</top.level.dir>
         <springboot.version>2.1.8.RELEASE</springboot.version>
         <okhttp.version>4.10.0</okhttp.version>
     </properties>
@@ -92,6 +93,11 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib-common</artifactId>
                 <version>1.5.31</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>3.17.3</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

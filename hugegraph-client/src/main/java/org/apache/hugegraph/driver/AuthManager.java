@@ -132,6 +132,10 @@ public class AuthManager {
         return this.userAPI.get(id);
     }
 
+    public User getUserByName(String name) {
+        return this.userAPI.getByName(name);
+    }
+
     public User.UserRole getUserRole(Object id) {
         return this.userAPI.getUserRole(id);
     }

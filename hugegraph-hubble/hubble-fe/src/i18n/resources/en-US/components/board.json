@@ -1,0 +1,15 @@
+{
+  "Topbar": {
+    "exit":{
+      "name": "Log Out",
+      "confirm":"Confirm log out?",
+      "success":"Logged out successfully"
+    }
+  },
+  "selector": {
+    "placeholder": "Please select"
+  },
+  "navigation": {
+    "name": "Navigation"
+  }
+}

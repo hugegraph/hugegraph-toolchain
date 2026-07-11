@@ -1,0 +1,470 @@
+{
+  "common": {
+    "action": {
+      "create": "Create",
+      "save": "Save",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "add": "Add",
+      "search": "Search",
+      "reset": "Reset",
+      "view": "View",
+      "detail": "Detail",
+      "upload": "Upload",
+      "download": "Download",
+      "refresh": "Refresh",
+      "submit": "Submit",
+      "back": "Back",
+      "close": "Close",
+      "apply": "Apply",
+      "assign_permission": "Assign Permission",
+      "set_default": "Set Default",
+      "schema_manage": "Schema Management",
+      "init": "Initialize",
+      "clone": "Clone"
+    },
+    "label": {
+      "default": "Default",
+      "unlimited": "Unlimited",
+      "unknown": "Unknown",
+      "yes": "Yes",
+      "no": "No",
+      "view_mode": "Card View",
+      "list_mode": "List View",
+      "loading": "Loading..."
+    },
+    "verify": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "msg": {
+      "success": "Operation succeeded",
+      "create_success": "Created successfully",
+      "update_success": "Updated successfully",
+      "delete_success": "Deleted successfully",
+      "set_success": "Set successfully",
+      "init_success": "Initialized successfully",
+      "upload_success": "Uploaded successfully",
+      "upload_fail": "Upload failed",
+      "enable_success": "Started successfully",
+      "enable_fail": "Failed to start",
+      "disable_success": "Paused successfully",
+      "disable_fail": "Failed to pause",
+      "delete_fail": "Deletion failed",
+      "select_one": "Please select at least one item"
+    },
+    "confirm": {
+      "delete": "Confirm delete?",
+      "delete_irrecoverable": "This action cannot be undone"
+    },
+    "form": {
+      "required": "This field is required",
+      "max_12": "Max 12 characters",
+      "max_48": "Max 48 characters",
+      "max_128": "Max 128 characters"
+    }
+  },
+  "graphspace": {
+    "title": "Graph Space Management",
+    "create": "Create Graph Space",
+    "search_placeholder": "Search by graph space name",
+    "set_default_confirm": "Confirm changing the default graph space?",
+    "delete_confirm": "Confirm delete?",
+    "delete_content": "This action cannot be undone",
+    "col": {
+      "name": "Name",
+      "auth": "Authentication",
+      "description": "Description",
+      "graph_service": "Graph Service",
+      "compute_task": "Compute Task",
+      "storage_limit": "Max Storage Limit",
+      "operation": "Actions"
+    },
+    "auth_yes": "Yes",
+    "auth_no": "No",
+    "unit": {
+      "cpu": "vCPU",
+      "memory": "GB",
+      "unlimited": "Unlimited"
+    },
+    "form": {
+      "title_edit": "Edit Graph Space",
+      "title_create": "Create Graph Space",
+      "id": "Graph Space ID",
+      "name": "Display Name",
+      "auth": "Enable Authentication",
+      "max_graph": "Max Graphs",
+      "max_role": "Max Roles",
+      "graph_service": "Graph Service:",
+      "compute_task": "Compute Task:",
+      "storage": "Storage Service:",
+      "cpu": "CPU Resources:",
+      "memory": "Memory Resources:",
+      "k8s_namespace": "K8s Namespace",
+      "operator_image": "Operator Image",
+      "algorithm_image": "Algorithm Image",
+      "storage_limit": "Max Storage Limit:",
+      "admin": "Space Admin",
+      "admin_placeholder": "Select space admin",
+      "description": "Description",
+      "description_placeholder": "Graph space description (optional)",
+      "cpu_placeholder": "vCPU",
+      "memory_placeholder": "GB",
+      "id_placeholder": "Start with a letter, lowercase letters/digits/underscore, max 48 chars",
+      "name_placeholder": "Letters, digits, underscore, max 12 chars",
+      "k8s_placeholder": "Start with a letter, lowercase letters/digits/hyphen, max 48 chars",
+      "image_format_error": "Please enter a valid image address (e.g. example.com/org_1/xx_img:1.0.0)",
+      "id_rule": "Start with a letter, lowercase letters/digits/underscore, max 48 chars",
+      "k8s_rule": "Start with a letter, lowercase letters/digits/hyphen, max 48 chars"
+    },
+    "card": {
+      "enter": "Enter Graph Space",
+      "vertex": "Vertices",
+      "edge": "Edges",
+      "daily_update": "Updated daily",
+      "last_update": "Last updated: {{date}}",
+      "graph_id": "Graph ID: {{name}}",
+      "auth_label": "Auth: ",
+      "max_graph": "Max Graphs: ",
+      "cpu": "CPU: {{val}}",
+      "memory": "Memory: {{val}}",
+      "storage": "Max Storage: ",
+      "used": "Used: ",
+      "set_default": "Default Space",
+      "created": "created"
+    }
+  },
+  "graph": {
+    "title": "Graph Management",
+    "create": "Create Graph",
+    "search_placeholder": "Search by graph name",
+    "col": {
+      "name": "Graph Name",
+      "auth": "Authentication",
+      "description": "Description",
+      "creator": "Creator",
+      "create_time": "Created At",
+      "operation": "Actions"
+    },
+    "menu": {
+      "enter_analysis": "Open Graph Studio",
+      "meta_config": "Metadata Config",
+      "clear_schema_data": "Clear Schema & Data",
+      "clear_data": "Clear Data",
+      "set_default": "Set Default",
+      "view_schema": "View Schema",
+      "clone": "Clone Graph"
+    },
+    "form": {
+      "title_create": "Create Graph",
+      "title_edit": "Edit Graph",
+      "name": "Graph ID",
+      "name_placeholder": "Lowercase letters, digits, underscore, max 48 chars",
+      "nickname": "Display Name",
+      "nickname_placeholder": "Letters, digits, underscore, max 12 chars",
+      "auth": "Enable Authentication",
+      "description": "Description",
+      "description_placeholder": "Graph description (optional)"
+    },
+    "detail": {
+      "title": "Detail",
+      "name": "Graph Name",
+      "nickname": "Display Name",
+      "auth": "Authentication",
+      "graphspace": "Graph Space",
+      "creator": "Creator",
+      "create_time": "Created At",
+      "last_update": "Last Updated: ",
+      "update_data": "Update Data"
+    }
+  },
+  "account": {
+    "title": "Account Management",
+    "create": "Create Account",
+    "delete_confirm": "Confirm deleting account {{name}}?",
+    "col": {
+      "id": "Account ID",
+      "name": "Account Name",
+      "remark": "Remark",
+      "resource": "Resource Permission",
+      "create_time": "Created At",
+      "is_superadmin": "Super Admin",
+      "permission": "Admin Permission"
+    },
+    "form": {
+      "title_detail": "View Account",
+      "title_edit": "Edit Account",
+      "title_auth": "Assign Permission",
+      "title_create": "Create Account",
+      "id": "Account ID",
+      "id_placeholder": "Login username",
+      "name": "Display Name",
+      "name_placeholder": "Can be changed after creation",
+      "is_superadmin": "Super Admin",
+      "remark": "Remark",
+      "remark_placeholder": "Enter account remark",
+      "default_password": "Default Password",
+      "default_password_placeholder": "123456 (changeable in profile)",
+      "permission": "Admin Permission"
+    }
+  },
+  "my": {
+    "title": "My Profile",
+    "col": {
+      "id": "Account ID",
+      "name": "Account Name",
+      "is_superadmin": "Super Admin",
+      "remark": "Remark",
+      "permission": "Admin Permission",
+      "create_time": "Created At"
+    },
+    "edit": {
+      "title": "Change Password",
+      "old_password": "Old Password",
+      "new_password": "New Password",
+      "confirm_password": "Confirm Password"
+    }
+  },
+  "role": {
+    "title": "Role Management",
+    "create": "Create Role",
+    "delete_confirm": "Confirm deleting role {{name}}?",
+    "col": {
+      "name": "Role Name",
+      "description": "Description",
+      "operation": "Actions"
+    },
+    "form": {
+      "title_create": "Create Role",
+      "title_edit": "Edit Role",
+      "name": "Role Name",
+      "description": "Description",
+      "permissions": "Permissions"
+    },
+    "auth": {
+      "title": "Assign Permission",
+      "graphspace": "Graph Space",
+      "graph": "Graph",
+      "permission": "Permission"
+    }
+  },
+  "resource": {
+    "title": "Resource Management",
+    "create": "Create Resource",
+    "col": {
+      "name": "Resource Name",
+      "type": "Type",
+      "graphspace": "Graph Space",
+      "graph": "Graph",
+      "operation": "Actions"
+    },
+    "form": {
+      "title_create": "Create Resource",
+      "title_edit": "Edit Resource",
+      "name": "Resource Name",
+      "type": "Resource Type",
+      "graphspace": "Graph Space",
+      "graph": "Graph"
+    }
+  },
+  "task": {
+    "title": "Data Import",
+    "search_placeholder": "Search by task name",
+    "pause": "Pause",
+    "execute": "Run",
+    "edit_title_create": "Create Task",
+    "edit_title_edit": "Edit Task",
+    "col": {
+      "name": "Task Name",
+      "source_type": "Source Type",
+      "target_space": "Target Space",
+      "target_graph": "Target Graph",
+      "sync_type": "Sync Type",
+      "status": "Status",
+      "create_time": "Created At",
+      "operation": "Actions"
+    },
+    "statistic": {
+      "total": "Total",
+      "running": "Running",
+      "success": "Completed",
+      "failed": "Failed"
+    },
+    "detail": {
+      "title": "Task Detail",
+      "success": "Success",
+      "failed": "Failed",
+      "running": "Running"
+    },
+    "view": {
+      "title": "View Task",
+      "name": "Task Name",
+      "source_type": "Source Type",
+      "target_space": "Target Space",
+      "target_graph": "Target Graph",
+      "sync_type": "Sync Type"
+    },
+    "edit": {
+      "name": "Task Name",
+      "graphspace": "Graph Space",
+      "graph": "Graph",
+      "source": "Data Source",
+      "source_type": "Source Type",
+      "select_graphspace": "Select graph space",
+      "select_graph": "Select graph",
+      "select_source": "Select data source",
+      "select_source_type": "Select source type"
+    }
+  },
+  "datasource": {
+    "title": "Data Source Management",
+    "create": "Add Data Source",
+    "search_placeholder": "Search by data source name",
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "operation": "Actions"
+    },
+    "form": {
+      "upload": "Upload File",
+      "no_compress": "None"
+    }
+  },
+  "schema": {
+    "title": "Metadata Management",
+    "tab": {
+      "property": "Property",
+      "vertex": "Vertex Type",
+      "edge": "Edge Type",
+      "vertex_index": "Vertex Index",
+      "edge_index": "Edge Index"
+    },
+    "property": {
+      "create": "Create Property",
+      "col": {
+        "name": "Property Name",
+        "type": "Data Type",
+        "cardinality": "Cardinality",
+        "operation": "Actions"
+      },
+      "form": {
+        "name": "Property Name: ",
+        "type": "Data Type: ",
+        "cardinality": "Cardinality: "
+      }
+    },
+    "vertex": {
+      "create": "Create Vertex Type",
+      "delete_confirm": "Confirm deleting this vertex type?",
+      "delete_warning": "This action cannot be undone. Please proceed with caution.",
+      "delete_task_note": "Deleting metadata may take a while. Check Task Management for progress.",
+      "col": {
+        "name": "Vertex Type Name",
+        "id_strategy": "ID Strategy",
+        "properties": "Properties",
+        "primary_keys": "Primary Keys",
+        "label_index": "Label Index",
+        "property_index": "Property Index",
+        "operation": "Actions"
+      },
+      "form": {
+        "title_create": "Create Vertex Type",
+        "title_edit": "Edit Vertex Type",
+        "name": "Vertex Type Name: ",
+        "id_strategy": "ID Strategy: ",
+        "style": "Vertex Style: ",
+        "display_fields": "Display Fields",
+        "label_index": "Label Index",
+        "property_index": "Property Index",
+        "properties": "Properties"
+      }
+    },
+    "edge": {
+      "delete_confirm": "Confirm deleting this edge type?",
+      "delete_warning": "This action cannot be undone. Please proceed with caution.",
+      "delete_task_note": "Deleting metadata may take a while. Check Task Management for progress.",
+      "col": {
+        "name": "Edge Type Name",
+        "type": "Edge Type",
+        "source": "Source Type",
+        "target": "Target Type",
+        "properties": "Properties",
+        "sort_keys": "Sort Keys",
+        "label_index": "Label Index",
+        "property_index": "Property Index",
+        "operation": "Actions"
+      },
+      "type": {
+        "NORMAL": "Normal",
+        "PARENT": "Parent",
+        "SUB": "Sub",
+        "parent_label": "Parent: "
+      },
+      "form": {
+        "title_create": "Create Edge Type",
+        "title_edit": "Edit Edge Type",
+        "name": "Edge Type Name: ",
+        "type": "Type: ",
+        "type_normal": "Normal",
+        "type_parent": "Parent",
+        "type_sub": "Sub",
+        "parent": "Parent Edge Type: ",
+        "parent_placeholder": "Select parent edge",
+        "style": "Edge Style: ",
+        "source": "Source Type",
+        "target": "Target Type",
+        "multi_link": "Allow Multiple Links",
+        "properties": "Properties",
+        "sort_keys": "Sort Keys",
+        "display_fields": "Display Fields",
+        "label_index": "Label Index",
+        "property_index": "Property Index"
+      }
+    },
+    "index": {
+      "vertex_title": "Vertex Index",
+      "edge_title": "Edge Index",
+      "create": "Create Index",
+      "col": {
+        "name": "Index Name",
+        "type": "Index Type",
+        "fields": "Fields",
+        "operation": "Actions"
+      }
+    },
+    "image_view": {
+      "vertex": "Vertex Type",
+      "edge": "Edge Type"
+    }
+  },
+  "navigation_page": {
+    "title": "Navigation",
+    "step1": "Create Data",
+    "step2": "Business Analysis",
+    "step3": "System Management",
+    "step4": "Business Management",
+    "create_graph": "Create Graph",
+    "create_schema": "Create Schema",
+    "load_data": "Load Data",
+    "graph_query": "Graph Query",
+    "graph_algorithm": "Graph Algorithm",
+    "graph_manage": "Graph Space Management",
+    "data_manage": "Data Management",
+    "account_manage": "Account Management",
+    "role_manage": "Role Management",
+    "resource_manage": "Resource Management",
+    "task_manage": "Task Management",
+    "datasource_manage": "Data Source Management"
+  },
+  "login": {
+    "submit": "Sign In",
+    "username": "Username",
+    "password": "Password",
+    "title": "Sign in to HugeGraph"
+  }
+}
