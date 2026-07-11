@@ -26,6 +26,8 @@
 - FE Router warning 6 -> 0；full Jest 40 suites / 148 tests 通过；第三方 warning 已隔离。
 - 核心 API 覆盖矩阵完成；新增 Schema view 成功/失败合同，mutation RED 有效，完整 BE 121 tests 通过。
 - CI 性能慢点完成分段；实现精确 Server SHA tarball cache，最新产品 HEAD `66e36594` 已推送并触发 PR #4 CI。
+- Hubble BE checkstyle 真实失败阈值已启用；临时违规 exit 1，恢复后 0 violations。
+- FE 显式 lint 已恢复：JS/JSX 329 文件原本 clean；唯一 TS 文件从配置 exit 2、36 errors 修至全量 330 文件 0 warning/error，并接入 CI。
 
 ## 当前工作树边界
 
@@ -36,6 +38,7 @@
 
 - FE `CI=true yarn build` fresh：exit 0，56.80s；52 条第三方 source-map warning 及 Browserslist/bundle 提示待 DEC-FE-01。
 - FE Jest：40 suites / 148 tests 通过，4.57s；项目 Router warning 已清零，剩余 act/defaultProps 为锁定依赖 warning。
+- FE `yarn lint`：exit 0，4.36s；`CI=true yarn build`：exit 0，49.26s；Jest 40/148：exit 0，5.34s。
 - BE clean compile：成功，265 source files；本项目 unchecked/deprecation warning 为 0，剩余输出为外部发布 POM/仓库元数据 warning。
 - BE unit：119 tests，0 failure/error/skip；clean JaCoCo report 成功分析 265 classes。
 - BE checkstyle：Hubble source diagnostics 128 -> 0；插件仍存在“报告问题但 exit 0”的全局可诊断性问题，保留 CQ-LINT-06。
@@ -46,7 +49,8 @@
 ## 阻塞与决策
 
 - server-core 发布 POM 阻塞已用 Hubble 最小排除解除；尚需 package/真实 CI 证明运行兼容。
-- Maven FE package 仍显式 `CI=false`，且独立 CI step 未运行 production build；与目标约束冲突。根治第三方 warning 需要用户批准最小依赖/lockfile 升级（DEC-FE-01）。
+- Maven FE package 仍显式 `CI=false`；临时 `CI=true` package/audit 已通过，但 warning 不会自动变成失败。恢复真实配置及 pin React 待 DEC-FE-01。
+- 52 条 source-map warning 已证明无法由兼容世代的最小升级清除，待 DEC-FE-02 明确接受或另行授权高风险方案。
 - 合并重复 FE build/release scan 属门禁编排重构（DEC-CI-02），未实施。
 
 ## 下一动作

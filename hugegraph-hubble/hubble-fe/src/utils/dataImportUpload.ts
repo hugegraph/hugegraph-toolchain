@@ -17,46 +17,46 @@
 
 const GB = 1024 * 1024 * 1024;
 
-type UploadedFile = {
+interface UploadedFile {
   name: string;
   total_size_bytes: number;
-};
+}
 
-type LocalUploadTask = {
+interface LocalUploadTask {
   name: string;
   size: number;
-};
+}
 
 export const getCurrentJobUploadSize = (
-  uploadedFiles: UploadedFile[],
-  localUploadTasks: LocalUploadTask[]
+    uploadedFiles: UploadedFile[],
+    localUploadTasks: LocalUploadTask[]
 ) => {
-  const uploadedFileNames = uploadedFiles.map(({ name }) => name);
-  const uploadedFileSize = uploadedFiles.reduce(
-    (sum, { total_size_bytes }) => sum + total_size_bytes,
-    0
-  );
-  const pendingFileSize = localUploadTasks
-    .filter(({ name }) => !uploadedFileNames.includes(name))
-    .reduce((sum, { size }) => sum + size, 0);
+    const uploadedFileNames = uploadedFiles.map(({name}) => name);
+    const uploadedFileSize = uploadedFiles.reduce(
+        (sum, {total_size_bytes}) => sum + total_size_bytes,
+        0
+    );
+    const pendingFileSize = localUploadTasks
+        .filter(({name}) => !uploadedFileNames.includes(name))
+        .reduce((sum, {size}) => sum + size, 0);
 
-  return uploadedFileSize + pendingFileSize;
+    return uploadedFileSize + pendingFileSize;
 };
 
 export const isCurrentJobUploadSizeExceeded = (
-  uploadedFiles: UploadedFile[],
-  localUploadTasks: LocalUploadTask[],
-  selectedFiles: File[],
-  totalLimit = 10 * GB
+    uploadedFiles: UploadedFile[],
+    localUploadTasks: LocalUploadTask[],
+    selectedFiles: File[],
+    totalLimit = 10 * GB
 ) => {
-  const selectedFileSize = selectedFiles.reduce(
-    (sum, { size }) => sum + size,
-    0
-  );
+    const selectedFileSize = selectedFiles.reduce(
+        (sum, {size}) => sum + size,
+        0
+    );
 
-  return (
-    getCurrentJobUploadSize(uploadedFiles, localUploadTasks) +
-      selectedFileSize >
-    totalLimit
-  );
+    return (
+        getCurrentJobUploadSize(uploadedFiles, localUploadTasks)
+      + selectedFileSize
+    > totalLimit
+    );
 };

@@ -49,4 +49,20 @@
 - `hubble-dist/pom.xml` 的 frontend build 显式设置 `<CI>false</CI>`，生成的 `dist.sh` 也 export `CI=false`。
 - workflow 的独立 FE step 未运行 production build；历史成功日志中两次 `Compiled with warnings` 仍绿。
 - 因此当前真实 CI 即使通过，也只能证明现行宽松门禁，不满足本目标最终证据。
-- 改为 `CI=true` 会因上述锁定第三方 warning 失败；根治需要依赖/lockfile 升级，必须先获用户批准。
+- 临时将两处环境改为 `CI=true` 后，完整 Maven package 仍 exit 0，117.73s，distribution audit 通过；52 条 source-map warning 仍存在。临时修改已恢复，未进入 diff。
+- CRA 5 在本项目中不会将这些 warning 提升为失败，因此恢复 `CI=true` 可消除宽松配置，但不能技术性清零第三方制品 warning。
+
+## Checkstyle 门禁 A/B
+
+- 根因：`tools/checkstyle.xml` 全局 severity 为 `info`，插件默认 `violationSeverity=error`，导致 diagnostics 打印但计数为 0。
+- 全仓当前债务 15 条：Client 6、Loader 9、Hubble BE 0。部分 Client 项为公开 API 名称，不在本目标中重命名。
+- `0fe6fd1f` 仅在 Hubble BE 将失败阈值设为 `info` 并保留 `failOnViolation=true`。
+- 临时 117 字符行 mutation：exit 1、1 violation；恢复后 exit 0、0 violation。mutation 未进入 diff。
+
+## FE 依赖决策矩阵
+
+- React/Jest：声明 `^18.2.0` 实装 18.3.1；18.3 专门增加 React 19 迁移 warning。最低风险候选是精确 pin `react`/`react-dom` 18.2.0，可望清除 `act` 与 function `defaultProps` warning。
+- X6 38 条：`@antv/x6-react-components` 1.1.20 已是最后 1.x；抽检 2.0.9/3.0.0 仍缺发布源码，major 升级不修根因。
+- Dagre 10 条：传递依赖 0.0.11；越界 override 0.0.12/13 无清 warning 证据，且有布局行为风险。
+- Antd 4 条：4.24.16 已是 4.x 末版；升级 5/6 才避开旧 map，但会改变 CSS/DOM/API/视觉，不符合稳定目标。
+- 推荐决策：批准 React 18.2 精确 pin；52 条 source-map warning 登记为已诊断的外部发布制品缺陷并由用户明确接受。禁用 source map、过滤 loader、patch `node_modules` 均不采用。
