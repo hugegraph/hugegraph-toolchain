@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - master
-      - /^release-.*$/
+      - 'release-*'
     paths:
       - hugegraph-hubble/**
       - hugegraph-dist/**
@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Fetch Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -51,23 +51,23 @@ jobs:
         uses: ./.github/actions/setup-java-env
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
-          distribution: 'adopt'
+          distribution: 'temurin'
           use-stage: ${{ env.USE_STAGE }}
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Set up Node.js 18.20.8
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '18.20.8'
 
       # we also should cache python & yarn & downloads to avoid useless work
       - name: Cache Maven packages
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -75,7 +75,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Cache Node modules
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             hugegraph-hubble/hubble-fe/node_modules
@@ -86,13 +86,13 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
       - name: Cache HugeGraph Server
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
           key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}

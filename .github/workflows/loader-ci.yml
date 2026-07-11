@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - master
-      - /^release-.*$/
+      - 'release-*'
     paths:
       - hugegraph-loader/**
       - hugegraph-dist/**
@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Fetch Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -55,17 +55,17 @@ jobs:
         uses: ./.github/actions/setup-java-env
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
-          distribution: 'adopt'
+          distribution: 'temurin'
           use-stage: ${{ env.USE_STAGE }}
 
       - name: Cache Hadoop
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/hadoop-3.3.6.tar.gz
           key: ${{ runner.os }}-hadoop-3.3.6
 
       - name: Cache HugeGraph Server
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
           key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}

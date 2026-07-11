@@ -3,13 +3,14 @@
 ## 当前 checkpoint
 
 - 更新时间：2026-07-12 00:10 +08:00
-- 当前阶段：Phase 6 独立审查与延迟 CI 取证
+- 当前阶段：Phase 6 延迟 CI 取证
 - 当前分支：`hubble2`
 - 目标状态：active
 - 唯一实时状态源：[`todo.md`](todo.md)
 - 执行合同：[`plan.md`](plan.md)
 - 完整本地门禁覆盖的产品实现 SHA：`10c0e8fa4f18694f8f848212ed1da52ef36d80a4`
-- 独立 review checkpoint / PR 观测 SHA：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`；相对实现 SHA 仅新增 SOT/evidence 文档
+- 独立整体 review checkpoint：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`
+- 最新代码 checkpoint：`e2c6926ec4ff4965d494ce0aeb99eb9a9cb245fe`；依赖清单修复已独立复审
 - 当前工作树：clean（生成物均 ignored）
 
 ## 已完成
@@ -59,12 +60,13 @@
 - 精确 PR #3008 Server SHA 隔离构建通过；完整 runtime/UI acceptance 在一次环境生命周期恢复后通过，未发现 server-core 运行兼容错误。
 - Server cache 本地 before/after 已收口：165.26s cold vs 0.40s hit 中位数，约节省 99.76%，未削弱 SHA 校验或 miss 源码构建。
 - 合并重复 FE build/release scan 属门禁编排重构（DEC-CI-02），未实施。
+- `check-dependency-license` 失败根因为受控 third-party inventory 落后于当前 runtime snapshot；使用仓库生成器得到 516 项并更新（31 add/2 remove），同一检查脚本本地 exit 0。该提交未改依赖声明或版本。
+- 独立 reviewer `/root/final_reviewer` 完整覆盖 `b66848d..03be1bd7`；唯一 Important 为 SOT SHA 语义，修复后 re-review resolved。后续依赖清单提交亦 re-review，无新增 finding。
 
 ## 下一动作
 
-1. 冻结实现后执行独立 review，修复 actionable findings 并 re-review。
-2. 用 reflection candidate-only 模式收口 lessons 与最终 progress。
-3. GitHub quota 恢复后补最终 HEAD Hubble CI 与 cache 交叉验证；不作为本地推进或 review blocker。
+1. 等待 GitHub quota 恢复，补届时实际 PR head 的 Hubble CI、license checker 与 cache 交叉验证。
+2. CI 通过后仅更新最终证据并结束 goal；不再实施 FUTURE-VIS 或 DEC-CI-02 项。
 
 ## 恢复入口
 

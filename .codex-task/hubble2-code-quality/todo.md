@@ -6,12 +6,13 @@
 - 当前分支：`hubble2`
 - 审计日期/HEAD：2026-07-11 / `b66848d308d58e6899cab7eb92589f1789b62259`
 - 完整本地门禁覆盖的产品实现 SHA：`10c0e8fa4f18694f8f848212ed1da52ef36d80a4`
-- 独立 review checkpoint：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`；相对实现 SHA 仅新增 SOT/evidence 文档
+- 独立整体 review checkpoint：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`
+- 最新代码 checkpoint：`e2c6926ec4ff4965d494ce0aeb99eb9a9cb245fe`；新增依赖清单修复已独立复审
 - fresh audit 工作树边界：26 个审计前已存在的 Hubble BE Java 修改，`+150/-57`
 - 初始/审计后 TODO 数：25 / 30
-- 当前范围内 CQ：24/30 完成；另有 10 项 FUTURE，不计入本轮完成率
-- 状态：本地实现与最终门禁已完成；独立审查及最终真实 CI 证据待完成
-- 当前阶段：Phase 6 最终门禁与独立审查
+- 当前范围内 CQ：27/30 完成；另有 10 项 FUTURE，不计入本轮完成率
+- 状态：本地实现、独立审查与 reflection 已完成；仅最终真实 CI 证据待完成
+- 当前阶段：Phase 6 延迟 CI 取证
 
 ## Phase 0：基线与所有权
 
@@ -60,9 +61,9 @@
 
 - [x] **CQ-FINAL-01** 新鲜运行完整 FE/BE、联动、package/audit 门禁并保存耗时与退出码。证据：[`evidence/2026-07-12-final-local-gates.md`](evidence/2026-07-12-final-local-gates.md)。
 - [ ] **CQ-FINAL-02** 确认必需 Hubble CI 在最终 head 真实通过。
-- [ ] **CQ-FINAL-03** 独立只读 reviewer 完成最终 diff 审查并记录 reviewer identity/result。
-- [ ] **CQ-FINAL-04** 修复 actionable findings，完成受影响范围复审且无未解决高严重度问题。
-- [ ] **CQ-FINAL-05** 更新最终 progress，并用 reflection candidate-only 模式完成 lessons。
+- [x] **CQ-FINAL-03** 独立只读 reviewer `/root/final_reviewer` 完成 `b66848d..03be1bd7` 整体审查；实现无高严重度 finding。
+- [x] **CQ-FINAL-04** 唯一 Important（SOT SHA 语义）已修复并复审通过；依赖清单后续修复 `0a160afc..e2c6926e` 亦由同一 reviewer 复审，无 finding。
+- [x] **CQ-FINAL-05** progress 已更新，并以 reflection candidate-only 模式完成 lessons；未修改 AGENTS 或 Memory。
 
 ## 用户决策项
 

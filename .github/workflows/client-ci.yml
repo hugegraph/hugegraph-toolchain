@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - master
-      - /^release-.*$/
+      - 'release-*'
     paths:
       - hugegraph-client/**
       - hugegraph-dist/**
@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Fetch code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
