@@ -19,7 +19,7 @@
 package org.apache.hugegraph.exception;
 
 public class HugeException extends RuntimeException {
-    public HugeException(String msg){
+    public HugeException(String msg) {
         super(msg);
     }
 }

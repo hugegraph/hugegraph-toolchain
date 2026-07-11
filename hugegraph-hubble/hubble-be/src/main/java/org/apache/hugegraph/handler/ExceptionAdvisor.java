@@ -39,6 +39,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.util.JsonUtil;
+import org.apache.hugegraph.util.HubbleUtil;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -97,7 +98,8 @@ public class ExceptionAdvisor {
     public Response exceptionHandler(ServerException e) {
         String logMessage = "Log ServerException: \n" + e.exception() + "\n";
         if (e.trace() != null) {
-            logMessage += StringUtils.join((List<String>) e.trace(), "\n");
+            logMessage += StringUtils.join(
+                    HubbleUtil.<List<String>>uncheckedCast(e.trace()), "\n");
         }
         log.info(logMessage);
 
@@ -214,12 +216,13 @@ public class ExceptionAdvisor {
         // message with ErrorCode is Json String
         if (message != null && message.startsWith("{\"")) {
             try {
-                Map<String, Object> result = JsonUtil.fromJson(message,
-                                                             Map.class);
+                Map<String, Object> result = HubbleUtil.uncheckedCast(
+                        JsonUtil.fromJson(message, Map.class));
                 if (result.containsKey("code") && result.containsKey("message")) {
                     String code = result.get("code").toString();
                     String origin = result.get("message").toString();
-                    List<String> attach = (List<String>) result.get("attach");
+                    List<String> attach =
+                            HubbleUtil.uncheckedCast(result.get("attach"));
                     message = ErrorCodeMessage.getErrorMessage(code, origin,
                                                                attach.toArray());
                 }

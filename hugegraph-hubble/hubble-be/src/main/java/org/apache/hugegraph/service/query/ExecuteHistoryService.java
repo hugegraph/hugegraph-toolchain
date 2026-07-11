@@ -119,7 +119,7 @@ public class ExecuteHistoryService {
     private void checkTypeValid(int type) {
         Ex.check(type == ExecuteType.CYPHER.getValue() ||
                  type == ExecuteType.GREMLIN.getValue() ||
-                 type == ExecuteType.ALGORITHM.getValue()||
+                 type == ExecuteType.ALGORITHM.getValue() ||
                  type == ExecuteType.GREMLIN_ASYNC.getValue() ||
                  type == ExecuteType.CYPHER_ASYNC.getValue() ||
                  type == ExecuteType.GREMLIN_ALL.getValue() ||
@@ -144,9 +144,9 @@ public class ExecuteHistoryService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void save(ExecuteHistory history) {
-         if (this.mapper.insert(history) != 1) {
-             throw new InternalException("entity.insert.failed", history);
-         }
+        if (this.mapper.insert(history) != 1) {
+            throw new InternalException("entity.insert.failed", history);
+        }
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

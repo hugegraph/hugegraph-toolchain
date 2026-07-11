@@ -229,7 +229,7 @@ public class EdgeLabelController extends SchemaController {
         EdgeLabelType type = EdgeLabelType.valueOf(entity.getEdgeLabelType());
         // skip check for PARENT type
         if (type.parent()) {
-            return ;
+            return;
         }
         // Check source label and target label
         checkRelation(entity, client);

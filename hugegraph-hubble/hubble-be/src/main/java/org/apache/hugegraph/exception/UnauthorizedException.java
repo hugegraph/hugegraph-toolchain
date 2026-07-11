@@ -18,7 +18,7 @@
 
 package org.apache.hugegraph.exception;
 
-public class UnauthorizedException extends RuntimeException{
+public class UnauthorizedException extends RuntimeException {
     public UnauthorizedException() {
         super("Unauthorized");
     }

@@ -45,7 +45,7 @@ public abstract class ESService {
     private HugeConfig config;
 
     public static final String[] LEVELS = new String[]{"TRACE", "OFF",
-            "FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
+        "FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
 
     public static volatile ElasticsearchClient elasticsearchClient;
 

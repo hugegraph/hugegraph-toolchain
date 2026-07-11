@@ -32,7 +32,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 @Component
 public interface ExecuteHistoryMapper extends BaseMapper<ExecuteHistory> {
 
-
     // 删除超出限制的记录
     default void deleteExceedLimit(int limit) {
         List<Long> ids = findIdsToDelete(limit, limit);
@@ -42,6 +41,7 @@ public interface ExecuteHistoryMapper extends BaseMapper<ExecuteHistory> {
     }
 
     // 查询满足条件的 id 列表
-    @Select("SELECT id FROM `execute_history` ORDER BY `create_time` DESC LIMIT #{limit} OFFSET #{offset}")
+    @Select("SELECT id FROM `execute_history` ORDER BY `create_time` DESC " +
+            "LIMIT #{limit} OFFSET #{offset}")
     List<Long> findIdsToDelete(@Param("limit") int limit, @Param("offset") int offset);
 }

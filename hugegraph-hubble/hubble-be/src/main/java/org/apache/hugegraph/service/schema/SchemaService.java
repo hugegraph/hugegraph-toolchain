@@ -25,7 +25,17 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.SchemaManager;
-import org.apache.hugegraph.entity.schema.*;
+import org.apache.hugegraph.entity.schema.ConflictDetail;
+import org.apache.hugegraph.entity.schema.ConflictStatus;
+import org.apache.hugegraph.entity.schema.EdgeLabelEntity;
+import org.apache.hugegraph.entity.schema.Property;
+import org.apache.hugegraph.entity.schema.PropertyIndex;
+import org.apache.hugegraph.entity.schema.PropertyKeyEntity;
+import org.apache.hugegraph.entity.schema.SchemaConflict;
+import org.apache.hugegraph.entity.schema.SchemaEntity;
+import org.apache.hugegraph.entity.schema.SchemaLabelEntity;
+import org.apache.hugegraph.entity.schema.SchemaType;
+import org.apache.hugegraph.entity.schema.VertexLabelEntity;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.structure.SchemaElement;
 import org.apache.hugegraph.structure.constant.IdStrategy;
@@ -37,7 +47,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -68,7 +86,7 @@ public class SchemaService {
                       .collect(Collectors.toList());
     }
 
-    public SchemaView getSchemaView(HugeClient client){
+    public SchemaView getSchemaView(HugeClient client) {
         List<PropertyKeyEntity> propertyKeys = this.pkService.list(client);
         List<VertexLabelEntity> vertexLabels = this.vlService.list(client);
         List<EdgeLabelEntity> edgeLabels = this.elService.list(client);
@@ -134,6 +152,7 @@ public class SchemaService {
             properties.put(name, pkEntity.getDataType().string());
         }
     }
+
     private PropertyKeyEntity findPropertyKey(List<PropertyKeyEntity> entities,
                                               String name) {
         for (PropertyKeyEntity entity : entities) {
@@ -143,7 +162,6 @@ public class SchemaService {
         }
         throw new InternalException("schema.propertykey.not-exist", name);
     }
-
 
     public Set<Property> collectProperties(SchemaLabel schemaLabel,
                                            HugeClient client) {

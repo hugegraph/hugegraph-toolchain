@@ -38,6 +38,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.space.VermeerService;
+import org.apache.hugegraph.util.HubbleUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.log4j.Log4j2;
 
@@ -54,7 +55,7 @@ public class VermeerController extends BaseController {
     private static final String GRAPH_LOADED = "loaded";
 
     @GetMapping
-    public Map<String, Object> getStatus(@RequestParam(value="check",
+    public Map<String, Object> getStatus(@RequestParam(value = "check",
                                                        required = false,
                                                        defaultValue = "false")
                                                      boolean check) {
@@ -70,10 +71,8 @@ public class VermeerController extends BaseController {
         String vGraph = vermeerService.convert2VG(graphspace, graph);
         HugeClient client = this.authClient(null, null);
 
-        Map<String, Object> graphInfo =
-                (Map<String, Object>) client.vermeer()
-                                            .getGraphInfoByName(vGraph)
-                                            .get("graph");
+        Map<String, Object> graphInfo = HubbleUtil.uncheckedCast(
+                client.vermeer().getGraphInfoByName(vGraph).get("graph"));
 
         // if (graphInfo != null && !graphInfo.isEmpty()) {
         //     E.checkArgument(body.force || !GRAPH_LOADED.equals(graphInfo.get(

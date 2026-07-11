@@ -34,7 +34,7 @@ public class ESUtil {
         } else {
             Object data1 = map.get(keys[0]);
             if (data1 instanceof Map) {
-                return getValueByPath((Map<String, Object>) data1,
+                return getValueByPath(HubbleUtil.uncheckedCast(data1),
                                       Arrays.copyOfRange(keys, 1,
                                                          keys.length));
             }

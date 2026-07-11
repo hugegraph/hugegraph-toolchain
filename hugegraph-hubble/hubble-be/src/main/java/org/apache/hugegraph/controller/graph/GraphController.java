@@ -204,7 +204,8 @@ public class GraphController extends BaseController {
     }
 
     @GetMapping("edgelabel/{label}")
-    public HashMap<String, Object> getEdgeProperties(@PathVariable("graphspace") String graphSpace,
+    public HashMap<String, Object> getEdgeProperties(
+                                                     @PathVariable("graphspace") String graphSpace,
                                                      @PathVariable("graph") String graph,
                                                      @PathVariable("label") String label) {
         HugeClient client = this.authClient(graphSpace, graph);
@@ -212,12 +213,14 @@ public class GraphController extends BaseController {
     }
 
     @GetMapping("vertexlabel/{label}")
-    public HashMap<String, Object> getVertexProperties(@PathVariable("graphspace") String graphSpace,
-                                                       @PathVariable("graph") String graph,
-                                                       @PathVariable("label") String label) {
+    public HashMap<String, Object> getVertexProperties(
+            @PathVariable("graphspace") String graphSpace,
+            @PathVariable("graph") String graph,
+            @PathVariable("label") String label) {
         HugeClient client = this.authClient(graphSpace, graph);
         return this.graphService.getVertexProperties(client, label);
     }
+
     @PostMapping("edgestype")
     public HashMap<String, Object> getEdgeStyle(@PathVariable("graphspace") String graphSpace,
                                                 @PathVariable("graph") String graph,
@@ -233,7 +236,6 @@ public class GraphController extends BaseController {
         HugeClient client = this.authClient(graphSpace, graph);
         return this.graphService.getVertexStyle(client, labels);
     }
-
 
     @PostMapping("import")
     public GraphView importJson(@PathVariable("graphspace") String graphSpace,
@@ -261,7 +263,7 @@ public class GraphController extends BaseController {
                                                  String label,
                                                  int propertyNum,
                                                  OptionType optionType,
-                                                 String content){
+                                                 String content) {
         return ElementEditHistory.builder()
                                  .graphspace(graphSpace)
                                  .graph(graph)

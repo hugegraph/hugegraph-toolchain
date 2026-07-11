@@ -690,8 +690,6 @@ public class LangChainController extends BaseController {
         return schema;
     }
 
-
-
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -741,8 +739,6 @@ public class LangChainController extends BaseController {
         @JsonProperty("gremlin")
         private String gremlin;
     }
-
-
 
     @Data
     static class VertexLabelVo {

@@ -72,7 +72,13 @@ test('renders one actionable page error when all initialization requests fail', 
     api.manage.getGraphStatistic.mockRejectedValue(new Error('connection refused'));
 
     render(
-        <MemoryRouter initialEntries={['/graphspace/DEFAULT/graph/g/detail']}>
+        <MemoryRouter
+            initialEntries={['/graphspace/DEFAULT/graph/g/detail']}
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
             <Routes>
                 <Route
                     path='/graphspace/:graphspace/graph/:graph/detail'
@@ -104,7 +110,13 @@ test('shows one inline fallback without duplicating the transport toast', async 
     });
 
     render(
-        <MemoryRouter initialEntries={['/graphspace/DEFAULT/graph/g/detail']}>
+        <MemoryRouter
+            initialEntries={['/graphspace/DEFAULT/graph/g/detail']}
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
             <Routes>
                 <Route
                     path='/graphspace/:graphspace/graph/:graph/detail'

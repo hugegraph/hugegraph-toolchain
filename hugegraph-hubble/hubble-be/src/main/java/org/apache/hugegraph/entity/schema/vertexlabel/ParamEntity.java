@@ -23,13 +23,18 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.hugegraph.entity.schema.*;
-import org.apache.hugegraph.structure.constant.IdStrategy;
-import org.apache.hugegraph.util.HubbleUtil;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.hugegraph.entity.schema.Property;
+import org.apache.hugegraph.entity.schema.PropertyIndex;
+import org.apache.hugegraph.entity.schema.SchemaLabelEntity;
+import org.apache.hugegraph.entity.schema.SchemaType;
+import org.apache.hugegraph.entity.schema.Timefiable;
+import org.apache.hugegraph.structure.constant.IdStrategy;
+import org.apache.hugegraph.util.HubbleUtil;
 
 @Data
 @NoArgsConstructor
@@ -84,7 +89,7 @@ public class ParamEntity implements SchemaLabelEntity, Timefiable {
                 this.openLabelIndex == other.openLabelIndex;
     }
 
-//    @Override
+    //    @Override
     public void setDisplayFields(@JsonProperty("display_fields") List<String> displayFields) {
         this.displayFields = displayFields;
     }

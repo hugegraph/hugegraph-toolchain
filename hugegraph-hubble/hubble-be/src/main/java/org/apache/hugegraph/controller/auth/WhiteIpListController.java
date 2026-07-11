@@ -34,7 +34,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping(Constant.API_VERSION + "auth/whiteiplist")
-public class WhiteIpListController extends AuthController{
+public class WhiteIpListController extends AuthController {
     @Autowired
     private WhiteIpListService whiteListService;
 

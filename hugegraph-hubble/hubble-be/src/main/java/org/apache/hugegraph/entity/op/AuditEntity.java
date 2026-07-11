@@ -19,6 +19,7 @@
 package org.apache.hugegraph.entity.op;
 
 import org.apache.hugegraph.util.JsonUtil;
+import org.apache.hugegraph.util.HubbleUtil;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -65,7 +66,8 @@ public class AuditEntity {
     private String result = "Success";
 
     public static AuditEntity fromMap(Map<String, Object> source) {
-        Map<String, String> jsonData = (Map<String, String>) source.get("json");
+        Map<String, String> jsonData =
+                HubbleUtil.uncheckedCast(source.get("json"));
         return JsonUtil.fromJson(JsonUtil.toJson(jsonData), AuditEntity.class);
     }
 }

@@ -93,7 +93,7 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
             String [] res = uri.split("/");
             String graphSpace = null;
             String graph = null;
-            for (int i = 0; i < res.length; i ++) {
+            for (int i = 0; i < res.length; i++) {
                 if ("graphspaces".equals(res[i]) && i < res.length - 1) {
                     graphSpace = res[i + 1];
                 }

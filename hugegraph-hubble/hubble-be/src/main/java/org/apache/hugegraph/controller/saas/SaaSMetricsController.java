@@ -39,7 +39,11 @@ import org.apache.hugegraph.util.HubbleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,12 +70,14 @@ public class SaaSMetricsController extends BaseController {
                         .expireAfterWrite(4 * 3600, TimeUnit.SECONDS)
                         .build();
 
-    private static final String BASE_COUNT_QUERY = "sum(nginx_vts_filter_requests_total{__CONDITIONS__})";
-    private static final String BASE_DIS_QUERY = "sum(rate(nginx_vts_filter_requests_total{__CONDITIONS__}[2m]))";
+    private static final String BASE_COUNT_QUERY =
+            "sum(nginx_vts_filter_requests_total{__CONDITIONS__})";
+    private static final String BASE_DIS_QUERY =
+            "sum(rate(nginx_vts_filter_requests_total{__CONDITIONS__}[2m]))";
 
     @GetMapping("graphspaces/{graphspace}/graphs/{graph}/request-details")
     public Object appsRequestDetails(@PathVariable String graphspace,
-                               @PathVariable String graph) {
+                                     @PathVariable String graph) {
         String idc = config.get(HubbleOptions.IDC);
         String graphName = join(idc, graphspace, graph);
         List<ApplicationInfo> appInfos = appInfoService.query(graphName);
@@ -118,8 +124,8 @@ public class SaaSMetricsController extends BaseController {
         return prometheusService.queryByRange(query, start, end, step);
     }
 
-
-    private AppRequestDetails getAppRequestDetails(ApplicationInfo appInfo, long from, long to) {
+    private AppRequestDetails getAppRequestDetails(ApplicationInfo appInfo,
+                                                    long from, long to) {
         long countDuring24h =
                 prometheusService.queryByDelta(appInfo.getCountQuery(), from,
                                                  to);
@@ -154,7 +160,8 @@ public class SaaSMetricsController extends BaseController {
                                    .preDayTaskCount(metrics.get("preDayTaskCount"))
                                    .preDayQueryCount(preDayCountTotal)
                                    .build();
-                logger.info("saas metrics in [{}]: {}", HubbleUtil.dateFormatLastDay(), saasMetrics);
+                logger.info("saas metrics in [{}]: {}",
+                            HubbleUtil.dateFormatLastDay(), saasMetrics);
                 this.saasMetricsCache.put("saas-metrics", saasMetrics);
                 return saasMetrics;
             });
@@ -168,7 +175,9 @@ public class SaaSMetricsController extends BaseController {
                                                      String graph) {
         // 默认的Gremlin应用
         String department = departmentName(graphSpace);
-        String baseCondition = "idc=~\"__IDC__\", filter=~\".*__DEPARTMENT__.*\", filter_name=\"POST::/gremlin\"";
+        String baseCondition =
+                "idc=~\"__IDC__\", filter=~\".*__DEPARTMENT__.*\", " +
+                "filter_name=\"POST::/gremlin\"";
 
         String condition = baseCondition.replace("__DEPARTMENT__", department)
                                         .replace("__IDC__", idc);
@@ -181,10 +190,9 @@ public class SaaSMetricsController extends BaseController {
            .countQuery(BASE_COUNT_QUERY.replace("__CONDITIONS__", condition))
            .distributionQuery(
                    BASE_DIS_QUERY.replace("__CONDITIONS__", condition))
-           .description("Gremlin查询应用(通用应用)");
+            .description("Gremlin查询应用(通用应用)");
         return app.build();
     }
-
 
     public static ApplicationInfo defaultVertexUpdateApp(String idc,
                                                           String graphSpace,
@@ -193,7 +201,8 @@ public class SaaSMetricsController extends BaseController {
         String department = departmentName(graphSpace);
         String baseCondition =
                 "idc=~\"__IDC__\", filter=~\".*__DEPARTMENT__.*\", " +
-                "filter_name=~\".*/graphspaces/__GRAPH_SPACE__/graphs/__GRAPH__/graph/vertices/batch\"";
+                "filter_name=~\".*/graphspaces/__GRAPH_SPACE__/graphs/" +
+                "__GRAPH__/graph/vertices/batch\"";
 
         String condition = baseCondition.replace("__DEPARTMENT__", department)
                                         .replace("__IDC__", idc)
@@ -207,7 +216,7 @@ public class SaaSMetricsController extends BaseController {
            .appType(AppType.GENERAL)
            .countQuery(BASE_COUNT_QUERY.replace("__CONDITIONS__", condition))
            .distributionQuery(BASE_DIS_QUERY.replace("__CONDITIONS__", condition))
-           .description("批量顶点更新应用(通用应用)");
+            .description("批量顶点更新应用(通用应用)");
         return app.build();
     }
 
@@ -233,7 +242,7 @@ public class SaaSMetricsController extends BaseController {
            .appType(AppType.GENERAL)
            .countQuery(BASE_COUNT_QUERY.replace("__CONDITIONS__", condition))
            .distributionQuery(BASE_DIS_QUERY.replace("__CONDITIONS__", condition))
-           .description("批量边更新应用(通用应用)");
+            .description("批量边更新应用(通用应用)");
         return app.build();
     }
 
@@ -251,10 +260,9 @@ public class SaaSMetricsController extends BaseController {
         app.appName("TOTAL-GRAPH")
            .appType(AppType.GENERAL)
            .countQuery(BASE_COUNT_QUERY.replace("__CONDITIONS__", condition))
-           .distributionQuery(BASE_DIS_QUERY.replace("__CONDITIONS__", condition));
+            .distributionQuery(BASE_DIS_QUERY.replace("__CONDITIONS__", condition));
         return app.build();
     }
-
 
     private static String departmentName(String graphSpace) {
         if (graphSpace.endsWith("gs")) {
@@ -263,7 +271,6 @@ public class SaaSMetricsController extends BaseController {
             return graphSpace;
         }
     }
-
 
     private static String join(String idc, String graphSpace, String graph) {
         return String.join("-", idc, graphSpace, graph);
@@ -299,7 +306,6 @@ public class SaaSMetricsController extends BaseController {
         private long preDayQueryCount;
     }
 
-
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -323,7 +329,6 @@ public class SaaSMetricsController extends BaseController {
         @JsonProperty("apps_request_details")
         private List<AppRequestDetails> appsRequestDetails;
     }
-
 
     @Data
     @NoArgsConstructor

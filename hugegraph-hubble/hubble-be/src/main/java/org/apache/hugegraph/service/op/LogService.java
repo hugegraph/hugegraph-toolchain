@@ -18,11 +18,19 @@
 
 package org.apache.hugegraph.service.op;
 
-import co.elastic.clients.elasticsearch._types.*;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOptionsBuilders;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.indices.GetAliasResponse;
@@ -37,12 +45,19 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.entity.op.LogEntity;
+import org.apache.hugegraph.util.HubbleUtil;
 import org.apache.hugegraph.util.PageUtil;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,13 +93,14 @@ public class LogService extends ESService {
         SearchResponse<Map> search = esClient().search((s) ->
             s.index(indexes).from(Math.max(logReq.pageNo - 1, 0) * logReq.pageSize)
              .size(logReq.pageSize)
-             .query(q -> q.bool( boolQuery ->
+             .query(q -> q.bool(boolQuery ->
                         boolQuery.must(querys)
                     )
              ).sort(sortKeyOption), Map.class);
 
         for (Hit<Map> hit: search.hits().hits()) {
-            logs.add(LogEntity.fromMap((Map<String, Object>) hit.source()));
+            logs.add(LogEntity.fromMap(
+                    HubbleUtil.uncheckedCast(hit.source())));
         }
 
         return PageUtil.newPage(logs, logReq.pageNo, logReq.pageSize,
@@ -121,12 +137,13 @@ public class LogService extends ESService {
             int start = i * batchSize;
 
             SearchResponse<Map> search = esClient().search((s) ->
-               s.index(indexes).from(start).size(batchSize)
-                .query(q -> q.bool( boolQuery -> boolQuery.must(querys))
-                ).sort(sortKeyOption), Map.class);
+                    s.index(indexes).from(start).size(batchSize)
+                     .query(q -> q.bool(boolQuery -> boolQuery.must(querys))
+                     ).sort(sortKeyOption), Map.class);
 
-            for (Hit<Map> hit: search.hits().hits()) {
-                logs.add(LogEntity.fromMap((Map<String, Object>) hit.source()));
+            for (Hit<Map> hit : search.hits().hits()) {
+                logs.add(LogEntity.fromMap(
+                        HubbleUtil.uncheckedCast(hit.source())));
             }
 
             int resultCount = (int) (search.hits().total().value());
@@ -138,27 +155,27 @@ public class LogService extends ESService {
         return logs;
     }
 
-    protected  List<Query>  buildQuery(LogReq logReq) {
+    protected List<Query> buildQuery(LogReq logReq) {
         // 根据Query信息，生成ES的query
 
         List<Query> querys = new ArrayList<>();
         // start_datetime, end_datetime
-        if(logReq.startDatetime != null || logReq.endDatetime != null) {
+        if (logReq.startDatetime != null || logReq.endDatetime != null) {
             Query.Builder builder = new Query.Builder();
             // builder.range(e->e.field())
             RangeQuery.Builder rBuilder = new RangeQuery.Builder();
             rBuilder = rBuilder.field("@timestamp");
-            if(logReq.startDatetime != null) {
+            if (logReq.startDatetime != null) {
                 rBuilder = rBuilder.gte(JsonData.of(logReq.startDatetime));
             }
-            if(logReq.endDatetime != null) {
+            if (logReq.endDatetime != null) {
                 rBuilder = rBuilder.lte(JsonData.of(logReq.endDatetime));
             }
             querys.add(builder.range(rBuilder.build()).build());
         }
 
         // query
-        if(!StringUtils.isEmpty(logReq.query)) {
+        if (!StringUtils.isEmpty(logReq.query)) {
             Query.Builder builder = new Query.Builder();
 
             MatchQuery.Builder mBuilder = new MatchQuery.Builder();
@@ -202,7 +219,7 @@ public class LogService extends ESService {
         return querys;
     }
 
-    @Cacheable(value = "ES_QUERY", key="#root.targetClass.name+':'+#root" +
+    @Cacheable(value = "ES_QUERY", key = "#root.targetClass.name+':'+#root" +
             ".methodName")
     public synchronized List<String> listServices() throws IOException {
         Set<String> services = new HashSet<>();
@@ -216,7 +233,7 @@ public class LogService extends ESService {
         return services.stream().sorted().collect(Collectors.toList());
     }
 
-    @Cacheable(value = "ES_QUERY", key="#root.targetClass.name+':'+#root" +
+    @Cacheable(value = "ES_QUERY", key = "#root.targetClass.name+':'+#root" +
             ".methodName")
     public List<String> listHosts() throws IOException {
 
@@ -254,8 +271,8 @@ public class LogService extends ESService {
     @AllArgsConstructor
     public static class LogReq {
         @JsonProperty("start_datetime")
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd "
-                + "HH:mm:ss", timezone = "GMT+8")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd " +
+                "HH:mm:ss", timezone = "GMT+8")
         public Date startDatetime;
 
         @JsonProperty("end_datetime")

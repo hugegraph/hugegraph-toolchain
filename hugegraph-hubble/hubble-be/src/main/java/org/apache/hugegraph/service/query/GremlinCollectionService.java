@@ -57,8 +57,8 @@ public class GremlinCollectionService {
                 // order by name
                 checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 query.eq("graphspace", graphSpace)
-                     .eq("graph", graph).
-                        eq("type", type).and(wrapper -> {
+                     .eq("graph", graph)
+                     .eq("type", type).and(wrapper -> {
                          wrapper.like("name", value).or()
                                 .like("content", value);
                      });
@@ -68,17 +68,17 @@ public class GremlinCollectionService {
                 // order by time
                 checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 query.eq("graphspace", graphSpace)
-                     .eq("graph", graph).
-                        eq("type", type).and(wrapper -> {
+                     .eq("graph", graph)
+                     .eq("type", type).and(wrapper -> {
                          wrapper.like("name", value).or()
                                 .like("content", value);
-                });
+                     });
                 query.orderBy(true, timeOrderAsc, "create_time");
                 return this.mapper.selectPage(page, query);
             } else {
                 // order by relativity
                 checkSingleOrder(nameOrderAsc, timeOrderAsc);
-                return this.mapper.selectByContentInPage(page, graphSpace, graph ,
+                return this.mapper.selectByContentInPage(page, graphSpace, graph,
                                                          content, type);
             }
         } else {

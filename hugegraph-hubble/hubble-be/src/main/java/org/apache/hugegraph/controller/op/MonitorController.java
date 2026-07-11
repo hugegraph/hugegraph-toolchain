@@ -52,6 +52,6 @@ public class MonitorController extends BaseController {
                         "Please set \"monitor.url\" in system environments " +
                                 "or config file(hugegraph-hubble.properties).");
 
-       return ImmutableMap.of("url", monitorURL);
+        return ImmutableMap.of("url", monitorURL);
     }
 }

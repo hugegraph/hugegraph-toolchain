@@ -18,8 +18,16 @@
 
 package org.apache.hugegraph.service.op;
 
-import co.elastic.clients.elasticsearch._types.*;
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOptionsBuilders;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.indices.GetAliasRequest;
@@ -34,12 +42,18 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.entity.op.AuditEntity;
+import org.apache.hugegraph.util.HubbleUtil;
 import org.apache.hugegraph.util.PageUtil;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -75,13 +89,13 @@ public class AuditService extends ESService {
             SearchResponse<Map> search = esClient().search((s) ->
                 s.index(indexes).from(begine * auditReq.pageSize)
                  .size(auditReq.pageSize)
-                 .query(q -> q.bool( boolQuery -> boolQuery.must(querys))
+                 .query(q -> q.bool(boolQuery -> boolQuery.must(querys))
                  ).sort(sortKeyOption), Map.class);
 
             for (Hit<Map> hit: search.hits().hits()) {
                 String service = hit.index().split("_")[0];
-                AuditEntity auditEntity =
-                        AuditEntity.fromMap((Map<String, Object>) hit.source());
+                AuditEntity auditEntity = AuditEntity.fromMap(
+                        HubbleUtil.uncheckedCast(hit.source()));
                 auditEntity.setService(service);
                 logs.add(auditEntity);
             }
@@ -122,13 +136,13 @@ public class AuditService extends ESService {
             int start = i * batchSize;
             SearchResponse<Map> search = esClient().search((s) ->
                    s.index(indexes).from(start).size(batchSize)
-                    .query(q -> q.bool( boolQuery -> boolQuery.must(querys))
+                    .query(q -> q.bool(boolQuery -> boolQuery.must(querys))
                     ).sort(sortKeyOption), Map.class);
 
             for (Hit<Map> hit: search.hits().hits()) {
                 String service = hit.index().split("_")[0];
-                AuditEntity auditEntity =
-                        AuditEntity.fromMap((Map<String, Object>) hit.source());
+                AuditEntity auditEntity = AuditEntity.fromMap(
+                        HubbleUtil.uncheckedCast(hit.source()));
                 auditEntity.setService(service);
                 audits.add(auditEntity);
             }
@@ -141,7 +155,6 @@ public class AuditService extends ESService {
 
         return audits;
     }
-
 
     protected List<Query> buildESQuery(AuditReq auditReq) {
         List<Query> querys = new ArrayList<>();
@@ -215,7 +228,7 @@ public class AuditService extends ESService {
         return querys;
     }
 
-    @Cacheable(value = "ES_QUERY", key="#root.targetClass.name+':'+#root" +
+    @Cacheable(value = "ES_QUERY", key = "#root.targetClass.name+':'+#root" +
             ".methodName")
     public synchronized List<String> listServices() throws IOException {
         Set<String> services = new HashSet<>();
@@ -235,8 +248,9 @@ public class AuditService extends ESService {
     protected String auditIndexPattern() {
         return "*_" + logAuditPattern() + "-*";
     }
+
     protected String auditIndexName(String logType) {
-        return  logType + "_" + logAuditPattern() + "-*";
+        return logType + "_" + logAuditPattern() + "-*";
     }
 
     @NoArgsConstructor
@@ -244,8 +258,8 @@ public class AuditService extends ESService {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class AuditReq {
         @JsonProperty("start_datetime")
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd "
-                + "HH:mm:ss", timezone = "GMT+8")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd " +
+                "HH:mm:ss", timezone = "GMT+8")
         public Date startDatetime;
 
         @JsonProperty("end_datetime")

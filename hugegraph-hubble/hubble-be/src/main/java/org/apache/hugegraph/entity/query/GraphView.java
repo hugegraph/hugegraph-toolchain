@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.hugegraph.entity.graph.VertexQueryEntity;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Vertex;
+import org.apache.hugegraph.util.HubbleUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -131,15 +132,13 @@ public class GraphView {
             if (vertices.get(source) == null || vertices.get(target) == null) {
                 continue;
             }
-            Set<Object> incidenceVertices =
-                    (Set<Object>) vertices.get(source)
-                                          .getStatistics()
-                                          .get("incidence_vertices");
+            Set<Object> incidenceVertices = HubbleUtil.uncheckedCast(
+                    vertices.get(source).getStatistics()
+                            .get("incidence_vertices"));
             incidenceVertices.add(target);
-            incidenceVertices =
-                    (Set<Object>) vertices.get(target)
-                                          .getStatistics()
-                                          .get("incidence_vertices");
+            incidenceVertices = HubbleUtil.uncheckedCast(
+                    vertices.get(target).getStatistics()
+                            .get("incidence_vertices"));
             incidenceVertices.add(source);
         }
     }
@@ -204,14 +203,12 @@ public class GraphView {
             if (vertices.get(source) == null || vertices.get(target) == null) {
                 continue;
             }
-            Set<Object> sourceIncidenceVertices =
-                    (Set<Object>) vertices.get(source)
-                                          .getStatistics()
-                                          .get("incidence_vertices");
-            Set<Object> targetIncidenceVertices =
-                    (Set<Object>) vertices.get(target)
-                                          .getStatistics()
-                                          .get("incidence_vertices");
+            Set<Object> sourceIncidenceVertices = HubbleUtil.uncheckedCast(
+                    vertices.get(source).getStatistics()
+                            .get("incidence_vertices"));
+            Set<Object> targetIncidenceVertices = HubbleUtil.uncheckedCast(
+                    vertices.get(target).getStatistics()
+                            .get("incidence_vertices"));
 
             if (sourceIncidenceVertices.size() == 1 &&
                 targetIncidenceVertices.size() == 1) {

@@ -41,7 +41,13 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.Comparator;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -103,9 +109,9 @@ public class GraphSpaceService {
         return res;
     }
 
-
     public IPage<Map<String, Object>> queryPage(HugeClient client, String query,
-                                       String createTime, int pageNo, int pageSize) {
+                                                String createTime, int pageNo,
+                                                int pageSize) {
         List<Map<String, Object>> results =
                 queryAllGs(client, query, createTime);
         return PageUtil.page(results, pageNo, pageSize);
@@ -119,9 +125,9 @@ public class GraphSpaceService {
                                       .compareTo(createTime) > 0)
                       .collect(Collectors.toList());
         // 将DEFAULT和neizhianli的图空间排在前面, 其他图空间按字母序排序
-        Collections.sort(results,
-                         (a, b) -> new BuiltInFirst().compare(a.get("name").toString(),
-                                                              b.get("name").toString()));
+        Collections.sort(results, (a, b) ->
+                new BuiltInFirst().compare(a.get("name").toString(),
+                                           b.get("name").toString()));
         for (Map<String, Object> info : results) {
             String name = info.get("name").toString();
             info.put("graphspace_admin",
@@ -157,7 +163,6 @@ public class GraphSpaceService {
         statisticTotal.put("edge", edgeTotal);
         return statisticTotal;
     }
-
 
     /**
      * 统计指定图空间下的edgeLabel总数和vertexLabel边总数

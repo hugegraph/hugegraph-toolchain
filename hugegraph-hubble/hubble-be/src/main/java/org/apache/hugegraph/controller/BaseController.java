@@ -129,7 +129,8 @@ public abstract class BaseController {
     }
 
     protected HttpServletRequest getRequest() {
-        return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        return ((ServletRequestAttributes) RequestContextHolder
+                .getRequestAttributes()).getRequest();
     }
 
     protected String getToken() {

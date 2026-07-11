@@ -27,6 +27,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.HugeClientBuilder;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.util.E;
+import org.apache.hugegraph.util.HubbleUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -75,8 +76,10 @@ public class VermeerService {
         Map<String, Object> sertMap = ImmutableMap.of("sertype", "vermeer");
         boolean enable = false;
         try {
-            Map<String, Object> result = client.post(GET_SYS_CFG, sertMap).readObject(Map.class);
-            Map<String, String> data = (Map<String, String>) result.get("data");
+            Map<String, Object> result = HubbleUtil.uncheckedCast(
+                    client.post(GET_SYS_CFG, sertMap).readObject(Map.class));
+            Map<String, String> data =
+                    HubbleUtil.uncheckedCast(result.get("data"));
             if (data == null || data.isEmpty()) {
                 enable = false;
             } else {

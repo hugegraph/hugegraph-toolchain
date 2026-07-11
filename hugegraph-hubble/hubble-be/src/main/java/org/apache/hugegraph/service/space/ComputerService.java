@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.ComputerServiceEntity;
 import org.apache.hugegraph.structure.Task;
+import org.apache.hugegraph.util.HubbleUtil;
 import org.apache.hugegraph.util.PageUtil;
 
 @Log4j2
@@ -41,7 +42,7 @@ public class ComputerService {
                                                   String query,
                                                   int pageNo,
                                                   int pageSize) {
-        ArrayList results = new ArrayList<ComputerService>();
+        List<ComputerServiceEntity> results = new ArrayList<>();
         List<Task> tasks = client.computer().list(500);
         tasks.stream().skip(Math.max(pageNo - 1, 0) * pageSize).limit(pageSize)
              .forEach((t) -> {
@@ -74,8 +75,8 @@ public class ComputerService {
 
         if (StringUtils.isNotEmpty(task.input())) {
             try {
-                Map<String, Object> input = JsonUtil.fromJson(task.input(),
-                                                              Map.class);
+                Map<String, Object> input = HubbleUtil.uncheckedCast(
+                        JsonUtil.fromJson(task.input(), Map.class));
 
                 entity.setAlgorithm(input.get("algorithm").toString());
                 entity.setInput(input.get("params").toString());

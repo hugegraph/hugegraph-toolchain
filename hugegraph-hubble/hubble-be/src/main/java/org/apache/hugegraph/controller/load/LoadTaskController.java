@@ -39,7 +39,14 @@ import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.HubbleUtil;
 import org.apache.hugegraph.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -238,7 +245,7 @@ public class LoadTaskController extends BaseController {
             return this.service.retry(taskId);
         } finally {
             jobEntity.setJobStatus(JobStatus.LOADING);
-            jobEntity.setUpdateTime( HubbleUtil.nowDate());
+            jobEntity.setUpdateTime(HubbleUtil.nowDate());
             this.jobService.update(jobEntity);
         }
     }

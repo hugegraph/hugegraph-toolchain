@@ -41,7 +41,6 @@ import org.apache.hugegraph.service.space.SchemaTemplateService;
 import org.apache.hugegraph.structure.space.SchemaTemplate;
 import org.apache.hugegraph.util.E;
 
-
 @RestController
 @RequestMapping(Constant.API_VERSION + "graphspaces/{graphspace" +
         "}/schematemplates")

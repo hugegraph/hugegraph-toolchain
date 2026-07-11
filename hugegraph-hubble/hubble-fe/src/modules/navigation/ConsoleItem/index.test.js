@@ -51,7 +51,12 @@ beforeEach(() => {
 
 test('probes the configured Dashboard only after an explicit user click', async () => {
     render(
-        <MemoryRouter>
+        <MemoryRouter
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
             <ConsoleItem />
         </MemoryRouter>
     );
@@ -75,7 +80,12 @@ test('probes the configured Dashboard only after an explicit user click', async 
 test('reports a blocked popup without probing the Dashboard', async () => {
     window.open.mockReturnValue(null);
     render(
-        <MemoryRouter>
+        <MemoryRouter
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
             <ConsoleItem />
         </MemoryRouter>
     );

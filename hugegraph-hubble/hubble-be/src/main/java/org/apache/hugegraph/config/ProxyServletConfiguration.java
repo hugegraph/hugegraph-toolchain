@@ -40,7 +40,8 @@ public class ProxyServletConfiguration {
      */
     @Bean
     @ConditionalOnProperty(name = "proxy.servlet_url", matchIfMissing = false)
-    public ServletRegistrationBean servletRegistrationBean() {
+    public ServletRegistrationBean<IngestionProxyServlet>
+           servletRegistrationBean() {
         String servletUrl = config.get(HubbleOptions.PROXY_SERVLET_URL);
         String targetUrl = config.get(HubbleOptions.PROXY_TARGET_URL);
 
@@ -51,9 +52,9 @@ public class ProxyServletConfiguration {
             return null;
         }
 
-        ServletRegistrationBean servletRegistrationBean =
-                new ServletRegistrationBean(new IngestionProxyServlet(),
-                                            servletUrl);
+        ServletRegistrationBean<IngestionProxyServlet> servletRegistrationBean =
+                new ServletRegistrationBean<>(new IngestionProxyServlet(),
+                                              servletUrl);
         servletRegistrationBean.addInitParameter("targetUri", targetUrl);
         servletRegistrationBean.addInitParameter(ProxyServlet.P_LOG, "true");
         return servletRegistrationBean;

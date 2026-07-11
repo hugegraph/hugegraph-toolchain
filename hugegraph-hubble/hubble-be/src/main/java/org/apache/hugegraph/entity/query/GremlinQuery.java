@@ -36,6 +36,7 @@ public class GremlinQuery {
     public GremlinQuery() {
         this.text = "";
     }
+
     public GremlinQuery(String content) {
         this.content = content;
         this.text = "";

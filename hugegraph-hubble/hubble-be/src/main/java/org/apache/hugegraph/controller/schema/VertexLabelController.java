@@ -376,7 +376,7 @@ public class VertexLabelController extends SchemaController {
 
     // format backend data to front
     private ParamEntity labelDataToParam(VertexLabelEntity entity) {
-//        Logger Logger = LoggerFactory.getLogger(getClass());
+        //        Logger Logger = LoggerFactory.getLogger(getClass());
 
         ParamStyle style = new ParamStyle();
         style.setColor(entity.getStyle().getColor());

@@ -59,7 +59,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Log4j2
 @Service
@@ -141,7 +146,7 @@ public class GraphService {
     public HashMap<String, Object> getVertexProperties(HugeClient client, String label) {
         VertexLabelEntity vlEntity = this.vlService.get(label,
                 client);
-        HashMap<String, Object> vertexPropertiesMap= new HashMap<>();
+        HashMap<String, Object> vertexPropertiesMap = new HashMap<>();
         vertexPropertiesMap.put("nonNullableProps", vlEntity.getNonNullableProps());
         vertexPropertiesMap.put("NullableProps", vlEntity.getNullableProps());
         vertexPropertiesMap.put("primaryKeys", vlEntity.getPrimaryKeys());
@@ -151,7 +156,7 @@ public class GraphService {
     public HashMap<String, Object> getEdgeProperties(HugeClient client, String label) {
         EdgeLabelEntity elEntity = this.elService.get(label,
                 client);
-        HashMap<String, Object> edgePropertiesMap= new HashMap<>();
+        HashMap<String, Object> edgePropertiesMap = new HashMap<>();
         edgePropertiesMap.put("nonNullableProps", elEntity.getNonNullableProps());
         edgePropertiesMap.put("NullableProps", elEntity.getNullableProps());
         edgePropertiesMap.put("sortKeys", elEntity.getSortKeys());
@@ -160,7 +165,7 @@ public class GraphService {
 
     public HashMap<String, Object> getVertexStyle(HugeClient client, List<String> labels) {
         HashMap<String, Object> vertexStyles = new HashMap<>();
-        for(String label : labels){
+        for (String label : labels) {
             VertexLabelEntity vlEntity = this.vlService.get(label,
                     client);
             vertexStyles.put(label, vlEntity.getStyle());
@@ -170,7 +175,7 @@ public class GraphService {
 
     public HashMap<String, Object> getEdgeStyle(HugeClient client, List<String> labels) {
         HashMap<String, Object> edgeStyles = new HashMap<>();
-        for(String label : labels){
+        for (String label : labels) {
             EdgeLabelEntity elEntity = this.elService.get(label,
                     client);
             edgeStyles.put(label, elEntity.getStyle());

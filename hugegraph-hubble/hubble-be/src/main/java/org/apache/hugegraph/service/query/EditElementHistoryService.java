@@ -61,7 +61,6 @@ public class EditElementHistoryService {
         return 0;
     }
 
-
     public int add(String graphspace, String graph,
                    String elementId, String label, int propertyNum,
                    String optionType, Date optionTime,
@@ -85,7 +84,6 @@ public class EditElementHistoryService {
         }
         return 0;
     }
-
 
     public IPage<ElementEditHistory> list(String graphSpace,
                                           String graph,
@@ -134,7 +132,6 @@ public class EditElementHistoryService {
         return this.mapper.selectPage(page, query);
     }
 
-
     public List<ElementEditHistory> queryByElementId(String graphSpace,
                                                      String graph,
                                                      String elementId) {
@@ -150,7 +147,8 @@ public class EditElementHistoryService {
         list.forEach(ele -> {
             map.merge(ele.getElementId(), ele, (oldValue, newValue) -> {
                 // 如果 newValue 的 optionTime 比较晚，则替换原来的元素
-                return newValue.getOptionTime().compareTo(oldValue.getOptionTime()) > 0 ? newValue : oldValue;
+                return newValue.getOptionTime().compareTo(oldValue.getOptionTime()) > 0 ?
+                       newValue : oldValue;
             });
         });
         return map;

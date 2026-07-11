@@ -17,6 +17,7 @@
  */
 
 package org.apache.hugegraph.service.algorithm;
+
 // TODO import difference
 import org.apache.hugegraph.api.traverser.NeighborRankAPI;
 import org.apache.hugegraph.api.traverser.PersonalRankAPI;
@@ -231,7 +232,8 @@ public class OltpAlgoService {
         }
     }
 
-    public GremlinResult singleSourceShortestPath(HugeClient client, SingleSourceShortestPathEntity body) {
+    public GremlinResult singleSourceShortestPath(HugeClient client,
+                                                   SingleSourceShortestPathEntity body) {
         String graphSpace = client.getGraphSpaceName();
         String graph = client.getGraphName();
         Date createTime = HubbleUtil.nowDate();
@@ -275,7 +277,8 @@ public class OltpAlgoService {
         }
     }
 
-    public GremlinResult multiNodeShortestPath(HugeClient client, MultiNodeShortestPathRequest body) {
+    public GremlinResult multiNodeShortestPath(HugeClient client,
+                                               MultiNodeShortestPathRequest body) {
         String graphSpace = client.getGraphSpaceName();
         String graph = client.getGraphName();
         Date createTime = HubbleUtil.nowDate();
@@ -459,7 +462,8 @@ public class OltpAlgoService {
             List<Object> resultVertices = result.getSameNeighbors();
             resultVertices.add(body.getVertex());
             resultVertices.add(body.getOther());
-            List<String> escapedIds = resultVertices.stream().map(GremlinUtil::escapeId).collect(Collectors.toList());
+            List<String> escapedIds = resultVertices.stream()
+                    .map(GremlinUtil::escapeId).collect(Collectors.toList());
             String ids = StringUtils.join(escapedIds, ",");
             String gremlin = String.format("g.V(%s).limit(1000)", ids);
             ResultSet resultSet = client.gremlin().gremlin(gremlin).execute();
@@ -515,7 +519,9 @@ public class OltpAlgoService {
             status = ExecuteStatus.SUCCESS;
             return GremlinResult.builder()
                     .type(GremlinResult.Type.PATH)
-                    .graphView(new GraphView(this.verticesOfEdge(edges, client).values(), result.edges()))
+                    .graphView(new GraphView(
+                            this.verticesOfEdge(edges, client).values(),
+                            result.edges()))
                     .pathnum(result.paths().size())
                     .build();
         } catch (Throwable e) {
@@ -556,7 +562,9 @@ public class OltpAlgoService {
             status = ExecuteStatus.SUCCESS;
             return GremlinResult.builder()
                     .type(GremlinResult.Type.PATH)
-                    .graphView(new GraphView(this.verticesOfEdge(edges, client).values(), result.edges()))
+                    .graphView(new GraphView(
+                            this.verticesOfEdge(edges, client).values(),
+                            result.edges()))
                     .pathnum(result.paths().size())
                     .build();
         } catch (Throwable e) {
@@ -650,7 +658,8 @@ public class OltpAlgoService {
         }
     }
 
-    public JaccardsimilarityView jaccardSimilarity(HugeClient client, JaccardSimilarityEntity body) {
+    public JaccardsimilarityView jaccardSimilarity(HugeClient client,
+                                                   JaccardSimilarityEntity body) {
         String graphSpace = client.getGraphSpaceName();
         String graph = client.getGraphName();
         Date createTime = HubbleUtil.nowDate();
@@ -665,7 +674,8 @@ public class OltpAlgoService {
         StopWatch timer = StopWatch.createStarted();
         try {
             TraverserManager traverser = client.traverser();
-            JaccardSimilarity result = traverser.jaccardSimilarity(body.getVertex(), body.getOther(),
+            JaccardSimilarity result = traverser.jaccardSimilarity(
+                    body.getVertex(), body.getOther(),
                     body.getDirection(), body.getLabel(), body.getMaxDegree());
             status = ExecuteStatus.SUCCESS;
             return JaccardsimilarityView.builder()
@@ -683,7 +693,8 @@ public class OltpAlgoService {
         }
     }
 
-    public JaccardsimilarityView jaccardSimilarityPost(HugeClient client, SingleSourceJaccardSimilarityRequest body) {
+    public JaccardsimilarityView jaccardSimilarityPost(HugeClient client,
+                                                       SingleSourceJaccardSimilarityRequest body) {
         String graphSpace = client.getGraphSpaceName();
         String graph = client.getGraphName();
         Date createTime = HubbleUtil.nowDate();
@@ -885,7 +896,7 @@ public class OltpAlgoService {
             Map<Object, Vertex> vertices = new HashMap<>();
             Map<Object, Edge> edges = new HashMap<>();
             List<Object> elements = new ArrayList<Object>();
-            for(Path crosspoints : result.getCrosspoints()) {
+            for (Path crosspoints : result.getCrosspoints()) {
                 elements.add(crosspoints.crosspoint());
             }
             List<String> escapedIds = elements.stream()
@@ -893,7 +904,7 @@ public class OltpAlgoService {
                     .collect(Collectors.toList());
             String ids = StringUtils.join(escapedIds, ",");
             GraphView graphView = new GraphView(vertices.values(), edges.values());
-            if (ids != ""){
+            if (ids != "") {
                 String gremlin = String.format("g.V(%s).limit(1000)", ids);
                 ResultSet resultSet = client.gremlin().gremlin(gremlin).execute();
                 for (Iterator<Result> iter = resultSet.iterator(); iter.hasNext();) {
@@ -1000,8 +1011,8 @@ public class OltpAlgoService {
         }
     }
 
-
-    public FusiformsimilarityView fusiformsimilarity(HugeClient client, FusiformSimilarityRequest body) {
+    public FusiformsimilarityView fusiformsimilarity(
+            HugeClient client, FusiformSimilarityRequest body) {
         String graphSpace = client.getGraphSpaceName();
         String graph = client.getGraphName();
         Date createTime = HubbleUtil.nowDate();
@@ -1076,7 +1087,8 @@ public class OltpAlgoService {
         }
     }
 
-    public Map<String, Double> resourceallocation(HugeClient client, ResourceallocationEntity body) {
+    public Map<String, Double> resourceallocation(HugeClient client,
+                                                   ResourceallocationEntity body) {
         String graphSpace = client.getGraphSpaceName();
         String graph = client.getGraphName();
         Date createTime = HubbleUtil.nowDate();
@@ -1129,7 +1141,7 @@ public class OltpAlgoService {
             Map<String, Edge> edges = new HashMap<>();
             Map<Object, Vertex> vertices = new HashMap<>();
             List<List<Object>> elementlist = result.sameNeighbors;
-            for(List<Object>elements : elementlist){
+            for (List<Object> elements : elementlist) {
                 List<String> escapedIds = elements.stream()
                         .map(GremlinUtil::escapeId)
                         .collect(Collectors.toList());
