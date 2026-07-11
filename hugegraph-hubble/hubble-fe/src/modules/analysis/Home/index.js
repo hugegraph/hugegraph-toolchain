@@ -20,7 +20,7 @@
  * @file 图分析 Home
  */
 
-import React, {useState, useCallback, useEffect, useContext} from 'react';
+import React, {useState, useCallback, useEffect, useContext, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import GraphAnalysisContext from '../../Context';
 import QueryBar from '../QueryBar/Home';
@@ -33,7 +33,7 @@ import _ from 'lodash';
 
 const {STANDBY, LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 const {QUERY} = GREMLIN_EXECUTES_MODE;
-const {GREMLIN} = ANALYSIS_TYPE;
+const {GREMLIN, CYPHER, TEXT2GQL} = ANALYSIS_TYPE;
 const {CLOSED} = PANEL_TYPE;
 const {CANVAS2D} = GRAPH_RENDER_MODE;
 const defaultPageParams = {page: 1, pageSize: 10};
@@ -62,9 +62,17 @@ const AnalysisHome = () => {
     const [search, setSearch] = useState();
     const [sortMode, setSortMode] = useState();
     const [graphRenderMode, setGraphRenderMode] = useState(CANVAS2D);
+    const queryRequest = useRef(null);
+
+    useEffect(() => () => {
+        queryRequest.current = null;
+    }, []);
 
     const getExecutionLogsList = useCallback(
         async () => {
+            if (analysisMode === TEXT2GQL) {
+                return;
+            }
             const params = {'page_size': pageSize, 'page_no': pageExecute, 'type': EXECUTION_LOGS_TYPE[analysisMode]};
             setLoading(true);
             const response = await api.analysis.getExecutionLogs(graphSpace, graph, params);
@@ -79,6 +87,9 @@ const AnalysisHome = () => {
 
     const getFavoriteQueriesList = useCallback(
         async () => {
+            if (analysisMode === TEXT2GQL) {
+                return;
+            }
             const params = {
                 page_size: pageSize,
                 page_no: pageFavorite,
@@ -170,11 +181,13 @@ const AnalysisHome = () => {
 
     const onAnalysisModeChange = useCallback(
         queryType => {
+            queryRequest.current = null;
             setCodeEditorContent('');
             setAnalysisMode(queryType);
+            initQueryResult();
             onResetPage();
         },
-        [onResetPage]
+        [initQueryResult, onResetPage]
     );
 
     const resetGraphInfo = useCallback(
@@ -187,6 +200,7 @@ const AnalysisHome = () => {
     );
 
     useEffect(() => {
+        queryRequest.current = null;
         if (graphSpace && graph) {
             resetGraphInfo();
         }
@@ -213,66 +227,106 @@ const AnalysisHome = () => {
 
     const onExecuteQuery = useCallback(
         async tabKey => {
+            const request = Symbol('query');
+            queryRequest.current = request;
             setQueryMode(true);
             setQueryStatus(LOADING);
             setPanelType(CLOSED);
             setGraphRenderMode(CANVAS2D);
-            let response;
-            if (tabKey === GREMLIN) {
-                response = await api.analysis.getExecutionQuery(graphSpace, graph, codeEditorContent);
+            try {
+                let response;
+                if (tabKey === GREMLIN) {
+                    response = await api.analysis.getExecutionQuery(
+                        graphSpace, graph, codeEditorContent
+                    );
+                }
+                else {
+                    response = await api.analysis.getCypherExecutionQuery(
+                        graphSpace, graph, {cypher: codeEditorContent}
+                    );
+                }
+                if (queryRequest.current !== request) {
+                    return;
+                }
+                const {status, data, message} = response || {};
+                setQueryResult(data);
+                setAsyncTaskResult();
+                if (status === 200) {
+                    setQueryMessage(message);
+                    setQueryStatus(SUCCESS);
+                }
+                else {
+                    setQueryMessage(t('analysis.query_result.run_failed_action'));
+                    setQueryStatus(FAILED);
+                }
+                onExeLogsRefresh();
+                onFavoriteRefresh();
+                resetGraphInfo();
             }
-            else {
-                response = await api.analysis.getCypherExecutionQuery(graphSpace, graph, {cypher: codeEditorContent});
-            }
-            const {status, data, message} = response || {};
-            setQueryResult(data);
-            setAsyncTaskResult();
-            if (status === 200) {
-                setQueryMessage(message);
-                setQueryStatus(SUCCESS);
-            }
-            else {
+            catch {
+                if (queryRequest.current !== request) {
+                    return;
+                }
+                setQueryResult();
+                setAsyncTaskResult();
                 setQueryMessage(t('analysis.query_result.run_failed_action'));
                 setQueryStatus(FAILED);
             }
-            onExeLogsRefresh();
-            onFavoriteRefresh();
-            resetGraphInfo();
         },
         [graph, graphSpace, codeEditorContent, onExeLogsRefresh, onFavoriteRefresh, resetGraphInfo, t]
     );
 
     const onExecuteTask = useCallback(
         async tabKey => {
+            const request = Symbol('task');
+            queryRequest.current = request;
             setQueryMode(false);
             setQueryStatus(LOADING);
             setPanelType(CLOSED);
-            let response;
-            if (tabKey === GREMLIN) {
-                response = await api.analysis.getExecutionTask(graphSpace, graph, {content: codeEditorContent});
+            try {
+                let response;
+                if (tabKey === GREMLIN) {
+                    response = await api.analysis.getExecutionTask(
+                        graphSpace, graph, {content: codeEditorContent}
+                    );
+                }
+                else {
+                    response = await api.analysis.getCypherTask(
+                        graphSpace, graph, {content: codeEditorContent}
+                    );
+                }
+                if (queryRequest.current !== request) {
+                    return;
+                }
+                const {status, message, data} = response || {};
+                setQueryMessage(message);
+                if (status === 200) {
+                    setQueryStatus(SUCCESS);
+                    setAsyncTaskResult(data?.task_id || 0);
+                    setQueryResult();
+                    onExeLogsRefresh();
+                    onFavoriteRefresh();
+                }
+                else {
+                    setQueryStatus(FAILED);
+                }
             }
-            else {
-                response = await api.analysis.getCypherTask(graphSpace, graph, {content: codeEditorContent});
-            }
-            const {status, message, data} = response || {};
-            setQueryMessage(message);
-            if (status === 200) {
-                setQueryStatus(SUCCESS);
-                // getExecuteAsyncTask(tabKey === GREMLIN ? ASYNC_GREMLIN : ASYNC_CYPHER);
-                setAsyncTaskResult(data?.task_id || 0);
-                setQueryResult();
-                onExeLogsRefresh();
-                onFavoriteRefresh();
-            }
-            else {
+            catch {
+                if (queryRequest.current !== request) {
+                    return;
+                }
+                setQueryMessage(t('analysis.query_result.submit_failed'));
                 setQueryStatus(FAILED);
             }
         },
-        [codeEditorContent, graph, graphSpace, onExeLogsRefresh, onFavoriteRefresh]
+        [codeEditorContent, graph, graphSpace, onExeLogsRefresh, onFavoriteRefresh, t]
     );
 
     const onExecute = useCallback(
         tabKey => {
+            if (tabKey !== GREMLIN && tabKey !== CYPHER) {
+                return;
+            }
             if (executeMode === QUERY) {
                 onExecuteQuery(tabKey);
             }
@@ -366,7 +420,7 @@ const AnalysisHome = () => {
                 onExecute={onExecute}
                 onRefresh={onFavoriteRefresh}
             />
-            <QueryResult
+            {analysisMode !== TEXT2GQL && <QueryResult
                 queryResult={queryResult}
                 asyncTaskResult={asyncTaskResult}
                 isQueryMode={isQueryMode}
@@ -380,8 +434,8 @@ const AnalysisHome = () => {
                 graphNums={graphNums}
                 graphRenderMode={graphRenderMode}
                 onGraphRenderModeChange={onGraphRenderModeChange}
-            />
-            <LogsDetail
+            />}
+            {analysisMode !== TEXT2GQL && <LogsDetail
                 executionLogsData={executionLogsData}
                 favoriteQueriesData={favoriteQueriesData}
                 pageExecute={pageExecute}
@@ -395,7 +449,7 @@ const AnalysisHome = () => {
                 onRefresh={onFavoriteRefresh}
                 onChangeSearchValue={onChangeFavorSearch}
                 onSortChange={onSortChange}
-            />
+            />}
         </>
     );
 };
