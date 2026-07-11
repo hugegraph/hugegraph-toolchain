@@ -91,6 +91,12 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
+      - name: Cache HugeGraph Server
+        uses: actions/cache@v4
+        with:
+          path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
+          key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}
+
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
         env:
