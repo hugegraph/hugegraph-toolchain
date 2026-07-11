@@ -20,6 +20,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import {ConfigProvider} from 'antd';
+// FIXME: Consolidate moment into date-fns after replacing filter comparisons
+// and Ant Design date values together; removing it piecemeal changes semantics.
 import 'moment/locale/zh-cn';
 import './index.css';
 import App from './App';

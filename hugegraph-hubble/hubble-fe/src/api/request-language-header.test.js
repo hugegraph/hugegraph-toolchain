@@ -73,7 +73,7 @@ describe('request language header', () => {
 
     it('preserves existing headers while adding the selected language to form requests', () => {
         localStorage.setItem('languageType', 'zh-CN');
-        const intercept = loadRequestInterceptor('./request2');
+        const intercept = loadRequestInterceptor('./request');
 
         const config = intercept({
             headers: {

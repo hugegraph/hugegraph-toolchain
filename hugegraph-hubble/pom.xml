@@ -45,6 +45,7 @@
         <top.level.dir>${project.basedir}/..</top.level.dir>
         <springboot.version>2.1.8.RELEASE</springboot.version>
         <okhttp.version>4.10.0</okhttp.version>
+        <kotlin.version>1.6.20</kotlin.version>
     </properties>
 
     <dependencyManagement>
@@ -80,7 +81,7 @@
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
-                <version>1.6.20</version>
+                <version>${kotlin.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>
@@ -92,7 +93,7 @@
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib-common</artifactId>
-                <version>1.5.31</version>
+                <version>${kotlin.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
