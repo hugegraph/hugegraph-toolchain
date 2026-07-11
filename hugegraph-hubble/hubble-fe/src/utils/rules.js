@@ -158,7 +158,7 @@ const isAccountName = msg => ({
     },
 });
 
-const isValidFavoriteName = value => /^[A-Za-z0-9_]{1,48}$/.test(value);
+const isValidFavoriteName = value => typeof value === 'string' && /^[A-Za-z0-9_\u4e00-\u9fa5]{1,48}$/.test(value);
 
 const isFavoriteName = msg => ({
     validator(_, value) {
@@ -166,7 +166,7 @@ const isFavoriteName = msg => ({
             return Promise.resolve();
         }
         return Promise.reject(new Error(
-            typeof msg === 'string' ? msg : 'Use letters, numbers, or underscores only'
+            typeof msg === 'string' ? msg : validationMessage('favorite_name_rule')
         ));
     },
 });

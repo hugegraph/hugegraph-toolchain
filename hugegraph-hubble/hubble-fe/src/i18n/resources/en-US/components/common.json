@@ -27,7 +27,49 @@
       "normal_name_rule": "Use Chinese characters, letters, numbers, or underscores only, up to 20 characters",
       "jdbc_rule": "Enter a valid JDBC URL, for example: jdbc:mysql://127.0.0.1:3306/db_name",
       "account_name_rule": "Account name must be within 16 characters and cannot start or end with an underscore",
+      "favorite_name_rule": "Use Chinese characters, letters, numbers, or underscores only, up to 48 characters",
       "invalid_data_format": "Invalid data format"
+    }
+  },
+  "workbench": {
+    "skip_to_workspace": "Skip to main workspace",
+    "navigation": "Primary navigation",
+    "context": {
+      "name": "Current graph context",
+      "graphspace": "Current GraphSpace",
+      "graph": "Current graph",
+      "select_graphspace": "Select GraphSpace",
+      "select_graph": "Select graph",
+      "non_pd_fixed": "DEFAULT fixed",
+      "graphspaces_load_failed": "GraphSpaces are temporarily unavailable. Your current page is preserved.",
+      "graphs_load_failed": "Graphs are temporarily unavailable. Your current page is preserved.",
+      "retry": "Retry",
+      "retry_graphspaces": "Retry GraphSpaces",
+      "retry_graphs": "Retry graphs"
+    },
+    "nav": {
+      "home": "Workbench",
+      "understand": "Understand graphs",
+      "prepare": "Prepare data",
+      "query": "Query and analyze",
+      "support": "System and operations"
+    },
+    "page": {
+      "navigation": "Graph Data Workbench",
+      "graphs": "Graphs",
+      "schema": "Schema",
+      "graph_detail": "Graph details",
+      "graph_meta": "Graph metadata",
+      "datasource": "Data sources",
+      "import": "Data import",
+      "import_detail": "Import task details",
+      "query": "Graph Query",
+      "algorithms": "Graph Algorithms",
+      "async_tasks": "Analysis tasks",
+      "async_result": "Analysis task result",
+      "account": "Account management",
+      "profile": "My profile",
+      "not_found": "Page not found"
     }
   },
   "request": {
