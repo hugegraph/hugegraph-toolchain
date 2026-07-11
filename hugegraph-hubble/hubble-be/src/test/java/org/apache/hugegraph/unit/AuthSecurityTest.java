@@ -37,6 +37,8 @@ import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -47,11 +49,20 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.IngestionProxyServlet;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.controller.auth.LoginController;
+import org.apache.hugegraph.controller.auth.UserController;
+import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.entity.auth.UserEntity;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.exception.ParameterizedException;
+import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
 import org.apache.hugegraph.exception.UnauthorizedException;
 import org.apache.hugegraph.handler.CustomInterceptor;
 import org.apache.hugegraph.handler.ExceptionAdvisor;
 import org.apache.hugegraph.handler.LoginInterceptor;
+import org.apache.hugegraph.handler.MessageSourceHandler;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.structure.auth.Login;
 import org.apache.hugegraph.structure.auth.LoginResult;
 
@@ -291,6 +302,102 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testMissingRequestParameterUsesActionableHttp400()
+           throws Exception {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest()));
+        ExceptionAdvisor advisor = new ExceptionAdvisor();
+        MessageSourceHandler messageSource =
+                Mockito.mock(MessageSourceHandler.class);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(),
+                                              Mockito.<Object[]>any()))
+               .thenAnswer(invocation -> invocation.getArgument(0));
+        ReflectionTestUtils.setField(advisor, "messageSourceHandler",
+                                     messageSource);
+        Method method = ExceptionAdvisor.class.getMethod(
+                "exceptionHandler",
+                MissingServletRequestParameterException.class);
+        ResponseStatus status = method.getAnnotation(ResponseStatus.class);
+
+        Response response = (Response) method.invoke(
+                advisor,
+                new MissingServletRequestParameterException("type", "int"));
+
+        Assert.assertEquals(HttpStatus.BAD_REQUEST, status.value());
+        Assert.assertEquals(Constant.STATUS_BAD_REQUEST, response.getStatus());
+        Assert.assertEquals("request.parameter.required", response.getMessage());
+        Assert.assertNull(response.getCause());
+    }
+
+    @Test
+    public void testExceptionResponsesDoNotExposeInternalCause() {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest()));
+        ExceptionAdvisor advisor = new ExceptionAdvisor();
+        MessageSourceHandler messageSource =
+                Mockito.mock(MessageSourceHandler.class);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(),
+                                              Mockito.<Object[]>any()))
+               .thenAnswer(invocation -> invocation.getArgument(0));
+        ReflectionTestUtils.setField(advisor, "messageSourceHandler",
+                                     messageSource);
+        RuntimeException cause = new RuntimeException("internal-secret");
+
+        Assert.assertNull(advisor.exceptionHandler(
+                new InternalException("internal", cause)).getCause());
+        Assert.assertNull(advisor.exceptionHandler(
+                new ExternalException("external", cause)).getCause());
+        Assert.assertNull(advisor.exceptionHandler(
+                new ParameterizedException("parameter", cause)).getCause());
+        Assert.assertNull(advisor.exceptionHandler((Exception) cause).getCause());
+    }
+
+    @Test
+    public void testDeleteSuperPropagatesMutationFailure() {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        UserService userService = Mockito.mock(UserService.class);
+        TestUserController controller = new TestUserController(client);
+        ReflectionTestUtils.setField(controller, "userService", userService);
+        Mockito.when(userService.getUser(client, "user-id"))
+               .thenThrow(new RuntimeException("server rejected mutation"));
+
+        assertThrows(RuntimeException.class,
+                     () -> controller.deleteSuper("user-id"));
+    }
+
+    @Test
+    public void testMissingServerCapabilityUsesHttp503WithoutCause()
+           throws Exception {
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest()));
+        ExceptionAdvisor advisor = new ExceptionAdvisor();
+        MessageSourceHandler messageSource =
+                Mockito.mock(MessageSourceHandler.class);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(),
+                                              Mockito.<Object[]>any()))
+               .thenAnswer(invocation -> invocation.getArgument(0));
+        ReflectionTestUtils.setField(advisor, "messageSourceHandler",
+                                     messageSource);
+        Method method = ExceptionAdvisor.class.getMethod(
+                "exceptionHandler",
+                ServerCapabilityUnavailableException.class);
+        ResponseStatus status = method.getAnnotation(ResponseStatus.class);
+
+        Response response = (Response) method.invoke(
+                advisor,
+                new ServerCapabilityUnavailableException(
+                        "server.capability.pd-status.unavailable",
+                        new RuntimeException("downstream details")));
+
+        Assert.assertEquals(HttpStatus.SERVICE_UNAVAILABLE, status.value());
+        Assert.assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(),
+                            response.getStatus());
+        Assert.assertEquals("server.capability.pd-status.unavailable",
+                            response.getMessage());
+        Assert.assertNull(response.getCause());
+    }
+
+    @Test
     public void testIngestionProxyRejectsMissingSessionWithHttp401()
            throws Exception {
         TestIngestionProxyServlet servlet = new TestIngestionProxyServlet();
@@ -434,6 +541,20 @@ public class AuthSecurityTest {
 
         public LoginResult standalone(Login login) {
             return this.loginStandalone(login);
+        }
+    }
+
+    private static class TestUserController extends UserController {
+
+        private final HugeClient client;
+
+        private TestUserController(HugeClient client) {
+            this.client = client;
+        }
+
+        @Override
+        protected HugeClient authClient(String graphSpace, String graph) {
+            return this.client;
         }
     }
 

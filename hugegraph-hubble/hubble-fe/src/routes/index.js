@@ -30,7 +30,6 @@ import GraphDetail from '../pages/GraphDetail';
 import My from '../pages/My';
 // import Super from '../pages/Super';
 import Account from '../pages/Account';
-import RoleAuth from '../pages/Role/Auth';
 import Navigation from '../pages/Navigation';
 import Error404 from '../pages/Error404';
 import Test from '../pages/Test';
@@ -155,7 +154,7 @@ const RouteList = ({element}) => {
                 {/* <Route path='/role' element={<Role />} /> */}
                 <Route
                     path='/role/graphspace/:graphspace/:role'
-                    element={<PdOnlyRoute><RoleAuth /></PdOnlyRoute>}
+                    element={<Navigate to='/navigation' replace />}
                 />
                 {/* <Route path='/resource' element={<Resource />} /> */}
                 {/* <Route path="/:moduleName" element={<GraphAnalysis />} /> */}

@@ -120,6 +120,20 @@ describe('route guard', () => {
         }
     );
 
+    it('redirects the orphaned PD RoleAuth deep link to navigation', () => {
+        isPdEnabled.mockReturnValue(true);
+        sessionStorage.setItem('user_', JSON.stringify({
+            id: 'admin',
+            user_nickname: 'admin',
+        }));
+
+        renderRoutes('/role/graphspace/DEFAULT/admin');
+
+        expect(screen.getByText('navigation page')).toBeTruthy();
+        expect(screen.queryByText('role auth page')).toBeNull();
+        expect(screen.queryByText('not found page')).toBeNull();
+    });
+
     it.each([
         ['/graphspace', 'graphspace page'],
         ['/account', 'account page'],

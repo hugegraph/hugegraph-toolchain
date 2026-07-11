@@ -53,7 +53,8 @@ public class ConsolePrintTest {
             for (int i = 0; i < lines.size(); i++) {
                 String line = lines.get(i);
                 if (line.contains("System.out.println") ||
-                    line.contains("System.err.println")) {
+                    line.contains("System.err.println") ||
+                    line.contains(".printStackTrace()")) {
                     violations.add(path + ":" + (i + 1));
                 }
             }

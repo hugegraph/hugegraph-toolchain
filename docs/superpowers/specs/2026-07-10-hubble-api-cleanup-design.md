@@ -133,6 +133,51 @@ external page or reports one localized actionable failure. This preserves
 private and loopback deployment support without turning passive navigation
 rendering into an arbitrary network request.
 
+## Retired Role Authorization Deep Link
+
+Role management has no supported Navigation entry in Hubble 2.0, and the
+top-level `/role` path already redirects to `/navigation`. The orphaned legacy
+`/role/graphspace/:graphspace/:role` authorization path follows the same
+replace-redirect policy instead of rendering the old RoleAuth page. This keeps
+direct bookmarks from exposing a partially localized, unsupported product
+surface while preserving a deterministic non-404 recovery path.
+
+## Retired and External Operational APIs
+
+The unused graph-storage facade is retired. Hubble has no reachable product
+consumer for `/graphspaces/{graphspace}/graphs/{graph}/storage`, and the former
+backend implementation was already commented out. Both remnants are removed;
+Hubble must not invent storage data to keep a dead endpoint green.
+
+Audit log is not a Hubble 2.0 published surface: there is no route, navigation
+entry or frontend client, and its Elasticsearch dependency is disabled by
+default. The fully commented controller is removed instead of restoring an
+untested capability. Reintroducing audit requires a separate accepted design,
+real Elasticsearch environment and complete authentication/browser evidence.
+
+PD and HStore status endpoints remain external-capability boundaries. Server
+1.7.0 does not expose the REST paths required by the current HugeClient calls.
+Hubble keeps the real calls and records the exact dependency at each call site;
+it must not synthesize a healthy response. These endpoints are not consumed by
+the Hubble frontend, whose monitoring entry opens Dashboard.
+
+The missing APIs remain external blockers, but their failure representation is
+Hubble-owned. These two status endpoints map the verified downstream
+`ServerException` to HTTP/business 503 with a localized actionable message and
+no downstream cause. Other ServerException paths retain their legacy HTTP
+compatibility until separately migrated.
+
+In non-PD mode, `/graphspaces/list` exposes `DEFAULT` for business navigation,
+while the paginated `/graphspaces` management API has no manageable records.
+This is an intentional capability distinction, not evidence that a synthetic
+GraphSpace record should enable unsupported management mutations.
+
+Graph nickname input follows the Server contract rather than the card display
+truncation. Server master `3bd990d8` defines a 48-character maximum in
+`GraphManager.NICKNAME_MAX_LENGTH`; Hubble therefore accepts up to 48
+characters while cards may still visually truncate long nicknames. The graph
+name remains immutable during edit and follows its separate name contract.
+
 ## Testing and Acceptance
 
 Backend MockMvc coverage verifies:

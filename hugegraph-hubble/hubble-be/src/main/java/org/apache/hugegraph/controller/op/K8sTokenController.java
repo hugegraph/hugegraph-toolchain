@@ -60,7 +60,7 @@ public class K8sTokenController  extends BaseController {
         Path configDir = fileDir();
 
         if (null == configDir) {
-            throw new InternalException("K8s Token文件不存在");
+            throw new InternalException("k8s.token.file.not-exist");
         }
 
         Path tokenFile = Paths.get(configDir.toString(), "k8s.token");
@@ -71,17 +71,20 @@ public class K8sTokenController  extends BaseController {
                                                         StandardCharsets.UTF_8);
                 return ImmutableMap.of("token", String.join("", lines));
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Failed to read the Kubernetes token file", e);
             }
         }
 
-        throw new InternalException("K8s Token文件不存在");
+        throw new InternalException("k8s.token.file.not-exist");
     }
 
     @GetMapping("dir")
     public Object getK8sToken1() {
 
         Path configDir = fileDir();
+        if (configDir == null) {
+            throw new InternalException("k8s.token.directory.unavailable");
+        }
         return ImmutableMap.of("token", configDir.toString());
     }
 }

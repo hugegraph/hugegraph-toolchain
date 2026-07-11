@@ -109,7 +109,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                 </Form.Item>
                 <Form.Item
                     label={t('graph.form.nickname')}
-                    rules={[rules.required(), rules.isPropertyName, {type: 'string', max: 12}]}
+                    rules={[rules.required(), rules.isPropertyName, {type: 'string', max: 48}]}
                     name='nickname'
                 >
                     <Input placeholder={t('graph.form.nickname_placeholder')} />

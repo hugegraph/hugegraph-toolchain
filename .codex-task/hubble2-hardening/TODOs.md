@@ -6,7 +6,7 @@
 
 - 最近核验：2026-07-11
 - 当前分支/最近已验证并推送实现提交：`hubble2` /
-  `bf4e66a15a2feb77ae7bddcf421c9d4b8ddc4bf6`。
+  `03285ac1081185b3ca239592187115dd97dace0b`。
 - 改动基线：`fd64a83b29fec9a3ec25b236eac06bf68348c78c`
 - CI 状态：后端 CI 是主路径远程门禁；前端 CI 的存量问题在双模式真实验收和最终本地门禁后处理，
   不作为 P0 或真实环境建立的前置阻塞。既有前端失败见 [29110373207](https://github.com/hugegraph/hugegraph-toolchain/actions/runs/29110373207)，浏览器认证根因见 [29107231006](https://github.com/hugegraph/hugegraph-toolchain/actions/runs/29107231006)。
@@ -20,20 +20,29 @@
   `019f4d43-922e-71c2-9ffe-8e52656d75ef` 的原 goal 仍为 active；原生 goal 可恢复，Codex
   heartbeat 可唤醒同一线程；以本文件和日期 evidence 作 checkpoint，暂不新增辅助脚本。证据见
   [本轮记录](evidence/2026-07-11-hubble2-hardening-run.md#续跑-preflight)。
-- [ ] **H2-GATE-02：每次暂停前保存 checkpoint。** 记录已完成/进行中项、未提交改动、验证结果、
+- [x] **H2-GATE-02：每次暂停前保存 checkpoint。** 2026-07-11，本轮在 TODO 与日期 evidence 中持续记录
+  已完成/进行中项、未提交改动、验证结果和下一步；CI 采用有限轮询与一次失败 job 重试，服务/Chrome
+  断连均恢复同一 goal，未使用前台长 sleep、busy loop 或伪造恢复命令。
   下一步；quota reset 还须记录错误中的 reset time、时区和 Usage 核验。网络、CI、服务、Chrome
   采用有限重试和退避，不使用前台长 sleep 或 busy loop。
-- [ ] **H2-GATE-03：守住授权边界。** 只操作 Hubble、必要 Loader/Client、构建/CI 和隔离 fixture；
+- [x] **H2-GATE-03：守住授权边界。** 2026-07-11，仅操作 Hubble、必要 Loader/Client、构建/CI 和隔离 fixture；
   不接触生产、个人或非隔离数据，不修改 Server/PD 仓库，不合并或发布。Server 单机和分布式环境
   可直接使用最新 master；若发现 Server/PD 问题，写入本文件的 Server 专项并跳过依赖该能力的步骤，
   继续其他可执行任务。
-- [ ] **H2-GATE-04：新发现先分级再修复。** P0/P1/P2 写入本文件；外部缺失能力必须在准确
+- [x] **H2-GATE-04：新发现先分级再修复。** 2026-07-11，全部新发现均先按 P0/P1/P2 写入本文件；
+  reviewer 的 Role 深链问题登记为 H2-P1-10 后修复并复审通过。外部缺失能力已在准确
   Hubble 调用点写明原因、依赖和解除条件的代码 TODO，并在这里同步 blocker 状态。
-- [ ] **H2-GATE-05：证据可复现且不伪造。** 每个完成项回填日期、环境、Toolchain/Server/PD
+- [x] **H2-GATE-05：证据可复现且不伪造。** 2026-07-11，每个完成项已回填日期、环境、Toolchain/Server/PD
   版本或 SHA、配置、命令/退出码、日志/截图/JSON、CI run URL；mock 仅作单测，不作 E2E 证据。
 
 ## P0
 
+- [x] **H2-P0-05：修复最终 PR license-header CI。** 2026-07-11，PR #4 / head `a9231067` 的
+  `license checker / check-license-header` run
+  [29145773126](https://github.com/hugegraph/hugegraph-toolchain/actions/runs/29145773126) 真实失败；日志列出
+  22 个分支新增/修改 Java/JS 文件只有截断 header 或完全缺失 header。批量补齐仓库标准 ASF header，
+  不改业务逻辑；head `03285ac1` 的同一 check 已在
+  [29145996488](https://github.com/hugegraph/hugegraph-toolchain/actions/runs/29145996488) SUCCESS。
 - [x] **H2-P0-00：修复 `CI=true` production build 的完整 ESLint 门禁。** 2026-07-11 在 CI 固定
   Node `18.20.8` 真实复现：i18n 通过后 CRA 将既有 warnings 作为 errors，覆盖 ERView、算法、分析、
   Schema/Meta/Task 等多模块。禁止恢复 `CI:false`、禁用规则或忽略退出码；按根因分批修复并以完整
@@ -66,6 +75,13 @@
 
 ## P1
 
+- [x] **H2-P1-10：关闭孤立 PD RoleAuth legacy 深链。** 最终独立 reviewer
+  `/root/final_independent_reviewer` 发现 `/role/graphspace/:graphspace/:role` 在 PD 模式仍可直接访问，页面
+  含产品可控中文且未进入最终 route matrix；`/role` 与导航入口已停用，因此将 scoped 深链同样 replace
+  redirect 到 `/navigation`。2026-07-11，targeted 13/13、完整 Jest 40 suites/148 tests、scoped ESLint、
+  i18n、`CI=true` build 与 package audit 全部通过；最终包 `687f7936...aa7f` 在真实 PD Chrome 从深链
+  replace 到 `/navigation`，RoleAuth 未渲染、HTTP error/意外 404/渲染失败/产品中文均为 0。证据见
+  [最终 Role redirect](evidence/2026-07-11-final-role-redirect/chrome-role-deep-link.json)，待同一 reviewer re-review。
 - [x] **H2-P1-01：处理 `/super`、`/resource`、`/role` 导航死链。** 2026-07-11 non-PD 发布包
   Chrome 验证：未接入入口不再出现在 Navigation/System Management；直接访问三个路径均 replace
   redirect 到 `/navigation`，意外 404 与渲染失败为 0。证据见
@@ -113,11 +129,17 @@
 
 ## P2
 
-- [ ] **H2-P2-00：最后处理前端 CI 浏览器 smoke 与遗留问题。** 当前真实登录实现和单测已落地，
-  但远端前端 CI 可能包含较多存量问题；仅在 non-PD、PD 真实 Chrome 验收、产品修复和最终本地门禁
-  完成后集中运行与修复。必须使用发布包 + 真实服务验证认证/API/路由/mutation；不得关闭 CI、跳过
-  测试、`continue-on-error`、忽略退出码、硬编码成功、弱化断言或伪造响应。其失败在该阶段前不阻塞
-  双模式环境和其他产品验收，但最终发布就绪前仍须真实通过或按目标规则明确处置。
+- [x] **H2-P2-04：核验 Loader Kafka CI 单次波动。** 2026-07-11，最终 head `03285ac1` 的 Loader
+  run [29145996501](https://github.com/hugegraph/hugegraph-toolchain/actions/runs/29145996501) 中
+  unit/file/hdfs/jdbc 已通过，Kafka `testNumberToStringInKafkaSource` 单次期望 7、实际 5；相邻代码 head
+  `a9231067` 的 PR run `29145773130` 已全绿，最终提交仅改变 license 注释。允许同 run 有限 rerun failed
+  一次；attempt 2 全 workflow SUCCESS，未再次出现，无需弱化测试或修改 Loader。证据见
+  [最终 CI 记录](evidence/2026-07-11-final-ci-and-review.md#final-pr-checks)。
+- [x] **H2-P2-00：最后处理前端 CI 浏览器 smoke 与遗留问题。** 2026-07-11，最终 head
+  `03285ac1` 的 Hubble CI run
+  [29145996476](https://github.com/hugegraph/hugegraph-toolchain/actions/runs/29145996476) SUCCESS；真实执行
+  i18n、production compile/package、release audit、111 个 BE tests 和发布包 + Server 的认证/API/Loader/
+  browser route/i18n acceptance，未使用 `CI=false`、跳过真实测试、忽略退出码或弱化断言。
 - [x] **H2-P2-01：展示 Gremlin 执行历史失败详情。** 2026-07-11 run8 旧 H2 fixture 启动日志确认幂等
   添加 `failure_reason`；Chrome 执行非法 Gremlin 后，新 FAILED 行显示一次本地化可行动原因，历史中的
   SUCCESS 与迁移前失败行不伪造详情，页面不显示 raw signature/stack。同步失败仅持久化受控 reason code；
@@ -131,8 +153,8 @@
   既有翻译并在 Vertex Style portal 实际显示 `Please select`。2026-07-11 PD/HStore 发布包真实登录后，
   Chrome 确认 `/graphspace`、`/graphspace/:graphspace/schema`、`/account` 及公共超级管理员身份存在成批
   硬编码中文，登记为 P1 英文验收 blocker；按同根因 i18n 批次集中修复并统一定向测试、构建和 Chrome
-  复验。`/role/graphspace/:graphspace/:role` 当前仅为孤立 legacy 深链，最终 route matrix 记录可达性后
-  决定是否纳入产品路径。最终 non-PD 17 routes、PD 18 routes 及 Meta/GraphSpace/Schema/Account/
+  复验。孤立 legacy `/role/graphspace/:graphspace/:role` 已按稳定产品决策 replace redirect 到 Navigation，
+  最终 non-PD 17 routes、PD 原 18 routes + 该深链及 Meta/GraphSpace/Schema/Account/
   Datasource/Task/Gremlin 动态 portal 产品可控中文为 0；`超级管理员`、`默认图空间` 分别来自 Server/PD
   nickname，已作为外部内容例外记录。
 - [x] **H2-P2-03：治理可复现 legacy `.catch()` 和依赖兼容 warning。** 2026-07-11，已修复范围内
@@ -162,8 +184,18 @@
   license、10 native-bearing JAR）。run7 包 SHA-256 为
   `45d2f41fb54a5de0e5cf83d7bdec5590293021a4d2cc126f29cdf63c8380a79b`；证据见
   [本轮记录](evidence/2026-07-11-hubble2-hardening-run.md#non-pd-graph-批次-run7-chrome-复验)。
-- [ ] **H2-LOCAL-06：最终工作树门禁新鲜重跑。** 在最终 diff 固定后重跑所有受影响检查，完整读取
-  输出并记录；旧结果不能作为完成声明依据。
+- [x] **H2-LOCAL-06：最终工作树门禁新鲜重跑。** 2026-07-11，最终实现冻结后：Hubble BE
+  111/111、Client UnitTestSuite 50/50、完整 FE Jest 40 suites/148 tests、scoped ESLint、i18n 1585/1585、
+  compile/production build、Client+Loader install、Hubble package/distribution audit 和最终包 issue-694
+  真实 acceptance 全部 exit 0。reviewer 修复后重新打包的 tar SHA-256
+  `687f7936f0bc3d4d66bdad99ea762efb82e398f36ed68597e18fae82bc20aa7f`，FE
+  `main.4ccb11e5.js`；最终 Role 深链受影响范围另以真实 PD Chrome 验证通过。
+  证据见[最终 CI/本地记录](evidence/2026-07-11-final-ci-and-review.md#fresh-local-gates)。
+  审计跟进及 reviewer 修复后再次以 Java 11 `mvnd` 新鲜运行 Hubble BE 119/119、0 failure/error/skip；
+  最终真实 Hubble/hubble-be/hubble-dist package BUILD SUCCESS（1m56s），distribution audit 为 392 JAR、275
+  license、43 FE license、10 native-bearing，tar SHA-256
+  `77a3c7aacc43d4eef7afc96dc3397571d90f8bff0146e82138f47c40b371ff77`、FE
+  `main.7d134651.js`。证据见[审计跟进](evidence/2026-07-11-audit-followup.md#final-error-contract-package)。
 
 ## 2. non-PD / RocksDB 真实验收（第一顺位）
 
@@ -206,11 +238,14 @@
   证据见 [环境快照](evidence/2026-07-11-pd/environment.json)、
   [健康检查](evidence/2026-07-11-pd/startup-health.json) 与
   [mutation matrix](evidence/2026-07-11-pd/chrome-mutation-matrix.json)。
-- [x] **H2-PD-02：Chrome 完成全部可达导航 route matrix。** 2026-07-11，最终发布包 SHA-256
+- [x] **H2-PD-02：Chrome 完成全部可达导航 route matrix。** 2026-07-11，完整矩阵发布包 SHA-256
   `df94a648448ec3b65f631c811a4f2ab83bf67de357f0aab3c49ac545f5227e14`，Chrome 重放 18 条可达/legacy
   路由；意外 404、渲染失败、产品 fatal console error 和应用 warning 均为 0。Account、Schema Template、
   GraphSpace 创建 portal 全英文；仅保留 Server 用户 nickname `超级管理员` 与 PD nickname `默认图空间`
   两项外部内容例外。证据见 [PD route matrix](evidence/2026-07-11-pd/chrome-route-matrix.json)。
+  最终 reviewer 补充发现的 RoleAuth 深链已由最终包 `687f7936...aa7f` 在真实 PD Chrome 验证 replace
+  redirect，无意外 404/渲染失败/产品中文；证据见
+  [final role redirect](evidence/2026-07-11-final-role-redirect/chrome-role-deep-link.json)。
 - [x] **H2-PD-03：Chrome 完成隔离 mutation matrix。** 覆盖与 non-PD 同等关键 mutation 和 PD 特有
   行为，使用独立 fixture 并核验后端真实状态。当前已完成 Graph create/update/default/restore/delete、
   Schema Template create/delete、Datasource metadata create/delete，以及最新包的 Meta Property/Vertex Type
@@ -227,17 +262,91 @@
 ## 4. 远程 CI、独立审查与发布就绪结论
 
 - [x] **H2-REMOTE-01：提交并推送当前 `hubble2` 分支用于验证。** 2026-07-11，提交
-  `bf4e66a15a2feb77ae7bddcf421c9d4b8ddc4bf6` 已推送到 `hugegraph/hubble2`；提交前
-  `git diff --cached --check` exit 0，提交包含 non-PD run8 已验证实现与证据；未合并、未发布、未修改
-  Server/PD 仓库。
-- [ ] **H2-REMOTE-02：最终 diff 的后端 CI 真实全绿。** 这是远程主路径门禁；记录最终 Toolchain
-  HEAD、每个后端 run/check URL、结论与关键 artifact。前端 CI 不纳入本项，不因其存量失败阻塞
-  non-PD/PD 与产品修复；前端远程检查由最后顺位的 `H2-P2-00` 收口。排队/网络失败使用有限退避和
-  checkpoint，不把未运行当通过。
-- [ ] **H2-REVIEW-01：独立只读 reviewer 完成最终审查。** reviewer 不得参与实现；输入完整 goal、
+  `a9231067d8446e35e4a865b2dc3e72ed49603af6`（实现）与
+  `03285ac1081185b3ca239592187115dd97dace0b`（license header）均已推送到 `hugegraph/hubble2`；提交前
+  `git diff --cached --check` exit 0。未合并、未发布、未修改 Server/PD 仓库。
+- [x] **H2-REMOTE-02：最终 diff 的后端 CI 真实全绿。** 2026-07-11，PR #4 精确 head
+  `03285ac1081185b3ca239592187115dd97dace0b` 的 Hubble、Java Client、Loader、Tools、Go Client、Spark、
+  license header/dependency 和 labeler checks 全部 SUCCESS；GitHub 汇总 10 successful、0 failing、
+  0 pending。Loader 仅 attempt 1 出现一次 Kafka 计数波动，attempt 2 同 head 全绿。所有 run URL、event、
+  attempt 与无可下载 artifact 的事实见[最终 CI 记录](evidence/2026-07-11-final-ci-and-review.md#final-pr-checks)。
+- [x] **H2-REVIEW-01：独立只读 reviewer 完成最终审查。** 2026-07-11，独立只读 reviewer
+  `/root/final_independent_reviewer` 未参与实现；输入完整 goal、
   最终 committed range + staged/unstaged/untracked diff、TODO/design/evidence 与测试/CI 证据；记录 reviewer
   身份、findings 和结论。无法创建 reviewer 时保持 goal active 并询问用户。
-- [ ] **H2-REVIEW-02：修复或由用户接受所有 actionable findings，并 re-review。** 修复后由独立
-  reviewer 复审受影响最终 diff；再执行新鲜最终门禁，记录身份、结果和证据。
+  本轮新增 diff 另由未参与实现的独立只读 reviewer `/root/final_followup_reviewer` 审查 base
+  `1b78c9d2` 到完整 working tree、ignored evidence 与原图；身份和结论见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#independent-review-follow-up)。
+- [x] **H2-REVIEW-02：修复或由用户接受所有 actionable findings，并 re-review。** 2026-07-11，唯一
+  Important finding H2-P1-10 已修复；同一 reviewer 定向复审受影响最终 diff，确认 resolved，且
+  Critical/Important/Minor 均为 0、无新 actionable finding。测试、发布包与真实 Chrome 证据见
+  [最终 CI/审查记录](evidence/2026-07-11-final-ci-and-review.md#independent-review)。
+  follow-up reviewer 发现 1 个 CSV 临时文件 Important，修复后同一 reviewer re-review PASS，确认 finding
+  resolved、无新 actionable；targeted 4/4、完整 BE 119/119 与 post-review 发布包均通过，证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#independent-review-follow-up)。
+
+## 5. 本轮审计新发现问题与测试核验（2026-07-11）
+
+- [x] **H2-AUDIT-01（P1 调查）：非 PD 个人信息契约核验。** 2026-07-11，已确认
+  `GET /auth/users/{id}` 是 ID
+  endpoint，使用 username `admin` 复现的 400 不能证明 `/my` 个人信息失效；non-PD 正常页面使用
+  `/auth/users/getpersonal`。须用真实发布包 Chrome 核验读取/编辑/刷新、错误反馈及 `-27:admin` 是否可见；
+  只有真实个人流程失败才升级 P0。真实发布包 Chrome `/my` 已完成读取、nickname 修改/保存/恢复；页面
+  始终显示 `admin`，未暴露 `-27:admin`，英文残留和可见 alert 均为 0，因此未复现 P0，剩余仅为 P2
+  ID/username 契约说明。证据见[审计跟进](evidence/2026-07-11-audit-followup.md#non-pd-my-profile-contract)。
+- [x] **H2-AUDIT-02（P2 退役）：清理未使用的 `/graphs/{graph}/storage` 空壳。** 2026-07-11，前端仅定义并导出
+  `getGraphStorage`、全仓无调用，后端对应端点也是注释死代码；两端残留已删除，design 已记录退役且未补
+  伪接口。GraphDetail 2/2 与 scoped ESLint 通过，证据见[审计跟进](evidence/2026-07-11-audit-followup.md#audit-cleanup-batch)。
+- [x] **H2-AUDIT-03（P1 错误规范批次）：规范 `/execute-histories` 缺参错误。** 2026-07-11，`type` 是必填参数，
+  HTTP 400 合理；缺失参数已由统一 advisor 返回 HTTP/business 400、中英文可行动消息且 cause=null。
+  TDD 与最终发布包真实认证 REST 均通过，证据见[审计跟进](evidence/2026-07-11-audit-followup.md#final-follow-up-package)。
+- [x] **H2-AUDIT-04/05（P2 外部兼容）：PD/HStore status 下游能力缺失。** 当前 FE 不消费
+  `/pds/status`、`/services/storage/status`，监控入口外跳 Dashboard；Server 18080 不提供所需 `/pd` 与
+  `/hstore/status`。在准确 Hubble 调用点记录原因、依赖和解除条件，不伪实现；Hubble 可控响应不得再用
+  HTTP 200 包装业务 400/下游 404。2026-07-11，准确调用点 TODO 保留外部依赖与解除条件；Hubble
+  局部映射为 HTTP/business 503、中英文可行动消息、`cause=null`。同一最终发布包已在 non-PD 38088
+  与 PD/HStore 38089 真实认证 REST 验证，证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#final-error-contract-package)。
+- [x] **H2-AUDIT-06（P2 退役）：明确 Audit 未发布边界。** 2026-07-11，当前无页面、路由、导航和 FE API，且依赖
+  默认未配置的 Elasticsearch；整段注释 controller 已删除，稳定 design 明确退役，未恢复未经验证能力；
+  Hubble BE 112/112 通过。证据见[审计跟进](evidence/2026-07-11-audit-followup.md#audit-cleanup-batch)。
+- [x] **H2-AUDIT-07（P2 契约）：记录 non-PD `/graphspaces` 降级语义。** 2026-07-11，`/graphspaces/list` 返回
+  `["DEFAULT"]` 供业务导航，而管理分页为空表达“无可管理 GraphSpace”；统一 API 文档/契约，避免合成
+  record 误启用管理 mutation；稳定 design 已记录该能力区别，既有 non-PD Chrome route 证据证明管理
+  页面受 guard 保护。
+- [x] **H2-AUDIT-08（P1 错误规范批次）：修正 Vermeer 可选集成失败反馈。** 2026-07-11，当前失败会降级而非
+  清空普通图列表；核验并修正 Graph Analysis 错误提示条件、中文硬编码日志及原始连接异常，保证最多一次
+  清晰提示且普通 graph 列表保持可用。最终发布包 `/vermeer` 返回 `enable=false`，普通 graph 列表仍显示
+  `hugegraph`；前端已有全局 message + 空消息 fallback 的单 owner 防重复语义，后端中文/原始 HTML 日志已
+  改为英文结构化摘要。证据见[审计跟进](evidence/2026-07-11-audit-followup.md#final-follow-up-package)。
+- [x] **H2-AUDIT-11（P1 资源安全）：关闭失败的 Dashboard/Vermeer 探测连接。** 2026-07-11，新发布包
+  真实运行发现 `VermeerService` 仅在成功分支关闭 `RestClient`，失败时泄漏连接并把下游整段 HTML 写入
+  日志；现已在 finally 关闭 client，日志只保留结构化可行动摘要。最终包真实失败探测已验证无原始 HTML。
+- [x] **H2-AUDIT-09（P2 契约）：统一 graph nickname 长度约束。** 2026-07-11，12 字符限制针对 nickname 而非
+  graph name；Server master `3bd990d8` 的真实上限是 48，前端校验和中英文文案已对齐。最终发布包 Chrome
+  成功保存超过旧上限的 `nickname_long1` 并恢复 `hugegraph`，可见 alert=0；证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#final-follow-up-package)。
+- [x] **H2-AUDIT-10（P1 异常安全）：移除可达路径的原始堆栈输出。** 2026-07-11，图列表 schema 获取失败时
+  `GraphsService` 直接 `printStackTrace()`；并审计 Vermeer 等可达分支的同类调用。改为结构化日志和统一
+  业务反馈，浏览器不得出现原始堆栈或重复提示。TDD RED 精确检出 8 处，全部改为结构化日志并由静态
+  回归锁定；Hubble BE 112/112 通过，主源码 `printStackTrace()` 为 0。证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#targeted-redgreen)。
+- [x] **H2-AUDIT-12（P1 错误信息安全）：统一客户端异常响应的 cause 契约。** 核验通用 advisor 是否把
+  `Throwable` 内部结构序列化给客户端；若可见，响应统一 `cause=null`，详细异常仅保留在结构化日志，
+  并用针对性测试和真实 REST 证明不暴露堆栈或不可读结构。2026-07-11，TDD RED 证明 cause 暴露，修复后
+  advisor 及直接 Response 路径均返回 `cause=null`；真实双模式 REST 复验通过，证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#error-contract-follow-up-batch)。
+- [x] **H2-AUDIT-13（P1 mutation 真实性）：修复删除超级管理员权限的假成功。** 当前公开 endpoint 捕获
+  异常后仅写日志并返回成功；失败必须传播为一次明确错误，或在确认无消费者后正式退役 endpoint，且补
+  权限 mutation 回归测试。2026-07-11，已移除 catch-and-success；模拟 Server mutation 失败的 RED 后，
+  失败正确传播且 targeted batch 24/24、完整 BE 117/117 通过，证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#error-contract-follow-up-batch)。
+- [x] **H2-AUDIT-14（P2 调查）：核验 K8s token 与用户 CSV 导入错误边界。** 先确认两者是否属于当前可达
+  发布表面；可达时修复产品可控中文、空路径/NPE 或部分导入假成功，不可达时记录准确退役/外部边界。
+  2026-07-11，全 FE 搜索确认两者仅有未调用 facade、无页面消费者；公开后端边界仍完成防御性修复：K8s
+  中文/NPE 改为 i18n 异常，CSV 临时文件/解析失败不再返回 null 或继续 mutation，临时文件 finally 删除。
+  TDD RED/GREEN、reviewer finding 的三条边界回归与完整 BE 119/119 通过，证据见
+  [审计跟进](evidence/2026-07-11-audit-followup.md#error-contract-follow-up-batch)。
+
 - [ ] **H2-DONE-01：发布就绪核对。** 所有可控 TODO 有证据且完成，仅保留已核验的外部缺失能力或
   用户明确接受 blocker；未解决高严重度问题为 0，TODO/design/evidence 三者一致后方可完成 goal。

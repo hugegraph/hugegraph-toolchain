@@ -82,10 +82,12 @@ public class VermeerService {
             } else {
                 enable = "true".equals(data.get("cfgvalue"));
             }
-            client.close();
         } catch (Exception e) {
-            log.info(e.getMessage());
+            log.warn("Dashboard Vermeer configuration is unavailable; " +
+                     "Vermeer integration is disabled for this request");
             enable = false;
+        } finally {
+            client.close();
         }
         return ImmutableMap.of("enable", enable);
     }

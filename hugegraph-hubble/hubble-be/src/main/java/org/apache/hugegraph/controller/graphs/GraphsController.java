@@ -97,7 +97,8 @@ public class GraphsController extends BaseController {
                                                                .getGraphsInfo()
                                                                .get("graphs");
             } catch (ServerException e) {
-                log.info("无法连接到vermeer平台", e.cause());
+                log.info("Failed to connect to the Vermeer service",
+                         e.cause());
                 graphinfos = null;
             }
             if (graphinfos == null || graphinfos.size() == 0) {
@@ -140,7 +141,8 @@ public class GraphsController extends BaseController {
             } catch (ServerException e) {
                 // if dashboard enables vermeer but server sets wrong vermeer 
                 // address, return null
-                log.info("无法连接到vermeer平台", e.cause());
+                log.info("Failed to connect to the Vermeer service",
+                         e.cause());
                 return ImmutableMap.of();
             }
 
@@ -205,21 +207,6 @@ public class GraphsController extends BaseController {
                                           graphspace, graph, vermeerInfo);
         return result;
     }
-
-    // no-use
-//    @GetMapping("{graph}/storage")
-//    public Map<String, Object> storage(@PathVariable("graphspace") String graphspace,
-//                      @PathVariable("graph") String graph) {
-//        RestClient pdClient = getPdClient();
-//        Map<String, Object> result = ImmutableMap.of("storage",
-//                                                     String.valueOf(
-//                                       graphsService.getStorage(graphspace,
-//                                                                graph)));
-//        if (pdClient != null) {
-//            pdClient.close();
-//        }
-//        return result;
-//    }
 
     @PostMapping("{graph}/statistics")
     public void postStatistics(

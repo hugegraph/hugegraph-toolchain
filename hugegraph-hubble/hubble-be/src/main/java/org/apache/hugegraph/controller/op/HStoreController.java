@@ -41,6 +41,8 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.structure.space.HStoreNodeInfo;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
+import org.apache.hugegraph.exception.ServerException;
 
 @Log4j2
 @RestController
@@ -82,7 +84,16 @@ public class HStoreController extends BaseController {
     @GetMapping("status")
     public Object status() {
         HugeClient client = this.authClient(null, null);
-        String status = client.hStoreManager().status();
+        // TODO: Server 1.7.0 does not expose the /hstore/status REST API used
+        // by HugeClient. Keep this call real (do not synthesize health); remove
+        // this TODO only after Server provides and Hubble CI verifies it.
+        String status;
+        try {
+            status = client.hStoreManager().status();
+        } catch (ServerException e) {
+            throw new ServerCapabilityUnavailableException(
+                    "server.capability.hstore-status.unavailable", e);
+        }
 
         return ImmutableMap.of("status", status);
     }

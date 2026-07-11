@@ -337,7 +337,7 @@ public class GraphMetricsController extends BaseController {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Failed to parse graph metrics date range", e);
         }
         return dateList.stream().sorted().collect(Collectors.toList());
     }
