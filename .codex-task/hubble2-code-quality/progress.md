@@ -2,12 +2,15 @@
 
 ## 当前 checkpoint
 
-- 更新时间：2026-07-11 23:20 +08:00
-- 当前阶段：Phase 6 前最终实现与验证
+- 更新时间：2026-07-12 00:10 +08:00
+- 当前阶段：Phase 6 独立审查与延迟 CI 取证
 - 当前分支：`hubble2`
 - 目标状态：active
 - 唯一实时状态源：[`todo.md`](todo.md)
 - 执行合同：[`plan.md`](plan.md)
+- 完整本地门禁覆盖的产品实现 SHA：`10c0e8fa4f18694f8f848212ed1da52ef36d80a4`
+- 独立 review checkpoint / PR 观测 SHA：`03be1bd7b9e2cbdbac90499821bbf4ce147124ac`；相对实现 SHA 仅新增 SOT/evidence 文档
+- 当前工作树：clean（生成物均 ignored）
 
 ## 已完成
 
@@ -29,26 +32,26 @@
 - Hubble BE checkstyle 真实失败阈值已启用；临时违规 exit 1，恢复后 0 violations。
 - FE 显式 lint 已恢复：JS/JSX 329 文件原本 clean；唯一 TS 文件从配置 exit 2、36 errors 修至全量 330 文件 0 warning/error，并接入 CI。
 
-## 当前工作树边界
+## 工作树边界
 
-- fresh audit 前已有 26 个 Hubble BE Java 修改（`+150/-57`），内容为 import/style 清理；视为既有未提交质量修复，保留并纳入后续 scoped verification。
-- 本轮新增产品改动为 `hubble-be/pom.xml` 的单一传递依赖排除及既有 dirty style/import 修复所需的漏 import 补全；未触及业务控制流和公开 API。
+- fresh audit 基线：审计前已有 26 个 Hubble BE Java 修改（`+150/-57`），已保留并纳入 scoped verification。
+- 当前：工作树 clean；本轮提交覆盖 BE 依赖/风格门禁、FE lint/React 稳定批次、Schema 最小合同测试、精确 Server cache 和 CI 可诊断性。未改变公开 API 或业务控制流。
 
 ## 最近验证
 
-- FE `CI=true yarn build` fresh：exit 0，56.80s；52 条第三方 source-map warning 及 Browserslist/bundle 提示待 DEC-FE-01。
-- FE Jest：40 suites / 148 tests 通过，4.57s；项目 Router warning 已清零，剩余 act/defaultProps 为锁定依赖 warning。
-- FE `yarn lint`：exit 0，4.36s；`CI=true yarn build`：exit 0，49.26s；Jest 40/148：exit 0，5.34s。
+- FE `yarn lint`：exit 0，4.94s，330 files 0 warning/error；Jest：40 suites / 148 tests，exit 0，6.50s，console warning 0。
+- FE `CI=true yarn build`：exit 0，47.47s；仅保留已接受的 52 条第三方 source-map warning，以及已转未来任务的 Browserslist/bundle 提示。
 - BE clean compile：成功，265 source files；本项目 unchecked/deprecation warning 为 0，剩余输出为外部发布 POM/仓库元数据 warning。
-- BE unit：119 tests，0 failure/error/skip；clean JaCoCo report 成功分析 265 classes。
-- BE checkstyle：Hubble source diagnostics 128 -> 0；插件仍存在“报告问题但 exit 0”的全局可诊断性问题，保留 CQ-LINT-06。
-- Client/Loader install：exit 0，41.04s；shade 的历史依赖重复 warning 不属于本轮 Hubble 源码 warning。
-- BE unit：新增 API 合同后 121 tests，0 failure/error/skip，15.14s。
-- PR #4 当前 HEAD `66e36594` 的 Hubble CI run `29157701832` 已触发。
+- BE clean unit：121 tests，0 failure/error/skip，exit 0，31.40s；checkstyle 0，JaCoCo 分析 407 classes。
+- Hubble checkstyle info 级门禁已证明临时违规 exit 1、恢复后 exit 0；全仓 15 条既有 debt 不扩入本目标。
+- Client/Loader linked install：exit 0，49.26s；shade 的历史依赖重复 warning 不属于本轮 Hubble 源码 warning。
+- Hubble package：exit 0，126.73s；distribution audit 423 JAR / 275 license / 43 FE license / 10 native-bearing。
+- CI 等价 sidecar audit：SHA-512、临时 GPG detached signature、`--require-sidecars` 均 exit 0。
+- PR #4 在 review checkpoint `03be1bd7`：部分轻量 job 已通过，Hubble 等 job 因 GitHub quota 仍 pending；最终完成以届时实际 PR head 的真实 CI 为准。
 
 ## 阻塞与决策
 
-- server-core 发布 POM 阻塞已用 Hubble 最小排除解除；尚需 package/真实 CI 证明运行兼容。
+- server-core 发布 POM 阻塞已用 Hubble 最小排除解除；精确 Server package、Hubble package 与完整本地 acceptance 已证明运行兼容，仅最终 HEAD 真实 CI 待补。
 - DEC-FE-01/02 已获用户批准：本轮精确 pin React/ReactDOM 18.2.0、恢复 `CI=true`，并以限定来源/数量接受 52 条第三方 source-map warning。
 - Antd/X6/Graphin/G6/Dagre 等核心可视化栈现代化已登记为未来任务，明确不属于当前 task/goal；稳定版本冻结后再积极迁移和重构。
 - 当前唯一构建执行器为 Yarn；删除无消费路径且与精确 pin 冲突的 `package-lock.json`。既有 peer-dependency、Browserslist 与 bundle 债务纳入未来现代化任务，本轮不补包、不升级核心图组件。
@@ -59,9 +62,9 @@
 
 ## 下一动作
 
-1. 运行最终新鲜本地 FE/BE/联动/release sidecar 门禁并保存退出码。
-2. GitHub quota 恢复后补最终 HEAD Hubble CI 与 cache 交叉验证；不作为当前本地推进 blocker。
-3. 冻结实现后执行独立 review，修复 actionable findings 并 re-review。
+1. 冻结实现后执行独立 review，修复 actionable findings 并 re-review。
+2. 用 reflection candidate-only 模式收口 lessons 与最终 progress。
+3. GitHub quota 恢复后补最终 HEAD Hubble CI 与 cache 交叉验证；不作为本地推进或 review blocker。
 
 ## 恢复入口
 
