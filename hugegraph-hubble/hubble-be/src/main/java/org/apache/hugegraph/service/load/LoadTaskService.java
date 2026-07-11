@@ -101,6 +101,15 @@ public class LoadTaskService {
         return this.mapper.selectById(id);
     }
 
+    public LoadTask get(String graphSpace, String graph, int jobId, int id) {
+        QueryWrapper<LoadTask> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", graphSpace)
+             .eq("graph", graph)
+             .eq("job_id", jobId);
+        return this.mapper.selectOne(query);
+    }
+
     public List<LoadTask> listAll() {
         return this.mapper.selectList(null);
     }
@@ -116,9 +125,14 @@ public class LoadTaskService {
         return this.mapper.selectPage(page, query);
     }
 
-    public List<LoadTask> list(String grpahSpace, String graph,
+    public List<LoadTask> list(String graphSpace, String graph, int jobId,
                                List<Integer> taskIds) {
-        return this.mapper.selectBatchIds(taskIds);
+        QueryWrapper<LoadTask> query = Wrappers.query();
+        query.eq("graphspace", graphSpace)
+             .eq("graph", graph)
+             .eq("job_id", jobId)
+             .in("id", taskIds);
+        return this.mapper.selectList(query);
     }
 
     public int count() {

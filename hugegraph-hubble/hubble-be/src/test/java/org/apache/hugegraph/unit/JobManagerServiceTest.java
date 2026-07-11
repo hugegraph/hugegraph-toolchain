@@ -20,6 +20,7 @@ package org.apache.hugegraph.unit;
 
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.Arrays;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -34,6 +35,18 @@ import org.apache.hugegraph.service.load.LoadTaskService;
 import org.apache.hugegraph.testutil.Assert;
 
 public class JobManagerServiceTest {
+
+    @Test
+    public void testListByIdsAppliesGraphScope() throws Exception {
+        JobManagerService service = this.service();
+        JobManagerMapper mapper = Mockito.mock(JobManagerMapper.class);
+        this.setField(service, "mapper", mapper);
+
+        service.list("space-a", "graph-a", Arrays.asList(1, 2));
+
+        Mockito.verify(mapper).selectList(Mockito.any());
+        Mockito.verify(mapper, Mockito.never()).selectBatchIds(Mockito.any());
+    }
 
     @Test
     public void testRefreshStatusMarksSucceededWhenAllLoadTasksSucceed()

@@ -91,13 +91,17 @@ public class LoadTaskController extends BaseController {
     @GetMapping("ids")
     public List<LoadTask> list(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph,
+                               @PathVariable("jobId") int jobId,
                                @RequestParam("task_ids") List<Integer> taskIds) {
-        return this.service.list(graphSpace, graph, taskIds);
+        return this.service.list(graphSpace, graph, jobId, taskIds);
     }
 
     @GetMapping("{id}")
-    public LoadTask get(@PathVariable("id") int id) {
-        LoadTask task = this.service.get(id);
+    public LoadTask get(@PathVariable("graphspace") String graphSpace,
+                        @PathVariable("graph") String graph,
+                        @PathVariable("jobId") int jobId,
+                        @PathVariable("id") int id) {
+        LoadTask task = this.service.get(graphSpace, graph, jobId, id);
         if (task == null) {
             throw new ExternalException("load.task.not-exist.id", id);
         }
@@ -109,7 +113,7 @@ public class LoadTaskController extends BaseController {
                            @PathVariable("graph") String graph,
                            @PathVariable("jobId") int jobId,
                            @RequestBody LoadTask entity) {
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.SETTING,
                  "load.task.create.no-permission");
@@ -118,14 +122,18 @@ public class LoadTaskController extends BaseController {
                      "load.task.reached-limit", LIMIT);
             entity.setGraphSpace(graphSpace);
             entity.setGraph(graph);
+            entity.setJobId(jobId);
             this.service.save(entity);
         }
         return entity;
     }
 
     @DeleteMapping("{id}")
-    public void delete(@PathVariable("id") int id) {
-        LoadTask task = this.service.get(id);
+    public void delete(@PathVariable("graphspace") String graphSpace,
+                       @PathVariable("graph") String graph,
+                       @PathVariable("jobId") int jobId,
+                       @PathVariable("id") int id) {
+        LoadTask task = this.service.get(graphSpace, graph, jobId, id);
         if (task == null) {
             throw new ExternalException("load.task.not-exist.id", id);
         }
@@ -155,7 +163,7 @@ public class LoadTaskController extends BaseController {
             connection.setPort(host.getPort());
         }
 
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.SETTING,
                  "load.task.start.no-permission");
@@ -164,7 +172,8 @@ public class LoadTaskController extends BaseController {
             List<LoadTask> tasks = new ArrayList<>();
             HugeClient client = this.authClient(graphSpace, graph);
             for (Integer fileId : fileIds) {
-                FileMapping fileMapping = this.fmService.get(fileId);
+                FileMapping fileMapping = this.fmService.get(graphSpace, graph,
+                                                              jobId, fileId);
                 if (fileMapping == null) {
                     throw new ExternalException("file-mapping.not-exist.id",
                                                 fileId);
@@ -187,10 +196,14 @@ public class LoadTaskController extends BaseController {
     }
 
     @PostMapping("pause")
-    public LoadTask pause(@PathVariable("jobId") int jobId,
+    public LoadTask pause(@PathVariable("graphspace") String graphSpace,
+                          @PathVariable("graph") String graph,
+                          @PathVariable("jobId") int jobId,
                           @RequestParam("task_id") int taskId) {
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
+        Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
+                 "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
                  "load.task.pause.no-permission");
         try {
@@ -203,10 +216,14 @@ public class LoadTaskController extends BaseController {
     }
 
     @PostMapping("resume")
-    public LoadTask resume(@PathVariable("jobId") int jobId,
+    public LoadTask resume(@PathVariable("graphspace") String graphSpace,
+                           @PathVariable("graph") String graph,
+                           @PathVariable("jobId") int jobId,
                            @RequestParam("task_id") int taskId) {
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
+        Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
+                 "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
                  "load.task.pause.no-permission");
         try {
@@ -219,10 +236,14 @@ public class LoadTaskController extends BaseController {
     }
 
     @PostMapping("stop")
-    public LoadTask stop(@PathVariable("jobId") int jobId,
+    public LoadTask stop(@PathVariable("graphspace") String graphSpace,
+                         @PathVariable("graph") String graph,
+                         @PathVariable("jobId") int jobId,
                          @RequestParam("task_id") int taskId) {
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
+        Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
+                 "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
                  "load.task.pause.no-permission");
         try {
@@ -235,10 +256,14 @@ public class LoadTaskController extends BaseController {
     }
 
     @PostMapping("retry")
-    public LoadTask retry(@PathVariable("jobId") int jobId,
+    public LoadTask retry(@PathVariable("graphspace") String graphSpace,
+                          @PathVariable("graph") String graph,
+                          @PathVariable("jobId") int jobId,
                           @RequestParam("task_id") int taskId) {
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
+        Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
+                 "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
                  "load.task.pause.no-permission");
         try {
@@ -251,16 +276,19 @@ public class LoadTaskController extends BaseController {
     }
 
     @GetMapping("{id}/reason")
-    public Response reason(@PathVariable("jobId") int jobId,
+    public Response reason(@PathVariable("graphspace") String graphSpace,
+                           @PathVariable("graph") String graph,
+                           @PathVariable("jobId") int jobId,
                            @PathVariable("id") int id) {
-        LoadTask task = this.service.get(id);
+        LoadTask task = this.service.get(graphSpace, graph, jobId, id);
         if (task == null) {
             throw new ExternalException("load.task.not-exist.id", id);
         }
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Integer fileId = task.getFileId();
-        FileMapping mapping = this.fmService.get(fileId);
+        FileMapping mapping = this.fmService.get(graphSpace, graph, jobId,
+                                                  fileId);
         String reason = this.service.readLoadFailedReason(mapping);
         return Response.builder()
                        .status(Constant.STATUS_OK)

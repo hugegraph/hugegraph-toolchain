@@ -79,9 +79,14 @@ public class FileUploadController extends BaseController {
     private JobManagerService jobService;
 
     @GetMapping("token")
-    public Map<String, String> fileToken(@PathVariable("jobId") int jobId,
+    public Map<String, String> fileToken(
+                                         @PathVariable("graphspace") String graphSpace,
+                                         @PathVariable("graph") String graph,
+                                         @PathVariable("jobId") int jobId,
                                          @RequestParam("names")
                                          List<String> fileNames) {
+        Ex.check(this.jobService.get(graphSpace, graph, jobId) != null,
+                 "job-manager.not-exist.id", jobId);
         Ex.check(CollectionUtil.allUnique(fileNames),
                  "load.upload.file.duplicate-name");
         Map<String, String> tokens = new HashMap<>();
@@ -111,7 +116,7 @@ public class FileUploadController extends BaseController {
         this.checkTotalAndIndexValid(total, index);
         this.checkFileNameValid(fileName);
         this.checkFileNameMatchToken(fileName, token);
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Long sourceFileSize = this.resolveSourceFileSize(file, fileSize,
                                                          total, index);
         this.checkFileValid(graphSpace, graph, jobId, jobEntity, file, fileName);
@@ -167,7 +172,8 @@ public class FileUploadController extends BaseController {
                     this.service.update(mapping);
                     return result;
                 }
-                JobManager currentJob = this.jobService.get(jobId);
+                JobManager currentJob = this.jobService.get(graphSpace, graph,
+                                                             jobId);
                 long actualFileSize;
                 try {
                     actualFileSize = this.resolveUploadedFileSize(
@@ -216,7 +222,7 @@ public class FileUploadController extends BaseController {
                           @RequestParam("name") String fileName,
                           @RequestParam("token") String token) {
         this.checkFileNameValid(fileName);
-        JobManager jobEntity = this.jobService.get(jobId);
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.UPLOADING ||
                  jobEntity.getJobStatus() == JobStatus.MAPPING ||
@@ -249,8 +255,10 @@ public class FileUploadController extends BaseController {
     }
 
     @PutMapping("next-step")
-    public JobManager nextStep(@PathVariable("jobId") int jobId) {
-        JobManager jobEntity = this.jobService.get(jobId);
+    public JobManager nextStep(@PathVariable("graphspace") String graphSpace,
+                               @PathVariable("graph") String graph,
+                               @PathVariable("jobId") int jobId) {
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.UPLOADING,
                  "job.manager.status.unexpected",
@@ -325,7 +333,7 @@ public class FileUploadController extends BaseController {
                                            int jobId,
                                            String fileName, String filePath,
                                            Long sourceFileSize) {
-        JobManager currentJob = this.jobService.get(jobId);
+        JobManager currentJob = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(currentJob != null, "job-manager.not-exist.id", jobId);
 
         FileMapping mapping = this.service.get(graphSpace, graph, jobId,

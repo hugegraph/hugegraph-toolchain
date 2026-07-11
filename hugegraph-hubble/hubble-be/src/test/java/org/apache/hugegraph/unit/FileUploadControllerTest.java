@@ -120,7 +120,8 @@ public class FileUploadControllerTest {
         FileMappingService service = Mockito.mock(FileMappingService.class);
         JobManagerService jobService = Mockito.mock(JobManagerService.class);
         JobManager job = JobManager.builder().id(1).jobSize(20L).build();
-        Mockito.when(jobService.get(1)).thenReturn(job);
+        Mockito.when(jobService.get("DEFAULT", "hugegraph", 1))
+               .thenReturn(job);
         Mockito.when(service.get("DEFAULT", "hugegraph", 1, "data.csv"))
                .thenReturn(null);
         Mockito.when(service.listByJob(1)).thenReturn(Collections.emptyList());
@@ -156,7 +157,8 @@ public class FileUploadControllerTest {
                                                 "data.csv",
                                                 "upload/old.csv");
         completed.setFileStatus(FileMappingStatus.COMPLETED);
-        Mockito.when(jobService.get(1)).thenReturn(job);
+        Mockito.when(jobService.get("DEFAULT", "hugegraph", 1))
+               .thenReturn(job);
         Mockito.when(service.get("DEFAULT", "hugegraph", 1, "data.csv"))
                .thenReturn(completed);
         this.setField(controller, "service", service);
@@ -186,7 +188,8 @@ public class FileUploadControllerTest {
         existing.setFileStatus(FileMappingStatus.UPLOADING);
         List<FileMapping> uploading = new ArrayList<>();
         uploading.add(existing);
-        Mockito.when(jobService.get(1)).thenReturn(job);
+        Mockito.when(jobService.get("DEFAULT", "hugegraph", 1))
+               .thenReturn(job);
         Mockito.when(service.get("DEFAULT", "hugegraph", 1, "data.csv"))
                .thenReturn(existing);
         Mockito.when(service.listByJob(1)).thenReturn(uploading);

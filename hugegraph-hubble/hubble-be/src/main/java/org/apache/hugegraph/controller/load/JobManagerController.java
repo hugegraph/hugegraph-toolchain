@@ -104,13 +104,17 @@ public class JobManagerController {
     }
 
     @DeleteMapping("{id}")
-    public void delete(@PathVariable("id") int id) {
-        this.service.deleteJob(id);
+    public void delete(@PathVariable("graphspace") String graphSpace,
+                       @PathVariable("graph") String graph,
+                       @PathVariable("id") int id) {
+        this.service.deleteJob(graphSpace, graph, id);
     }
 
     @GetMapping("{id}")
-    public JobManager get(@PathVariable("id") int id) {
-        JobManager job = this.service.get(id);
+    public JobManager get(@PathVariable("graphspace") String graphSpace,
+                          @PathVariable("graph") String graph,
+                          @PathVariable("id") int id) {
+        JobManager job = this.service.get(graphSpace, graph, id);
         if (job == null) {
             throw new ExternalException("job.manager.not-exist.id", id);
         }
@@ -158,7 +162,7 @@ public class JobManagerController {
                  newEntity.getJobRemarks()).matches(),
                  "job.manager.job-remarks.unmatch-regex");
         // Check exist Job Manager with this id
-        JobManager entity = this.service.get(id);
+        JobManager entity = this.service.get(graphSpace, graph, id);
         if (entity == null) {
             throw new ExternalException("job-manager.not-exist.id", id);
         }
@@ -176,7 +180,7 @@ public class JobManagerController {
     public Response reason(@PathVariable("graphspace") String graphSpace,
                            @PathVariable("graph") String graph,
                            @PathVariable("id") int id) {
-        JobManager job = this.service.get(id);
+        JobManager job = this.service.get(graphSpace, graph, id);
         if (job == null) {
             throw new ExternalException("job.manager.not-exist.id", id);
         }
@@ -187,7 +191,8 @@ public class JobManagerController {
             int fileId = task.getFileId();
             String reason = "";
             if (task.getStatus() == LoadStatus.FAILED) {
-                FileMapping mapping = this.fmService.get(fileId);
+                FileMapping mapping = this.fmService.get(graphSpace, graph, id,
+                                                          fileId);
                 reason = this.taskService.readLoadFailedReason(mapping);
             }
             reasonResult.setTaskId(task.getJobId());
