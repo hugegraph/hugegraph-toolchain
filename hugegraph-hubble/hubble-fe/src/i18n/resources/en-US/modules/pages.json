@@ -443,6 +443,8 @@
       "select_graphspace": "Select graph space",
       "select_graph": "Select graph",
       "select_source": "Select data source",
+      "no_datasource": "No data source",
+      "go_create_datasource": "Create now",
       "select_source_type": "Select source type",
       "select_source_fields": "Select source fields",
       "source_available_fields": "Available Source Fields",

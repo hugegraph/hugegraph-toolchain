@@ -18,6 +18,7 @@
 
 import {Form, Input, Typography, Select, Space, Button, message} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
+import {Link} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
@@ -157,6 +158,14 @@ const BaseForm = ({cancel, visible}) => {
                     <Select
                         options={datasourceOptions}
                         placeholder={t('task.edit.select_source')}
+                        notFoundContent={
+                            <div style={{textAlign: 'center', padding: '4px 0'}}>
+                                <span>{t('task.edit.no_datasource')}</span>
+                                <Link to="/source" style={{marginLeft: 8}}>
+                                    {t('task.edit.go_create_datasource')}
+                                </Link>
+                            </div>
+                        }
                     />
                 </Form.Item>
                 <Form.Item label={t('task.edit.target')} required>
