@@ -166,7 +166,8 @@ public final class TaskManager {
                         this.context.occurredError();
                         this.context.stopLoading();
                         LOG.error("Batch insert {} error, interrupting import", mapping.type(), e);
-                        Printer.printError("Batch insert %s failed, stop loading. Please check the logs",
+                        Printer.printError("Batch insert %s failed, stop loading. " +
+                                           "Please check the logs",
                                            mapping.type().string());
                     }
                 } else {

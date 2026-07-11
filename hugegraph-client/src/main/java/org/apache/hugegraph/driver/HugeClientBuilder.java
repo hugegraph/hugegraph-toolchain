@@ -78,8 +78,8 @@ public class HugeClientBuilder {
                             "Expect a string value as the url parameter argument, but got: %s",
                             this.url);
             E.checkArgument(this.graph != null && !this.graph.isEmpty(),
-                            "Expect a string value as the graph name parameter argument, but got: %s",
-                            this.graph);
+                            "Expect a string value as the graph name " +
+                            "parameter argument, but got: %s", this.graph);
         }
         return new HugeClient(this);
     }
