@@ -33,6 +33,7 @@ import {GRAPH_STATUS, Algorithm_Url, ALGORITHM_NAME} from '../../../../../utils/
 import {integerValidator, topValidator, alphaValidator, positiveIntegerValidator} from '../../utils';
 import classnames from 'classnames';
 import s from '../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../components/KeyboardAction';
 
 const {NEIGHBOR_RANK_API} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
@@ -223,7 +224,11 @@ const NeighborRankApi = props => {
     const renderSteps = () => {
         return (
             <div>
-                <div className={s.stepHeader} onClick={changeStepVisible}>
+                <KeyboardAction
+                    className={s.stepHeader}
+                    onAction={changeStepVisible}
+                    aria-expanded={stepVisible}
+                >
                     <div className={s.stepIcon}>
                         {stepVisible ? <DownOutlined /> : <RightOutlined />}
                     </div>
@@ -236,7 +241,7 @@ const NeighborRankApi = props => {
                             <QuestionCircleOutlined />
                         </Tooltip>
                     </div>
-                </div>
+                </KeyboardAction>
                 <div className={stepContentClassName}>
                     {renderStepsFormItems()}
                 </div>

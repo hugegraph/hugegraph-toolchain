@@ -24,6 +24,7 @@ import React, {useCallback} from 'react';
 import {DoubleRightOutlined} from '@ant-design/icons';
 import c from './index.module.scss';
 import classnames from 'classnames';
+import KeyboardAction from '../../../components/KeyboardAction';
 
 const PanelControlButton = props => {
     const {
@@ -44,9 +45,13 @@ const PanelControlButton = props => {
     );
 
     return (
-        <div className={buttonClassnames} onClick={handleClickButton}>
+        <KeyboardAction
+            className={buttonClassnames}
+            onAction={handleClickButton}
+            aria-expanded={show}
+        >
             <DoubleRightOutlined />
-        </div>
+        </KeyboardAction>
     );
 };
 

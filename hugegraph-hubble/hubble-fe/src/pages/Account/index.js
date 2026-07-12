@@ -17,6 +17,7 @@
  */
 
 import {
+    Alert,
     PageHeader,
     Button,
     Space,
@@ -25,7 +26,7 @@ import {
     Tooltip,
     Modal,
 } from 'antd';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import TableHeader from '../../components/TableHeader';
 import EditLayer from './EditLayer';
@@ -34,32 +35,41 @@ import {getUser} from '../../utils/user';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 
+const RowAction = ({onAction, row, children}) => {
+    const handleClick = useCallback(() => onAction(row), [onAction, row]);
+
+    return <Button type='link' onClick={handleClick}>{children}</Button>;
+};
+
 const Account = () => {
     const {t} = useTranslation();
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [op, setOp] = useState('detail');
     const [detail, setDetail] = useState({});
     const [data, setData] = useState([]);
+    const [listLoading, setListLoading] = useState(true);
+    const [listError, setListError] = useState(false);
+    const listRequest = useRef(null);
     const [refresh, setRefresh] = useState(false);
     const [pagination, setPagination] = useState({toatal: 0, current: 1, pageSize: 10});
 
-    const showDetail = row => {
+    const showDetail = useCallback(row => {
         setDetail(row);
         setOp('detail');
         setEditLayerVisible(true);
-    };
+    }, []);
 
-    const showEdit = row => {
+    const showEdit = useCallback(row => {
         setDetail(row);
         setOp('edit');
         setEditLayerVisible(true);
-    };
+    }, []);
 
-    const showAuth = row => {
+    const showAuth = useCallback(row => {
         setDetail(row);
         setOp('auth');
         setEditLayerVisible(true);
-    };
+    }, []);
 
     const showAdd = useCallback(() => {
         setDetail({});
@@ -75,7 +85,7 @@ const Account = () => {
         setEditLayerVisible(false);
     }, []);
 
-    const handleDelete = row => {
+    const handleDelete = useCallback(row => {
         Modal.confirm({
             title: t('account.delete_confirm', {name: row.user_name}),
             onOk: () => {
@@ -89,11 +99,11 @@ const Account = () => {
                 }).catch(() => message.error(t('common.msg.operation_failed')));
             },
         });
-    };
+    }, [t]);
 
     const handleTable = useCallback(page => {
-        setPagination({...pagination, ...page});
-    }, [pagination]);
+        setPagination(value => ({...value, ...page}));
+    }, []);
 
     const columns = [
         {
@@ -127,12 +137,22 @@ const Account = () => {
             align: 'center',
             render: row => (
                 <Space>
-                    <a onClick={() => showDetail(row)}>{t('common.action.detail')}</a>
-                    {<a onClick={() => showEdit(row)}>{t('common.action.edit')}</a>}
-                    <a onClick={() => showAuth(row)}>{t('common.action.assign_permission')}</a>
+                    <RowAction onAction={showDetail} row={row}>
+                        {t('common.action.detail')}
+                    </RowAction>
+                    <RowAction onAction={showEdit} row={row}>
+                        {t('common.action.edit')}
+                    </RowAction>
+                    <RowAction onAction={showAuth} row={row}>
+                        {t('common.action.assign_permission')}
+                    </RowAction>
                     {row.user_name !== 'admin'
                         && row.user_name !== getUser().id
-                        && <a onClick={() => handleDelete(row)}>{t('common.action.delete')}</a>}
+                        && (
+                            <RowAction onAction={handleDelete} row={row}>
+                                {t('common.action.delete')}
+                            </RowAction>
+                        )}
                 </Space>
             ),
         },
@@ -141,21 +161,46 @@ const Account = () => {
     const rowKey = useCallback(item => item.user_name, []);
     const {current, pageSize} = pagination;
 
-    useEffect(() => {
-        api.auth.getAllUserList({
-            query: '',
-            page_no: current,
-            page_size: pageSize,
-        }, PAGE_ERROR_CONFIG).then(res => {
+    const loadAccounts = useCallback(async () => {
+        const token = Symbol('account-list');
+        listRequest.current = token;
+        setListLoading(true);
+        setListError(false);
+        setData([]);
+        try {
+            const res = await api.auth.getAllUserList({
+                query: '',
+                page_no: current,
+                page_size: pageSize,
+            }, PAGE_ERROR_CONFIG);
+            if (listRequest.current !== token) {
+                return;
+            }
             if (res.status === 200) {
                 setData(res.data.records);
                 setPagination(value => ({...value, total: res.data.total}));
                 return;
             }
+            setListError(true);
+        }
+        catch (error) {
+            if (listRequest.current === token) {
+                setListError(true);
+            }
+        }
+        finally {
+            if (listRequest.current === token) {
+                setListLoading(false);
+            }
+        }
+    }, [current, pageSize]);
 
-            message.error(t('common.msg.load_failed'));
-        }).catch(() => message.error(t('common.msg.load_failed')));
-    }, [refresh, current, pageSize, t]);
+    useEffect(() => {
+        loadAccounts();
+        return () => {
+            listRequest.current = null;
+        };
+    }, [refresh, loadAccounts]);
 
     return (
         <>
@@ -166,6 +211,18 @@ const Account = () => {
             />
 
             <div className='container'>
+                {listError && (
+                    <Alert
+                        type='error'
+                        showIcon
+                        message={t('account.load.unavailable')}
+                        action={(
+                            <Button size='small' onClick={loadAccounts}>
+                                {t('account.load.retry')}
+                            </Button>
+                        )}
+                    />
+                )}
                 <TableHeader>
                     <Space>
                         <Button onClick={showAdd} type='primary'>{t('account.create')}</Button>
@@ -178,6 +235,7 @@ const Account = () => {
                     rowKey={rowKey}
                     pagination={pagination}
                     onChange={handleTable}
+                    loading={listLoading}
                 />
             </div>
 

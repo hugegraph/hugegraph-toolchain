@@ -29,6 +29,7 @@ import GraphAnalysisContext from '../../../Context';
 import classnames from 'classnames';
 import c from './index.module.scss';
 import * as api from '../../../../api/index';
+import KeyboardAction from '../../../../components/KeyboardAction';
 
 const FAVORITE_TYPE  = {
     Gremlin: 'GREMLIN',
@@ -235,9 +236,13 @@ const ContentCommon = props => {
                     </Button>
                 </div>
             </div>
-            <div className={c.showMoreButton} onClick={onToggleCollapse}>
+            <KeyboardAction
+                className={c.showMoreButton}
+                onAction={onToggleCollapse}
+                aria-expanded={isShowMore}
+            >
                 {renderCollapseHeader()}
-            </div>
+            </KeyboardAction>
         </div>
     );
 };

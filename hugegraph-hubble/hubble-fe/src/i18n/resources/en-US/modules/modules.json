@@ -201,6 +201,8 @@
   },
   "style_config": {
     "title": "Style Config",
+    "color_picker": "Choose color",
+    "close_color_picker": "Close color picker",
     "vertex_style": "Vertex Style",
     "edge_style": "Edge Style",
     "vertex_appearance": "Vertex Appearance",

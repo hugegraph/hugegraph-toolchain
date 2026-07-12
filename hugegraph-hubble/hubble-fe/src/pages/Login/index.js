@@ -105,8 +105,10 @@ const Login = () => {
                 form={form}
             >
                 <Row>
-                    <Col span={24} className={style.title}>
-                        <img src={Logo} alt='' /> | {t('login.title')}
+                    <Col span={24}>
+                        <h1 className={style.title}>
+                            <img src={Logo} alt='' /> | {t('login.title')}
+                        </h1>
                     </Col>
                 </Row>
                 <Form.Item
@@ -115,6 +117,7 @@ const Login = () => {
                 >
                     <Input
                         prefix={<UserOutlined className="site-form-item-icon" />}
+                        aria-label={t('login.username')}
                         placeholder={t('login.username')}
                     />
                 </Form.Item>
@@ -124,6 +127,7 @@ const Login = () => {
                 >
                     <Input
                         prefix={<LockOutlined className="site-form-item-icon" />}
+                        aria-label={t('login.password')}
                         type="password"
                         placeholder={t('login.password')}
                     />

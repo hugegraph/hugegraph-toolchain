@@ -22,7 +22,7 @@
 
 import {useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Table, Space, Tag, Input, Popconfirm} from 'antd';
+import {Button, Table, Space, Tag, Input, Popconfirm} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
 import c from './index.module.scss';
 
@@ -91,11 +91,13 @@ const ExecuteLogActions = props => {
                 okText={t('analysis.logs.action.favorite')}
                 cancelText={t('common.action.cancel')}
             >
-                <a onClick={onFavoriteCard}>{t('analysis.logs.action.favorite')}</a>
+                <Button type='link' onClick={onFavoriteCard}>
+                    {t('analysis.logs.action.favorite')}
+                </Button>
             </Popconfirm>
-            <a style={{marginLeft: '8px'}} onClick={handleLoadStatements}>
+            <Button type='link' style={{marginLeft: '8px'}} onClick={handleLoadStatements}>
                 {t('analysis.logs.action.load_statement')}
-            </a>
+            </Button>
         </div>
     );
 };

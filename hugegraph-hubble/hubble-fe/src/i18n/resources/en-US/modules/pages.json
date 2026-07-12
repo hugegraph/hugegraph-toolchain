@@ -85,6 +85,10 @@
   },
   "graphspace": {
     "title": "Graph Space Management",
+    "load": {
+      "unavailable": "Unable to load the GraphSpace list.",
+      "retry": "Retry GraphSpaces"
+    },
     "create": "Create Graph Space",
     "search_placeholder": "Search by graph space name",
     "set_default_confirm": "Confirm changing the default graph space?",
@@ -264,6 +268,10 @@
   },
   "account": {
     "title": "Account Management",
+    "load": {
+      "unavailable": "Unable to load the account list.",
+      "retry": "Retry accounts"
+    },
     "create": "Create Account",
     "delete_confirm": "Confirm deleting account {{name}}?",
     "col": {
@@ -295,6 +303,10 @@
   "my": {
     "title": "My Profile",
     "edit_profile_title": "Edit Profile",
+    "load": {
+      "unavailable": "Unable to load your profile.",
+      "retry": "Retry profile"
+    },
     "col": {
       "id": "Account ID",
       "name": "Account Name",
@@ -418,6 +430,8 @@
     },
     "view": {
       "title": "View Task",
+      "unavailable": "Unable to load the current task details.",
+      "retry": "Retry task details",
       "name": "Task Name",
       "source_type": "Source Type",
       "target_space": "Target Space",
@@ -581,6 +595,11 @@
     "retry": "Retry schema data",
     "delete_failed": "Delete failed. Check the server connection and retry.",
     "title": "Metadata Management",
+    "identity": {
+      "graph_unavailable": "Unable to load the current graph.",
+      "graphspace_unavailable": "Unable to load the current GraphSpace.",
+      "retry": "Retry graph context"
+    },
     "name_placeholder": "Letters, numbers, underscores, and Chinese characters are allowed",
     "delete_irreversible": "This action cannot be undone. Please proceed with caution.",
     "delete_task_hint": "Deleting metadata may take a while. Check Task Management for progress.",
@@ -790,6 +809,10 @@
     "dashboard_checking": "Checking Dashboard availability...",
     "dashboard_unavailable": "Dashboard is unavailable. Check dashboard.address and service health.",
     "dashboard_popup_blocked": "The Dashboard window was blocked. Allow pop-ups and retry."
+  },
+  "not_found": {
+    "subtitle": "Page not found",
+    "home": "Return home"
   },
   "login": {
     "submit": "Sign In",

@@ -17,13 +17,17 @@
  * under the License.
  */
 
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useId, useRef, useState} from 'react';
 import {ChromePicker} from 'react-color';
 import styles from './index.module.scss';
+import {useTranslation} from 'react-i18next';
 
 const InputColorSelect = ({value, onChange, disable}) => {
+    const {t} = useTranslation();
     const [visible, setVisible] = useState(false);
     const [color, setColor] = useState('#5c73e6');
+    const triggerRef = useRef(null);
+    const pickerId = useId();
 
     const showPicker = useCallback(() => {
         if (disable) {
@@ -39,7 +43,15 @@ const InputColorSelect = ({value, onChange, disable}) => {
         }
 
         setVisible(false);
+        triggerRef.current?.focus();
     }, [disable]);
+
+    const handleKeyDown = useCallback(event => {
+        if (event.key === 'Escape' && visible) {
+            event.preventDefault();
+            hidePicker();
+        }
+    }, [hidePicker, visible]);
 
     const handleClick = useCallback(color => {
         if (disable) {
@@ -58,19 +70,29 @@ const InputColorSelect = ({value, onChange, disable}) => {
     }, [value]);
 
     return (
-        <div className={styles.wrap}>
+        <div className={styles.wrap} onKeyDown={handleKeyDown}>
             {disable ? <div className={styles.disable} /> : null}
             <div className={styles.swatch}>
-                <div
+                <button
+                    ref={triggerRef}
+                    type='button'
                     className={styles.color}
                     style={{background: `${color}`}}
-                    // style={{background: `rgba(${color.hex}, ${color.g}, ${color.b}, ${color.a})`}}
                     onClick={showPicker}
+                    disabled={disable}
+                    aria-label={t('style_config.color_picker')}
+                    aria-expanded={visible}
+                    aria-controls={visible ? pickerId : undefined}
                 />
             </div>
             {visible ? (
-                <div className={styles.popover}>
-                    <div className={styles.cover} onClick={hidePicker} />
+                <div className={styles.popover} id={pickerId}>
+                    <button
+                        type='button'
+                        className={styles.cover}
+                        onClick={hidePicker}
+                        aria-label={t('style_config.close_color_picker')}
+                    />
                     <ChromePicker color={color} onChange={handleClick} disableAlpha />
                 </div>
             ) : null}

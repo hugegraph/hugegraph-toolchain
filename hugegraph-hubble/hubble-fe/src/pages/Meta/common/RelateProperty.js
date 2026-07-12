@@ -18,6 +18,7 @@
 
 import {Space, Form, Select} from 'antd';
 import {useTranslation} from 'react-i18next';
+import {FormListAdd, FormListRemove} from '../../../components/FormListAction';
 import {attrOptions} from './config';
 
 const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, isEdit}) => {
@@ -97,19 +98,19 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                             onChange={selectProperty}
                                         />
                                     </Form.Item>
-                                    <a onClick={() => {
-                                        remove(index);
-                                        removeProperty();
-                                    }}
+                                    <FormListRemove
+                                        remove={remove}
+                                        index={index}
+                                        afterRemove={removeProperty}
                                     >
                                         {t('common.action.delete')}
-                                    </a>
+                                    </FormListRemove>
                                 </Space>
                             ))}
                             <Form.ErrorList errors={errors} />
-                            <div className="form_attr_add" onClick={() => add()}>
+                            <FormListAdd add={add}>
                                 +{t('common.action.add')}
-                            </div>
+                            </FormListAdd>
                         </>
                     )}
                 </Form.List>
@@ -143,19 +144,19 @@ const RelateProperty = ({propertyList, selectProperty, removeProperty, exist, is
                                         onChange={selectProperty}
                                     />
                                 </Form.Item>
-                                <a onClick={() => {
-                                    remove(index);
-                                    removeProperty();
-                                }}
+                                <FormListRemove
+                                    remove={remove}
+                                    index={index}
+                                    afterRemove={removeProperty}
                                 >
                                     {t('common.action.delete')}
-                                </a>
+                                </FormListRemove>
                             </Space>
                         ))}
                         <Form.ErrorList errors={errors} />
-                        <div className="form_attr_add" onClick={() => add()}>
+                        <FormListAdd add={add}>
                             +{t('common.action.add')}
-                        </div>
+                        </FormListAdd>
                     </>
                 )}
             </Form.List>

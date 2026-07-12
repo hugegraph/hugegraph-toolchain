@@ -41,6 +41,16 @@ const {Text} = Typography;
 
 const {FAILED, SUCCESS, DELETING, CANCELLING} = Async_Taskt_Status;
 
+const TaskAction = ({onAction, args, children}) => {
+    const handleClick = useCallback(() => onAction(...args), [args, onAction]);
+
+    return (
+        <Button type='link' style={{margin: '10px'}} onClick={handleClick}>
+            {children}
+        </Button>
+    );
+};
+
 const AsyncTaskDetail = props => {
     const {t} = useTranslation();
     const {
@@ -148,7 +158,7 @@ const AsyncTaskDetail = props => {
         abortAsyncTaskById(taskId);
     }, [abortAsyncTaskById]);
 
-    const onDeleteConfirm = id => {
+    const onDeleteConfirm = useCallback(id => {
         Modal.confirm({
             title: t('analysis.async_task.delete_confirm_title'),
             content: t('analysis.async_task.delete_confirm_content'),
@@ -156,7 +166,7 @@ const AsyncTaskDetail = props => {
             cancelText: t('common.action.cancel'),
             onOk: () => deleteTaskByIds([id]),
         });
-    };
+    }, [deleteTaskByIds, t]);
 
     const onMassDeleteConfirm = useCallback(() => {
         Modal.confirm({
@@ -252,22 +262,26 @@ const AsyncTaskDetail = props => {
 
                         )}
                         {isAllowCheckRes && (
-                            <a style={{margin: '10px'}} onClick={() => viewResult(result, rowData, index)}>
+                            <TaskAction onAction={viewResult} args={[result, rowData, index]}>
                                 {resultText}
-                            </a>
+                            </TaskAction>
                         )}
                         {!isAllowAbort && (
                             status === DELETING
                                 ? <Spin type="strong" />
-                                : <a style={{margin: '10px'}} onClick={() => onDeleteConfirm(taskId)}>{delText}</a>
+                                : (
+                                    <TaskAction onAction={onDeleteConfirm} args={[taskId]}>
+                                        {delText}
+                                    </TaskAction>
+                                )
                         )}
                         {isAllowAbort && (
-                            <a style={{margin: '10px'}} onClick={() => onAbortTaskHandler(taskId)}>
+                            <TaskAction onAction={onAbortTaskHandler} args={[taskId]}>
                                 {abort}
-                            </a>
+                            </TaskAction>
                         )}
                         {status === CANCELLING && (
-                            <div><a style={{margin: '10px'}}>{aborting}</a></div>
+                            <div><span style={{margin: '10px'}}>{aborting}</span></div>
                         )}
                     </div>
                 );

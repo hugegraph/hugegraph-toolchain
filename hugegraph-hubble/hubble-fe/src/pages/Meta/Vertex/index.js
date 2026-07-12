@@ -157,8 +157,12 @@ const VertexTable = () => {
             align: 'center',
             render: val => (
                 <Space>
-                    <a onClick={() => handleEdit(val)}>{t('common.edit')}</a>
-                    <a onClick={() => handleDelete(val)}>{t('common.delete')}</a>
+                    <RowActionButton onAction={handleEdit} value={val}>
+                        {t('common.edit')}
+                    </RowActionButton>
+                    <RowActionButton onAction={handleDelete} value={val}>
+                        {t('common.delete')}
+                    </RowActionButton>
                 </Space>
             ),
         },

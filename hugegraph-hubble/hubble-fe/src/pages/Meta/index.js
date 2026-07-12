@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {PageHeader, Row, Col, Radio, Spin, message} from 'antd';
-import {useCallback, useEffect, useState} from 'react';
+import {Alert, Button, PageHeader, Row, Col, Radio, Spin, Space} from 'antd';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import ImageView from './ImageView';
 import ListView from './ListView';
 import {useParams, useNavigate} from 'react-router-dom';
@@ -26,8 +26,11 @@ import {useTranslation} from 'react-i18next';
 
 const Meta = () => {
     const [viewType, setViewType] = useState('list');
-    const [graphIno, setGraphInfo] = useState(false);
-    const [graphspaceInfo, setGraphspaceInfo] = useState(false);
+    const [graphIno, setGraphInfo] = useState({});
+    const [graphspaceInfo, setGraphspaceInfo] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [errors, setErrors] = useState({graph: false, graphspace: false});
+    const identityRequest = useRef(null);
     const {graphspace, graph} = useParams();
     const navigate = useNavigate();
     const {t} = useTranslation();
@@ -41,39 +44,60 @@ const Meta = () => {
         setViewType(e.target.value);
     }, []);
 
-    useEffect(() => {
-        if (!graphspace || !graph) {
+    const loadIdentity = useCallback(async () => {
+        const token = Symbol('meta-identity');
+        identityRequest.current = token;
+        setLoading(true);
+        setErrors({graph: false, graphspace: false});
+        setGraphInfo({});
+        setGraphspaceInfo({});
+        const config = {suppressBusinessErrorToast: true};
+        const [graphResult, graphspaceResult] = await Promise.allSettled([
+            api.manage.getGraph(graphspace, graph, config),
+            api.manage.getGraphSpace(graphspace, config),
+        ]);
+        if (identityRequest.current !== token) {
             return;
         }
-
-        api.manage.getGraph(graphspace, graph).then(res => {
-            if (res.status === 200) {
-                setGraphInfo(res.data);
-                return;
-            }
-
-            setGraphInfo({});
-            message.error(res.message);
-        });
-
-        api.manage.getGraphSpace(graphspace).then(res => {
-            if (res.status === 200) {
-                setGraphspaceInfo(res.data);
-                return;
-            }
-
-            setGraphspaceInfo({});
-            message.error(res.message);
-        });
+        const graphResponse = graphResult.status === 'fulfilled'
+            ? graphResult.value : null;
+        const graphspaceResponse = graphspaceResult.status === 'fulfilled'
+            ? graphspaceResult.value : null;
+        const nextErrors = {
+            graph: graphResponse?.status !== 200,
+            graphspace: graphspaceResponse?.status !== 200,
+        };
+        if (!nextErrors.graph) {
+            setGraphInfo(graphResponse.data);
+        }
+        if (!nextErrors.graphspace) {
+            setGraphspaceInfo(graphspaceResponse.data);
+        }
+        setErrors(nextErrors);
+        setLoading(false);
     }, [graphspace, graph]);
+
+    useEffect(() => {
+        if (!graphspace || !graph) {
+            return undefined;
+        }
+        loadIdentity();
+        return () => {
+            identityRequest.current = null;
+        };
+    }, [graphspace, graph, loadIdentity]);
+
+    const hasIdentityError = errors.graph || errors.graphspace;
+    const pageTitle = `${graphspaceInfo.nickname ?? graphspace} - `
+        + `${graphIno.nickname ?? graph} - ${t('schema.title')}`;
 
     return (
         <>
-            <Spin spinning={graphIno === false || graphspaceInfo === false}>
+            <Spin spinning={loading}>
                 <PageHeader
                     ghost={false}
                     onBack={handlePageBack}
-                    title={`${graphspaceInfo.nickname} - ${graphIno.nickname} - ${t('schema.title')}`}
+                    title={pageTitle}
                 >
                     <Row justify='space-between'>
                         <Col>
@@ -92,13 +116,34 @@ const Meta = () => {
                 </PageHeader>
 
                 <div className='container'>
-                    {viewType === 'list'
+                    {hasIdentityError && (
+                        <Space direction='vertical' style={{width: '100%'}}>
+                            {errors.graphspace && (
+                                <Alert
+                                    type='error'
+                                    showIcon
+                                    message={t('schema.identity.graphspace_unavailable')}
+                                />
+                            )}
+                            {errors.graph && (
+                                <Alert
+                                    type='error'
+                                    showIcon
+                                    message={t('schema.identity.graph_unavailable')}
+                                />
+                            )}
+                            <Button onClick={loadIdentity}>
+                                {t('schema.identity.retry')}
+                            </Button>
+                        </Space>
+                    )}
+                    {!hasIdentityError && viewType === 'list'
                         ? (
                             <ListView />
                         )
-                        : (
+                        : !hasIdentityError ? (
                             <ImageView />
-                        )
+                        ) : null
                     }
                 </div>
             </Spin>

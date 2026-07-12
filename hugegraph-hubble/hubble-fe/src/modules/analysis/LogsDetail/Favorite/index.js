@@ -22,7 +22,7 @@
 
 import React, {useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Table, Input, Popconfirm, Modal} from 'antd';
+import {Button, Table, Input, Popconfirm, Modal} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
 import Highlighter from 'react-highlight-words';
 import c from './index.module.scss';
@@ -56,9 +56,9 @@ const FavoriteActions = props => {
 
     return (
         <div className={c.manipulation}>
-            <a style={{marginLeft: '8px'}} onClick={handleLoadStatements}>
+            <Button type='link' style={{marginLeft: '8px'}} onClick={handleLoadStatements}>
                 {t('analysis.logs.action.load_statement')}
-            </a>
+            </Button>
             <Popconfirm
                 placement="left"
                 className={c.favoriteModel}
@@ -68,13 +68,13 @@ const FavoriteActions = props => {
                 okButtonProps={{disabled: isDisabledName}}
                 cancelText={t('common.action.cancel')}
             >
-                <a style={{marginLeft: '8px'}} onClick={handleEditFavorite}>
+                <Button type='link' style={{marginLeft: '8px'}} onClick={handleEditFavorite}>
                     {t('analysis.logs.action.edit_name')}
-                </a>
+                </Button>
             </Popconfirm>
-            <a style={{marginLeft: '8px'}} onClick={handleConfirm}>
+            <Button type='link' style={{marginLeft: '8px'}} onClick={handleConfirm}>
                 {t('common.action.delete')}
-            </a>
+            </Button>
         </div>
     );
 };

@@ -39,6 +39,9 @@
     width: 46px;
     height: 18px;
     border-radius: 2px;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
 }
 
 .swatch {
@@ -61,5 +64,8 @@
     top: 0;
     right: 0;
     bottom: 0;
-    left: 0,
+    left: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
 }

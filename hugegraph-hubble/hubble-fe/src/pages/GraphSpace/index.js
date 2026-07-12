@@ -17,6 +17,7 @@
  */
 
 import {
+    Alert,
     Table,
     Space,
     Row,
@@ -32,7 +33,7 @@ import {
     Pagination,
     Spin,
 } from 'antd';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {EditLayer} from './EditLayer';
 import TableHeader from '../../components/TableHeader';
@@ -48,6 +49,12 @@ const showText = (val, suffix, unlimited, empty) => (
     val > 99999 ? (empty === undefined ? unlimited : empty) : `${val}${suffix}`
 );
 
+const GraphSpaceRowAction = ({onAction, value, children}) => {
+    const handleClick = useCallback(() => onAction(value), [onAction, value]);
+
+    return <Button type='link' onClick={handleClick}>{children}</Button>;
+};
+
 const GraphSpace = () => {
     const [data, setData] = useState([]);
     const [detail, setDetail] = useState({});
@@ -58,12 +65,21 @@ const GraphSpace = () => {
     const [graphspacename, setGraphspacename] = useState('');
     const [pagination, setPagination] = useState({toatal: 0, current: 1, pageSize: 11});
     const [loading, setLoading] = useState(false);
+    const [listError, setListError] = useState(false);
+    const listRequest = useRef(null);
     const {t} = useTranslation();
 
     const handleCreate = useCallback(() => {
         setEditLayer(true);
         setDetail({});
     }, []);
+
+    const handleCreateKeyDown = useCallback(event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleCreate();
+        }
+    }, [handleCreate]);
 
     const editGraphspace = useCallback(detail => {
         setDetail(detail);
@@ -77,8 +93,12 @@ const GraphSpace = () => {
 
     const handleListType = useCallback(e => {
         setListType(e.target.value);
-        setPagination({...pagination, current: 1, pageSize: e.target.value === 'image' ? 11 : 10});
-    }, [pagination]);
+        setPagination(value => ({
+            ...value,
+            current: 1,
+            pageSize: e.target.value === 'image' ? 11 : 10,
+        }));
+    }, []);
 
     const deleteGraphspace = useCallback(graphspace => {
         Modal.confirm({
@@ -98,8 +118,8 @@ const GraphSpace = () => {
     }, [t]);
 
     const handlePage = useCallback(current => {
-        setPagination({...pagination, current});
-    }, [pagination]);
+        setPagination(value => ({...value, current}));
+    }, []);
 
     const handleTable = useCallback(pagination => {
         setPagination(pagination);
@@ -187,17 +207,30 @@ const GraphSpace = () => {
                             <Link to={`/graphspace/${row.name}/schema`}>
                                 {t('common.action.schema_manage')}
                             </Link>
-                            <a onClick={handleInit}>{t('common.action.init')}</a>
+                            <Button type='link' onClick={handleInit}>
+                                {t('common.action.init')}
+                            </Button>
                         </Space>
                     ) : (
                         <Space wrap>
                             {(row.default)
                                 ? <span className={style.disable}>{t('common.action.edit')}</span>
-                                : <a onClick={() => editGraphspace(row)}>{t('common.action.edit')}</a>
+                                : (
+                                    <GraphSpaceRowAction onAction={editGraphspace} value={row}>
+                                        {t('common.action.edit')}
+                                    </GraphSpaceRowAction>
+                                )
                             }
                             {(row.default)
                                 ? <span className={style.disable}>{t('common.action.delete')}</span>
-                                : <a onClick={() => deleteGraphspace(row.name)}>{t('common.action.delete')}</a>
+                                : (
+                                    <GraphSpaceRowAction
+                                        onAction={deleteGraphspace}
+                                        value={row.name}
+                                    >
+                                        {t('common.action.delete')}
+                                    </GraphSpaceRowAction>
+                                )
                             }
                             <Link to={`/graphspace/${row.name}/schema`}>
                                 {t('common.action.schema_manage')}
@@ -209,28 +242,49 @@ const GraphSpace = () => {
         },
     ];
 
-    useEffect(() => {
-        setLoading(true);
+    const {current, pageSize} = pagination;
 
-        api.manage.getGraphSpaceList({
-            create_time: dateData,
-            query: graphspacename,
-            page_no: pagination.current,
-            page_size: pagination.pageSize,
-        }, PAGE_ERROR_CONFIG).then(res => {
-            setLoading(false);
-            if (res.status === 200) {
-                setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
+    const loadGraphspaces = useCallback(async () => {
+        const token = Symbol('graphspace-list');
+        listRequest.current = token;
+        setLoading(true);
+        setListError(false);
+        setData([]);
+        try {
+            const res = await api.manage.getGraphSpaceList({
+                create_time: dateData,
+                query: graphspacename,
+                page_no: current,
+                page_size: pageSize,
+            }, PAGE_ERROR_CONFIG);
+            if (listRequest.current !== token) {
                 return;
             }
-            message.error(t('common.msg.load_failed'));
-        }).catch(() => {
-            setLoading(false);
-            message.error(t('common.msg.load_failed'));
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refresh, listType, dateData, graphspacename, pagination.current]);
+            if (res.status === 200) {
+                setData(res.data.records);
+                setPagination(value => ({...value, total: res.data.total}));
+                return;
+            }
+            setListError(true);
+        }
+        catch (error) {
+            if (listRequest.current === token) {
+                setListError(true);
+            }
+        }
+        finally {
+            if (listRequest.current === token) {
+                setLoading(false);
+            }
+        }
+    }, [current, dateData, graphspacename, pageSize]);
+
+    useEffect(() => {
+        loadGraphspaces();
+        return () => {
+            listRequest.current = null;
+        };
+    }, [refresh, listType, loadGraphspaces]);
 
     return (
         <>
@@ -266,13 +320,31 @@ const GraphSpace = () => {
             </PageHeader>
 
             <div className='container'>
+                {listError && (
+                    <Alert
+                        type='error'
+                        showIcon
+                        message={t('graphspace.load.unavailable')}
+                        action={(
+                            <Button size='small' onClick={loadGraphspaces}>
+                                {t('graphspace.load.retry')}
+                            </Button>
+                        )}
+                    />
+                )}
                 <Spin spinning={loading}>
                     {listType === 'image'
                         ? (
                             <>
                                 <Row gutter={[10, 10]} justify='start'>
                                     <Col span={8} key='add'>
-                                        <Card className={style.add_card} onClick={handleCreate}>
+                                        <Card
+                                            className={style.add_card}
+                                            onClick={handleCreate}
+                                            onKeyDown={handleCreateKeyDown}
+                                            role='button'
+                                            tabIndex={0}
+                                        >
                                             <Space><PlusOutlined />{t('graphspace.create')}</Space>
                                         </Card>
                                     </Col>

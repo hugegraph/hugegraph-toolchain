@@ -27,6 +27,7 @@ import {useTranslation} from 'react-i18next';
 import {integerValidator, propertiesValidator} from '../../../utils';
 import classnames from 'classnames';
 import s from '../../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../../components/KeyboardAction';
 
 const createActionHandler = handler => () => handler();
 const createValueHandler = (handler, value) => () => handler(value);
@@ -165,7 +166,11 @@ const StepItem = () => {
 
     return (
         <div>
-            <div className={s.stepHeader} onClick={changeStepVisible}>
+            <KeyboardAction
+                className={s.stepHeader}
+                onAction={changeStepVisible}
+                aria-expanded={stepVisible}
+            >
                 <div className={s.stepIcon}>
                     {stepVisible ? <DownOutlined /> : <RightOutlined />}
                 </div>
@@ -178,7 +183,7 @@ const StepItem = () => {
                         <QuestionCircleOutlined />
                     </Tooltip>
                 </div>
-            </div>
+            </KeyboardAction>
             <div className={stepContentClassName}>
                 {renderStepsFormItems()}
             </div>

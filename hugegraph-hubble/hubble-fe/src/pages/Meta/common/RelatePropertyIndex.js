@@ -16,9 +16,10 @@
  * under the License.
  */
 
-import {Form, Select, Input, Space} from 'antd';
+import {Button, Form, Select, Input, Space} from 'antd';
 import {useCallback, useState, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
+import {FormListAdd, FormListRemove} from '../../../components/FormListAction';
 import {indexTypeOptions} from './config';
 
 const IndexTypeSelect = ({index, onChange}) => {
@@ -34,6 +35,21 @@ const PropertyFieldsSelect = ({options, type}) => {
     }, [type]);
 
     return <Select options={options} mode='multiple' onChange={handleChange} />;
+};
+
+const ExistingIndexRemove = ({
+    item, index, showList, setShowList, getFieldValue, setFieldValue, children,
+}) => {
+    const handleClick = useCallback(() => {
+        const next = showList.filter((_, itemIndex) => itemIndex !== index);
+        setShowList(next);
+        setFieldValue('remove_property_indexes', [
+            ...(getFieldValue('remove_property_indexes') ?? []),
+            item.name,
+        ]);
+    }, [getFieldValue, index, item.name, setFieldValue, setShowList, showList]);
+
+    return <Button type='link' onClick={handleClick}>{children}</Button>;
 };
 
 const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit, primaryKeys}) => {
@@ -126,18 +142,17 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                             </Form.Item>
                             <Form.Item noStyle shouldUpdate>
                                 {({getFieldValue, setFieldValue}) => {
-                                    const handleRemove = (item, index) => {
-                                        showList.splice(index, 1);
-                                        setShowList([...showList]);
-                                        // removePropertyIndex(item.name);
-                                        setFieldValue('remove_property_indexes',
-                                            [...(getFieldValue('remove_property_indexes') ?? []), item.name]);
-                                    };
-
                                     return (
-                                        <a onClick={() => handleRemove(item, index)}>
+                                        <ExistingIndexRemove
+                                            item={item}
+                                            index={index}
+                                            showList={showList}
+                                            setShowList={setShowList}
+                                            getFieldValue={getFieldValue}
+                                            setFieldValue={setFieldValue}
+                                        >
                                             {t('common.action.delete')}
-                                        </a>
+                                        </ExistingIndexRemove>
                                     );
                                 }}
                             </Form.Item>
@@ -176,20 +191,17 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                                 mode={plist[index] === 'UNIQUE' ? 'multiple' : 'multiple'}
                                             />
                                         </Form.Item>
-                                        <a onClick={() => {
-                                            remove(index);
-                                        }}
-                                        >
+                                        <FormListRemove remove={remove} index={index}>
                                             {t('common.action.delete')}
-                                        </a>
+                                        </FormListRemove>
                                     </Space>
                                 );
                             }
                             )}
                             <Form.ErrorList errors={errors} />
-                            <div className="form_attr_add" onClick={() => add()}>
+                            <FormListAdd add={add}>
                                 +{t('common.action.add')}
-                            </div>
+                            </FormListAdd>
                         </>
                     )}
                 </Form.List>
@@ -228,20 +240,17 @@ const RelatePropertyIndex = ({selectedPropertyList, propertyList, exist, isEdit,
                                             type={plist[index]}
                                         />
                                     </Form.Item>
-                                    <a onClick={() => {
-                                        remove(index);
-                                    }}
-                                    >
+                                    <FormListRemove remove={remove} index={index}>
                                         {t('common.action.delete')}
-                                    </a>
+                                    </FormListRemove>
                                 </Space>
                             );
                         }
                         )}
                         <Form.ErrorList errors={errors} />
-                        <div className="form_attr_add" onClick={() => add()}>
+                        <FormListAdd add={add}>
                             +{t('common.action.add')}
-                        </div>
+                        </FormListAdd>
                     </>
                 )}
             </Form.List>

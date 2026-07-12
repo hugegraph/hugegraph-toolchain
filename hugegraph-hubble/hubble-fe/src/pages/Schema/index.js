@@ -33,9 +33,9 @@ const SchemaActions = ({row, onView, onEdit, onDelete}) => {
 
     return (
         <Space>
-            <a onClick={handleView}>{t('schema_template.action.view')}</a>
-            <a onClick={handleEdit}>{t('schema_template.action.edit')}</a>
-            <a onClick={handleDelete}>{t('schema_template.action.delete')}</a>
+            <Button type='link' onClick={handleView}>{t('schema_template.action.view')}</Button>
+            <Button type='link' onClick={handleEdit}>{t('schema_template.action.edit')}</Button>
+            <Button type='link' onClick={handleDelete}>{t('schema_template.action.delete')}</Button>
         </Space>
     );
 };

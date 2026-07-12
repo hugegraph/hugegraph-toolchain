@@ -138,7 +138,11 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
             title: t('schema.property.col.operation'),
             width: 120,
             align: 'center',
-            render: val => <a onClick={() => handleDelete(val)}>{t('common.action.delete')}</a>,
+            render: val => (
+                <RowActionButton onAction={handleDelete} value={val}>
+                    {t('common.action.delete')}
+                </RowActionButton>
+            ),
         },
     ];
 

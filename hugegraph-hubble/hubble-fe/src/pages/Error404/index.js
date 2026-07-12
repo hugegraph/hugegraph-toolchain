@@ -18,14 +18,19 @@
 
 import {Result} from 'antd';
 import {Link} from 'react-router-dom';
+import {useTranslation} from 'react-i18next';
 
-const Error404 = () => (
-    <Result
-        status={404}
-        title={404}
-        subTitle='页面不存在'
-        extra={<Link to='/'>返回首页</Link>}
-    />
-);
+const Error404 = () => {
+    const {t} = useTranslation();
+
+    return (
+        <Result
+            status={404}
+            title={404}
+            subTitle={t('not_found.subtitle')}
+            extra={<Link to='/'>{t('not_found.home')}</Link>}
+        />
+    );
+};
 
 export default Error404;

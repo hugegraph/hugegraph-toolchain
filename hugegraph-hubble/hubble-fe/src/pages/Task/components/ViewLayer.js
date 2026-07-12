@@ -17,11 +17,12 @@
  */
 
 import {
+    Alert,
+    Button,
     Modal,
-    message,
     Spin,
 } from 'antd';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import * as api from '../../../api';
 import ReactJsonView from 'react-json-view';
 import {useTranslation} from 'react-i18next';
@@ -30,25 +31,54 @@ const ViewLayer = ({visible, onCancel, task_id}) => {
     const {t} = useTranslation();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const detailRequest = useRef(null);
 
     const onFinish = useCallback(() => {
         onCancel();
     }, [onCancel]);
 
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        api.manage.getTaskDetail(task_id).then(res => {
-            if (res.status === 200) {
-                setData(JSON.parse(JSON.stringify(res.data)));
-                setLoading(false);
+    const loadDetail = useCallback(async () => {
+        const token = Symbol('task-view-detail');
+        detailRequest.current = token;
+        setData(null);
+        setError(false);
+        setLoading(true);
+        try {
+            const res = await api.manage.getTaskDetail(task_id, {
+                suppressBusinessErrorToast: true,
+            });
+            if (detailRequest.current !== token) {
                 return;
             }
-            message.error(res.message);
-        });
+            if (res.status === 200) {
+                setData(JSON.parse(JSON.stringify(res.data)));
+                return;
+            }
+            setError(true);
+        }
+        catch (requestError) {
+            if (detailRequest.current === token) {
+                setError(true);
+            }
+        }
+        finally {
+            if (detailRequest.current === token) {
+                setLoading(false);
+            }
+        }
+    }, [task_id]);
 
-    }, [visible, task_id]);
+    useEffect(() => {
+        if (!visible) {
+            detailRequest.current = null;
+            return undefined;
+        }
+        loadDetail();
+        return () => {
+            detailRequest.current = null;
+        };
+    }, [visible, task_id, loadDetail]);
 
     return (
         <Modal
@@ -60,6 +90,18 @@ const ViewLayer = ({visible, onCancel, task_id}) => {
             destroyOnClose
         >
             <Spin spinning={loading}>
+                {error && (
+                    <Alert
+                        type='error'
+                        showIcon
+                        message={t('task.view.unavailable')}
+                        action={(
+                            <Button size='small' onClick={loadDetail}>
+                                {t('task.view.retry')}
+                            </Button>
+                        )}
+                    />
+                )}
                 {data && (
                     <div style={{height: 400, overflow: 'scroll'}}>
                         <ReactJsonView
