@@ -83,6 +83,8 @@ public class CypherController extends GremlinController {
             return result;
         } catch (Throwable e) {
             status = ExecuteStatus.FAILED;
+            history.setFailureReason(
+                    GremlinQueryController.GREMLIN_EXECUTION_FAILED);
             throw e;
         } finally {
             timer.stop();
