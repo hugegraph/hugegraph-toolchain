@@ -32,10 +32,11 @@ import {
     Pagination,
     Spin,
     Alert,
+    Tooltip,
 } from 'antd';
 import {useState, useEffect, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {EditLayer, ViewLayer, CloneLayer} from './EditLayer';
+import {EditLayer, ViewLayer} from './EditLayer';
 import {PlusOutlined} from '@ant-design/icons';
 import {Link, useParams, useNavigate} from 'react-router-dom';
 import style from './index.module.scss';
@@ -58,7 +59,6 @@ const Graph = () => {
     const [graphspaceInfo, setGraphspaceInfo] = useState({});
     const [editLayer, setEditLayer] = useState(false);
     const [viewLayer, setViewLayer] = useState(false);
-    const [cloneLayer, setCloneLayer] = useState(false);
     const [selectGraph, setSelectGraph] = useState('');
     const [listType, setListType] = useState('image');
     const [refresh, setRefresh] = useState(false);
@@ -100,9 +100,7 @@ const Graph = () => {
         setEditLayer(true);
     };
 
-    const clearSchema = graph => {
-        // TODO: Restore a separate data-only action as soon as Server provides
-        // a verified API that preserves schema.
+    const clearData = graph => {
         setClearSelection({graph});
     };
 
@@ -117,7 +115,7 @@ const Graph = () => {
     }, []);
 
     const handleClearConfirm = useCallback(() => {
-        return api.manage.clearGraphDataAndSchema(graphspace, clearSelection.graph);
+        return api.manage.clearGraphData(graphspace, clearSelection.graph);
     }, [clearSelection, graphspace]);
 
     const showSchema = graph => {
@@ -218,16 +216,6 @@ const Graph = () => {
         navigate(`/gremlin/${item.graphspace || 'DEFAULT'}/${item.name}`);
     }, [navigate]);
 
-    const showClone = graph => {
-        setSelectGraph(graph);
-        setCloneLayer(true);
-    };
-
-    const handleHideCloneLayer = useCallback(() => {
-        setSelectGraph('');
-        setCloneLayer(false);
-    }, []);
-
     const columns = [
         {
             title: t('graph.col.name'),
@@ -277,8 +265,8 @@ const Graph = () => {
                             {t('graph.menu.meta_config')}
                         </Link>
                         {(row.default)
-                            ? <span className={style.disable}>{t('graph.menu.clear_schema_data')}</span>
-                            : <a onClick={() => clearSchema(row.name)}>{t('graph.menu.clear_schema_data')}</a>}
+                            ? <span className={style.disable}>{t('graph.menu.clear_data')}</span>
+                            : <a onClick={() => clearData(row.name)}>{t('graph.menu.clear_data')}</a>}
                         {(row.graphspace === 'neizhianli')
                             ? <span className={style.disable}>{t('common.action.delete')}</span>
                             : <a onClick={() => deleteGraph(row.name)}>{t('common.action.delete')}</a>}
@@ -292,7 +280,17 @@ const Graph = () => {
                                 : <a onClick={() => handleSetDefault(row.name)}>{t('graph.menu.set_default')}</a>
                         )}
                         {graphCreateEnabled && (
-                            <a onClick={() => showClone(row.name)}>{t('graph.menu.clone')}</a>
+                            <Tooltip title={t('graph.clone.unavailable')}>
+                                <span
+                                    className={style.disable}
+                                    role='button'
+                                    aria-disabled='true'
+                                    aria-label={`${t('graph.menu.clone')}: ${t('graph.clone.unavailable')}`}
+                                    tabIndex={0}
+                                >
+                                    {t('graph.menu.clone')}
+                                </span>
+                            </Tooltip>
                         )}
                     </Space>
                 );
@@ -312,8 +310,8 @@ const Graph = () => {
         {
             key: '2',
             label: item.default
-                ? <span className={style.disable}>{t('graph.menu.clear_schema_data')}</span>
-                : <a onClick={() => clearSchema(item.name)}>{t('graph.menu.clear_schema_data')}</a>,
+                ? <span className={style.disable}>{t('graph.menu.clear_data')}</span>
+                : <a onClick={() => clearData(item.name)}>{t('graph.menu.clear_data')}</a>,
         },
         graphDefaultMutationEnabled && {
             key: '4',
@@ -339,7 +337,16 @@ const Graph = () => {
         },
         graphCreateEnabled && {
             key: '8',
-            label: <a onClick={() => showClone(item.name)}>{t('graph.menu.clone')}</a>,
+            disabled: true,
+            label: (
+                <Tooltip title={t('graph.clone.unavailable')}>
+                    <span
+                        aria-label={`${t('graph.menu.clone')}: ${t('graph.clone.unavailable')}`}
+                    >
+                        {t('graph.menu.clone')}
+                    </span>
+                </Tooltip>
+            ),
         },
     ].filter(Boolean);
 
@@ -498,13 +505,6 @@ const Graph = () => {
                 <ViewLayer
                     visible={viewLayer}
                     onCancel={handleHideViewLayer}
-                    graph={selectGraph}
-                    graphspace={graphspace}
-                />
-                <CloneLayer
-                    open={cloneLayer}
-                    onCancel={handleHideCloneLayer}
-                    refresh={handleRefresh}
                     graph={selectGraph}
                     graphspace={graphspace}
                 />

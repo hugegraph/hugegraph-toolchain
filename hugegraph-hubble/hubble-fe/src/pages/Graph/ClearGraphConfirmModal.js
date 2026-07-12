@@ -129,7 +129,7 @@ const ClearGraphConfirmModal = ({
                 <Alert
                     type='warning'
                     showIcon
-                    message={t('graph.clear_confirm.scope_schema_data')}
+                    message={t('graph.clear_confirm.scope_data')}
                     description={t('graph.clear_confirm.irreversible')}
                 />
                 {error && <Alert type='error' showIcon message={error} />}

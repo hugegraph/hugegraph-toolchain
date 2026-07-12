@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import Graph from './index';
 import * as api from '../../api';
 
@@ -39,7 +39,7 @@ jest.mock('../../api', () => ({
     manage: {
         getGraphSpace: jest.fn(),
         getGraphList: jest.fn(),
-        clearGraphDataAndSchema: jest.fn(),
+        clearGraphData: jest.fn(),
     },
 }));
 
@@ -51,7 +51,11 @@ jest.mock('./EditLayer', () => ({
 
 jest.mock('./Card', () => ({menus}) => (
     <div data-testid='graph-card-menu'>
-        {menus.map(item => <div key={item.key}>{item.label}</div>)}
+        {menus.map(item => (
+            <div key={item.key} role='menuitem' aria-disabled={item.disabled || undefined}>
+                {item.label}
+            </div>
+        ))}
     </div>
 ));
 
@@ -104,7 +108,7 @@ test('disables every clear action for the default graph card', async () => {
     render(<Graph />);
 
     const menu = await screen.findByTestId('graph-card-menu');
-    const clearSchemaData = screen.getByText('graph.menu.clear_schema_data');
+    const clearSchemaData = screen.getByText('graph.menu.clear_data');
     const setDefault = screen.getByText('graph.menu.set_default');
 
     expect(menu).toContainElement(clearSchemaData);
@@ -116,10 +120,10 @@ test('disables every clear action for the default graph card', async () => {
     await waitFor(() => {
         expect(screen.queryByTestId('clear-confirm-modal')).not.toBeInTheDocument();
     });
-    expect(api.manage.clearGraphDataAndSchema).not.toHaveBeenCalled();
+    expect(api.manage.clearGraphData).not.toHaveBeenCalled();
 });
 
-test('offers one schema-and-data clear action and calls its canonical API', async () => {
+test('offers one data clear action and calls its canonical API', async () => {
     api.manage.getGraphList.mockResolvedValue({
         status: 200,
         data: {
@@ -132,18 +136,29 @@ test('offers one schema-and-data clear action and calls its canonical API', asyn
             total: 1,
         },
     });
-    api.manage.clearGraphDataAndSchema.mockResolvedValue({status: 200});
+    api.manage.clearGraphData.mockResolvedValue({status: 200});
     render(<Graph />);
 
     const menu = await screen.findByTestId('graph-card-menu');
-    const clearActions = screen.getAllByText('graph.menu.clear_schema_data');
+    const clearActions = screen.getAllByText('graph.menu.clear_data');
     expect(menu).toContainElement(clearActions[0]);
     expect(clearActions).toHaveLength(1);
-    expect(screen.queryByText('graph.menu.clear_data')).not.toBeInTheDocument();
 
     fireEvent.click(clearActions[0]);
     fireEvent.click(await screen.findByTestId('clear-confirm-modal'));
 
-    await waitFor(() => expect(api.manage.clearGraphDataAndSchema)
+    await waitFor(() => expect(api.manage.clearGraphData)
         .toHaveBeenCalledWith('space', 'graph-a'));
+});
+
+test('shows clone as unavailable instead of exposing a failing action', async () => {
+    render(<Graph />);
+
+    const menu = await screen.findByTestId('graph-card-menu');
+    const cloneItem = within(menu).getByRole('menuitem', {
+        name: /graph.menu.clone: graph.clone.unavailable/,
+    });
+    const clone = within(cloneItem).getByText('graph.menu.clone');
+    expect(cloneItem).toHaveAttribute('aria-disabled', 'true');
+    expect(clone.closest('a')).toBeNull();
 });

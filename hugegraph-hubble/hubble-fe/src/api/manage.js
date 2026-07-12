@@ -116,9 +116,7 @@ const getDefaultGraph = (graphspace, config) => {
     return config ? request.get(path, config) : request.get(path);
 };
 
-const clearGraphDataAndSchema = (graphspace, graph) => {
-    // TODO: Add a distinct data-only action as soon as Server provides a
-    // verified API that preserves schema; this endpoint intentionally clears both.
+const clearGraphData = (graphspace, graph) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/clear`);
 };
 
@@ -135,7 +133,7 @@ const cloneGraph = (graphspace, graph, params) => {
 };
 
 export {getGraphList, getGraph, addGraph, updateGraph, delGraph, getDefaultGraph,
-    getGraphView, setDefaultGraph, clearGraphDataAndSchema,
+    getGraphView, setDefaultGraph, clearGraphData,
     getGraphStatistic, updateGraphStatistic, cloneGraph};
 
 // meta property
