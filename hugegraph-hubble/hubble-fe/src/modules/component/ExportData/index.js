@@ -25,6 +25,8 @@ import {useTranslation} from 'react-i18next';
 import {Button, Tooltip, Dropdown, Modal, Form, Input} from 'antd';
 import {DownloadOutlined} from '@ant-design/icons';
 
+const EXPORT_MENU_TRIGGER = ['click'];
+
 const createExportMenu = (t, handleClickExportJson, handleClickExportPng) => ({
     items: [
         {
@@ -124,7 +126,12 @@ const ExportData = props => {
 
     return (
         <>
-            <Dropdown menu={exportMenu} placement="bottomLeft" disabled={!buttonEnable}>
+            <Dropdown
+                menu={exportMenu}
+                placement="bottomLeft"
+                trigger={EXPORT_MENU_TRIGGER}
+                disabled={!buttonEnable}
+            >
                 <Tooltip placement="bottom" title={buttonEnable ? '' : tooltip}>
                     <Button
                         type='text'
@@ -173,5 +180,5 @@ const ExportData = props => {
     );
 };
 
-export {createExportMenu};
+export {createExportMenu, EXPORT_MENU_TRIGGER};
 export default ExportData;

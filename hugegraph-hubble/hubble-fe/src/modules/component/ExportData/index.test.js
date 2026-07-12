@@ -15,7 +15,7 @@
  * under the License.
  */
 
-import {createExportMenu} from './index';
+import {createExportMenu, EXPORT_MENU_TRIGGER} from './index';
 
 it('uses keyboard-operable menu actions instead of click-only anchors', () => {
     const exportJson = jest.fn();
@@ -32,4 +32,8 @@ it('uses keyboard-operable menu actions instead of click-only anchors', () => {
     menu.items[1].onClick();
     expect(exportJson).toHaveBeenCalledTimes(1);
     expect(exportPng).toHaveBeenCalledTimes(1);
+});
+
+it('opens the export menu through an explicit click trigger', () => {
+    expect(EXPORT_MENU_TRIGGER).toEqual(['click']);
 });
