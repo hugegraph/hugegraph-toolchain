@@ -23,6 +23,7 @@ import static org.apache.hugegraph.service.load.FileMappingService.JOB_PREIFX;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
@@ -54,6 +55,7 @@ import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.FileUploadResult;
 import org.apache.hugegraph.entity.load.JobManager;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.load.FileMappingService;
@@ -485,7 +487,12 @@ public class FileUploadController extends BaseController {
         this.ensureLocationExist(location, path);
         // Before merge: upload-files/conn-1/verson_person.csv/part-1
         // After merge: upload-files/conn-1/file-mapping-1/verson_person.csv
-        return Paths.get(location, path, fileName).toString();
+        Path root = Paths.get(location, path).normalize();
+        Path filePathObj = root.resolve(fileName).normalize();
+        if (!filePathObj.startsWith(root)) {
+            throw new ExternalException("load.upload.file.name.invalid");
+        }
+        return filePathObj.toString();
     }
 
     private void ensureLocationExist(String location, String connPath) {

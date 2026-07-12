@@ -213,7 +213,7 @@ const Task = () => {
         });
     }, [refresh, t]);
 
-    const deleteTask = id => {
+    const deleteTask = useCallback(id => {
         setLoading(true);
         api.manage.deleteTask(id).then(res => {
             setLoading(false);
@@ -226,17 +226,17 @@ const Task = () => {
 
             message.error(t('common.msg.delete_fail'));
         });
-    };
+    }, [refresh, t]);
 
-    const editTask = row => {
+    const editTask = useCallback(row => {
         setDetail(row);
         setEditLayer(true);
-    };
+    }, []);
 
-    const viewTask = row => {
+    const viewTask = useCallback(row => {
         setDetail(row);
         setViewLayer(true);
-    };
+    }, []);
 
     const handleBack = useCallback(() => {
         navigate('/task/edit');
