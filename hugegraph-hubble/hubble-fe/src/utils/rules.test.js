@@ -140,6 +140,18 @@ describe('rules i18n defaults', () => {
         expect(await validate(rules.isAccountName('custom account'))).toBe('custom account');
     });
 
+    it('rejects invalid account names with an Error object', async () => {
+        await expect(rules.isAccountName().validator(null, 'name_too_long_123'))
+            .rejects.toBeInstanceOf(Error);
+    });
+
+    it('accepts only backend-compatible favorite names', async () => {
+        await expect(rules.isFavoriteName().validator(null, 'query_2026'))
+            .resolves.toBeUndefined();
+        await expect(rules.isFavoriteName().validator(null, 'query-2026'))
+            .rejects.toBeInstanceOf(Error);
+    });
+
     it('uses Chinese messages when the active language is Chinese', async () => {
         await i18n.changeLanguage('zh-CN');
 

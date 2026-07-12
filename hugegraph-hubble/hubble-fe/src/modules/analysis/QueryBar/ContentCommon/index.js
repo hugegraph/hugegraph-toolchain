@@ -27,6 +27,7 @@ import {UpOutlined, DownOutlined, QuestionCircleOutlined} from '@ant-design/icon
 import {GREMLIN_EXECUTES_MODE} from '../../../../utils/constants';
 import GraphAnalysisContext from '../../../Context';
 import classnames from 'classnames';
+import {isValidFavoriteName} from '../../../../utils/rules';
 import c from './index.module.scss';
 import * as api from '../../../../api/index';
 import KeyboardAction from '../../../../components/KeyboardAction';
@@ -139,7 +140,7 @@ const ContentCommon = props => {
         e => {
             const favoriteName = e.target.value;
             setFavoriteName(favoriteName);
-            favoriteName ? setDisabledFavorite(false) : setDisabledFavorite(true);
+            setDisabledFavorite(!isValidFavoriteName(favoriteName));
         },
         []
     );
@@ -152,6 +153,8 @@ const ContentCommon = props => {
                 maxLength={48}
                 value={favoriteName}
                 onChange={onChangeFavoraiteName}
+                status={favoriteName && !isValidFavoriteName(favoriteName)
+                    ? 'error' : undefined}
             />
             <Space style={{marginTop: '24px'}}>
                 <Button type='primary' onClick={onOkFavorite} disabled={disabledFavorite}>
