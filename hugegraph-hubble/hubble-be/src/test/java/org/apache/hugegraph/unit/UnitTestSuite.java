@@ -46,6 +46,7 @@ import org.junit.runners.Suite;
     LegacyFacadeRemovalTest.class,
     MessageSourceHandlerTest.class,
     SchemaControllerSecurityTest.class,
+    GroovySchemaCompatibilityTest.class,
     JobManagerServiceTest.class,
     K8sTokenEndpointSecurityTest.class,
     LoadTaskServiceTest.class,
