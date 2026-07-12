@@ -375,6 +375,14 @@
     "search_placeholder": "Search by task name",
     "pause": "Pause",
     "execute": "Run",
+    "action": {
+      "detail": "View execution history",
+      "config": "View task configuration",
+      "edit": "Edit task",
+      "pause": "Pause task",
+      "run": "Run task",
+      "delete": "Delete task"
+    },
     "edit_title_create": "Create Task",
     "edit_title_edit": "Edit Task",
     "create": "Create Task",

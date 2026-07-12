@@ -308,16 +308,30 @@ public class LangChainController extends BaseController {
         String scriptName = requested.getFileName().toString();
         List<String> allowlist =
                 this.configValue(HubbleOptions.LANGCHAIN_SCRIPT_ALLOWLIST);
-        E.checkArgument(allowlist.contains(scriptName),
-                        "python file is not allowed");
+        
+        String safeScriptName = null;
+        for (String allowed : allowlist) {
+            if (allowed.equals(scriptName)) {
+                safeScriptName = allowed;
+                break;
+            }
+        }
+        if (safeScriptName == null) {
+            throw new IllegalArgumentException("python file is not allowed");
+        }
 
         Path root = Paths.get(this.configValue(HubbleOptions.LANGCHAIN_SCRIPT_DIR))
                          .normalize();
-        E.checkArgument(root.toFile().isDirectory(),
-                        "langchain script dir not exist");
-        Path script = root.resolve(scriptName).normalize();
-        E.checkArgument(script.startsWith(root), "python file is not allowed");
-        E.checkArgument(script.toFile().exists(), "python file not exist");
+        if (!root.toFile().isDirectory()) {
+            throw new IllegalArgumentException("langchain script dir not exist");
+        }
+        Path script = root.resolve(safeScriptName).normalize();
+        if (!script.startsWith(root)) {
+            throw new IllegalArgumentException("python file is not allowed");
+        }
+        if (!script.toFile().exists()) {
+            throw new IllegalArgumentException("python file not exist");
+        }
         return script.toString();
     }
 

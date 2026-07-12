@@ -375,6 +375,14 @@
     "search_placeholder": "请输入任务名称",
     "pause": "暂停",
     "execute": "执行",
+    "action": {
+      "detail": "查看执行历史",
+      "config": "查看任务配置",
+      "edit": "编辑任务",
+      "pause": "暂停任务",
+      "run": "运行任务",
+      "delete": "删除任务"
+    },
     "edit_title_create": "创建任务",
     "edit_title_edit": "编辑任务",
     "create": "创建任务",

@@ -27,6 +27,10 @@ module.exports = app => {
             pathRewrite: {
                 '^/api': '/api',
             },
+            // Override Origin so Java backend CORS check passes (dev server runs on different port)
+            headers: {
+                origin: 'http://127.0.0.1:8088',
+            },
         })
     );
 };
