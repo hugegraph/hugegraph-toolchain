@@ -27,7 +27,6 @@ jest.mock('../../api', () => ({
 
 jest.mock('./ListView', () => () => <div>schema list</div>);
 jest.mock('./ImageView', () => () => <div>schema image</div>);
-jest.mock('../../components/GraphJourneyNav', () => () => <nav>journey</nav>);
 
 beforeEach(() => {
     jest.clearAllMocks();
