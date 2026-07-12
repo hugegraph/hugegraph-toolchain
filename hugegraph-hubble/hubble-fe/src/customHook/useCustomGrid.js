@@ -24,6 +24,8 @@ import _ from 'lodash';
 import G6 from '@antv/g6';
 import {useEffect} from 'react';
 
+const CUSTOM_GRID_REGISTERED = '__hubbleCustomGridRegistered';
+
 const options =  {
     small(val) {
         const self = this;
@@ -292,7 +294,10 @@ const options =  {
 const useCustomGrid = () => {
     useEffect(
         () => {
-            G6.registerLayout('customGrid', options);
+            if (!G6[CUSTOM_GRID_REGISTERED]) {
+                G6.registerLayout('customGrid', options);
+                G6[CUSTOM_GRID_REGISTERED] = true;
+            }
         },
         []
     );
