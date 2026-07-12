@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {Modal, Form, Input, Select, Row, Col, Checkbox, message, Spin} from 'antd';
-import {useEffect, useState, useCallback} from 'react';
+import {Alert, Button, Modal, Form, Input, Select, Row, Col, Checkbox, message, Spin} from 'antd';
+import {useEffect, useState, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
@@ -41,7 +41,42 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
     const [primaryKeys, setPrimaryKeys] = useState([]);
     const [loading, setLoading] = useState(false);
     const [spinning, setSpinning] = useState(false);
+    const [detailError, setDetailError] = useState(false);
+    const detailRequest = useRef(null);
     const [form] = Form.useForm();
+
+    const loadDetail = useCallback(() => {
+        const token = Symbol('vertex-detail');
+        detailRequest.current = token;
+        setDetailError(false);
+        setSpinning(true);
+        api.manage.getMetaVertex(graphspace, graph, name).then(res => {
+            if (detailRequest.current !== token) {
+                return;
+            }
+            if (res.status !== 200) {
+                setDetailError(true);
+                return;
+            }
+            const {properties, property_indexes, id_strategy, primaryKeys} = res.data;
+            form.setFieldsValue(res.data);
+            setSelectedPropertyList(properties.map(item => ({
+                ...item, label: item.name, value: item.name,
+            })));
+            setExistProperties(properties);
+            setExistPropertyIndex(property_indexes);
+            setIdStrategy(id_strategy);
+            setPrimaryKeys(primaryKeys);
+        }).catch(() => {
+            if (detailRequest.current === token) {
+                setDetailError(true);
+            }
+        }).finally(() => {
+            if (detailRequest.current === token) {
+                setSpinning(false);
+            }
+        });
+    }, [form, graph, graphspace, name]);
 
     const handleIDStrategy = useCallback(value => {
         setIdStrategy(value);
@@ -143,27 +178,11 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
             return;
         }
 
-        setSpinning(true);
-        api.manage.getMetaVertex(graphspace, graph, name).then(res => {
-            if (res.status === 200) {
-                const {properties, property_indexes, id_strategy, primaryKeys} = res.data;
-
-                form.setFieldsValue(res.data);
-                // form.setFields([{name: 'properties', value: properties}]);
-
-                setSelectedPropertyList(properties.map(item => ({
-                    ...item,
-                    label: item.name,
-                    value: item.name,
-                })));
-                setExistProperties(properties);
-                setExistPropertyIndex(property_indexes);
-                setIdStrategy(id_strategy);
-                setSpinning(false);
-                setPrimaryKeys(primaryKeys);
-            }
-        });
-    }, [visible, name, form, graph, graphspace]);
+        loadDetail();
+        return () => {
+            detailRequest.current = null;
+        };
+    }, [visible, name, form, graph, graphspace, loadDetail]);
 
     return (
         <Modal
@@ -173,8 +192,17 @@ const EditVertexLayer = ({visible, onCancle, graphspace, graph, refresh, name, p
             width={600}
             onOk={onFinish}
             confirmLoading={loading}
+            okButtonProps={{disabled: spinning || detailError}}
             destroyOnClose
         >
+            {detailError && (
+                <Alert
+                    type='error'
+                    showIcon
+                    message={t('schema.vertex.detail_failed')}
+                    action={<Button size='small' onClick={loadDetail}>{t('schema.retry')}</Button>}
+                />
+            )}
             <Spin spinning={spinning}>
                 <Form
                     form={form}

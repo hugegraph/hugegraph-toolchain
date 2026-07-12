@@ -198,6 +198,12 @@
       "view_schema": "View Schema",
       "clone": "Clone Graph"
     },
+    "schema_view": {
+      "export": "Export Groovy Schema",
+      "load_failed": "Schema could not be loaded. Check the Server connection and retry.",
+      "retry": "Retry schema",
+      "export_failed": "Schema export failed. Retry when the Server is available."
+    },
     "form": {
       "title_create": "Create Graph",
       "title_edit": "Edit Graph",
@@ -206,6 +212,9 @@
       "nickname": "Display Name",
       "nickname_placeholder": "Letters, digits, underscore, max 48 chars",
       "schema_placeholder": "Select a schema",
+      "schema_load_failed": "Schema templates could not be loaded.",
+      "schema_retry": "Retry templates",
+      "schema_optional_hint": "Optional. You can create an empty graph without a template.",
       "create_success": "Graph created",
       "update_success": "Graph updated",
       "auth": "Enable Authentication",
@@ -248,6 +257,7 @@
       "count": "Count"
     },
     "card": {
+      "more_actions": "More actions for {{graph}}",
       "storage": "Storage",
       "detail_tooltip": "View the current vertex and edge counts for this graph"
     }
@@ -567,6 +577,8 @@
     }
   },
   "schema": {
+    "list_failed": "Schema data could not be loaded. Check the Server connection and retry.",
+    "retry": "Retry schema data",
     "delete_failed": "Delete failed. Check the server connection and retry.",
     "title": "Metadata Management",
     "name_placeholder": "Letters, numbers, underscores, and Chinese characters are allowed",
@@ -620,6 +632,7 @@
     "vertex": {
       "create": "Create Vertex Type",
       "edit": "Edit Vertex Type",
+      "detail_failed": "Vertex type details could not be loaded. Retry before editing.",
       "id": "Vertex ID",
       "in_use": "Vertices {{names}} are in use and cannot be deleted.",
       "select_properties_first": "Select related properties first",
@@ -652,6 +665,7 @@
     "edge": {
       "create": "Create Edge Type",
       "edit": "Edit Edge Type",
+      "detail_failed": "Edge type details could not be loaded. Retry before editing.",
       "display_fields": "Display Fields",
       "link_multi_times": "Allow Multiple Links",
       "parent": "Parent Edge Type: ",
@@ -713,6 +727,7 @@
       }
     },
     "image_view": {
+      "load_failed": "Schema diagram data could not be loaded. Retry before editing.",
       "vertex": "Vertex Type",
       "edge": "Edge Type",
       "view_properties": "View Properties"

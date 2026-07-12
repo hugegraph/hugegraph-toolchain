@@ -50,6 +50,7 @@ import {
 import moment from 'moment';
 import GraphCard from './Card';
 import ClearGraphConfirmModal from './ClearGraphConfirmModal';
+import KeyboardAction from '../../components/KeyboardAction';
 
 const Graph = () => {
     const {t} = useTranslation();
@@ -440,9 +441,14 @@ const Graph = () => {
                             <Row gutter={[10, 10]} justify='start'>
                                 {graphCreateEnabled && (
                                     <Col span={8} key='add'>
-                                        <Card className={style.add_card} onClick={showEditLayer}>
-                                            <Space><PlusOutlined />{t('graph.create')}</Space>
-                                        </Card>
+                                        <KeyboardAction
+                                            onAction={showEditLayer}
+                                            aria-label={t('graph.create')}
+                                        >
+                                            <Card className={style.add_card}>
+                                                <Space><PlusOutlined />{t('graph.create')}</Space>
+                                            </Card>
+                                        </KeyboardAction>
                                     </Col>
                                 )}
 

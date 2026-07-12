@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {useEffect, useCallback, useState} from 'react';
+import {useEffect, useCallback, useRef, useState} from 'react';
 import {useParams} from 'react-router-dom';
 import * as api from '../../api';
 import GraphView from '../../components/GraphinView';
@@ -24,7 +24,7 @@ import {EditPropertyLayer} from './Property/EditLayer';
 import {EditVertexLayer} from './Vertex/EditLayer';
 import {EditEdgeLayer} from './Edge/EditLayer';
 import PropertyTable from './Property';
-import {Button, Row, Space, Col, Drawer} from 'antd';
+import {Alert, Button, Row, Space, Col, Drawer, Spin} from 'antd';
 import {formatToGraphInData} from '../../utils/formatGraphInData';
 import {useTranslation} from 'react-i18next';
 
@@ -41,6 +41,9 @@ const ImageView = () => {
     const [edgeName, setEdgeName] = useState('');
     const [propertyList, setPropertyList] = useState([]);
     const [vertexList, setVertexList] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const requestToken = useRef(null);
     const [refresh, setRefresh] = useState(false);
 
     const handleRefresh = useCallback(() => {
@@ -95,60 +98,102 @@ const ImageView = () => {
         }
     }, []);
 
+    const loadSchemaView = useCallback(() => {
+        const token = Symbol('schema-image');
+        requestToken.current = token;
+        setData({nodes: [], edges: []});
+        setVertexList([]);
+        setPropertyList([]);
+        setLoadError(false);
+        setLoading(true);
+        Promise.allSettled([
+            api.manage.getGraphView(graphspace, graph),
+            api.manage.getMetaVertexList(graphspace, graph, {page_size: -1}),
+            api.manage.getMetaPropertyList(graphspace, graph, {page_size: -1}),
+        ]).then(results => {
+            if (requestToken.current !== token) {
+                return;
+            }
+            const [view, vertices, properties] = results;
+            const successful = results.every(result => result.status === 'fulfilled'
+                && result.value.status === 200);
+            if (!successful) {
+                setLoadError(true);
+                return;
+            }
+            setData(formatToGraphInData(view.value.data));
+            setVertexList(vertices.value.data.records.map(item => ({
+                label: item.name, value: item.name,
+            })));
+            setPropertyList(properties.value.data.records.map(item => ({
+                label: item.name,
+                value: item.name,
+                data_type: item.data_type,
+            })));
+        }).finally(() => {
+            if (requestToken.current === token) {
+                setLoading(false);
+            }
+        });
+    }, [graph, graphspace]);
+
     useEffect(() => {
-        api.manage.getGraphView(graphspace, graph).then(res => {
-            if (res.status === 200) {
-                const {data} = res;
-
-                setData(formatToGraphInData(data));
-            }
-        });
-
-        api.manage.getMetaVertexList(graphspace, graph, {page_size: -1}).then(res => {
-            if (res.status === 200) {
-                setVertexList(res.data.records.map(item => ({label: item.name, value: item.name})));
-            }
-        });
-
-        api.manage.getMetaPropertyList(graphspace, graph, {page_size: -1}).then(res => {
-            if (res.status === 200) {
-                setPropertyList(res.data.records.map(item => ({
-                    lable: item.name,
-                    value: item.name,
-                    data_type: item.data_type,
-                })));
-            }
-        });
-    }, [refresh, graph, graphspace]);
+        loadSchemaView();
+        return () => {
+            requestToken.current = null;
+        };
+    }, [refresh, loadSchemaView]);
 
     return (
         <div style={{textAlign: 'center'}}>
+            {loadError && (
+                <Alert
+                    type='error'
+                    showIcon
+                    message={t('schema.image_view.load_failed')}
+                    action={(
+                        <Button size='small' onClick={loadSchemaView}>
+                            {t('schema.retry')}
+                        </Button>
+                    )}
+                />
+            )}
             {/* <div ref={graphRef} style={{display: 'inline-block', width: 1000, height: 600}} /> */}
             <Row>
                 <Col>
                     <Space>
-                        <Button onClick={createProperty}>{t('schema.property.create')}</Button>
-                        <Button onClick={createVertex}>{t('schema.vertex.create')}</Button>
-                        <Button onClick={createEdge}>{t('schema.edge.form.title_create')}</Button>
-                        <Button onClick={showPropertyList}>{t('schema.image_view.view_properties')}</Button>
+                        <Button disabled={loading || loadError} onClick={createProperty}>
+                            {t('schema.property.create')}
+                        </Button>
+                        <Button disabled={loading || loadError} onClick={createVertex}>
+                            {t('schema.vertex.create')}
+                        </Button>
+                        <Button disabled={loading || loadError} onClick={createEdge}>
+                            {t('schema.edge.form.title_create')}
+                        </Button>
+                        <Button disabled={loading || loadError} onClick={showPropertyList}>
+                            {t('schema.image_view.view_properties')}
+                        </Button>
                     </Space>
                 </Col>
             </Row>
-            <GraphView
-                data={data}
-                config={{
-                    minZoom: 0.5,
-                    maxZoom: 2,
-                    fitCenter: true,
-                }}
-                layout={{
-                    type: 'gForce',
-                    gravity: 10,
-                    linkDistance: 150,
-                }}
-                onClick={handleClick}
-                height={600}
-            />
+            <Spin spinning={loading}>
+                <GraphView
+                    data={data}
+                    config={{
+                        minZoom: 0.5,
+                        maxZoom: 2,
+                        fitCenter: true,
+                    }}
+                    layout={{
+                        type: 'gForce',
+                        gravity: 10,
+                        linkDistance: 150,
+                    }}
+                    onClick={handleClick}
+                    height={600}
+                />
+            </Spin>
 
             <EditVertexLayer
                 visible={vertexVisible}

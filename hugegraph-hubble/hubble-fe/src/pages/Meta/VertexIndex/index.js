@@ -18,20 +18,23 @@
 
 import {Table} from 'antd';
 import {indexTypeOptions} from '../common/config.js';
-import {useEffect, useState, useCallback} from 'react';
+import {useCallback} from 'react';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
+import useMetaTable from '../common/useMetaTable';
+import MetaTableStatus from '../common/MetaTableStatus';
 
 const VertexIndexTable = () => {
-    const [data, setData] = useState([]);
-    const [pagination, setPagination] = useState({current: 1, total: 10});
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
 
-    const handleTable = useCallback(newPagination => {
-        setPagination(newPagination);
-    }, []);
+    const fetchPage = useCallback(params => api.manage.getMetaVertexIndexList(
+        graphspace, graph, params
+    ), [graphspace, graph]);
+    const {data, pagination, loading, error, retry, handleTable} = useMetaTable(
+        fetchPage, {identityKey: `${graphspace}:${graph}`}
+    );
 
     const columns = [
         {
@@ -54,18 +57,6 @@ const VertexIndexTable = () => {
         },
     ];
 
-    useEffect(() => {
-        api.manage.getMetaVertexIndexList(graphspace, graph, {
-            page_no: pagination.current,
-        }).then(res => {
-            if (res.status === 200) {
-                setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
-            }
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.current, graph, graphspace]);
-
     return (
         <>
             {/* <Row>
@@ -74,11 +65,13 @@ const VertexIndexTable = () => {
                 </Col>
             </Row> */}
 
+            <MetaTableStatus error={error} onRetry={retry} />
             <Table
                 columns={columns}
                 dataSource={data}
                 pagination={pagination}
                 onChange={handleTable}
+                loading={loading}
             />
         </>
     );

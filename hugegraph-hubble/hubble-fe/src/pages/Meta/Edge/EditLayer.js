@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {Modal, Form, Input, Select, Row, Col, Checkbox, message, Spin, Radio} from 'antd';
-import {useCallback, useEffect, useState} from 'react';
+import {Alert, Button, Modal, Form, Input, Select, Row, Col, Checkbox, message, Spin, Radio} from 'antd';
+import {useCallback, useEffect, useState, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
@@ -38,9 +38,44 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
     const [existProperties, setExistProperties] = useState([]);
     const [existPropertyIndex, setExistPropertyIndex] = useState([]);
     const [spinning, setSpinning] = useState(false);
+    const [detailError, setDetailError] = useState(false);
+    const detailRequest = useRef(null);
     const [loading, setLoading] = useState(false);
     const [edgeLabelType, setEdgeLabelType] = useState('NORMAL');
     const [parentEdgeLabelList, setParentEdgeLabelList] = useState([]);
+
+    const loadDetail = useCallback(() => {
+        const token = Symbol('edge-detail');
+        detailRequest.current = token;
+        setDetailError(false);
+        setSpinning(true);
+        api.manage.getMetaEdge(graphspace, graph, name).then(res => {
+            if (detailRequest.current !== token) {
+                return;
+            }
+            if (res.status !== 200) {
+                setDetailError(true);
+                return;
+            }
+            const {properties, property_indexes, link_multi_times, edgelabel_type} = res.data;
+            form.setFieldsValue(res.data);
+            setSelectedPropertyList(properties.map(item => ({
+                ...item, label: item.name, value: item.name,
+            })));
+            setLinkMulti(link_multi_times);
+            setExistProperties(properties);
+            setExistPropertyIndex(property_indexes);
+            setEdgeLabelType(edgelabel_type);
+        }).catch(() => {
+            if (detailRequest.current === token) {
+                setDetailError(true);
+            }
+        }).finally(() => {
+            if (detailRequest.current === token) {
+                setSpinning(false);
+            }
+        });
+    }, [form, graph, graphspace, name]);
 
     const selectProperty = useCallback(() => {
         const attr = form.getFieldValue('properties');
@@ -142,27 +177,11 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
             return;
         }
 
-        setSpinning(true);
-        api.manage.getMetaEdge(graphspace, graph, name).then(res => {
-            if (res.status === 200) {
-                const {properties, property_indexes, link_multi_times, edgelabel_type} = res.data;
-
-                form.setFieldsValue(res.data);
-                // form.setFields([{name: 'properties', value: properties}]);
-
-                setSelectedPropertyList(properties.map(item => ({
-                    ...item,
-                    label: item.name,
-                    value: item.name,
-                })));
-                setLinkMulti(link_multi_times);
-                setExistProperties(properties);
-                setExistPropertyIndex(property_indexes);
-                setSpinning(false);
-                setEdgeLabelType(edgelabel_type);
-            }
-        });
-    }, [visible, name, form, graph, graphspace]);
+        loadDetail();
+        return () => {
+            detailRequest.current = null;
+        };
+    }, [visible, name, form, graph, graphspace, loadDetail]);
 
     useEffect(() => {
         if (!visible) {
@@ -185,9 +204,18 @@ const EditEdgeLayer = ({visible, onCancle, graphspace, graph, refresh, name, pro
             onClose={onCancle}
             onOk={onFinish}
             confirmLoading={loading}
+            okButtonProps={{disabled: spinning || detailError}}
             width={600}
             destroyOnClose
         >
+            {detailError && (
+                <Alert
+                    type='error'
+                    showIcon
+                    message={t('schema.edge.detail_failed')}
+                    action={<Button size='small' onClick={loadDetail}>{t('schema.retry')}</Button>}
+                />
+            )}
             <Spin spinning={spinning}>
                 <Form
                     form={form}
