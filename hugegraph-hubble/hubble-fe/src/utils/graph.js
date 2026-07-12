@@ -26,6 +26,11 @@ const fitView = graph => {
     const padding = [50, 50, 50, 50];
     const width = graph.get('width');
     const height = graph.get('height');
+
+    if (width <= padding[1] + padding[3]
+        || height <= padding[0] + padding[2]) {
+        return;
+    }
     const group = graph.get('group');
     group.resetMatrix();
     const bbox = group.getCanvasBBox();

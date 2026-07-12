@@ -28,6 +28,7 @@ import TaskNavigateView from '../../../component/TaskNavigateView';
 import {GRAPH_STATUS} from '../../../../utils/constants';
 import _ from 'lodash';
 import c from './index.module.scss';
+import {isJsonBigNumber, projectJsonValue} from '../Home/utils';
 
 const {
     STANDBY,
@@ -36,6 +37,31 @@ const {
     FAILED,
     UPLOAD_FAILED,
 } = GRAPH_STATUS;
+export function tableRowKey(record, index) {
+    return record.id ?? record._id ?? `result-row-${index}`;
+}
+
+export function renderTableCell(value) {
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (typeof value === 'bigint') {
+        return value.toString();
+    }
+    if (isJsonBigNumber(value)) {
+        return value.toString();
+    }
+    if (value === undefined) {
+        return '';
+    }
+    if (value === null) {
+        return 'null';
+    }
+    if (typeof value === 'object') {
+        return JSON.stringify(projectJsonValue(value));
+    }
+    return String(value);
+}
 
 const TableView = props => {
     const {t} = useTranslation();
@@ -51,7 +77,7 @@ const TableView = props => {
         title,
         dataIndex: title,
         render(text) {
-            return JSON.stringify(text);
+            return renderTableCell(text);
         },
     }));
 
@@ -78,7 +104,7 @@ const TableView = props => {
                 return (
                     <div className={c.tableWrapper}>
                         <Table
-                            rowKey="id"
+                            rowKey={tableRowKey}
                             dataSource={queryResultTable?.rows || []}
                             columns={tableColums}
                             pagination={{position: ['bottomCenter']}}

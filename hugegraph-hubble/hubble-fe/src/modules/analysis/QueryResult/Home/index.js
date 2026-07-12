@@ -20,12 +20,13 @@
  * @file Gremlin语法分析 查询结果
  */
 
-import React from 'react';
+import React, {useMemo} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Tabs} from 'antd';
 import JsonView from '../JsonView';
 import GraphResult from '../GraphResult/Home';
 import TableView from '../TableView';
+import {getJsonViewContent} from './utils';
 import c from './index.module.scss';
 
 const QueryResult = props => {
@@ -45,7 +46,10 @@ const QueryResult = props => {
         table_view: queryResultTable = {},
     } = queryResult || {};
 
-    const jsonViewContent = JSON.parse(JSON.stringify(queryResultJson?.data || []));
+    const jsonViewContent = useMemo(
+        () => getJsonViewContent(queryResultJson),
+        [queryResultJson]
+    );
 
     const GRAPH_VIEW = t('analysis.query_result.graph');
     const TABLE_VIEW = t('analysis.query_result.table');
