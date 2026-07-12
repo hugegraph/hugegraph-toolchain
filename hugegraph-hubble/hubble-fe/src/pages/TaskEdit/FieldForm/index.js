@@ -16,7 +16,17 @@
  * under the License.
  */
 
-import {Form, Input, Transfer, Space, Button, Typography, message, Tree, Popconfirm} from 'antd';
+import {
+    Alert,
+    Form,
+    Input,
+    Transfer,
+    Space,
+    Button,
+    Typography,
+    Tree,
+    Popconfirm,
+} from 'antd';
 import {PlusOutlined, MinusSquareOutlined} from '@ant-design/icons';
 import {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -76,6 +86,8 @@ const FieldForm = ({visible, prev, datasourceID}) => {
     const [inputData, setInputData] = useState('');
     const [status, setStatus] = useState('');
     const [transferStatus, setTransferStatus] = useState('');
+    const [loadError, setLoadError] = useState(false);
+    const [retry, setRetry] = useState(0);
     const [fieldForm] = Form.useForm();
 
     const setSourceData = useCallback(data => {
@@ -148,26 +160,51 @@ const FieldForm = ({visible, prev, datasourceID}) => {
     }, [addField, handleInputData, inputData, status, t]);
 
     const renderField = useCallback(item => item.key, []);
+    const retryFields = useCallback(() => setRetry(value => value + 1), []);
 
     useEffect(() => {
         if (!datasourceID) {
             return;
         }
 
+        let active = true;
+        setSourceData([]);
+        setTargetKeys([]);
+        fieldForm.setFieldValue('target_keys', []);
+        setLoadError(false);
         api.manage.getDatasourceSchema(datasourceID).then(res => {
+            if (!active) {
+                return;
+            }
             if (res.status === 200) {
                 setSourceData(res.data.map(item => ({key: item})));
                 return;
             }
 
-            message.error(res.message);
-        });
-    }, [datasourceID, setSourceData]);
+            setLoadError(true);
+        }).catch(() => active && setLoadError(true));
+
+        return () => {
+            active = false;
+        };
+    }, [datasourceID, fieldForm, retry, setSourceData]);
 
     return (
         <div style={{display: visible ? '' : 'none'}} className={style.transfer}>
             <Form form={fieldForm} name='field_form'>
                 <Typography.Title level={5}>{t('task.edit.step_source_fields')}</Typography.Title>
+                {loadError && (
+                    <Alert
+                        showIcon
+                        type='error'
+                        message={t('task.edit.load_fields_failed')}
+                        action={(
+                            <Button size='small' onClick={retryFields}>
+                                {t('task.edit.retry_fields')}
+                            </Button>
+                        )}
+                    />
+                )}
                 <Form.Item
                     name='target_keys'
                     rules={[rules.required(t('task.edit.select_source_fields'))]}

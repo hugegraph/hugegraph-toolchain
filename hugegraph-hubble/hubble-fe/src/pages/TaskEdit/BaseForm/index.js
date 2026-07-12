@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Form, Input, Typography, Select, Space, Button, message} from 'antd';
+import {Alert, Form, Input, Typography, Select, Space, Button} from 'antd';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
@@ -35,6 +35,12 @@ const BaseForm = ({cancel, visible}) => {
     const [graphspaceOptions, setGraphsapceOptions] = useState([]);
     const [graphOptions, setGraphOptions] = useState([]);
     const [selectGraphspace, setSelectGraphspace] = useState('');
+    const [datasourceError, setDatasourceError] = useState(false);
+    const [graphspaceError, setGraphspaceError] = useState(false);
+    const [graphError, setGraphError] = useState(false);
+    const [datasourceRetry, setDatasourceRetry] = useState(0);
+    const [graphspaceRetry, setGraphspaceRetry] = useState(0);
+    const [graphRetry, setGraphRetry] = useState(0);
     const [baseForm] = Form.useForm();
 
     const checkExistName = () => ({
@@ -49,7 +55,7 @@ const BaseForm = ({cancel, visible}) => {
                 }
 
                 return '';
-            });
+            }).catch(() => t('task.edit.duplicate_check_failed'));
 
             if (res) {
                 return Promise.reject(res);
@@ -61,13 +67,22 @@ const BaseForm = ({cancel, visible}) => {
     });
 
     const handleChange = useCallback(val => setSelectGraphspace(val), []);
+    const retryDatasources = useCallback(() => setDatasourceRetry(v => v + 1), []);
+    const retryGraphspaces = useCallback(() => setGraphspaceRetry(v => v + 1), []);
+    const retryGraphs = useCallback(() => setGraphRetry(v => v + 1), []);
 
     useEffect(() => {
         if (!selectGraphspace) {
             return;
         }
 
+        let active = true;
+        setGraphOptions([]);
+        setGraphError(false);
         api.manage.getGraphList(selectGraphspace, {page_size: -1}).then(res => {
+            if (!active) {
+                return;
+            }
             if (res.status === 200) {
                 setGraphOptions(res.data.records.map(item => ({
                     label: item.nickname,
@@ -79,16 +94,25 @@ const BaseForm = ({cancel, visible}) => {
                 return;
             }
 
-            message.error(res.message);
-        });
+            setGraphError(true);
+        }).catch(() => active && setGraphError(true));
 
         // setVertex([]);
         // setEdge([]);
         baseForm.resetFields([['ingestion_option', 'graph']]);
-    }, [selectGraphspace, baseForm]);
+        return () => {
+            active = false;
+        };
+    }, [selectGraphspace, baseForm, graphRetry]);
 
     useEffect(() => {
+        let active = true;
+        setDatasourceOptions([]);
+        setDatasourceError(false);
         api.manage.getDatasourceList({page_size: -1}).then(res => {
+            if (!active) {
+                return;
+            }
             if (res.status === 200) {
                 setDatasourceOptions(res.data.records.map(item => ({
                     label: item.datasource_name,
@@ -98,22 +122,38 @@ const BaseForm = ({cancel, visible}) => {
 
                 return;
             }
-            message.error(res.message);
-        });
+            setDatasourceError(true);
+        }).catch(() => active && setDatasourceError(true));
 
+        return () => {
+            active = false;
+        };
+    }, [datasourceRetry]);
+
+    useEffect(() => {
         if (!pdMode) {
             return;
         }
 
+        let active = true;
+        setGraphsapceOptions([]);
+        setGraphspaceError(false);
         api.manage.getGraphSpaceList({page_size: -1}).then(res => {
+            if (!active) {
+                return;
+            }
             if (res.status === 200) {
                 setGraphsapceOptions(getTaskGraphspaceOptions(pdMode, res.data.records));
 
                 return;
             }
-            message.error(res.message);
-        });
-    }, [pdMode, t]);
+            setGraphspaceError(true);
+        }).catch(() => active && setGraphspaceError(true));
+
+        return () => {
+            active = false;
+        };
+    }, [graphspaceRetry, pdMode]);
 
     useEffect(() => {
         if (pdMode) {
@@ -137,6 +177,42 @@ const BaseForm = ({cancel, visible}) => {
                 labelCol={{span: 3}}
             >
                 <Typography.Title level={5}>{t('task.edit.basic_info')}</Typography.Title>
+                {datasourceError && (
+                    <Alert
+                        showIcon
+                        type='error'
+                        message={t('task.edit.load_datasources_failed')}
+                        action={(
+                            <Button size='small' onClick={retryDatasources}>
+                                {t('task.edit.retry_datasources')}
+                            </Button>
+                        )}
+                    />
+                )}
+                {graphspaceError && (
+                    <Alert
+                        showIcon
+                        type='error'
+                        message={t('task.edit.load_graphspaces_failed')}
+                        action={(
+                            <Button size='small' onClick={retryGraphspaces}>
+                                {t('task.edit.retry_graphspaces')}
+                            </Button>
+                        )}
+                    />
+                )}
+                {graphError && (
+                    <Alert
+                        showIcon
+                        type='error'
+                        message={t('task.edit.load_graphs_failed')}
+                        action={(
+                            <Button size='small' onClick={retryGraphs}>
+                                {t('task.edit.retry_graphs')}
+                            </Button>
+                        )}
+                    />
+                )}
                 <Form.Item
                     label={t('task.edit.name')}
                     name='task_name'
