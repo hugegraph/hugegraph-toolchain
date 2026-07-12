@@ -31,6 +31,7 @@ import * as api from '../../../api/index';
 import _ from 'lodash';
 import c from './index.module.scss';
 import classnames from 'classnames';
+import KeyboardAction from '../../../components/KeyboardAction';
 
 const SELECTED_TYPE = {EDGE: 'EDGE', VERTEX: 'VERTEX'};
 
@@ -161,13 +162,16 @@ const EditElement = props => {
                     <>
                         <div className={c.fields}>
                             <div> {t('analysis.canvas.edit_element.edge_relation')}:</div>
-                            <div onClick={handleChangeVisible}>
+                            <KeyboardAction
+                                onAction={handleChangeVisible}
+                                aria-expanded={isExpandEdgeLabelType}
+                            >
                                 {showEdgeLabelExpand && (isExpandEdgeLabelType ? <UpOutlined /> : <DownOutlined />)}
                                 {parent_label}
                                 <Tag color='blue' style={{marginLeft: '10px'}}>
                                     {t('analysis.canvas.edit_element.parent_edge')}
                                 </Tag>
-                            </div>
+                            </KeyboardAction>
                         </div>
                         <div className={c.fieldWithoutName}>
                             {isExpandEdgeLabelType && children?.map(item =>

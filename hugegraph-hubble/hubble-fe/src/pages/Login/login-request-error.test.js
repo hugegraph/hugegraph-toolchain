@@ -88,6 +88,20 @@ describe('Login request errors', () => {
         };
     });
 
+    it('labels the standalone login page and its credential fields', () => {
+        render(
+            <MemoryRouter future={{v7_relativeSplatPath: true, v7_startTransition: true}}>
+                <Login />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByRole('heading', {level: 1, name: /login.title/}))
+            .toBeInTheDocument();
+        expect(screen.getByRole('textbox', {name: 'login.username'}))
+            .toBeInTheDocument();
+        expect(screen.getByLabelText('login.password')).toHaveAttribute('type', 'password');
+    });
+
     it('keeps rejected login requests from escaping the submit handler', async () => {
         const loginError = new Error('login failed');
         api.auth.login.mockRejectedValue(loginError);

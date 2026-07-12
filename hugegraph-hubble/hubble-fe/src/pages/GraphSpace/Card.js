@@ -32,7 +32,7 @@ const formatPercent = percent => {
     return percent >= 100 ? <InfoOutlined /> : `${percent}%`;
 };
 
-const TitleField = ({item, onClick}) => {
+const TitleField = ({item, onClick, onKeyDown}) => {
     const {t} = useTranslation();
 
     return (
@@ -42,6 +42,9 @@ const TitleField = ({item, onClick}) => {
                 ellipsis={{ellipsis: true}}
                 title={`${item.nickname}`}
                 onClick={onClick}
+                onKeyDown={onKeyDown}
+                role='button'
+                tabIndex={0}
             >{item.nickname}
             </Typography.Text>
             <div className={style.subtitle}>
@@ -70,6 +73,13 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
         deleteGraphspace(item.name);
     }, [deleteGraphspace, item]);
 
+    const handleGotoGraphKeyDown = useCallback(event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleGotoGraph();
+        }
+    }, [handleGotoGraph]);
+
     const getMenu = item => ({
         items: item.name === 'neizhianli'
             ? [
@@ -83,7 +93,8 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
                 },
                 {
                     key: '2',
-                    label: <a onClick={handleInit}>{t('common.action.init')}</a>,
+                    label: t('common.action.init'),
+                    onClick: handleInit,
                 },
             ]
             : [
@@ -97,13 +108,16 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
                 },
                 {
                     key: '2',
-                    label: <a onClick={handleEdit}>{t('common.action.edit')}</a>,
+                    label: t('common.action.edit'),
+                    onClick: handleEdit,
                 },
                 {
                     key: '3',
+                    disabled: item.default,
                     label: (item.default)
                         ? <span className={style.disable}>{t('common.action.delete')}</span>
-                        : <a onClick={handleDelete}>{t('common.action.delete')}</a>,
+                        : t('common.action.delete'),
+                    onClick: item.default ? undefined : handleDelete,
                 },
             ],
     });
@@ -116,7 +130,13 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
     return (
         <Card
             className={style.card}
-            title={<TitleField item={item} onClick={handleGotoGraph} />}
+            title={(
+                <TitleField
+                    item={item}
+                    onClick={handleGotoGraph}
+                    onKeyDown={handleGotoGraphKeyDown}
+                />
+            )}
             headStyle={{
                 backgroundImage: 'linear-gradient(180deg, '
                     + 'rgba(51,136,255,0.10) 0%, rgba(51,136,255,0.00) 100%)',
@@ -158,7 +178,13 @@ const GraphSpaceCard = ({item, editGraphspace, deleteGraphspace, handleInit}) =>
                 ]
             }
         >
-            <div className={style.card_content} onClick={handleGotoGraph}>
+            <div
+                className={style.card_content}
+                onClick={handleGotoGraph}
+                onKeyDown={handleGotoGraphKeyDown}
+                role='button'
+                tabIndex={0}
+            >
                 <Row justify='space-between'>
                     <Col span={14}>
                         <ul className={style.list}>

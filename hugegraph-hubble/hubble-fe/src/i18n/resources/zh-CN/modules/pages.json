@@ -85,6 +85,10 @@
   },
   "graphspace": {
     "title": "图空间管理",
+    "load": {
+      "unavailable": "无法加载图空间列表。",
+      "retry": "重试图空间列表"
+    },
     "create": "创建图空间",
     "search_placeholder": "请输入图空间名称",
     "set_default_confirm": "确认更改图空间的默认设置?",
@@ -264,6 +268,10 @@
   },
   "account": {
     "title": "账号管理",
+    "load": {
+      "unavailable": "无法加载账号列表。",
+      "retry": "重试账号列表"
+    },
     "create": "创建账号",
     "delete_confirm": "确定要删除账号 {{name}}吗？",
     "col": {
@@ -295,6 +303,10 @@
   "my": {
     "title": "个人中心",
     "edit_profile_title": "编辑信息",
+    "load": {
+      "unavailable": "无法加载个人资料。",
+      "retry": "重试个人资料"
+    },
     "col": {
       "id": "账号ID",
       "name": "账号名",
@@ -418,6 +430,8 @@
     },
     "view": {
       "title": "查看任务",
+      "unavailable": "无法加载当前任务详情。",
+      "retry": "重试任务详情",
       "name": "任务名称",
       "source_type": "源数据类型",
       "target_space": "目标图空间",
@@ -581,6 +595,11 @@
     "retry": "重试 Schema 数据",
     "delete_failed": "删除失败，请检查 Server 连接后重试。",
     "title": "元数据管理",
+    "identity": {
+      "graph_unavailable": "无法加载当前图信息。",
+      "graphspace_unavailable": "无法加载当前 GraphSpace 信息。",
+      "retry": "重试图上下文"
+    },
     "name_placeholder": "允许出现中英文、数字、下划线",
     "delete_irreversible": "删除后无法恢复，请谨慎操作。",
     "delete_task_hint": "删除元数据耗时较久，详情可在任务管理中查看",
@@ -790,6 +809,10 @@
     "dashboard_checking": "正在检查 Dashboard 可用性……",
     "dashboard_unavailable": "Dashboard 不可用，请检查 dashboard.address 配置和服务健康状态。",
     "dashboard_popup_blocked": "Dashboard 窗口被拦截，请允许弹出式窗口后重试。"
+  },
+  "not_found": {
+    "subtitle": "页面不存在",
+    "home": "返回首页"
   },
   "login": {
     "submit": "登录",

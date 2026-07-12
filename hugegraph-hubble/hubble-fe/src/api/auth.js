@@ -160,8 +160,8 @@ export {
     getRoleUser, addRoleUser, addRoleUserBatch, delRoleUser, delRoleUserBatch,
 };
 
-const getPersonal = () => {
-    return request.get('/auth/users/getpersonal');
+const getPersonal = config => {
+    return request.get('/auth/users/getpersonal', config);
 };
 
 const updatePersonal = data => {

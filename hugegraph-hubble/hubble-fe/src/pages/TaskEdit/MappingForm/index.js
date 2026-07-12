@@ -34,8 +34,12 @@ const MappingListItem = ({item, index, type, onEdit, onRemove, t}) => {
     return (
         <List.Item
             actions={[
-                <a key={'1'} onClick={handleEdit}>{t('common.action.edit')}</a>,
-                <a key={'2'} onClick={handleRemove}>{t('common.action.delete')}</a>,
+                <Button key={'1'} type='link' onClick={handleEdit}>
+                    {t('common.action.edit')}
+                </Button>,
+                <Button key={'2'} type='link' onClick={handleRemove}>
+                    {t('common.action.delete')}
+                </Button>,
             ]}
         >
             <Space>

@@ -27,6 +27,7 @@ import {useTranslation} from 'react-i18next';
 import {propertiesValidator, maxDegreeValidator} from '../../../utils';
 import classnames from 'classnames';
 import s from '../../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../../components/KeyboardAction';
 
 const createActionHandler = handler => () => handler();
 const createValueHandler = (handler, value) => () => handler(value);
@@ -134,7 +135,11 @@ const PathPatternsFormItems = () => {
 
     return (
         <>
-            <div className={s.stepHeader} onClick={changePatternsVisible}>
+            <KeyboardAction
+                className={s.stepHeader}
+                onAction={changePatternsVisible}
+                aria-expanded={patternVisible}
+            >
                 <div className={s.stepIcon}>
                     {patternVisible ? <DownOutlined /> : <RightOutlined />}
                 </div>
@@ -147,7 +152,7 @@ const PathPatternsFormItems = () => {
                         <QuestionCircleOutlined />
                     </Tooltip>
                 </div>
-            </div>
+            </KeyboardAction>
             <div className={patternContentClassName}>
                 {renderPathPatterns('path_patterns')}
             </div>

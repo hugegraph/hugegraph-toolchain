@@ -30,6 +30,7 @@ import MaxDepthItem from '../../MaxDepthItem';
 import NearestItem from '../../NearestItem';
 import MaxDegreeItem from '../../MaxDegreeItem';
 import CapacityItem from '../../CapacityItem';
+import KeyboardAction from '../../../../../components/KeyboardAction';
 import LimitItem from '../../LimitItem';
 import _ from 'lodash';
 import * as api from '../../../../../api';
@@ -144,7 +145,11 @@ const AllPaths = props => {
 
     const stepFormItems = (
         <div>
-            <div className={s.stepHeader} onClick={changeStepVisibleState}>
+            <KeyboardAction
+                className={s.stepHeader}
+                onAction={changeStepVisibleState}
+                aria-expanded={stepVisible}
+            >
                 <div className={s.stepIcon}>
                     {stepVisible ? <DownOutlined /> : <RightOutlined />}
                 </div>
@@ -157,7 +162,7 @@ const AllPaths = props => {
                         <QuestionCircleOutlined />
                     </Tooltip>
                 </div>
-            </div>
+            </KeyboardAction>
             <div className={stepContentClassName}>
                 <Form.Item
                     name={['step', 'direction']}

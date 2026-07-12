@@ -25,6 +25,7 @@ import {useTranslation} from 'react-i18next';
 import FinishedIcon from '../../../assets/ic_done_144.svg';
 import {useNavigate} from 'react-router-dom';
 import c from './index.module.scss';
+import {Button} from 'antd';
 
 const TaskNavigateView = props => {
     const {t} = useTranslation();
@@ -52,9 +53,9 @@ const TaskNavigateView = props => {
             <span>{message}</span>
             <span>{t('analysis.canvas.task_navigation.task_id')}: {taskId}</span>
             <span>
-                <a onClick={onClickDetail}>
+                <Button type='link' onClick={onClickDetail}>
                     {t('analysis.canvas.task_navigation.view')}
-                </a>
+                </Button>
             </span>
         </div>
     );

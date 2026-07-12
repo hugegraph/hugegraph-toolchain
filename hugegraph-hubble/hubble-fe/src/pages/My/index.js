@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {PageHeader, Button, Form, Input, Space, message, Spin} from 'antd';
-import {useEffect, useState, useCallback} from 'react';
+import {Alert, PageHeader, Button, Form, Input, Space, message, Spin} from 'antd';
+import {useEffect, useRef, useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import style from './index.module.scss';
 import EditLayer from './EditLayer';
@@ -32,6 +32,8 @@ const My = () => {
     const [data, setData] = useState({});
     const [loading, setLoading] = useState(false);
     const [spinning, setSpinning] = useState(true);
+    const [profileError, setProfileError] = useState(false);
+    const profileRequest = useRef(null);
     const [form] = Form.useForm();
 
     const handleForm = useCallback(() => {
@@ -64,24 +66,48 @@ const My = () => {
     }, []);
 
     const handleRefresh = useCallback(() => {
-        setRefresh(!refresh);
-    }, [refresh]);
+        setRefresh(value => !value);
+    }, []);
 
     const handleShowAccount = useCallback(() => {
         setChangePass(false);
     }, []);
 
-    useEffect(() => {
-        api.auth.getPersonal().then(res => {
-            setSpinning(false);
+    const loadProfile = useCallback(async () => {
+        const token = Symbol('my-profile');
+        profileRequest.current = token;
+        setSpinning(true);
+        setProfileError(false);
+        setData({});
+        try {
+            const res = await api.auth.getPersonal({suppressBusinessErrorToast: true});
+            if (profileRequest.current !== token) {
+                return;
+            }
             if (res.status === 200) {
                 setData(res.data);
                 return;
             }
+            setProfileError(true);
+        }
+        catch (error) {
+            if (profileRequest.current === token) {
+                setProfileError(true);
+            }
+        }
+        finally {
+            if (profileRequest.current === token) {
+                setSpinning(false);
+            }
+        }
+    }, []);
 
-            message.error(res.message);
-        });
-    }, [refresh]);
+    useEffect(() => {
+        loadProfile();
+        return () => {
+            profileRequest.current = null;
+        };
+    }, [refresh, loadProfile]);
 
     return (
         <>
@@ -90,19 +116,43 @@ const My = () => {
                 onBack={false}
                 title={t('my.title')}
                 extra={[
-                    <Button key='1' onClick={handleShowLayer}>{t('common.action.edit')}</Button>,
-                    <Button key='2' onClick={handleChange}>{t('my.edit.title')}</Button>,
+                    <Button
+                        key='1'
+                        onClick={handleShowLayer}
+                        disabled={spinning || profileError}
+                    >
+                        {t('common.action.edit')}
+                    </Button>,
+                    <Button
+                        key='2'
+                        onClick={handleChange}
+                        disabled={spinning || profileError}
+                    >
+                        {t('my.edit.title')}
+                    </Button>,
                 ]}
             />
 
             <div className='container'>
+                {profileError && (
+                    <Alert
+                        type='error'
+                        showIcon
+                        message={t('my.load.unavailable')}
+                        action={(
+                            <Button size='small' onClick={loadProfile}>
+                                {t('my.load.retry')}
+                            </Button>
+                        )}
+                    />
+                )}
                 <Form
                     className={style.form}
                     labelCol={{span: 6}}
                     initialValues={{user_name: data.user_name}}
                     form={form}
                 >
-                    {changePass === false
+                    {!profileError && changePass === false
                         ? (
                             <Spin spinning={spinning}>
                                 <Form.Item label={t('my.col.id')} className={style.item}>
@@ -122,7 +172,7 @@ const My = () => {
                                 </Form.Item>
                             </Spin>
                         )
-                        : (
+                        : !profileError ? (
                             <>
                                 <Form.Item label={t('my.col.name')} name='user_name'>
                                     <Input disabled />
@@ -170,7 +220,7 @@ const My = () => {
                                     {/* <div className={Style.desc}>上次更改密码时间：2022-06-24 10:44:22</div> */}
                                 </Form.Item>
                             </>
-                        )}
+                        ) : null}
                 </Form>
             </div>
 

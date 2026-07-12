@@ -201,6 +201,8 @@
   },
   "style_config": {
     "title": "样式配置",
+    "color_picker": "选择颜色",
+    "close_color_picker": "关闭颜色选择器",
     "vertex_style": "顶点样式",
     "edge_style": "边样式",
     "vertex_appearance": "点外观",

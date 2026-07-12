@@ -52,15 +52,18 @@ const NewConfig = props => {
         items: [
             {
                 key: '1',
-                label: (<a onClick={handleClickNewNode}>{t('analysis.canvas.add_vertex')}</a>),
+                label: t('analysis.canvas.add_vertex'),
+                onClick: handleClickNewNode,
             },
             {
                 key: '2',
-                label: (<a onClick={() => handleClickNewEdge(false)}>{t('analysis.canvas.add_in_edge')}</a>),
+                label: t('analysis.canvas.add_in_edge'),
+                onClick: () => handleClickNewEdge(false),
             },
             {
                 key: '3',
-                label: (<a onClick={() => handleClickNewEdge(true)}>{t('analysis.canvas.add_out_edge')}</a>),
+                label: t('analysis.canvas.add_out_edge'),
+                onClick: () => handleClickNewEdge(true),
             },
         ],
     };

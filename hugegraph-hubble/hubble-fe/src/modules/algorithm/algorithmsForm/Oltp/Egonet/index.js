@@ -36,6 +36,7 @@ import GraphAnalysisContext from '../../../../Context';
 import classnames from 'classnames';
 import _ from 'lodash';
 import s from '../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../components/KeyboardAction';
 
 const {EGONET} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
@@ -144,7 +145,11 @@ const Egonet = props => {
     const renderStepItems = param => {
         return (
             <div>
-                <div className={s.stepHeader} onClick={changeStepVisibleState}>
+                <KeyboardAction
+                    className={s.stepHeader}
+                    onAction={changeStepVisibleState}
+                    aria-expanded={stepVisible}
+                >
                     <div className={s.stepIcon}>
                         {stepVisible ? <DownOutlined /> : <RightOutlined />}
                     </div>
@@ -157,7 +162,7 @@ const Egonet = props => {
                             <QuestionCircleOutlined />
                         </Tooltip>
                     </div>
-                </div>
+                </KeyboardAction>
                 <div className={stepContentClassName}>
                     <Form.Item
                         name={[param, 'direction']}

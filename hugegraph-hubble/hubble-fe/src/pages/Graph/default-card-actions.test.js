@@ -52,7 +52,12 @@ jest.mock('./EditLayer', () => ({
 jest.mock('./Card', () => ({menus}) => (
     <div data-testid='graph-card-menu'>
         {menus.map(item => (
-            <div key={item.key} role='menuitem' aria-disabled={item.disabled || undefined}>
+            <div
+                key={item.key}
+                role='menuitem'
+                aria-disabled={item.disabled || undefined}
+                onClick={item.onClick}
+            >
                 {item.label}
             </div>
         ))}

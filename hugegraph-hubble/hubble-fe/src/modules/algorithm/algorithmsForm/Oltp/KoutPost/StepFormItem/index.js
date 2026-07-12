@@ -28,6 +28,7 @@ import StepsItems from '../../../StepsItems';
 import {integerValidator} from '../../../utils';
 import classnames from 'classnames';
 import s from '../../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../../components/KeyboardAction';
 
 const StepFormItem = () => {
     const {t} = useTranslation();
@@ -51,7 +52,11 @@ const StepFormItem = () => {
 
     return (
         <>
-            <div className={s.stepHeader} onClick={changeStepVisible}>
+            <KeyboardAction
+                className={s.stepHeader}
+                onAction={changeStepVisible}
+                aria-expanded={stepVisible}
+            >
                 <div className={s.stepIcon}>
                     {stepVisible ? <DownOutlined /> : <RightOutlined />}
                 </div>
@@ -64,7 +69,7 @@ const StepFormItem = () => {
                         <QuestionCircleOutlined />
                     </Tooltip>
                 </div>
-            </div>
+            </KeyboardAction>
             <div className={stepContentClassName}>
                 <Form.Item
                     name={['steps', 'direction']}

@@ -29,15 +29,16 @@ import {isPdEnabled} from '../../utils/config';
 import style from './index.module.scss';
 import {byteConvert} from '../../utils/format';
 
-const TitleField = ({item, onClick}) => {
+const TitleField = ({item, onClick, onKeyDown}) => {
     const {t} = useTranslation();
     const pdMode = isPdEnabled();
+    const graphName = item.nickname || item.name;
     const displayName = pdMode
-        ? `${_.truncate(item.graphspace_nickname, {length: 12})}-${_.truncate(item.nickname, {length: 12})}`
-        : (item.nickname || item.name);
+        ? `${_.truncate(item.graphspace_nickname, {length: 12})}-${_.truncate(graphName, {length: 12})}`
+        : graphName;
     const fullTitle = pdMode
-        ? `${item.graphspace_nickname}-${item.nickname}`
-        : (item.nickname || item.name);
+        ? `${item.graphspace_nickname}-${graphName}`
+        : graphName;
 
     return (
         <>
@@ -46,6 +47,9 @@ const TitleField = ({item, onClick}) => {
                 ellipsis={{ellipsis: true}}
                 title={fullTitle}
                 onClick={onClick}
+                onKeyDown={onKeyDown}
+                role='button'
+                tabIndex={0}
             >
                 {displayName}
             </Typography.Text>
@@ -72,10 +76,30 @@ const GraphCard = ({item, menus}) => {
         navigate(`/graphspace/${item.graphspace || 'DEFAULT'}/graph/${item.name}/detail`);
     }, [item, navigate]);
 
+    const handleAnalysisKeyDown = useCallback(event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleGotoAnalysis();
+        }
+    }, [handleGotoAnalysis]);
+
+    const handleDetailKeyDown = useCallback(event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleGotoDetail();
+        }
+    }, [handleGotoDetail]);
+
     return (
         <Card
             className={style.card}
-            title={<TitleField item={item} onClick={handleGotoAnalysis} />}
+            title={(
+                <TitleField
+                    item={item}
+                    onClick={handleGotoAnalysis}
+                    onKeyDown={handleAnalysisKeyDown}
+                />
+            )}
             headStyle={{
                 paddingLeft: 20,
             }}
@@ -92,17 +116,35 @@ const GraphCard = ({item, menus}) => {
                 </Dropdown>
             )}
             actions={[
-                <span key="setting" onClick={handleGotoAnalysis}>
+                <span
+                    key="setting"
+                    onClick={handleGotoAnalysis}
+                    onKeyDown={handleAnalysisKeyDown}
+                    role='button'
+                    tabIndex={0}
+                >
                     {t('graph.col.create_time')}: {moment(item.create_time).format('YYYY-MM-DD')}
                 </span>,
-                <span key='statistic' onClick={handleGotoDetail}>
+                <span
+                    key='statistic'
+                    onClick={handleGotoDetail}
+                    onKeyDown={handleDetailKeyDown}
+                    role='button'
+                    tabIndex={0}
+                >
                     <Tooltip title={t('graph.card.detail_tooltip')}>
                         <EyeOutlined />{t('graph.detail.title')}
                     </Tooltip>
                 </span>,
             ]}
         >
-            <div className={style.card_content} onClick={handleGotoAnalysis}>
+            <div
+                className={style.card_content}
+                onClick={handleGotoAnalysis}
+                onKeyDown={handleAnalysisKeyDown}
+                role='button'
+                tabIndex={0}
+            >
                 <GraphView
                     data={graphinData}
                     style={{minHeight: '153px'}}

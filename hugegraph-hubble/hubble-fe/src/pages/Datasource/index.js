@@ -23,6 +23,7 @@ import EditLayer from './EditLayer';
 import TableHeader from '../../components/TableHeader';
 import {sourceTypeOptions} from './config';
 import * as api from '../../api';
+import RowActionButton from '../../components/RowActionButton';
 
 const Datasource = () => {
     const {t} = useTranslation();
@@ -33,17 +34,27 @@ const Datasource = () => {
     const [query, setQuery] = useState('');
     const [pagination, setPagination] = useState({pageSize: 10, current: 1});
 
-    const delDatasource = datasourceID => {
+    const delDatasource = useCallback(datasourceID => {
         api.manage.delDatasource(datasourceID).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.delete_success'));
-                setRefresh(!refresh);
+                setRefresh(value => !value);
                 return;
             }
 
             message.error(res.message);
         });
-    };
+    }, [t]);
+
+    const confirmDelete = useCallback(datasourceID => {
+        Modal.confirm({
+            title: t('datasource.delete_title'),
+            content: t('datasource.delete_content'),
+            onOk() {
+                delDatasource(datasourceID);
+            },
+        });
+    }, [delDatasource, t]);
 
     const delBatchDatasource = useCallback(list => {
         api.manage.delBatchDatasource(list).then(res => {
@@ -107,15 +118,9 @@ const Datasource = () => {
             render: val => {
                 return (
                     <Space>
-                        <a onClick={() => Modal.confirm({
-                            title: t('datasource.delete_title'),
-                            content: t('datasource.delete_content'),
-                            onOk() {
-                                delDatasource(val);
-                            },
-                        })}
-                        >{t('common.action.delete')}
-                        </a>
+                        <RowActionButton onAction={confirmDelete} value={val}>
+                            {t('common.action.delete')}
+                        </RowActionButton>
                     </Space>
                 );
             },

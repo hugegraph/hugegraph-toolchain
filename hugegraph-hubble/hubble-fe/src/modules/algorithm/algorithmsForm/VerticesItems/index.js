@@ -27,6 +27,7 @@ import {RightOutlined, DownOutlined, QuestionCircleOutlined} from '@ant-design/i
 import {propertiesValidator} from '../utils';
 import classnames from 'classnames';
 import c from './index.module.scss';
+import KeyboardAction from '../../../../components/KeyboardAction';
 
 const VerticesItems = props => {
     const {t} = useTranslation();
@@ -46,7 +47,11 @@ const VerticesItems = props => {
 
     return (
         <div className={c.verticesItems}>
-            <div className={c.stepHeader} onClick={changeItemVisibleState}>
+            <KeyboardAction
+                className={c.stepHeader}
+                onAction={changeItemVisibleState}
+                aria-expanded={itemVisible}
+            >
                 <div className={c.stepIcon}>
                     {itemVisible ? <DownOutlined /> : <RightOutlined />}
                 </div>
@@ -59,7 +64,7 @@ const VerticesItems = props => {
                         <QuestionCircleOutlined />
                     </Tooltip>
                 </div>
-            </div>
+            </KeyboardAction>
             <div className={verticesContentClassName}>
                 <Form.Item
                     label="ids"

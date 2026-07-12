@@ -33,6 +33,7 @@ import AlgorithmNameHeader from '../../AlgorithmNameHeader';
 import _ from 'lodash';
 import classnames from 'classnames';
 import s from '../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../components/KeyboardAction';
 
 const {JACCARD_SIMILARITY_POST} = ALGORITHM_NAME;
 const {LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
@@ -160,7 +161,11 @@ const JaccardSimilarityPost = props => {
 
     const stepFormItems = (
         <>
-            <div className={s.stepHeader} onClick={changeStepVisible}>
+            <KeyboardAction
+                className={s.stepHeader}
+                onAction={changeStepVisible}
+                aria-expanded={stepVisible}
+            >
                 <div className={s.stepIcon}>
                     {stepVisible ? <DownOutlined /> : <RightOutlined />}
                 </div>
@@ -173,7 +178,7 @@ const JaccardSimilarityPost = props => {
                         <QuestionCircleOutlined />
                     </Tooltip>
                 </div>
-            </div>
+            </KeyboardAction>
             <div className={stepContentClassName}>
                 <Form.Item
                     name={['step', 'direction']}

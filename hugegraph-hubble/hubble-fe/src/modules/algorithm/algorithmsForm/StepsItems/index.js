@@ -27,6 +27,7 @@ import {RightOutlined, DownOutlined, PlusOutlined, QuestionCircleOutlined} from 
 import {propertiesValidator} from '../utils';
 import classnames from 'classnames';
 import c from './index.module.scss';
+import KeyboardAction from '../../../../components/KeyboardAction';
 
 const createValueHandler = (handler, value) => () => handler(value);
 const createAddHandler = (add, setItemVisible) => () => {
@@ -80,7 +81,11 @@ const StepsItems = props => {
         >
             {(lists, {add, remove}, {errors}) => (
                 <div className={c.stepsItemsContent}>
-                    <div className={c.stepHeader} onClick={changeItemVisibleState}>
+                    <KeyboardAction
+                        className={c.stepHeader}
+                        onAction={changeItemVisibleState}
+                        aria-expanded={itemVisible}
+                    >
                         <div className={c.stepIcon}>
                             {itemVisible ? <DownOutlined /> : <RightOutlined />}
                         </div>
@@ -93,7 +98,7 @@ const StepsItems = props => {
                                 <QuestionCircleOutlined />
                             </Tooltip>
                         </div>
-                    </div>
+                    </KeyboardAction>
                     {
 
                         lists.map((item, name, index) => {

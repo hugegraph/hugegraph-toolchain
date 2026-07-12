@@ -23,7 +23,7 @@
 import React, {useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import Highlighter from 'react-highlight-words';
-import {Table, Input, Popconfirm, Modal} from 'antd';
+import {Button, Table, Input, Popconfirm, Modal} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
 import c from './index.module.scss';
 
@@ -162,19 +162,21 @@ const Favorite = props => {
                             okButtonProps={{disabled: isDisabledName}}
                             cancelText={t('common.action.cancel')}
                         >
-                            <a
+                            <Button
+                                type='link'
                                 style={{marginLeft: '8px'}}
                                 onClick={createValueHandler(onEditFavorite, rowData)}
                             >
                                 {t('analysis.logs.action.edit_name')}
-                            </a>
+                            </Button>
                         </Popconfirm>
-                        <a
+                        <Button
+                            type='link'
                             style={{marginLeft: '8px'}}
                             onClick={createValueHandler(onConfirm, rowData.id)}
                         >
                             {t('common.action.delete')}
-                        </a>
+                        </Button>
                     </div>
                 );
             },

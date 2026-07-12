@@ -21,9 +21,9 @@ import {EditEdgeLayer} from './EditLayer';
 import {useState, useEffect, useCallback} from 'react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
-import RowActionButton from '../../../components/RowActionButton';
 import useMetaTable from '../common/useMetaTable';
 import MetaTableStatus from '../common/MetaTableStatus';
+import RowActionButton from '../../../components/RowActionButton';
 import * as api from '../../../api';
 
 const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
@@ -157,8 +157,12 @@ const EdgeTable = () => {
             align: 'center',
             render: row => (
                 <Space>
-                    <a onClick={() => handleEdit(row)}>{t('common.edit')}</a>
-                    <a onClick={() => handleDelete(row)}>{t('common.delete')}</a>
+                    <RowActionButton onAction={handleEdit} value={row}>
+                        {t('common.edit')}
+                    </RowActionButton>
+                    <RowActionButton onAction={handleDelete} value={row}>
+                        {t('common.delete')}
+                    </RowActionButton>
                 </Space>
             ),
         },

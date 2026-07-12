@@ -52,6 +52,12 @@ import GraphCard from './Card';
 import ClearGraphConfirmModal from './ClearGraphConfirmModal';
 import KeyboardAction from '../../components/KeyboardAction';
 
+const GraphRowAction = ({onAction, graph, children}) => {
+    const handleClick = useCallback(() => onAction(graph), [graph, onAction]);
+
+    return <Button type='link' onClick={handleClick}>{children}</Button>;
+};
+
 const Graph = () => {
     const {t} = useTranslation();
     const [data, setData] = useState([]);
@@ -96,14 +102,14 @@ const Graph = () => {
         setSelectGraph('');
     }, []);
 
-    const editGraph = graph => {
+    const editGraph = useCallback(graph => {
         setSelectGraph(graph);
         setEditLayer(true);
-    };
+    }, []);
 
-    const clearData = graph => {
+    const clearData = useCallback(graph => {
         setClearSelection({graph});
-    };
+    }, []);
 
     const handleClearSuccess = useCallback(() => {
         message.success(t('common.msg.success'));
@@ -119,12 +125,12 @@ const Graph = () => {
         return api.manage.clearGraphData(graphspace, clearSelection.graph);
     }, [clearSelection, graphspace]);
 
-    const showSchema = graph => {
+    const showSchema = useCallback(graph => {
         setViewLayer(true);
         setSelectGraph(graph);
-    };
+    }, []);
 
-    const deleteGraph = graph => {
+    const deleteGraph = useCallback(graph => {
         Modal.confirm({
             title: t('graph.delete_confirm.title'),
             content: t('graph.delete_confirm.irreversible'),
@@ -134,7 +140,7 @@ const Graph = () => {
                     hide();
                     if (res.status === 200) {
                         message.success(t('graph.delete_confirm.success'));
-                        setRefresh(!refresh);
+                        setRefresh(value => !value);
                         return;
                     }
 
@@ -142,9 +148,9 @@ const Graph = () => {
                 });
             },
         });
-    };
+    }, [graphspace, t]);
 
-    const setDefault = graph => {
+    const setDefault = useCallback(graph => {
         const hide = message.loading(t('graph.set_default.setting'), 0);
         return api.manage.setDefaultGraph(graphspace, graph, {
             suppressBusinessErrorToast: true,
@@ -152,7 +158,7 @@ const Graph = () => {
             hide();
             if (res.status === 200) {
                 message.success(t('graph.set_default.success'));
-                setRefresh(!refresh);
+                setRefresh(value => !value);
                 return;
             }
             message.error(t('common.msg.operation_failed'));
@@ -160,9 +166,9 @@ const Graph = () => {
             hide();
             message.error(t('common.msg.operation_failed'));
         });
-    };
+    }, [graphspace, t]);
 
-    const handleSetDefault = graph => {
+    const handleSetDefault = useCallback(graph => {
         api.manage.getDefaultGraph(graphspace, {
             suppressBusinessErrorToast: true,
         }).then(res => {
@@ -184,7 +190,7 @@ const Graph = () => {
 
             setDefault(graph);
         }).catch(() => message.error(t('common.msg.operation_failed')));
-    };
+    }, [graphspace, setDefault, t]);
 
     const handleBack = useCallback(() => {
         if (isPdEnabled()) {
@@ -267,18 +273,36 @@ const Graph = () => {
                         </Link>
                         {(row.default)
                             ? <span className={style.disable}>{t('graph.menu.clear_data')}</span>
-                            : <a onClick={() => clearData(row.name)}>{t('graph.menu.clear_data')}</a>}
+                            : (
+                                <GraphRowAction onAction={clearData} graph={row.name}>
+                                    {t('graph.menu.clear_data')}
+                                </GraphRowAction>
+                            )}
                         {(row.graphspace === 'neizhianli')
                             ? <span className={style.disable}>{t('common.action.delete')}</span>
-                            : <a onClick={() => deleteGraph(row.name)}>{t('common.action.delete')}</a>}
-                        <a onClick={() => showSchema(row.name)}>{t('graph.menu.view_schema')}</a>
+                            : (
+                                <GraphRowAction onAction={deleteGraph} graph={row.name}>
+                                    {t('common.action.delete')}
+                                </GraphRowAction>
+                            )}
+                        <GraphRowAction onAction={showSchema} graph={row.name}>
+                            {t('graph.menu.view_schema')}
+                        </GraphRowAction>
                         {(row.graphspace === 'neizhianli')
                             ? <span className={style.disable}>{t('common.action.edit')}</span>
-                            : <a onClick={() => editGraph(row.name)}>{t('common.action.edit')}</a>}
+                            : (
+                                <GraphRowAction onAction={editGraph} graph={row.name}>
+                                    {t('common.action.edit')}
+                                </GraphRowAction>
+                            )}
                         {graphDefaultMutationEnabled && (
                             row.default
                                 ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
-                                : <a onClick={() => handleSetDefault(row.name)}>{t('graph.menu.set_default')}</a>
+                                : (
+                                    <GraphRowAction onAction={handleSetDefault} graph={row.name}>
+                                        {t('graph.menu.set_default')}
+                                    </GraphRowAction>
+                                )
                         )}
                         {graphCreateEnabled && (
                             <Tooltip title={t('graph.clone.unavailable')}>
@@ -302,39 +326,52 @@ const Graph = () => {
     const getMenus = item => [
         {
             key: '0',
-            label: <a onClick={() => handleGotoAnalysis(item)}>{t('graph.menu.enter_analysis')}</a>,
+            label: t('graph.menu.enter_analysis'),
+            onClick: () => handleGotoAnalysis(item),
         },
         {
             key: '1',
-            label: <a onClick={() => handleGotoMeta(item)}>{t('graph.menu.meta_config')}</a>,
+            label: t('graph.menu.meta_config'),
+            onClick: () => handleGotoMeta(item),
         },
         {
             key: '2',
+            disabled: item.default,
             label: item.default
                 ? <span className={style.disable}>{t('graph.menu.clear_data')}</span>
-                : <a onClick={() => clearData(item.name)}>{t('graph.menu.clear_data')}</a>,
+                : t('graph.menu.clear_data'),
+            onClick: item.default ? undefined : () => clearData(item.name),
         },
         graphDefaultMutationEnabled && {
             key: '4',
+            disabled: item.default,
             label: item.default
                 ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
-                : <a onClick={() => handleSetDefault(item.name)}>{t('graph.menu.set_default')}</a>,
+                : t('graph.menu.set_default'),
+            onClick: item.default ? undefined : () => handleSetDefault(item.name),
         },
         {
             key: '5',
-            label: <a onClick={() => showSchema(item.name)}>{t('graph.menu.view_schema')}</a>,
+            label: t('graph.menu.view_schema'),
+            onClick: () => showSchema(item.name),
         },
         {
             key: '6',
+            disabled: item.graphspace === 'neizhianli',
             label: item.graphspace === 'neizhianli'
                 ? <span className={style.disable}>{t('common.action.edit')}</span>
-                : <a onClick={() => editGraph(item.name)}>{t('common.action.edit')}</a>,
+                : t('common.action.edit'),
+            onClick: item.graphspace === 'neizhianli'
+                ? undefined : () => editGraph(item.name),
         },
         {
             key: '7',
+            disabled: item.graphspace === 'neizhianli',
             label: item.graphspace === 'neizhianli'
                 ? <span className={style.disable}>{t('common.action.delete')}</span>
-                : <a onClick={() => deleteGraph(item.name)}>{t('common.action.delete')}</a>,
+                : t('common.action.delete'),
+            onClick: item.graphspace === 'neizhianli'
+                ? undefined : () => deleteGraph(item.name),
         },
         graphCreateEnabled && {
             key: '8',

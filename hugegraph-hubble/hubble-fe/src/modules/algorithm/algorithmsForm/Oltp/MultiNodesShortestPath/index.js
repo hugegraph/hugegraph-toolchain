@@ -35,6 +35,7 @@ import {integerValidator, positiveIntegerValidator, maxDegreeValidator, skipDegr
     formatVerticesValue} from '../../utils';
 import _ from 'lodash';
 import s from '../OltpItem/index.module.scss';
+import KeyboardAction from '../../../../../components/KeyboardAction';
 import classnames from 'classnames';
 
 const {MULTINODESSHORTESTPATH} = ALGORITHM_NAME;
@@ -183,7 +184,11 @@ const MultiNodesShortestPath = props => {
     const renderSteps = () => {
         return (
             <div>
-                <div className={s.stepHeader} onClick={changeStepVisible}>
+                <KeyboardAction
+                    className={s.stepHeader}
+                    onAction={changeStepVisible}
+                    aria-expanded={stepVisible}
+                >
                     <div className={s.stepIcon}>
                         {stepVisible ? <DownOutlined /> : <RightOutlined />}
                     </div>
@@ -196,7 +201,7 @@ const MultiNodesShortestPath = props => {
                             <QuestionCircleOutlined />
                         </Tooltip>
                     </div>
-                </div>
+                </KeyboardAction>
                 <div className={stepContentClassName}>
                     {stepFormItems()}
                 </div>
