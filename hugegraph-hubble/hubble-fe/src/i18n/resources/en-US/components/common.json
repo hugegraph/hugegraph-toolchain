@@ -27,6 +27,7 @@
       "normal_name_rule": "Use Chinese characters, letters, numbers, or underscores only, up to 20 characters",
       "jdbc_rule": "Enter a valid JDBC URL, for example: jdbc:mysql://127.0.0.1:3306/db_name",
       "account_name_rule": "Account name must be within 16 characters and cannot start or end with an underscore",
+      "favorite_name_rule": "Use Chinese characters, letters, numbers, or underscores only, up to 48 characters",
       "invalid_data_format": "Invalid data format"
     }
   },
