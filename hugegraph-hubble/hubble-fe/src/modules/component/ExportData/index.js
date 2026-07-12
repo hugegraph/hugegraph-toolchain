@@ -25,6 +25,21 @@ import {useTranslation} from 'react-i18next';
 import {Button, Tooltip, Dropdown, Modal, Form, Input} from 'antd';
 import {DownloadOutlined} from '@ant-design/icons';
 
+const createExportMenu = (t, handleClickExportJson, handleClickExportPng) => ({
+    items: [
+        {
+            key: '1',
+            label: t('analysis.canvas.export_json'),
+            onClick: handleClickExportJson,
+        },
+        {
+            key: '2',
+            label: t('analysis.canvas.export_png'),
+            onClick: handleClickExportPng,
+        },
+    ],
+});
+
 const ExportData = props => {
     const {t} = useTranslation();
     const {
@@ -105,18 +120,7 @@ const ExportData = props => {
         [exportJsonForm, onExportJsonChange]
     );
 
-    const exportMenu = {
-        items: [
-            {
-                key: '1',
-                label: (<a onClick={handleClickExportJson}>{t('analysis.canvas.export_json')}</a>),
-            },
-            {
-                key: '2',
-                label: (<a onClick={handleClickExportPng}>{t('analysis.canvas.export_png')}</a>),
-            },
-        ],
-    };
+    const exportMenu = createExportMenu(t, handleClickExportJson, handleClickExportPng);
 
     return (
         <>
@@ -169,4 +173,5 @@ const ExportData = props => {
     );
 };
 
+export {createExportMenu};
 export default ExportData;
