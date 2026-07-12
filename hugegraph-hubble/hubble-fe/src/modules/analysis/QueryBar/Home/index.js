@@ -30,6 +30,10 @@ import c from './index.module.scss';
 
 const {GREMLIN, CYPHER} = ANALYSIS_TYPE;
 
+const isFavoritePopoverOpen = (visible, activeTab, tabKey) => {
+    return visible && activeTab === tabKey;
+};
+
 const QueryBar = props => {
     const {t} = useTranslation();
     const {...args} = props;
@@ -51,6 +55,14 @@ const QueryBar = props => {
         [setCodeEditorContent]
     );
 
+    const handleTabsChange = useCallback(
+        nextTab => {
+            setFavoriteCardVisible(false);
+            onTabsChange(nextTab);
+        },
+        [onTabsChange]
+    );
+
     const tabItems = [
         {
             label: t('analysis.query.gremlin_tab'),
@@ -59,7 +71,11 @@ const QueryBar = props => {
                 <ContentCommon
                     {...args}
                     isEmptyQuery={isEmptyQuery}
-                    favoriteCardVisible={favoriteCardVisible}
+                    favoriteCardVisible={isFavoritePopoverOpen(
+                        favoriteCardVisible,
+                        activeTab,
+                        GREMLIN
+                    )}
                     setFavoriteCardVisible={setFavoriteCardVisible}
                 >
                     <CodeEditor
@@ -77,7 +93,11 @@ const QueryBar = props => {
                 <ContentCommon
                     {...args}
                     isEmptyQuery={isEmptyQuery}
-                    favoriteCardVisible={favoriteCardVisible}
+                    favoriteCardVisible={isFavoritePopoverOpen(
+                        favoriteCardVisible,
+                        activeTab,
+                        CYPHER
+                    )}
                     setFavoriteCardVisible={setFavoriteCardVisible}
                 >
                     <CodeEditor
@@ -96,7 +116,7 @@ const QueryBar = props => {
                 defaultActiveKey={GREMLIN}
                 activeKey={activeTab}
                 type="card"
-                onChange={onTabsChange}
+                onChange={handleTabsChange}
                 items={tabItems}
                 size='small'
             />
@@ -104,4 +124,5 @@ const QueryBar = props => {
     );
 };
 
+export {isFavoritePopoverOpen};
 export default QueryBar;
