@@ -111,6 +111,58 @@ const RunningText = ({status, onClick, data}) => {
     );
 };
 
+const TaskActions = ({row, onView, onEdit, onEnable, onDisable, onDelete}) => {
+    const {t} = useTranslation();
+    const canEditOrDelete = row.task_schedule_status === 'DISABLE';
+    const handleView = useCallback(() => onView(row), [onView, row]);
+    const handleEdit = useCallback(() => onEdit(row), [onEdit, row]);
+    const handleDelete = useCallback(() => {
+        Modal.confirm({
+            title: t('common.confirm.delete'),
+            content: t('common.confirm.delete_irrecoverable'),
+            onOk: () => onDelete(row.task_id),
+        });
+    }, [onDelete, row.task_id, t]);
+
+    return (
+        <Space>
+            <DetailTip row={row} />
+            <Button
+                type='link'
+                aria-label={t('task.action.config')}
+                title={t('task.action.config')}
+                icon={<FileTextOutlined />}
+                onClick={handleView}
+            />
+            <Button
+                type='link'
+                aria-label={t('task.action.edit')}
+                title={t('task.action.edit')}
+                icon={<EditOutlined />}
+                disabled={!canEditOrDelete}
+                onClick={handleEdit}
+            />
+            {row.task_schedule_status === 'ENABLE'
+                ? (
+                    <RunningText
+                        status='enable'
+                        data={row.task_id}
+                        onClick={onDisable}
+                    />)
+                : <RunningText data={row.task_id} onClick={onEnable} />}
+            <Button
+                type='link'
+                aria-label={t('common.action.delete')}
+                title={t('common.action.delete')}
+                icon={<DeleteOutlined />}
+                disabled={!canEditOrDelete}
+                onClick={handleDelete}
+            />
+        </Space>
+    );
+};
+
+
 const Task = () => {
     const {t} = useTranslation();
     const [data, setData] = useState([]);
@@ -256,46 +308,14 @@ const Task = () => {
             width: 160,
             render: row => {
                 return (
-                    <Space>
-                        <DetailTip row={row} />
-                        <a onClick={() => viewTask(row)}><FileTextOutlined /></a>
-                        {row.task_schedule_status  === 'DISABLE'
-                            ? <a onClick={() => editTask(row)}><EditOutlined /></a>
-                            : <EditOutlined style={{color: '#8c8c8c'}} />}
-                        {/* <a>{row.task_schedule_status === 'ENABLE'
-                            ? (
-                                <Tooltip title={t('task.pause')}>
-                                    <PauseOutlined onClick={() => disableTask(row.task_id)} />
-                                </Tooltip>
-                            )
-                            : (
-                                <Tooltip title={t('task.execute')}>
-                                    <CaretRightOutlined onClick={() => enableTask(row.task_id)} />
-                                </Tooltip>)}
-                        </a> */}
-                        <a>{row.task_schedule_status === 'ENABLE'
-                            ? (
-                                <RunningText
-                                    status='enable'
-                                    data={row.task_id}
-                                    onClick={disableTask}
-                                />)
-                            : <RunningText data={row.task_id} onClick={enableTask} />}
-                        </a>
-                        {row.task_schedule_status === 'DISABLE'
-                            ? (
-                                <a
-                                    onClick={() => Modal.confirm({
-                                        title: t('common.confirm.delete'),
-                                        content: t('common.confirm.delete_irrecoverable'),
-                                        onOk: () => deleteTask(row.task_id),
-                                    })}
-                                >
-                                    <DeleteOutlined />
-                                </a>
-                            )
-                            : <DeleteOutlined style={{color: '#8c8c8c'}} />}
-                    </Space>
+                    <TaskActions
+                        row={row}
+                        onView={viewTask}
+                        onEdit={editTask}
+                        onEnable={enableTask}
+                        onDisable={disableTask}
+                        onDelete={deleteTask}
+                    />
                 );
             },
         },
