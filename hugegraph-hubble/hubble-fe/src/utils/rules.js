@@ -149,12 +149,25 @@ const isAccountName = msg => ({
         let res2 = /.*_$/.test(value);
 
         if (!res || res1 || res2) {
-            return Promise.reject(
+            return Promise.reject(new Error(
                 typeof msg === 'string' ? msg : validationMessage('account_name_rule')
-            );
+            ));
         }
 
         return Promise.resolve();
+    },
+});
+
+const isValidFavoriteName = value => typeof value === 'string' && /^[A-Za-z0-9_\u4e00-\u9fa5]{1,48}$/.test(value);
+
+const isFavoriteName = msg => ({
+    validator(_, value) {
+        if (isValidFavoriteName(value)) {
+            return Promise.resolve();
+        }
+        return Promise.reject(new Error(
+            typeof msg === 'string' ? msg : validationMessage('favorite_name_rule')
+        ));
     },
 });
 
@@ -192,6 +205,8 @@ export {
     isNoramlName,
     isJDBC,
     isAccountName,
+    isFavoriteName,
+    isValidFavoriteName,
     isUUID,
     isInt,
 };

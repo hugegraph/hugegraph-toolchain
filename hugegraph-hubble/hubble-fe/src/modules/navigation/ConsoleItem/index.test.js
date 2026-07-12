@@ -102,3 +102,15 @@ test('reports a blocked popup without probing the Dashboard', async () => {
         'navigation_page.dashboard_popup_blocked'
     );
 });
+
+test('shows why operations are disabled when Dashboard is unavailable', async () => {
+    api.auth.getDashboard.mockResolvedValue({status: 500});
+    render(
+        <MemoryRouter future={{v7_relativeSplatPath: true, v7_startTransition: true}}>
+            <ConsoleItem />
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByText('navigation_page.dashboard_unavailable'))
+        .toBeInTheDocument();
+});

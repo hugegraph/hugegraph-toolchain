@@ -38,6 +38,8 @@ jest.mock('../i18n', () => ({
                     'Enter a valid JDBC URL, for example: jdbc:mysql://127.0.0.1:3306/db_name',
                 'common.validation.account_name_rule':
                     'Account name must be within 16 characters and cannot start or end with an underscore',
+                'common.validation.favorite_name_rule':
+                    'Use Chinese characters, letters, numbers, or underscores only, up to 48 characters',
                 'common.validation.invalid_data_format': 'Invalid data format',
             },
             'zh-CN': {
@@ -53,6 +55,7 @@ jest.mock('../i18n', () => ({
                 'common.validation.jdbc_rule':
                     '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name',
                 'common.validation.account_name_rule': '账号名不超过16个字符，且不能以下划线开始和结尾',
+                'common.validation.favorite_name_rule': '只能包含中文、字母、数字、_, 不能超过48个字符',
                 'common.validation.invalid_data_format': '非法的数据格式',
             },
         };
@@ -140,6 +143,25 @@ describe('rules i18n defaults', () => {
         expect(await validate(rules.isAccountName('custom account'))).toBe('custom account');
     });
 
+    it('rejects invalid account names with an Error object', async () => {
+        await expect(rules.isAccountName().validator(null, 'name_too_long_123'))
+            .rejects.toBeInstanceOf(Error);
+    });
+
+    it('accepts only backend-compatible favorite names', async () => {
+        await i18n.changeLanguage('en-US');
+        await expect(rules.isFavoriteName().validator(null, 'query_2026'))
+            .resolves.toBeUndefined();
+        await expect(rules.isFavoriteName().validator(null, '我的查询_123'))
+            .resolves.toBeUndefined();
+        await expect(rules.isFavoriteName().validator(null, 'query-2026'))
+            .rejects.toThrow('Use Chinese characters, letters, numbers, or underscores only, up to 48 characters');
+        await expect(rules.isFavoriteName().validator(null, undefined))
+            .rejects.toThrow('Use Chinese characters, letters, numbers, or underscores only, up to 48 characters');
+        await expect(rules.isFavoriteName().validator(null, null))
+            .rejects.toThrow('Use Chinese characters, letters, numbers, or underscores only, up to 48 characters');
+    });
+
     it('uses Chinese messages when the active language is Chinese', async () => {
         await i18n.changeLanguage('zh-CN');
 
@@ -156,6 +178,7 @@ describe('rules i18n defaults', () => {
             [rules.isNoramlName(), '只能包含中文、字母、数字、_, 不能超过20个字符'],
             [rules.isJDBC(), '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name'],
             [rules.isAccountName(), '账号名不超过16个字符，且不能以下划线开始和结尾'],
+            [rules.isFavoriteName(), '只能包含中文、字母、数字、_, 不能超过48个字符'],
             [rules.isUUID(), '非法的数据格式'],
             [rules.isInt(), '非法的数据格式'],
         ];
