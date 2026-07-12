@@ -34,6 +34,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.HugeException;
 import org.apache.hugegraph.service.schema.SchemaService;
+import org.apache.hugegraph.service.schema.GroovySchemaCompatibility;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
@@ -82,7 +83,8 @@ public class SchemaController extends BaseController {
     public Object schemaGroovy(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph) {
         HugeClient client = this.authClient(graphSpace, graph);
-        return ImmutableMap.of("schema", client.schema().getGroovySchema());
+        return ImmutableMap.of("schema",
+                               GroovySchemaCompatibility.export(client.schema()));
     }
 
     @PostMapping("groovy")
@@ -103,15 +105,18 @@ public class SchemaController extends BaseController {
     }
 
     private void checkSchemaGroovy(String content) {
-        String[] lines = content.split("\n|;");
-        for (String line : lines) {
-            if (StringUtils.isEmpty(line)) {
-                continue;
-            }
-            if (!line.startsWith("graph.schema()")) {
+        List<String> statements;
+        try {
+            statements = GroovySchemaCompatibility.splitStatements(content);
+        } catch (IllegalArgumentException e) {
+            throw new ExternalException(
+                    "Schema Groovy contains an unterminated string");
+        }
+        for (String statement : statements) {
+            if (!statement.startsWith("graph.schema()")) {
                 throw new ExternalException(
-                        "Schema Groovy each row must start with 'graph.schema" +
-                        "().'");
+                        "Schema Groovy each row must start with 'graph" +
+                        ".schema().'");
             }
         }
     }
@@ -121,7 +126,7 @@ public class SchemaController extends BaseController {
                                      @PathVariable("graph") String graph,
                                      HttpServletResponse response) {
         HugeClient client = this.authClient(graphSpace, graph);
-        String schema = client.schema().getGroovySchema();
+        String schema = GroovySchemaCompatibility.export(client.schema());
 
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/octet-stream");
