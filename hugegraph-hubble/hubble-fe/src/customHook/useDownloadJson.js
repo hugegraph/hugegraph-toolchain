@@ -20,6 +20,11 @@
  * @file  下载Json数据
  */
 
+const serializeDownloadJson = data => JSON.stringify(
+    data,
+    (key, value) => (typeof value === 'bigint' ? value.toString() : value)
+);
+
 const useDownloadJson = () => {
 
     const downloadJsonHandler = (fileName, data) => {
@@ -30,8 +35,8 @@ const useDownloadJson = () => {
             .join('');
         const formatedFileName = `${sanitizedFileName || 'graph-data'}.json`;
         const element = document.createElement('a');
-        const processedData = JSON.stringify(data);
-        const blob = new Blob([`\ufeff${processedData}`], {
+        const processedData = serializeDownloadJson(data);
+        const blob = new Blob([processedData], {
             type: 'application/json;charset=utf-8',
         });
         const objectUrl = URL.createObjectURL(blob);
@@ -47,4 +52,5 @@ const useDownloadJson = () => {
     return {downloadJsonHandler};
 };
 
+export {serializeDownloadJson};
 export default useDownloadJson;
