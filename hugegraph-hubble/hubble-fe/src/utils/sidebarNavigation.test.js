@@ -16,23 +16,20 @@
  * under the License.
  */
 
-import {render, screen} from '@testing-library/react';
-import {MemoryRouter} from 'react-router-dom';
-import Error404 from './index';
+import {getSidebarMenuKey} from './sidebarNavigation';
 
-jest.mock('react-i18next', () => ({
-    useTranslation: () => ({t: key => key}),
-}));
+test.each([
+    [true, '/graphspace/SPACE/schema', 'schema'],
+    [true, '/graphspace/SPACE/schema/', 'schema'],
+    [true, '/graphspace/SPACE', 'graphspace'],
+    [false, '/graphspace/DEFAULT/graph/hugegraph/meta', 'graphspace'],
+    [false, '/graphspace/DEFAULT/graph/hugegraph/detail', 'graphspace'],
+    [false, '/navigation', 'navigation'],
+    [false, '/', 'navigation'],
+])('maps mode-aware route %s %s to %s', (pdEnabled, pathname, expected) => {
+    expect(getSidebarMenuKey(pathname, pdEnabled)).toBe(expected);
+});
 
-test('uses localized unknown-route recovery copy', () => {
-    render(
-        <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
-            <Error404 />
-        </MemoryRouter>
-    );
-
-    expect(screen.getByText('not_found.subtitle')).toBeInTheDocument();
-    expect(screen.getByRole('link', {name: 'not_found.home'}))
-        .toHaveAttribute('href', '/navigation');
-    expect(screen.getByTestId('not-found-surface')).toBeInTheDocument();
+test('does not advertise the PD-only Schema entry in non-PD mode', () => {
+    expect(getSidebarMenuKey('/graphspace/DEFAULT/schema', false)).toBe('graphspace');
 });
