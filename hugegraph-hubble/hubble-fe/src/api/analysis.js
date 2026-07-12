@@ -137,16 +137,42 @@ const addEdge = (graphspace, graph, params) => {
 
 
 // 图算法
+const runAlgorithmRequest = async requestCall => {
+    try {
+        return await requestCall();
+    }
+    catch (error) {
+        const errorData = error?.response?.data || error?.data;
+        return {
+            status: errorData?.status || error?.response?.status || 500,
+            data: null,
+            message: errorData?.message || error?.message || '',
+        };
+    }
+};
+
 const postOlapInfo =  (graphspace, graph, data) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/algorithms/olap`, data);
+    return runAlgorithmRequest(() => {
+        return request.post(`/graphspaces/${graphspace}/graphs/${graph}/algorithms/olap`, data);
+    });
 };
 
 const runOltpInfo =  (graphspace, graph, data) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/algorithms/oltp/` + data.algorithmName, data);
+    return runAlgorithmRequest(() => {
+        return request.post(
+            `/graphspaces/${graphspace}/graphs/${graph}/algorithms/oltp/` + data.algorithmName,
+            data
+        );
+    });
 };
 
 const runOlapVermeer =  (graphspace, graph, params) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/algorithms/vermeer`, {params});
+    return runAlgorithmRequest(() => {
+        return request.post(
+            `/graphspaces/${graphspace}/graphs/${graph}/algorithms/vermeer`,
+            {params}
+        );
+    });
 };
 
 // 任务管理

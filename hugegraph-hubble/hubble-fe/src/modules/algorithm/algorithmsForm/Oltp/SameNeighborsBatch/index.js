@@ -107,6 +107,9 @@ const SameNeighborsBatch = props => {
 
     return (
         <Collapse.Panel
+            isActive={props.isActive}
+            onItemClick={props.onItemClick}
+            panelKey={props.panelKey}
             header={
                 <AlgorithmNameHeader
                     icon={<ForkOutlined />}

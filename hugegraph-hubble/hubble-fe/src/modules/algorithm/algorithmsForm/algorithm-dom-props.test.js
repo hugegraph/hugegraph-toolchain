@@ -37,3 +37,18 @@ test('algorithm component props are not forwarded to Collapse panel DOM', () => 
 
     expect(offenders).toEqual([]);
 });
+
+test('algorithm panels forward only the collapse control contract', () => {
+    const offenders = collectJavaScript(__dirname).flatMap(file => {
+        const source = fs.readFileSync(file, 'utf8');
+        if (!source.includes('<Collapse.Panel')) {
+            return [];
+        }
+        const hasContract = source.includes('isActive={props.isActive}')
+            && source.includes('onItemClick={props.onItemClick}')
+            && source.includes('panelKey={props.panelKey}');
+        return hasContract ? [] : [path.relative(__dirname, file)];
+    });
+
+    expect(offenders).toEqual([]);
+});
