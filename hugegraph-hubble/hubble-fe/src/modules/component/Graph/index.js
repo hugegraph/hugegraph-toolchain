@@ -21,6 +21,7 @@
  */
 
 import React, {useCallback, useEffect, useState, useRef, useMemo} from 'react';
+import {useTranslation} from 'react-i18next';
 import G6 from '@antv/g6';
 import '@antv/graphin-icons/dist/index.css';
 import _ from 'lodash';
@@ -48,6 +49,7 @@ import {
 } from '../../../utils/graphSemanticZoom';
 
 const Graph = (props, ref) => {
+    const {t} = useTranslation();
     const {
         data,
         layout: layoutOptions,
@@ -87,6 +89,15 @@ const Graph = (props, ref) => {
     const [context, setContext] = useState({
         graph: graph.current,
     });
+
+    const focusCanvas = useCallback(event => {
+        const isInteractive = event.target.closest?.(
+            'button, input, textarea, select, a, [contenteditable="true"]'
+        );
+        if (!isInteractive) {
+            event.currentTarget.focus({preventScroll: true});
+        }
+    }, []);
 
     const throttledContainerResize = useMemo(
         () => {
@@ -318,7 +329,14 @@ const Graph = (props, ref) => {
 
     return (
         <GraphContext.Provider value={context}>
-            <div ref={container} className={graphClassName} id={'graph'}>
+            <div
+                ref={container}
+                className={graphClassName}
+                id={'graph'}
+                tabIndex={0}
+                aria-label={t('analysis.canvas.graph_canvas')}
+                onMouseDown={focusCanvas}
+            >
                 {props.children}
             </div>
         </GraphContext.Provider>
