@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {Modal, Form, Input, Select, message} from 'antd';
-import {useState, useEffect, useCallback} from 'react';
+import {Alert, Button, Modal, Form, Input, Select, Spin, message} from 'antd';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api/index';
 import * as rules from '../../utils/rules';
@@ -26,9 +26,25 @@ import style from './index.module.scss';
 
 const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
     const [schemaList, setSchemaList] = useState([]);
+    const [schemaLoading, setSchemaLoading] = useState(false);
+    const [schemaError, setSchemaError] = useState(false);
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
     const {t} = useTranslation();
+
+    const loadSchemaTemplates = useCallback(() => {
+        setSchemaList([]);
+        setSchemaError(false);
+        setSchemaLoading(true);
+        api.manage.getSchemaList(graphspace).then(res => {
+            if (res.status === 200) {
+                setSchemaList(res.data.records);
+                return;
+            }
+            setSchemaError(true);
+        }).catch(() => setSchemaError(true))
+            .finally(() => setSchemaLoading(false));
+    }, [graphspace]);
 
     const onFinish = useCallback(() => {
         form.validateFields().then(values => {
@@ -66,14 +82,9 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
             return;
         }
 
-        api.manage.getSchemaList(graphspace).then(res => {
-            if (res.status === 200) {
-                setSchemaList(res.data.records);
-                return;
-            }
-
-            message.error(res.message);
-        });
+        if (!graph) {
+            loadSchemaTemplates();
+        }
 
         if (graph) {
             api.manage.getGraph(graphspace, graph).then(res => {
@@ -82,7 +93,7 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                 }
             });
         }
-    }, [visible, graph, form, graphspace]);
+    }, [visible, graph, form, graphspace, loadSchemaTemplates]);
 
     return (
         <Modal
@@ -115,15 +126,36 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                     <Input placeholder={t('graph.form.nickname_placeholder')} />
                 </Form.Item>
                 {!graph && (
-                    <Form.Item
-                        label='schema'
-                        name='schema'
-                    >
-                        <Select
-                            placeholder={t('graph.form.schema_placeholder')}
-                            options={schemaList.map(item => ({label: item.name, value: item.name}))}
-                        />
-                    </Form.Item>
+                    <>
+                        {schemaError && (
+                            <Alert
+                                type='error'
+                                showIcon
+                                message={t('graph.form.schema_load_failed')}
+                                description={t('graph.form.schema_optional_hint')}
+                                action={(
+                                    <Button size='small' onClick={loadSchemaTemplates}>
+                                        {t('graph.form.schema_retry')}
+                                    </Button>
+                                )}
+                            />
+                        )}
+                        <Form.Item
+                            label='schema'
+                            name='schema'
+                            extra={t('graph.form.schema_optional_hint')}
+                        >
+                            <Select
+                                loading={schemaLoading}
+                                disabled={schemaLoading || schemaError}
+                                placeholder={t('graph.form.schema_placeholder')}
+                                options={schemaList.map(item => ({
+                                    label: item.name,
+                                    value: item.name,
+                                }))}
+                            />
+                        </Form.Item>
+                    </>
                 )}
             </Form>
         </Modal>
@@ -132,21 +164,80 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
 
 const ViewLayer = ({visible, onCancel, graphspace, graph}) => {
     const [info, setInfo] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const [exportError, setExportError] = useState(false);
+    const requestToken = useRef(null);
+    const exportRequest = useRef(null);
     const {t} = useTranslation();
+
+    const loadSchema = useCallback(() => {
+        const token = Symbol('graph-schema');
+        requestToken.current = token;
+        setInfo('');
+        setLoadError(false);
+        setLoading(true);
+        api.manage.getGraphSchema(graphspace, graph).then(res => {
+            if (requestToken.current !== token) {
+                return;
+            }
+            if (res.status === 200) {
+                setInfo(res.data.schema);
+                return;
+            }
+            setLoadError(true);
+        }).catch(() => {
+            if (requestToken.current === token) {
+                setLoadError(true);
+            }
+        }).finally(() => {
+            if (requestToken.current === token) {
+                setLoading(false);
+            }
+        });
+    }, [graphspace, graph]);
+
+    const exportSchema = useCallback(() => {
+        const token = Symbol('graph-schema-export');
+        exportRequest.current = token;
+        setExportError(false);
+        setExporting(true);
+        api.manage.exportSchema(graphspace, graph).then(content => {
+            if (exportRequest.current !== token) {
+                return;
+            }
+            const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `${graphspace}-${graph}-schema.groovy`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+        }).catch(() => {
+            if (exportRequest.current === token) {
+                setExportError(true);
+            }
+        }).finally(() => {
+            if (exportRequest.current === token) {
+                setExporting(false);
+            }
+        });
+    }, [graphspace, graph]);
 
     useEffect(() => {
         if (!visible) {
             return;
         }
-
-        api.manage.getGraphSchema(graphspace, graph).then(res => {
-            if (res.status === 200) {
-                setInfo(res.data.schema);
-                return;
-            }
-            message.error(res.message);
-        });
-    }, [visible, graphspace, graph]);
+        exportRequest.current = null;
+        setExporting(false);
+        setExportError(false);
+        loadSchema();
+        return () => {
+            requestToken.current = null;
+            exportRequest.current = null;
+        };
+    }, [visible, loadSchema]);
 
     return (
         <Modal
@@ -158,7 +249,35 @@ const ViewLayer = ({visible, onCancel, graphspace, graph}) => {
             footer={null}
             maskClosable={false}
         >
-            {info}
+            {loadError && (
+                <Alert
+                    type='error'
+                    showIcon
+                    message={t('graph.schema_view.load_failed')}
+                    action={(
+                        <Button size='small' onClick={loadSchema}>
+                            {t('graph.schema_view.retry')}
+                        </Button>
+                    )}
+                />
+            )}
+            {exportError && (
+                <Alert
+                    type='error'
+                    showIcon
+                    message={t('graph.schema_view.export_failed')}
+                />
+            )}
+            <Spin spinning={loading}>
+                <pre>{info}</pre>
+            </Spin>
+            <Button
+                onClick={exportSchema}
+                loading={exporting}
+                disabled={loading || loadError || !info}
+            >
+                {t('graph.schema_view.export')}
+            </Button>
         </Modal>
     );
 };

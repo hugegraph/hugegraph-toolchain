@@ -17,7 +17,7 @@
  */
 
 import {useCallback} from 'react';
-import {Card, Dropdown, Typography, Tooltip} from 'antd';
+import {Button, Card, Dropdown, Typography, Tooltip} from 'antd';
 import {UnorderedListOutlined, EyeOutlined} from '@ant-design/icons';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
@@ -60,6 +60,7 @@ const TitleField = ({item, onClick}) => {
 const GraphCard = ({item, menus}) => {
     const {t} = useTranslation();
     const navigate = useNavigate();
+    const graphName = item.nickname || item.name;
     const schemaView = item.schemaview || {vertices: [], edges: []};
     const graphinData = formatToGraphInData(schemaView, false);
 
@@ -83,7 +84,11 @@ const GraphCard = ({item, menus}) => {
                     menu={{items: menus}}
                     trigger={['click']}
                 >
-                    <UnorderedListOutlined />
+                    <Button
+                        type='text'
+                        icon={<UnorderedListOutlined />}
+                        aria-label={t('graph.card.more_actions', {graph: graphName})}
+                    />
                 </Dropdown>
             )}
             actions={[

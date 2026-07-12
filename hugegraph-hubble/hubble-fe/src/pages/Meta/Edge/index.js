@@ -21,15 +21,16 @@ import {EditEdgeLayer} from './EditLayer';
 import {useState, useEffect, useCallback} from 'react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
+import RowActionButton from '../../../components/RowActionButton';
+import useMetaTable from '../common/useMetaTable';
+import MetaTableStatus from '../common/MetaTableStatus';
 import * as api from '../../../api';
 
 const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
 const EdgeTable = () => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
-    const [data, setData] = useState([]);
     const [refresh, setRefresh] = useState(false);
-    const [pagination, setPagination] = useState({current: 1, total: 10});
     const [selectedItems, setSelectedItems] = useState([]);
     const [edgeName, setEdgeName] = useState('');
     const [propertyList, setPropertyList] = useState([]);
@@ -37,9 +38,12 @@ const EdgeTable = () => {
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
 
-    const handleTable = useCallback(newPagination => {
-        setPagination(newPagination);
-    }, []);
+    const fetchPage = useCallback(params => api.manage.getMetaEdgeList(
+        graphspace, graph, params
+    ), [graphspace, graph]);
+    const {data, pagination, loading, error, retry, handleTable} = useMetaTable(
+        fetchPage, {identityKey: `${graphspace}:${graph}`, refreshKey: refresh}
+    );
 
     const removeEdge = useCallback((names, isBatch) => {
         Modal.confirm({
@@ -161,18 +165,6 @@ const EdgeTable = () => {
     ];
 
     useEffect(() => {
-        api.manage.getMetaEdgeList(graphspace, graph, {
-            page_no: pagination.current,
-        }).then(res => {
-            if (res.status === 200) {
-                setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
-            }
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refresh, graphspace, graph, pagination.current]);
-
-    useEffect(() => {
         api.manage.getMetaPropertyList(graphspace, graph).then(res => {
             if (res.status === 200) {
                 setPropertyList(res.data.records.map(item => ({
@@ -204,6 +196,7 @@ const EdgeTable = () => {
             </Row>
             <br />
 
+            <MetaTableStatus error={error} onRetry={retry} />
             <Table
                 columns={columns}
                 dataSource={data}
@@ -217,6 +210,7 @@ const EdgeTable = () => {
                 onChange={handleTable}
                 rowKey={rowKey}
                 showExpandColumn={false}
+                loading={loading}
             />
 
             <EditEdgeLayer

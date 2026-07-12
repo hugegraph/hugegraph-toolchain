@@ -198,6 +198,12 @@
       "view_schema": "查看schema",
       "clone": "克隆图"
     },
+    "schema_view": {
+      "export": "导出 Groovy Schema",
+      "load_failed": "Schema 暂时无法加载，请检查 Server 连接后重试。",
+      "retry": "重试 Schema",
+      "export_failed": "Schema 导出失败，请在 Server 恢复后重试。"
+    },
     "form": {
       "title_create": "创建图",
       "title_edit": "编辑图",
@@ -206,6 +212,9 @@
       "nickname": "图名",
       "nickname_placeholder": "只能包含中文、字母、数字、_，最长48位",
       "schema_placeholder": "请选择schema",
+      "schema_load_failed": "Schema 模板暂时无法加载。",
+      "schema_retry": "重试模板",
+      "schema_optional_hint": "可选；不选择模板时将创建空 Schema 图。",
       "create_success": "创建成功",
       "update_success": "更新成功",
       "auth": "是否开启鉴权",
@@ -248,6 +257,7 @@
       "count": "数量"
     },
     "card": {
+      "more_actions": "{{graph}} 的更多操作",
       "storage": "存储空间",
       "detail_tooltip": "点击可以查看本图目前存储的点边的数量"
     }
@@ -567,6 +577,8 @@
     }
   },
   "schema": {
+    "list_failed": "Schema 数据暂时无法加载，请检查 Server 连接后重试。",
+    "retry": "重试 Schema 数据",
     "delete_failed": "删除失败，请检查 Server 连接后重试。",
     "title": "元数据管理",
     "name_placeholder": "允许出现中英文、数字、下划线",
@@ -620,6 +632,7 @@
     "vertex": {
       "create": "创建顶点类型",
       "edit": "编辑顶点类型",
+      "detail_failed": "顶点类型详情暂时无法加载，请重试后再编辑。",
       "id": "顶点ID",
       "in_use": "顶点数据 {{names}} 正在使用中，不可删除",
       "select_properties_first": "请先选择关联属性",
@@ -652,6 +665,7 @@
     "edge": {
       "create": "创建边类型",
       "edit": "编辑边类型",
+      "detail_failed": "边类型详情暂时无法加载，请重试后再编辑。",
       "display_fields": "边展示内容",
       "link_multi_times": "允许多次连接",
       "parent": "父边类型：",
@@ -713,6 +727,7 @@
       }
     },
     "image_view": {
+      "load_failed": "Schema 图数据暂时无法加载，请重试后再编辑。",
       "vertex": "顶点类型",
       "edge": "边类型",
       "view_properties": "查看属性"

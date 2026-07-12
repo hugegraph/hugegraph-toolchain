@@ -17,21 +17,24 @@
  */
 
 import {Table} from 'antd';
-import {useEffect, useState, useCallback} from 'react';
+import {useCallback} from 'react';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
+import useMetaTable from '../common/useMetaTable';
+import MetaTableStatus from '../common/MetaTableStatus';
 import {indexTypeOptions} from '../common/config.js';
 
 const EdgeIndexTable = () => {
-    const [data, setData] = useState([]);
-    const [pagination, setPagination] = useState({current: 1, total: 10});
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
 
-    const handleTable = useCallback(newPagination => {
-        setPagination(newPagination);
-    }, []);
+    const fetchPage = useCallback(params => api.manage.getMetaEdgeIndexList(
+        graphspace, graph, params
+    ), [graphspace, graph]);
+    const {data, pagination, loading, error, retry, handleTable} = useMetaTable(
+        fetchPage, {identityKey: `${graphspace}:${graph}`}
+    );
 
     const columns = [
         {
@@ -54,25 +57,15 @@ const EdgeIndexTable = () => {
         },
     ];
 
-    useEffect(() => {
-        api.manage.getMetaEdgeIndexList(graphspace, graph, {
-            page_no: pagination.current,
-        }).then(res => {
-            if (res.status === 200) {
-                setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
-            }
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.current, graph, graphspace]);
-
     return (
         <>
+            <MetaTableStatus error={error} onRetry={retry} />
             <Table
                 columns={columns}
                 dataSource={data}
                 pagination={pagination}
                 onChange={handleTable}
+                loading={loading}
             />
         </>
     );

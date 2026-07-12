@@ -17,11 +17,14 @@
  */
 
 import {Table, Row, Col, Space, Button, message, Modal} from 'antd';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useCallback} from 'react';
 import {EditPropertyLayer} from './EditLayer';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
+import RowActionButton from '../../../components/RowActionButton';
+import useMetaTable from '../common/useMetaTable';
+import MetaTableStatus from '../common/MetaTableStatus';
 
 const PROPERTY_IN_USE_KEY = 'schema.property.in_use';
 const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
@@ -29,8 +32,6 @@ const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 const PropertyTable = ({noHeader, forceRefresh}) => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [refresh, setRefresh] = useState(false);
-    const [data, setData] = useState([]);
-    const [pagination, setPagination] = useState({current: 1, total: 10});
     const [selectedItems, setSelectedItems] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
@@ -76,9 +77,15 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
         });
     }, [graph, graphspace, refresh, t]);
 
-    const handleTable = useCallback(newPagination => {
-        setPagination(newPagination);
-    }, []);
+    const fetchPage = useCallback(params => api.manage.getMetaPropertyList(
+        graphspace, graph, params
+    ), [graphspace, graph]);
+    const {data, pagination, loading, error, retry, handleTable} = useMetaTable(
+        fetchPage, {
+            identityKey: `${graphspace}:${graph}`,
+            refreshKey: `${refresh}:${forceRefresh}`,
+        }
+    );
 
     const handleDelete = useCallback(row => {
         removeProperty([row.name]);
@@ -135,18 +142,6 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
         },
     ];
 
-    useEffect(() => {
-        api.manage.getMetaPropertyList(graphspace, graph, {
-            page_no: pagination.current,
-        }).then(res => {
-            if (res.status === 200) {
-                setData(res.data.records);
-                setPagination({...pagination, total: res.data.total});
-            }
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refresh, forceRefresh, pagination.current]);
-
     return (
         <>
             {!noHeader
@@ -163,6 +158,8 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
             )}
             <br />{noHeader}
 
+            <MetaTableStatus error={error} onRetry={retry} />
+
             <Table
                 columns={columns}
                 dataSource={data}
@@ -175,6 +172,7 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
                 rowKey={rowKey}
                 pagination={pagination}
                 onChange={handleTable}
+                loading={loading}
             />
 
             {!noHeader
