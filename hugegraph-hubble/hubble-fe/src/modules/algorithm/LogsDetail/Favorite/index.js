@@ -25,8 +25,6 @@ import {useTranslation} from 'react-i18next';
 import Highlighter from 'react-highlight-words';
 import {Button, Table, Input, Popconfirm, Modal} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
-import FavoriteNameInput from '../../../../components/FavoriteNameInput';
-import {isValidFavoriteName} from '../../../../utils/rules';
 import c from './index.module.scss';
 
 const createValueHandler = (handler, value) => () => handler(value);
@@ -50,6 +48,7 @@ const Favorite = props => {
     const [favoriteName, setFavoriteName] = useState();
     const [searchCache, setSearchCache] = useState('');
     const [search, setSearch] = useState('');
+    const [isDisabledName, setDisabledName]  = useState(false);
 
     const changeCollection = useCallback(
         rowData => {
@@ -73,6 +72,7 @@ const Favorite = props => {
     const onChangeFavoraiteName = useCallback(
         e => {
             setFavoriteName(e.target.value);
+            e.target.value ? setDisabledName(false) : setDisabledName(true);
         }, []);
 
     const onConfirm = id => {
@@ -90,9 +90,11 @@ const Favorite = props => {
             <div style={{marginBottom: '16px'}}>
                 {t('analysis.logs.edit_name')}
             </div>
-            <FavoriteNameInput
+            <Input
                 style={{marginBottom: '18px'}}
                 placeholder={t('analysis.logs.favorite_name_placeholder')}
+                showCount
+                maxLength={48}
                 value={favoriteName}
                 onChange={onChangeFavoraiteName}
             />
@@ -157,7 +159,7 @@ const Favorite = props => {
                             title={editFavoriteForm}
                             onConfirm={createValueHandler(onSaveEditFavorite, rowData)}
                             okText={t('analysis.logs.action.save')}
-                            okButtonProps={{disabled: !isValidFavoriteName(favoriteName)}}
+                            okButtonProps={{disabled: isDisabledName}}
                             cancelText={t('common.action.cancel')}
                         >
                             <Button

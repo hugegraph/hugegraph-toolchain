@@ -15,12 +15,13 @@
 # limitations under the License.
 #
 
-FROM --platform=$BUILDPLATFORM maven:3.9.0-eclipse-temurin-11 AS build
+FROM maven:3.9.0-eclipse-temurin-11 AS build
 
 ENV NODE_OPTIONS=--dns-result-order=ipv4first
 
 ARG MAVEN_ARGS
 
+COPY . /pkg
 WORKDIR /pkg
 
 RUN set -x \
@@ -28,8 +29,6 @@ RUN set -x \
     && apt-get install curl -yq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-COPY . /pkg
 
 RUN set -x \
     && mvn install $MAVEN_ARGS -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp \

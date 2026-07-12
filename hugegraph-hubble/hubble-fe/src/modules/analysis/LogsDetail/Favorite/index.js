@@ -24,8 +24,6 @@ import React, {useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Button, Table, Input, Popconfirm, Modal} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
-import FavoriteNameInput from '../../../../components/FavoriteNameInput';
-import {isValidFavoriteName} from '../../../../utils/rules';
 import Highlighter from 'react-highlight-words';
 import c from './index.module.scss';
 
@@ -100,6 +98,7 @@ const Favorite = props => {
     const [favoriteName, setFavoriteName] = useState();
     const [searchCache, setSearchCache] = useState('');
     const [search, setSearch] = useState('');
+    const [isDisabledName, setDisabledName]  = useState(false);
 
     const loadStatements = useCallback(
         (content, index) => {
@@ -136,6 +135,7 @@ const Favorite = props => {
     const onChangeFavoraiteName = useCallback(
         e => {
             setFavoriteName(e.target.value);
+            e.target.value ? setDisabledName(false) : setDisabledName(true);
         },
         []
     );
@@ -155,9 +155,11 @@ const Favorite = props => {
             <div style={{marginBottom: '16px'}}>
                 {t('analysis.logs.edit_name')}
             </div>
-            <FavoriteNameInput
+            <Input
                 style={{marginBottom: '18px'}}
                 placeholder={t('analysis.logs.favorite_name_placeholder')}
+                showCount
+                maxLength={48}
                 value={favoriteName}
                 onChange={onChangeFavoraiteName}
             />
@@ -223,7 +225,7 @@ const Favorite = props => {
                         onEditFavorite={onEditFavorite}
                         onConfirm={onConfirm}
                         editFavoriteForm={editFavoriteForm}
-                        isDisabledName={!isValidFavoriteName(favoriteName)}
+                        isDisabledName={isDisabledName}
                         t={t}
                     />
                 );

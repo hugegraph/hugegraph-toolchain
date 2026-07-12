@@ -22,10 +22,8 @@
 
 import {useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Table, Space, Tag, Popconfirm} from 'antd';
+import {Button, Table, Space, Tag, Input, Popconfirm} from 'antd';
 import ExecutionContent from '../../../../components/ExecutionContent';
-import FavoriteNameInput from '../../../../components/FavoriteNameInput';
-import {isValidFavoriteName} from '../../../../utils/rules';
 import c from './index.module.scss';
 
 const EXECUTE_TYPE_KEY = {
@@ -118,6 +116,7 @@ const ExecuteLog = props => {
     } = props;
 
     const [favoriteName, setFavoriteName] = useState();
+    const [disabledFavorite, setDisabledFavorite]  = useState(true);
 
     const loadStatements = useCallback(
         (text, rowData, index) => {
@@ -131,6 +130,7 @@ const ExecuteLog = props => {
     const onFavoraiteName = useCallback(
         e => {
             setFavoriteName(e.target.value);
+            e.target.value ? setDisabledFavorite(false) : setDisabledFavorite(true);
         },
         []
     );
@@ -138,6 +138,7 @@ const ExecuteLog = props => {
     const onFavoriteCard = useCallback(
         () => {
             setFavoriteName('');
+            setDisabledFavorite(true);
         },
         []
     );
@@ -162,9 +163,11 @@ const ExecuteLog = props => {
                 <div style={{marginBottom: '16px'}}>
                     {t('analysis.logs.favorite_statement')}
                 </div>
-                <FavoriteNameInput
+                <Input
                     style={{marginBottom: '18px'}}
                     placeholder={t('analysis.logs.favorite_name_placeholder')}
+                    showCount
+                    maxLength={48}
                     value={favoriteName}
                     onChange={onFavoraiteName}
                 />
@@ -251,7 +254,7 @@ const ExecuteLog = props => {
                         onAddFavorite={onAddFavorite}
                         onFavoriteCard={onFavoriteCard}
                         loadStatements={loadStatements}
-                        disabledFavorite={!isValidFavoriteName(favoriteName)}
+                        disabledFavorite={disabledFavorite}
                         t={t}
                     />
                 );
