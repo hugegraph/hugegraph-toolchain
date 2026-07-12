@@ -284,8 +284,6 @@ public class GraphsController extends BaseController {
     @PostMapping("{graph}/clear")
     public void clearGraph(@PathVariable("graphspace") String graphspace,
                            @PathVariable("graph") String graph) {
-        // TODO: Add a separate data-only endpoint as soon as Server provides a
-        // verified clear operation that preserves schema.
         this.graphsService.clearGraph(this.authClient(graphspace, graph), graph);
     }
 

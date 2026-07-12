@@ -174,7 +174,7 @@
       "title": "确认清空图",
       "graphspace": "GraphSpace：{{graphspace}}",
       "graph": "图：{{graph}}",
-      "scope_schema_data": "删除范围：图数据、属性键、顶点类型、边类型和索引",
+      "scope_data": "删除范围：图数据。清空前请先备份 Schema。",
       "irreversible": "此操作不可恢复。",
       "input_label": "输入图名以确认",
       "input_placeholder": "图名",
@@ -193,7 +193,7 @@
     "menu": {
       "enter_analysis": "进入图分析平台",
       "meta_config": "元数据配置",
-      "clear_schema_data": "清空schema+数据",
+      "clear_data": "清空数据",
       "set_default": "设为默认",
       "view_schema": "查看schema",
       "clone": "克隆图"
@@ -213,6 +213,7 @@
       "description_placeholder": "图描述，可选"
     },
     "clone": {
+      "unavailable": "当前连接的 Server 未提供兼容的克隆 API，因此暂不可用。",
       "title": "克隆图",
       "success": "克隆成功",
       "name": "克隆图ID",

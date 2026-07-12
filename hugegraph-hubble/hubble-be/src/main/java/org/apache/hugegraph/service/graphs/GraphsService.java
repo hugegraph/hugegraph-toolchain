@@ -281,8 +281,6 @@ public class GraphsService {
     }
 
     public void clearGraph(HugeClient client, String graph) {
-        // TODO: Add data-only clearing as soon as Server provides a verified
-        // operation that preserves schema. This operation clears both.
         GraphsManager graphs = client.graphs();
         Map<String, Object> response = graphs.getDefault();
         Set<String> defaults = defaultGraphs(response.get("default_graph"));

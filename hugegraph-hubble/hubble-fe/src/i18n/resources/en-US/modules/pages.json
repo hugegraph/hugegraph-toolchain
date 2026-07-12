@@ -174,7 +174,7 @@
       "title": "Confirm graph clear",
       "graphspace": "GraphSpace: {{graphspace}}",
       "graph": "Graph: {{graph}}",
-      "scope_schema_data": "Deletion scope: graph data, property keys, vertex labels, edge labels, and indexes",
+      "scope_data": "Deletion scope: graph data. Back up schema before clearing.",
       "irreversible": "This operation is irreversible.",
       "input_label": "Enter the graph name to confirm",
       "input_placeholder": "Graph name",
@@ -193,7 +193,7 @@
     "menu": {
       "enter_analysis": "Open Graph Studio",
       "meta_config": "Metadata Config",
-      "clear_schema_data": "Clear Schema & Data",
+      "clear_data": "Clear Data",
       "set_default": "Set Default",
       "view_schema": "View Schema",
       "clone": "Clone Graph"
@@ -213,6 +213,7 @@
       "description_placeholder": "Graph description (optional)"
     },
     "clone": {
+      "unavailable": "Clone is unavailable because the connected Server does not expose a compatible clone API.",
       "title": "Clone Graph",
       "success": "Graph cloned",
       "name": "Cloned Graph ID",
