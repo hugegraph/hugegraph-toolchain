@@ -77,6 +77,16 @@ const Item = props => {
             );
             res.push(content);
         }
+        const reasons = [...new Set(listData
+            .filter(item => item.disabled && item.reason)
+            .map(item => item.reason))];
+        if (reasons.length > 0) {
+            res.push(
+                <div className={style.reason} role='status' key='disabled-reason'>
+                    {reasons.join('; ')}
+                </div>
+            );
+        }
         return res;
     };
     return (
