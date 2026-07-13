@@ -33,6 +33,7 @@ import org.apache.hugegraph.structure.space.GraphSpace;
 import org.apache.hugegraph.structure.space.SchemaTemplate;
 import org.apache.hugegraph.util.GremlinUtil;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.JsonUtil;
 import org.apache.hugegraph.util.Log;
 import org.apache.hugegraph.util.PageUtil;
 import org.slf4j.Logger;
@@ -129,6 +130,7 @@ public class GraphSpaceService {
                 new BuiltInFirst().compare(a.get("name").toString(),
                                            b.get("name").toString()));
         for (Map<String, Object> info : results) {
+            removeSensitiveFields(info);
             String name = info.get("name").toString();
             info.put("graphspace_admin",
                      userService.listGraphSpaceAdmin(client, name));
@@ -138,27 +140,87 @@ public class GraphSpaceService {
         return results;
     }
 
+    public List<Map<String, Object>> queryAccessibleGs(HugeClient client,
+                                                       String query,
+                                                       String createTime) {
+        String prefix = query == null ? "" : query;
+        String after = createTime == null ? "" : createTime;
+        List<Map<String, Object>> results = client.graphSpace()
+                .listGraphSpace().stream()
+                .map(client.graphSpace()::getGraphSpace)
+                .filter(space -> space != null &&
+                                 (space.getName().contains(prefix) ||
+                                  space.getNickname() != null &&
+                                  space.getNickname().contains(prefix)))
+                .filter(space -> space.getCreateTime() == null ||
+                                 space.getCreateTime().compareTo(after) > 0)
+                .filter(space -> !space.isAuth() ||
+                                 client.auth().isSpaceAdmin(space.getName()) ||
+                                 client.auth().checkDefaultRole(
+                                         space.getName(), "analyst"))
+                .map(space -> {
+                    GraphSpaceEntity entity =
+                            GraphSpaceEntity.fromGraphSpace(space);
+                    entity.setStatistic(evCount(client, space.getName()));
+                    Map<String, Object> info = toView(entity);
+                    info.put("authed", true);
+                    info.put("default", false);
+                    return info;
+                })
+                .collect(Collectors.toList());
+        Collections.sort(results, (a, b) ->
+                new BuiltInFirst().compare(a.get("name").toString(),
+                                           b.get("name").toString()));
+        return results;
+    }
+
+    public Map<String, Object> toView(GraphSpaceEntity entity) {
+        Map<String, Object> info = HubbleUtil.uncheckedCast(
+                JsonUtil.fromJson(JsonUtil.toJson(entity), Map.class));
+        removeSensitiveFields(info);
+        return info;
+    }
+
+    private static void removeSensitiveFields(Map<String, Object> info) {
+        info.remove("dp_username");
+        info.remove("dp_password");
+        info.remove("configs");
+    }
+
     /**
      * 统计指定图空间下的顶点总数和边总数
      * @param client
      * @param graphSpace
      * @return
      */
-    private Map<String, Object> evCount(HugeClient client, String graphSpace) {
+    Map<String, Object> evCount(HugeClient client, String graphSpace) {
         long vertexTotal = 0L;
         long edgeTotal = 0L;
         Map<String, Object> statisticTotal = new HashMap<>();
         client.assignGraph(graphSpace, "");
         Set<String> graphs = graphsService.listGraphNames(client, graphSpace, "");
-        String statisticDate = HubbleUtil.dateFormatDay(HubbleUtil.nowDate());
+        String statisticDate = null;
+        boolean mixedStatisticDates = false;
         for (String graph : graphs) {
             Map<String, Object> graphEvCount =
                     graphsService.evCount(client, graphSpace, graph);
 
+            String graphStatisticDate = (String) graphEvCount.get("date");
+            if (statisticDate == null && !mixedStatisticDates) {
+                statisticDate = graphStatisticDate;
+            } else if (!java.util.Objects.equals(statisticDate,
+                                                  graphStatisticDate)) {
+                mixedStatisticDates = true;
+                statisticDate = null;
+            }
+
             vertexTotal += (long) graphEvCount.get("vertex");
             edgeTotal += (long) graphEvCount.get("edge");
         }
-        statisticTotal.put("date", HubbleUtil.dateFormatDay(statisticDate));
+        if (graphs.isEmpty()) {
+            statisticDate = HubbleUtil.dateFormatDay(HubbleUtil.nowDate());
+        }
+        statisticTotal.put("date", statisticDate);
         statisticTotal.put("vertex", vertexTotal);
         statisticTotal.put("edge", edgeTotal);
         return statisticTotal;

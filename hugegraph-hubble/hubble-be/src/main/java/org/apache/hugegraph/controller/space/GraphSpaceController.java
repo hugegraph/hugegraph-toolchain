@@ -33,9 +33,9 @@ import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.service.space.GraphSpaceService;
-import org.apache.hugegraph.structure.space.GraphSpace;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.Ex;
+import org.apache.hugegraph.util.PageUtil;
 import org.apache.hugegraph.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -103,11 +103,19 @@ public class GraphSpaceController extends BaseController {
                                   "total", 0);
         }
         if (all) {
-            return this.graphSpaceService.queryAllGs(
-                    this.authClient(null, null), query, createTime);
+            HugeClient client = this.authClient(null, null);
+            return this.userService.isSuperAdmin(client) ?
+                   this.graphSpaceService.queryAllGs(client, query,
+                                                     createTime) :
+                   this.graphSpaceService.queryAccessibleGs(client, query,
+                                                            createTime);
         }
-        return graphSpaceService.queryPage(this.authClient(null, null),
-                                           query, createTime, pageNo, pageSize);
+        HugeClient client = this.authClient(null, null);
+        return this.userService.isSuperAdmin(client) ?
+               graphSpaceService.queryPage(client, query, createTime,
+                                           pageNo, pageSize) :
+               PageUtil.page(graphSpaceService.queryAccessibleGs(
+                       client, query, createTime), pageNo, pageSize);
     }
 
     @GetMapping("{graphspace}/auth")
@@ -121,7 +129,7 @@ public class GraphSpaceController extends BaseController {
     }
 
     @GetMapping("{graphspace}")
-    public GraphSpaceEntity get(@PathVariable("graphspace") String graphspace) {
+    public Object get(@PathVariable("graphspace") String graphspace) {
         if (!isPdEnabled()) {
             // Return a minimal stub entity for non-PD mode
             GraphSpaceEntity stub = new GraphSpaceEntity();
@@ -131,7 +139,8 @@ public class GraphSpaceController extends BaseController {
         }
         HugeClient client = this.authClient(null, null);
         // Get GraphSpace Info
-        return graphSpaceService.getWithAdmins(client, graphspace);
+        return graphSpaceService.toView(
+                graphSpaceService.getWithAdmins(client, graphspace));
     }
 
     @PostMapping
@@ -177,8 +186,8 @@ public class GraphSpaceController extends BaseController {
     }
 
     @PutMapping("{graphspace}")
-    public GraphSpace update(@PathVariable("graphspace") String graphspace,
-                             @RequestBody GraphSpaceEntity graphSpaceEntity) {
+    public Object update(@PathVariable("graphspace") String graphspace,
+                         @RequestBody GraphSpaceEntity graphSpaceEntity) {
         E.checkArgument(isPdEnabled(),
                 "GraphSpace management is not supported in standalone mode");
 
