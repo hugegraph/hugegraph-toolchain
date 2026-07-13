@@ -18,7 +18,7 @@
 
 import {
     Alert, PageHeader, Row, Col, Button, Spin, message, Space, Table,
-    Card, Statistic, Tag,
+    Card, Empty, Statistic, Tag,
 } from 'antd';
 import {
     NodeIndexOutlined, ReloadOutlined, SearchOutlined, ShareAltOutlined,
@@ -59,6 +59,14 @@ const GraphDetail = () => {
         navigate(`/gremlin/${graphspace}/${graph}`);
     }, [graphspace, graph, navigate]);
 
+    const handleSchema = useCallback(() => {
+        navigate(`/graphspace/${graphspace}/graph/${graph}/meta`);
+    }, [graphspace, graph, navigate]);
+
+    const handlePrepareData = useCallback(() => {
+        navigate('/source');
+    }, [navigate]);
+
     const formatList = data => {
         if (!data || Object.keys(data).length === 0) {
             return [];
@@ -83,7 +91,9 @@ const GraphDetail = () => {
             if (pageRequest.current !== token) {
                 return;
             }
-            if (graphspaceResponse.status !== 200 || graphResponse.status !== 200) {
+            if (!graphspaceResponse || !graphResponse
+                || graphspaceResponse.status !== 200
+                || graphResponse.status !== 200) {
                 setPageDataRoute(routeKey);
                 setPageError(true);
                 return;
@@ -205,6 +215,11 @@ const GraphDetail = () => {
         ? statisticsStatus
         : 'loading';
     const visibleStatistic = isStatisticsDataCurrent ? statistic : {};
+    const isEmptyGraph = visibleStatisticsStatus === 'success'
+        && Number(visibleStatistic.vertex_count ?? 0) === 0
+        && Number(visibleStatistic.edge_count ?? 0) === 0
+        && formatList(visibleStatistic.vertices).length === 0
+        && formatList(visibleStatistic.edges).length === 0;
 
     return (
         <Spin spinning={pageLoading || !isPageDataCurrent}>
@@ -294,63 +309,87 @@ const GraphDetail = () => {
                                     />
                                 )}
 
-                                <Row gutter={[16, 16]}>
-                                    <Col span={12}>
-                                        <Card
-                                            className={style.metricCard}
-                                            title={(
-                                                <Space>
-                                                    <NodeIndexOutlined />
-                                                    {t('graph.detail.vertex_total')}
-                                                </Space>
-                                            )}
-                                        >
-                                            <Statistic
-                                                loading={statisticsLoading}
-                                                value={visibleStatisticsStatus !== 'success'
-                                                    ? '--'
-                                                    : visibleStatistic.vertex_count ?? 0}
-                                            />
-                                            <Table
-                                                columns={[
-                                                    {title: t('graph.detail.vertex_type'), dataIndex: 'key'},
-                                                    {title: t('graph.detail.count'), dataIndex: 'num'},
-                                                ]}
-                                                dataSource={formatList(visibleStatistic.vertices)}
-                                                pagination={false}
-                                                size='small'
-                                            />
-                                        </Card>
-                                    </Col>
+                                {isEmptyGraph ? (
+                                    <Empty
+                                        className={style.emptyJourney}
+                                        description={(
+                                            <div>
+                                                <strong>{t('graph.detail.empty_title')}</strong>
+                                                <p>{t('graph.detail.empty_description')}</p>
+                                            </div>
+                                        )}
+                                    >
+                                        <Space wrap>
+                                            <Button type='primary' onClick={handleSchema}>
+                                                {t('graph.detail.create_schema')}
+                                            </Button>
+                                            <Button onClick={handlePrepareData}>
+                                                {t('graph.detail.prepare_data')}
+                                            </Button>
+                                            <Button onClick={handleQuery}>
+                                                {t('graph.detail.query')}
+                                            </Button>
+                                        </Space>
+                                    </Empty>
+                                ) : (
+                                    <Row gutter={[16, 16]}>
+                                        <Col span={12}>
+                                            <Card
+                                                className={style.metricCard}
+                                                title={(
+                                                    <Space>
+                                                        <NodeIndexOutlined />
+                                                        {t('graph.detail.vertex_total')}
+                                                    </Space>
+                                                )}
+                                            >
+                                                <Statistic
+                                                    loading={statisticsLoading}
+                                                    value={visibleStatisticsStatus !== 'success'
+                                                        ? '--'
+                                                        : visibleStatistic.vertex_count ?? 0}
+                                                />
+                                                <Table
+                                                    columns={[
+                                                        {title: t('graph.detail.vertex_type'), dataIndex: 'key'},
+                                                        {title: t('graph.detail.count'), dataIndex: 'num'},
+                                                    ]}
+                                                    dataSource={formatList(visibleStatistic.vertices)}
+                                                    pagination={false}
+                                                    size='small'
+                                                />
+                                            </Card>
+                                        </Col>
 
-                                    <Col span={12}>
-                                        <Card
-                                            className={style.metricCard}
-                                            title={(
-                                                <Space>
-                                                    <ShareAltOutlined />
-                                                    {t('graph.detail.edge_total')}
-                                                </Space>
-                                            )}
-                                        >
-                                            <Statistic
-                                                loading={statisticsLoading}
-                                                value={visibleStatisticsStatus !== 'success'
-                                                    ? '--'
-                                                    : visibleStatistic.edge_count ?? 0}
-                                            />
-                                            <Table
-                                                columns={[
-                                                    {title: t('graph.detail.edge_type'), dataIndex: 'key'},
-                                                    {title: t('graph.detail.count'), dataIndex: 'num'},
-                                                ]}
-                                                dataSource={formatList(visibleStatistic.edges)}
-                                                pagination={false}
-                                                size='small'
-                                            />
-                                        </Card>
-                                    </Col>
-                                </Row>
+                                        <Col span={12}>
+                                            <Card
+                                                className={style.metricCard}
+                                                title={(
+                                                    <Space>
+                                                        <ShareAltOutlined />
+                                                        {t('graph.detail.edge_total')}
+                                                    </Space>
+                                                )}
+                                            >
+                                                <Statistic
+                                                    loading={statisticsLoading}
+                                                    value={visibleStatisticsStatus !== 'success'
+                                                        ? '--'
+                                                        : visibleStatistic.edge_count ?? 0}
+                                                />
+                                                <Table
+                                                    columns={[
+                                                        {title: t('graph.detail.edge_type'), dataIndex: 'key'},
+                                                        {title: t('graph.detail.count'), dataIndex: 'num'},
+                                                    ]}
+                                                    dataSource={formatList(visibleStatistic.edges)}
+                                                    pagination={false}
+                                                    size='small'
+                                                />
+                                            </Card>
+                                        </Col>
+                                    </Row>
+                                )}
                             </>
                         )}
                     </div>
