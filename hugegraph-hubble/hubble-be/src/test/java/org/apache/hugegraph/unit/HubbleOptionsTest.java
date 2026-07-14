@@ -52,6 +52,11 @@ public class HubbleOptionsTest {
                             HubbleOptions.OPERATIONS_STORE_THREADS.defaultValue());
         Assert.assertEquals(5000,
                             HubbleOptions.OPERATIONS_STORE_DEADLINE.defaultValue());
+        Assert.assertEquals(java.util.Arrays.asList(
+                            "http://127.0.0.1:8520",
+                            "http://[::1]:8520"),
+                            HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS
+                                         .defaultValue());
         Assert.assertEquals("hubble",
                             HubbleOptions.OPERATIONS_PD_USERNAME.defaultValue());
         Assert.assertEquals("",
@@ -79,6 +84,33 @@ public class HubbleOptionsTest {
     public void testOperationsStoreFanoutLimitsArePositive() {
         assertPositive(HubbleOptions.OPERATIONS_STORE_THREADS);
         assertPositive(HubbleOptions.OPERATIONS_STORE_DEADLINE);
+    }
+
+    @Test
+    public void testOperationsStoreAllowedTargetsRequireExactOrigins() {
+        Assert.assertThrows(ConfigException.class, () ->
+                HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS.parseConvert(
+                        "[store.internal]"));
+        Assert.assertThrows(ConfigException.class, () ->
+                HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS.parseConvert(
+                        "[http://*.internal:8520]"));
+        Assert.assertThrows(ConfigException.class, () ->
+                HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS.parseConvert(
+                        "[http://store.internal]"));
+        Assert.assertThrows(ConfigException.class, () ->
+                HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS.parseConvert(
+                        "[http://store.internal:8520/metrics]"));
+        Assert.assertEquals(java.util.Arrays.asList(
+                            "http://store.internal:8520",
+                            "https://store.internal:9443"),
+                HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS.parseConvert(
+                        "[http://store.internal:8520," +
+                        "https://store.internal:9443]"));
+        Assert.assertEquals(java.util.Arrays.asList(
+                            "http://127.0.0.1:8520",
+                            "http://[::1]:8520"),
+                HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS.parseConvert(
+                        "[http://127.0.0.1:8520,http://[::1]:8520]"));
     }
 
     private static void assertPositive(ConfigOption<Integer> option) {

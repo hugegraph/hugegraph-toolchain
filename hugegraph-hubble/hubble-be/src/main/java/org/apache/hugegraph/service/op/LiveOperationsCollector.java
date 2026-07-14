@@ -77,6 +77,7 @@ public class LiveOperationsCollector implements OperationsCollector {
     private final Clock clock;
     private final ExecutorService storeExecutor;
     private final int storeDeadlineMillis;
+    private final Set<String> storeAllowedTargets;
 
     @Autowired
     public LiveOperationsCollector(HugeConfig config, ObjectMapper mapper) {
@@ -95,7 +96,9 @@ public class LiveOperationsCollector implements OperationsCollector {
                      config.get(HubbleOptions.OPERATIONS_MAX_RESPONSE_BYTES)),
              new OperationsPayloadParser(mapper), Clock.systemUTC(),
              config.get(HubbleOptions.OPERATIONS_STORE_THREADS),
-             config.get(HubbleOptions.OPERATIONS_STORE_DEADLINE));
+             config.get(HubbleOptions.OPERATIONS_STORE_DEADLINE),
+             new java.util.LinkedHashSet<>(config.get(
+                     HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS)));
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -104,7 +107,8 @@ public class LiveOperationsCollector implements OperationsCollector {
                             String serverIdentity, OperationsHttpClient http,
                             OperationsPayloadParser parser, Clock clock) {
         this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
-             storePassword, serverIdentity, http, parser, clock, 16, 5000);
+             storePassword, serverIdentity, http, parser, clock, 16, 5000,
+             defaultStoreAllowedTargets());
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -113,6 +117,18 @@ public class LiveOperationsCollector implements OperationsCollector {
                             String serverIdentity, OperationsHttpClient http,
                             OperationsPayloadParser parser, Clock clock,
                             int storeThreads, int storeDeadlineMillis) {
+        this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
+             storePassword, serverIdentity, http, parser, clock, storeThreads,
+             storeDeadlineMillis, defaultStoreAllowedTargets());
+    }
+
+    LiveOperationsCollector(boolean pdEnabled, String pdBase,
+                            String pdUsername, String pdPassword,
+                            String storeUsername, String storePassword,
+                            String serverIdentity, OperationsHttpClient http,
+                            OperationsPayloadParser parser, Clock clock,
+                            int storeThreads, int storeDeadlineMillis,
+                            Set<String> storeAllowedTargets) {
         if (storeThreads <= 0 || storeDeadlineMillis <= 0) {
             throw new IllegalArgumentException(
                       "Store metric collection limits must be positive");
@@ -128,6 +144,14 @@ public class LiveOperationsCollector implements OperationsCollector {
         this.parser = parser;
         this.clock = clock;
         this.storeDeadlineMillis = storeDeadlineMillis;
+        if (storeAllowedTargets == null || storeAllowedTargets.isEmpty()) {
+            throw new IllegalArgumentException(
+                      "Store metric allowed targets must not be empty");
+        }
+        this.storeAllowedTargets = storeAllowedTargets.stream()
+                .map(URI::create)
+                .map(OperationsHttpClient::origin)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
         this.storeExecutor = Executors.newFixedThreadPool(
                 storeThreads, runnable -> {
                     Thread thread = new Thread(
@@ -378,12 +402,11 @@ public class LiveOperationsCollector implements OperationsCollector {
                                              SourceStatus status,
                                              List<Node> nodes) {
         try {
-            Map<String, String> hosts = this.parser.parseStoreHosts(stores);
             Map<String, String> restAddresses =
                     this.parser.parseStoreRestAddresses(stores);
             Map<String, URI> targets = this.parser.parseStoreMetricTargets(
                                        this.get("/v1/prom/targets-all"));
-            Set<String> allowedTargets = targets.keySet();
+            Set<String> allowedTargets = new java.util.LinkedHashSet<>();
             boolean partial = false;
             int successfulGroups = 0;
             String failureReason = null;
@@ -393,8 +416,9 @@ public class LiveOperationsCollector implements OperationsCollector {
                 if (!"STORE".equals(node.getType())) {
                     continue;
                 }
-                StoreTarget target = storeTarget(node.getId(), hosts,
-                                                 restAddresses, targets);
+                StoreTarget target = storeTarget(node.getId(), restAddresses,
+                                                 targets,
+                                                 this.storeAllowedTargets);
                 if (target.getUri() == null) {
                     partial = true;
                     failureReason = mergeReason(failureReason,
@@ -408,7 +432,12 @@ public class LiveOperationsCollector implements OperationsCollector {
                     nodes.set(i, copyNode(node, node.getMetrics(), statuses));
                     continue;
                 }
+                allowedTargets.add(OperationsHttpClient.origin(
+                                   target.getUri()));
                 jobs.add(new StoreMetricJob(i, node, target.getUri()));
+            }
+            if (allowedTargets.isEmpty()) {
+                allowedTargets.add("no_trusted_store_target");
             }
             List<Future<StoreMetricResult>> futures = this.storeExecutor.invokeAll(
                     jobs.stream().map(job -> (java.util.concurrent.Callable<
@@ -488,29 +517,26 @@ public class LiveOperationsCollector implements OperationsCollector {
     }
 
     private static StoreTarget storeTarget(String nodeId,
-                                           Map<String, String> hosts,
                                            Map<String, String> restAddresses,
-                                           Map<String, URI> targets) {
+                                           Map<String, URI> targets,
+                                           Set<String> allowedTargets) {
         String restAddress = restAddresses.get(nodeId);
         if (restAddress != null) {
             URI exact = targets.get(restAddress);
+            if (exact != null && !allowedTargets.contains(
+                    OperationsHttpClient.origin(exact))) {
+                return new StoreTarget(null, "metrics_target_untrusted");
+            }
             return exact == null ?
                    new StoreTarget(null, "metrics_target_missing") :
                    new StoreTarget(exact, null);
         }
-        String host = hosts.get(nodeId);
-        if (host == null) {
-            return new StoreTarget(null, "metrics_target_missing");
-        }
-        List<URI> candidates = targets.values().stream()
-                .filter(target -> host.equalsIgnoreCase(target.getHost()))
-                .collect(Collectors.toList());
-        if (candidates.size() > 1) {
-            return new StoreTarget(null, "metrics_target_ambiguous");
-        }
-        return candidates.isEmpty() ?
-               new StoreTarget(null, "metrics_target_missing") :
-               new StoreTarget(candidates.get(0), null);
+        return new StoreTarget(null, "metrics_target_missing");
+    }
+
+    private static Set<String> defaultStoreAllowedTargets() {
+        return new java.util.LinkedHashSet<>(Arrays.asList(
+               "http://127.0.0.1:8520", "http://[::1]:8520"));
     }
 
     private void applyStoreFailureStatuses(List<Node> nodes, long now,

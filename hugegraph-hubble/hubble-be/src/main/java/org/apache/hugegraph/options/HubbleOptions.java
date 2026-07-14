@@ -18,6 +18,8 @@
 
 package org.apache.hugegraph.options;
 
+import java.net.URI;
+
 import static org.apache.hugegraph.config.OptionChecker.allowValues;
 import static org.apache.hugegraph.config.OptionChecker.disallowEmpty;
 import static org.apache.hugegraph.config.OptionChecker.positiveInt;
@@ -365,6 +367,41 @@ public class HubbleOptions extends OptionHolder {
                     positiveInt(),
                     5000
             );
+
+    public static final ConfigListOption<String> OPERATIONS_STORE_ALLOWED_TARGETS =
+            new ConfigListOption<>(
+                    "operations.store.allowed_targets",
+                    "Operator-managed Store metric origin allowlist.",
+                    input -> !CollectionUtils.isEmpty(input) &&
+                             input.stream().allMatch(
+                                   HubbleOptions::validOperationsStoreTarget),
+                    "http://127.0.0.1:8520", "http://[::1]:8520"
+            );
+
+    private static boolean validOperationsStoreTarget(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return false;
+        }
+        String origin = value.trim();
+        if (origin.contains("*") || origin.matches(".*\\s+.*")) {
+            return false;
+        }
+        try {
+            URI target = URI.create(origin);
+            String scheme = target.getScheme();
+            if (!("http".equalsIgnoreCase(scheme) ||
+                  "https".equalsIgnoreCase(scheme)) ||
+                target.getHost() == null || target.getPort() <= 0 ||
+                target.getPort() > 65535 || target.getUserInfo() != null ||
+                target.getQuery() != null || target.getFragment() != null) {
+                return false;
+            }
+            String path = target.getPath();
+            return path == null || path.isEmpty();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
 
     public static final ConfigOption<String> OPERATIONS_PD_USERNAME =
             new ConfigOption<>(
