@@ -62,19 +62,28 @@
     gap: 8px;
 }
 
-.operations-advanced-monitoring {
-    display: flex;
-    align-items: flex-end;
-    flex-direction: column;
-    gap: 4px;
+.operations-header-tools {
+    flex-wrap: nowrap;
 }
 
-.operations-advanced-monitoring-reason {
-    max-width: 240px;
-    color: var(--workbench-color-text-tertiary);
-    font-size: 12px;
-    line-height: 18px;
-    text-align: right;
+.operations-refresh-button {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    color: var(--workbench-color-text-secondary);
+
+    &:hover,
+    &:focus-visible {
+        background: #e6f4ff;
+        color: var(--workbench-color-brand-strong);
+        box-shadow: var(--workbench-focus-ring);
+    }
+}
+
+.operations-advanced-monitoring {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .operations-eyebrow {
@@ -327,6 +336,10 @@
     }
 }
 
+.tier-server .operations-topology-node::before {
+    display: none;
+}
+
 .operations-node-icon {
     display: inline-flex;
     align-items: center;
@@ -467,11 +480,26 @@
     }
 }
 
+.operations-node-name-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .operations-node-name-label {
     display: block;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.operations-node-id-label {
+    color: var(--workbench-color-text-tertiary);
+    font-size: 12px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
@@ -485,6 +513,38 @@
 
 .operations-nodes .ant-table-row:focus-visible {
     box-shadow: inset var(--workbench-focus-ring);
+}
+
+.operations-node-identity-cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 6px;
+
+    > a { min-width: 0; }
+}
+
+.operations-node-role {
+    flex: 0 0 auto;
+    margin-inline-end: 0;
+    color: var(--workbench-color-text-secondary);
+
+    &.is-leader {
+        border-color: #d4b106;
+        background: #fffbe6;
+        color: #614700;
+        font-weight: 600;
+    }
+}
+
+.operations-copy-node-id {
+    flex: 0 0 auto;
+    color: var(--workbench-color-text-tertiary);
+
+    &:hover,
+    &:focus-visible {
+        color: var(--workbench-color-brand-strong);
+    }
 }
 
 .operations-node-detail {
@@ -529,25 +589,46 @@
     }
 }
 
-.operations-metric-heading {
+.operations-metric-header {
+    display: grid;
+    gap: 6px;
+    min-height: 54px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--workbench-color-border);
+}
+
+.operations-metric-title-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
 
-    h3 { text-transform: capitalize; }
+    h3 {
+        margin: 0;
+        text-transform: capitalize;
+    }
+
+    > strong {
+        flex: 0 0 auto;
+        font-size: 12px;
+    }
 }
 
 .operations-metric-status {
     display: flex;
-    justify-content: flex-end;
     flex-wrap: wrap;
     gap: 4px 10px;
     color: var(--workbench-color-text-secondary);
     font-size: 12px;
-    text-align: right;
+}
 
-    strong { color: var(--workbench-color-text); }
+.operations-metric-empty {
+    display: flex;
+    align-items: center;
+    min-height: 72px;
+    padding: 16px 0 4px;
+    color: var(--workbench-color-text-secondary);
+    line-height: 22px;
 }
 
 .operations-capacity-summary {
