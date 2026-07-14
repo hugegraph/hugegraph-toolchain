@@ -157,15 +157,6 @@ public abstract class BaseController {
         return client;
     }
 
-    protected HugeClient requireAccountCreator() {
-        HugeClient client = this.authClient(null, null);
-        String level = this.userService.userLevel(client, this.getUser());
-        if (!"ADMIN".equals(level) && !"SPACEADMIN".equals(level)) {
-            throw new ForbiddenException("Permission denied: manage accounts");
-        }
-        return client;
-    }
-
     protected HugeClient requireGraphSpaceManager(String graphSpace) {
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client) &&
@@ -174,6 +165,15 @@ public abstract class BaseController {
                     "Permission denied: manage graphspace members");
         }
         client.assignGraph(graphSpace, null);
+        return client;
+    }
+
+    protected HugeClient requireGraphSpaceAdministrator() {
+        HugeClient client = this.authClient(null, null);
+        if (!this.userService.isSuperAdmin(client)) {
+            throw new ForbiddenException(
+                    "Permission denied: manage graphspaces");
+        }
         return client;
     }
 
