@@ -155,7 +155,6 @@ public class LoadTaskController extends BaseController {
         connection.setGraph(graph);
         connection.setToken(this.getToken());
         connection.setUsername(this.getUser());
-        connection.setPassword(this.getCredentialPassword());
         if (!config.get(HubbleOptions.PD_ENABLED)) {
             UrlUtil.Host host = UrlUtil.parseHost(config.get(HubbleOptions.SERVER_URL));
             connection.setProtocol(host.getScheme());
@@ -227,7 +226,7 @@ public class LoadTaskController extends BaseController {
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
                  "load.task.pause.no-permission");
         try {
-            return this.service.resume(taskId);
+            return this.service.resume(taskId, this.getToken());
         } finally {
             jobEntity.setJobStatus(JobStatus.LOADING);
             jobEntity.setUpdateTime(HubbleUtil.nowDate());
@@ -267,7 +266,7 @@ public class LoadTaskController extends BaseController {
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
                  "load.task.pause.no-permission");
         try {
-            return this.service.retry(taskId);
+            return this.service.retry(taskId, this.getToken());
         } finally {
             jobEntity.setJobStatus(JobStatus.LOADING);
             jobEntity.setUpdateTime(HubbleUtil.nowDate());
