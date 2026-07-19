@@ -298,7 +298,11 @@ const GraphSpace = () => {
             <PageHeader
                 ghost={false}
                 onBack={false}
-                title={t('graphspace.title')}
+                title={
+                    <span data-testid='graphspace-page-title'>
+                        {t('graphspace.title')}
+                    </span>
+                }
             >
                 <Row justify='space-between'>
                     <Col>
