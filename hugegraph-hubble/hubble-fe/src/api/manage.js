@@ -63,6 +63,14 @@ const getGraphSchema = (graphspace, graph) => {
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/schema/groovy`);
 };
 
+const addGraphSchema = (graphspace, graph, data, config) => {
+    return request.post(
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/groovy`,
+        data,
+        config
+    );
+};
+
 const exportSchema = (graphspace, graph) => {
     return request.get(`graphspaces/${graphspace}/graphs/${graph}/schema/groovy/export`);
 };
@@ -75,7 +83,8 @@ const delSchema = (graphspace, name, config) => {
     return request.delete(`graphspaces/${graphspace}/schematemplates/${name}`, undefined, config);
 };
 
-export {getSchemaList, addSchema, updateSchema, getSchema, getGraphSchema, exportSchema, delSchema};
+export {getSchemaList, addSchema, updateSchema, getSchema, getGraphSchema,
+    addGraphSchema, exportSchema, delSchema};
 
 // 图
 const getGraphList = (graphspace, params, config = {}) => {
@@ -90,8 +99,8 @@ const addGraph = (graphspace, data) => {
     });
 };
 
-const updateGraph = (graphspace, graph, params) => {
-    return request.put(`/graphspaces/${graphspace}/graphs/${graph}`, params);
+const updateGraph = (graphspace, graph, params, config) => {
+    return request.put(`/graphspaces/${graphspace}/graphs/${graph}`, params, config);
 };
 
 const getGraph = (graphspace, graph, config) => {
@@ -148,8 +157,9 @@ const getMetaPropertyList = (graphspace, graph, params) => {
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys`, {params});
 };
 
-const addMetaProperty = (graphspace, graph, data) => {
-    return request.post(`/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys`, data);
+const addMetaProperty = (graphspace, graph, data, config) => {
+    return request.post(
+        `/graphspaces/${graphspace}/graphs/${graph}/schema/propertykeys`, data, config);
 };
 
 const checkMetaProperty = (graphspace, graph, data, config) => {
