@@ -31,10 +31,36 @@ beforeEach(() => {
 });
 
 test('updates a graph with PUT JSON on the canonical route', () => {
-    manage.updateGraph('DEFAULT', 'g', {nickname: 'nick'});
+    const config = {suppressBusinessErrorToast: true};
+    manage.updateGraph('DEFAULT', 'g', {nickname: 'nick'}, config);
     expect(request.put).toHaveBeenCalledWith(
         '/graphspaces/DEFAULT/graphs/g',
-        {nickname: 'nick'}
+        {nickname: 'nick'},
+        config
+    );
+});
+
+test('creates a property with request error ownership controls', () => {
+    const config = {suppressBusinessErrorToast: true};
+    manage.addMetaProperty('DEFAULT', 'g', {name: 'created_at'}, config);
+
+    expect(request.post).toHaveBeenCalledWith(
+        '/graphspaces/DEFAULT/graphs/g/schema/propertykeys',
+        {name: 'created_at'},
+        config
+    );
+});
+
+test('applies Groovy Schema to an existing graph with page-owned errors', () => {
+    const config = {suppressBusinessErrorToast: true};
+    const data = {'schema-groovy': 'graph.schema().propertyKey("name").create()'};
+
+    manage.addGraphSchema('DEFAULT', 'g', data, config);
+
+    expect(request.post).toHaveBeenCalledWith(
+        '/graphspaces/DEFAULT/graphs/g/schema/groovy',
+        data,
+        config
     );
 });
 

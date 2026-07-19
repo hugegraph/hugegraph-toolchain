@@ -33,12 +33,22 @@ div.nav {
 
 .header {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 16px;
   align-items: center;
   height: var(--workbench-header-height);
   padding: 0 24px;
   background: #061c38;
   box-shadow: 0 2px 14px rgba(2, 17, 35, 0.22);
+}
+
+.leftContainer {
+  display: flex;
+  grid-column: 1;
+  min-width: 0;
+  align-items: center;
+  overflow: hidden;
 }
 
 .logo {
@@ -52,9 +62,10 @@ div.nav {
 
 .rightContainer {
   display: flex;
+  grid-column: 3;
   align-items: center;
+  justify-self: end;
   flex: 0 0 auto;
-  margin-left: auto;
   color: #fff;
   cursor: pointer;
 
@@ -69,6 +80,19 @@ div.nav {
   }
 }
 
+.pageContext {
+  display: flex;
+  grid-column: 2;
+  min-width: 0;
+  align-items: center;
+  justify-self: center;
+  white-space: nowrap;
+
+  &:empty {
+    display: none;
+  }
+}
+
 .right {
   margin-left: 10px;
 }
@@ -77,7 +101,6 @@ div.nav {
   display: inline-flex;
   height: 32px;
   align-items: center;
-  gap: 8px;
   padding: 0 6px;
   color: #fff !important;
 
@@ -85,57 +108,6 @@ div.nav {
   &:focus-visible {
     color: #fff !important;
     background: rgba(255, 255, 255, 0.12) !important;
-  }
-}
-
-.languageSwitch {
-  :global(.ant-radio-button-wrapper) {
-    height: 24px;
-    padding: 0 5px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    color: rgba(255, 255, 255, 0.68);
-    line-height: 24px;
-
-    &::before {
-      display: none;
-    }
-
-    &:hover,
-    &:focus-visible {
-      color: #fff;
-    }
-  }
-
-  :global(.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)) {
-    background: transparent;
-    box-shadow: none;
-    color: #fff;
-    font-weight: 600;
-  }
-
-  :global(.ant-radio-button-wrapper + .ant-radio-button-wrapper) {
-    margin-left: 8px;
-
-    &::before {
-      display: block;
-      position: absolute;
-      top: 0;
-      left: -7px;
-      width: auto;
-      height: 24px;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.48);
-      content: '/';
-      line-height: 24px;
-    }
-  }
-
-  &:focus-within {
-    border-radius: 3px;
-    outline: 2px solid rgba(255, 255, 255, 0.72);
-    outline-offset: 2px;
   }
 }
 
@@ -165,11 +137,11 @@ div.nav {
     }
   }
 
+  .pageContext {
+    max-width: 100%;
+  }
+
   .right {
     margin-left: 6px;
-
-    span:last-child {
-      display: none;
-    }
   }
 }
