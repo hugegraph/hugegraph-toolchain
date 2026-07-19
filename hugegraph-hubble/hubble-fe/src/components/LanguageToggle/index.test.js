@@ -59,6 +59,7 @@ describe('LanguageToggle', () => {
         render(<LanguageToggle />);
 
         const english = screen.getByRole('button', {name: /中/});
+        expect(english).toHaveAttribute('data-testid', 'language-toggle');
         expect(english).toHaveTextContent('EN');
         expect(screen.queryByText('中')).not.toBeInTheDocument();
 

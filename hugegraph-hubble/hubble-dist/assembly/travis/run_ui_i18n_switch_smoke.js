@@ -91,9 +91,7 @@ async function captureLanguage(page, hubbleUrl, screenshot) {
 }
 
 async function switchToEnglish(page) {
-  await page.locator(
-    '[data-testid="language-switcher"] label:has(input[value="en-US"])'
-  )
+  await page.locator('[data-testid="language-toggle"]')
             .click({ timeout: 5000 });
   await page.waitForFunction(
     () => window.localStorage.getItem('languageType') === 'en-US',
@@ -133,8 +131,8 @@ async function main() {
                                    path.join(outputDir, 'i18n-zh-CN.png'));
     await switchToEnglish(page);
     englishSelected = await page.locator(
-      '[data-testid="language-switcher"] input[value="en-US"]'
-    ).isChecked({ timeout: 5000 });
+      '[data-testid="language-toggle"]'
+    ).isVisible({ timeout: 5000 });
     await page.screenshot({
       path: path.join(outputDir, 'i18n-en-US.png'),
       fullPage: true

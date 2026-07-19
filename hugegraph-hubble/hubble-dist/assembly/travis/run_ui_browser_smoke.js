@@ -134,6 +134,7 @@ async function main() {
   const routes = [
     { name: 'graphspace', path: '/graphspace',
       requiredApis: ['/api/v1.3/graphspaces'],
+      readySelector: '[data-testid="graphspace-page-title"]',
       textPattern: /图空间|Graph Space/ },
     { name: 'gremlin', path: '/gremlin',
       requiredApis: ['/api/v1.3/graphspaces/list'],
@@ -172,12 +173,15 @@ async function main() {
                                    entry.businessStatus === 200))
         };
       });
+      const routeTextMatched = route.readySelector
+        ? await page.locator(route.readySelector).isVisible({ timeout: 5000 })
+        : route.textPattern.test(text);
       results.push({
         route: route.path,
         screenshot,
         matchedApis,
         rawI18nKeyFound: rawKeyPattern.test(text),
-        routeTextMatched: route.textPattern.test(text),
+        routeTextMatched,
         notFoundPage: /404|页面不存在|Not Found/.test(text),
         requestCount: network.length
       });

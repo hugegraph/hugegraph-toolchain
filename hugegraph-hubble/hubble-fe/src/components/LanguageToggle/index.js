@@ -54,6 +54,7 @@ const LanguageToggle = ({className = '', tone = 'light'}) => {
     return (
         <Button
             type='text'
+            data-testid='language-toggle'
             className={`${style.toggle} ${style[tone]} ${className}`}
             aria-label={t('workbench.language_switch', {
                 language: option.targetLabel,
