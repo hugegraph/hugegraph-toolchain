@@ -131,11 +131,15 @@ async function main() {
     }
   });
 
+  const graphspaceRoute = auth.pdEnabled
+    ? { name: 'graphspace', path: '/graphspace',
+        requiredApis: ['/api/v1.3/graphspaces'],
+        readySelector: '[data-testid="graphspace-page-title"]' }
+    : { name: 'graphspace', path: '/graphspace',
+        requiredApis: ['/api/v1.3/graphspaces/DEFAULT/graphs'],
+        textPattern: /图管理|Graph Management/ };
   const routes = [
-    { name: 'graphspace', path: '/graphspace',
-      requiredApis: ['/api/v1.3/graphspaces'],
-      readySelector: '[data-testid="graphspace-page-title"]',
-      textPattern: /图空间|Graph Space/ },
+    graphspaceRoute,
     { name: 'gremlin', path: '/gremlin',
       requiredApis: ['/api/v1.3/graphspaces/list'],
       textPattern: /Gremlin|图查询|查询/ },

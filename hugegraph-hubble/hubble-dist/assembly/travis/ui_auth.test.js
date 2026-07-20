@@ -83,20 +83,37 @@ test('requires an authenticated status with a level', async () => {
 
 test('uses the server user and shared browser context session', async () => {
   const user = {id: 7, user_name: 'admin', is_superadmin: true};
+  const config = {pd_enabled: false, server_url: 'http://127.0.0.1:8080'};
   const item = fixture([
     response(200, {status: 200, data: user}),
-    response(200, {status: 200, data: {level: 'ADMIN'}})
+    response(200, {status: 200, data: {level: 'ADMIN'}}),
+    response(200, {status: 200, data: config})
   ]);
   const result = await authenticateUi(item.context, item.page,
                                       'http://hubble/', 'admin', 'pa');
 
-  assert.deepEqual(result, {user, level: 'ADMIN'});
+  assert.deepEqual(result, {user, level: 'ADMIN', pdEnabled: false});
   assert.equal(item.calls[0].url, 'http://hubble/api/v1.3/auth/login');
   assert.deepEqual(item.calls[0].options.data, {
     user_name: 'admin',
     user_password: 'pa'
   });
   assert.equal(item.calls[1].url, 'http://hubble/api/v1.3/auth/status');
+  assert.equal(item.calls[2].url, 'http://hubble/api/v1.3/config');
   assert.equal(item.initScripts.length, 1);
-  assert.deepEqual(item.initScripts[0].value, user);
+  assert.deepEqual(item.initScripts[0].value, {user, config});
+});
+
+test('requires runtime config before opening authenticated routes', async () => {
+  const item = fixture([
+    response(200, {status: 200, data: {id: 7, user_name: 'admin'}}),
+    response(200, {status: 200, data: {level: 'ADMIN'}}),
+    response(200, {status: 500, message: 'config unavailable'})
+  ]);
+
+  await assert.rejects(
+    authenticateUi(item.context, item.page, 'http://hubble', 'admin', 'pa'),
+    /config failed: config unavailable/
+  );
+  assert.equal(item.initScripts.length, 0);
 });
