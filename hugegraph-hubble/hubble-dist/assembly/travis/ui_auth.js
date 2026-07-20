@@ -49,10 +49,17 @@ async function authenticateUi(context, page, hubbleUrl, username, password) {
   if (!user || !user.user_name) {
     throw new Error('login response did not include user_name');
   }
-  await page.addInitScript(serverUser => {
-    window.sessionStorage.setItem('user_', JSON.stringify(serverUser));
-  }, user);
-  return {user, level: status.level};
+  const config = await payload(await context.request.get(
+    `${baseUrl}/api/v1.3/config`
+  ), 'config');
+  if (!config || typeof config.pd_enabled !== 'boolean') {
+    throw new Error('config response did not include pd_enabled');
+  }
+  await page.addInitScript(session => {
+    window.sessionStorage.setItem('user_', JSON.stringify(session.user));
+    window.sessionStorage.setItem('hubble_config_', JSON.stringify(session.config));
+  }, {user, config});
+  return {user, level: status.level, pdEnabled: config.pd_enabled};
 }
 
 module.exports = {authenticateUi};
