@@ -1,0 +1,73 @@
+version = 1
+name = "toolchain-hubble"
+
+[setup]
+script = "bash .codex/scripts/setup.sh"
+
+[cleanup]
+script = "bash .codex/scripts/hubble.sh cleanup"
+
+[[actions]]
+name = "Hubble FE Dev"
+icon = "run"
+command = "bash .codex/scripts/hubble.sh fe-start"
+
+[[actions]]
+name = "Hubble BE Dev"
+icon = "run"
+command = "bash .codex/scripts/hubble.sh be-start"
+
+[[actions]]
+name = "Hubble BE Switch"
+icon = "debug"
+command = "bash .codex/scripts/hubble.sh be-switch"
+
+[[actions]]
+name = "Hubble Status"
+icon = "tool"
+command = "bash .codex/scripts/hubble.sh status"
+
+[[actions]]
+name = "Hubble Stop"
+icon = "tool"
+command = "bash .codex/scripts/hubble.sh stop"
+
+[[actions]]
+name = "HStore Low Memory"
+icon = "run"
+command = "bash .codex/scripts/infra.sh hstore-start low"
+
+[[actions]]
+name = "HStore Balanced"
+icon = "run"
+command = "bash .codex/scripts/infra.sh hstore-start balanced"
+
+[[actions]]
+name = "Infrastructure Status"
+icon = "tool"
+command = "bash .codex/scripts/infra.sh status"
+
+[[actions]]
+name = "Infrastructure Stop"
+icon = "tool"
+command = "bash .codex/scripts/infra.sh stop"
+
+[[actions]]
+name = "Infrastructure Reset"
+icon = "tool"
+command = "bash .codex/scripts/infra.sh reset"
+
+[[actions]]
+name = "Infrastructure Pull"
+icon = "tool"
+command = "bash .codex/scripts/infra.sh pull"
+
+[[actions]]
+name = "Fast Verify"
+icon = "test"
+command = "bash .codex/scripts/verify.sh fast"
+
+[[actions]]
+name = "Full Verify"
+icon = "test"
+command = "bash .codex/scripts/verify.sh full"

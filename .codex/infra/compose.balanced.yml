@@ -1,0 +1,75 @@
+services:
+  pd:
+    mem_limit: 640m
+    environment:
+      JAVA_OPTS: >-
+        -Xms96m -Xmx128m
+        -XX:ActiveProcessorCount=2
+        -XX:MaxMetaspaceSize=128m
+        -XX:MaxDirectMemorySize=96m
+        -XX:+UseContainerSupport
+        -Dlog4j2.asyncLoggerConfigRingBufferSize=8192
+        -DAsyncLoggerConfig.RingBufferSize=8192
+        -Dthread.pool.grpc.core=8
+        -Dthread.pool.grpc.max=32
+        -Dthread.pool.grpc.queue=512
+        -Djob.interruptableThreadPool.core=1
+        -Djob.interruptableThreadPool.max=8
+        -Djob.interruptableThreadPool.queue=256
+        -Djob.uninterruptibleThreadPool.core=0
+        -Djob.uninterruptibleThreadPool.max=4
+        -Djob.uninterruptibleThreadPool.queue=128
+        -Dpartition.default-shard-count=1
+        -Dpartition.store-max-shard-count=12
+
+  store:
+    mem_limit: 768m
+    environment:
+      JAVA_OPTS: >-
+        -Xms96m -Xmx128m
+        -XX:ActiveProcessorCount=2
+        -XX:MaxMetaspaceSize=128m
+        -XX:MaxDirectMemorySize=128m
+        -XX:+UseContainerSupport
+        -Dlog4j2.asyncLoggerConfigRingBufferSize=8192
+        -DAsyncLoggerConfig.RingBufferSize=8192
+        -Drocksdb.total_memory_size=134217728
+        -Drocksdb.write_buffer_size=4194304
+        -Drocksdb.min_write_buffer_number_to_merge=2
+        -Dthread.pool.grpc.core=8
+        -Dthread.pool.grpc.max=32
+        -Dthread.pool.grpc.queue=512
+        -Dthread.pool.scan.core=4
+        -Dthread.pool.scan.max=16
+        -Dthread.pool.scan.queue=256
+        -Djob.interruptableThreadPool.core=2
+        -Djob.interruptableThreadPool.max=8
+        -Djob.interruptableThreadPool.queue=256
+        -Djob.uninterruptibleThreadPool.core=0
+        -Djob.uninterruptibleThreadPool.max=4
+        -Djob.uninterruptibleThreadPool.queue=128
+        -Dquery.push-down.threads=8
+        -Dquery.push-down.fetch_batch=1000
+        -Dquery.push-down.fetch_timeout=30000
+        -Dquery.push-down.memory_limit_count=10000
+        -Dquery.push-down.index_size_limit_count=10000
+        -Draft.disruptorBufferSize=512
+        -Draft.metrics=false
+        -Draft.maxReplicatorInflightMsgs=32
+        -Draft.maxEntriesSize=64
+        -Draft.maxBodySize=262144
+
+  server:
+    mem_limit: 1024m
+    environment:
+      JAVA_OPTS: >-
+        -Xms128m -Xmx384m
+        -XX:ActiveProcessorCount=4
+        -XX:MaxMetaspaceSize=192m
+        -XX:MaxDirectMemorySize=128m
+        -XX:+UseContainerSupport
+        -Dlog4j2.asyncLoggerConfigRingBufferSize=8192
+        -DAsyncLoggerConfig.RingBufferSize=8192
+        --add-exports=java.base/jdk.internal.reflect=ALL-UNNAMED
+        --add-modules=jdk.unsupported
+        --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
