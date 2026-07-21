@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 set -euo pipefail
 unset CDPATH
 
@@ -15,16 +32,17 @@ set_property() {
             "s|^[[:space:]]*${escaped}[[:space:]]*=.*|${key}=${value}|" "${file}"
         rm -f "${file}.bak"
     else
+        echo "WARN: property '${key}' is not declared in ${file}; adding low-memory override" >&2
         printf '%s=%s\n' "${key}" "${value}" >> "${file}"
     fi
 }
 
 set_yaml_scalar() {
     local file=$1 key=$2 value=$3
-    grep -qE "^[[:space:]]*${key}:" "${file}" || {
-        echo "ERROR: missing YAML key '${key}' in ${file}" >&2
-        exit 1
-    }
+    if ! grep -qE "^[[:space:]]*${key}:" "${file}"; then
+        echo "WARN: optional YAML key '${key}' is unavailable in ${file}; keeping image default" >&2
+        return
+    fi
     sed -E -i.bak \
         "s|^([[:space:]]*)${key}:.*|\\1${key}: ${value}|" "${file}"
     rm -f "${file}.bak"

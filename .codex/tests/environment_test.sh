@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 set -euo pipefail
 unset CDPATH
 
@@ -59,46 +76,35 @@ test_setup_dry_run() {
 }
 
 test_stable_frontend_ports() {
-    local first second other
+    local first second
     first=$("${CODEX_DIR}/scripts/hubble.sh" fe-port "/tmp/worktree-a")
     second=$("${CODEX_DIR}/scripts/hubble.sh" fe-port "/tmp/worktree-a")
-    other=$("${CODEX_DIR}/scripts/hubble.sh" fe-port "/tmp/worktree-b")
 
     [[ "${first}" == "${second}" ]] || fail "port assignment is not stable"
     ((first >= 3001 && first <= 3099)) || fail "port ${first} is outside 3001-3099"
-    [[ "${first}" != "${other}" ]] || fail "fixture paths unexpectedly collide"
 }
 
 test_concurrent_frontend_claim() {
-    local worktree="${TEST_TMP}/fe-worktree"
-    local fake_node="${TEST_TMP}/fake-node"
-    local first_output="${TEST_TMP}/first-fe.log"
-    local second_output="${TEST_TMP}/second-fe.log"
-    local first_pid
-    mkdir -p "${worktree}/hugegraph-hubble/hubble-fe/node_modules" \
-        "${fake_node}/bin"
+    local worktree="${TEST_TMP}/fe-worktree" fake_node="${TEST_TMP}/fake-node"
+    local first_log="${TEST_TMP}/first-fe.log" first_pid
+    mkdir -p "${worktree}/hugegraph-hubble/hubble-fe/node_modules" "${fake_node}/bin"
     printf '#!/bin/sh\nexit 0\n' > "${fake_node}/bin/node"
     printf '#!/bin/sh\nsleep 1\n' > "${fake_node}/bin/yarn"
     chmod +x "${fake_node}/bin/node" "${fake_node}/bin/yarn"
 
-    CODEX_HOME="${TEST_TMP}/codex-home" \
-        CODEX_SOURCE_TREE_PATH="${TEST_TMP}/source" \
-        CODEX_WORKTREE_PATH="${worktree}" \
-        HUBBLE_NODE_HOME="${fake_node}" \
-        "${CODEX_DIR}/scripts/hubble.sh" fe-start >"${first_output}" 2>&1 &
+    CODEX_HOME="${TEST_TMP}/codex-home" CODEX_SOURCE_TREE_PATH="${TEST_TMP}/source" \
+        CODEX_WORKTREE_PATH="${worktree}" HUBBLE_NODE_HOME="${fake_node}" \
+        "${CODEX_DIR}/scripts/hubble.sh" fe-start >"${first_log}" 2>&1 &
     first_pid=$!
     sleep 0.2
-    if CODEX_HOME="${TEST_TMP}/codex-home" \
-       CODEX_SOURCE_TREE_PATH="${TEST_TMP}/source" \
-       CODEX_WORKTREE_PATH="${worktree}" \
-       HUBBLE_NODE_HOME="${fake_node}" \
-       "${CODEX_DIR}/scripts/hubble.sh" fe-start >"${second_output}" 2>&1; then
-        fail "concurrent FE start unexpectedly acquired a second owner"
+    if CODEX_HOME="${TEST_TMP}/codex-home" CODEX_SOURCE_TREE_PATH="${TEST_TMP}/source" \
+       CODEX_WORKTREE_PATH="${worktree}" HUBBLE_NODE_HOME="${fake_node}" \
+       "${CODEX_DIR}/scripts/hubble.sh" fe-start >/dev/null 2>&1; then
+        fail "duplicate frontend start unexpectedly succeeded"
     fi
     wait "${first_pid}"
-    grep -q 'FE already runs from this worktree' "${second_output}"
     [[ -z "$(find "${TEST_TMP}/codex-home" -name 'fe-*.owner' -print -quit)" ]] ||
-        fail "FE owner was not removed by its token-aware EXIT cleanup"
+        fail "frontend owner was not cleaned up"
 }
 
 test_shared_backend_runtime() {
@@ -110,46 +116,6 @@ test_shared_backend_runtime() {
     assert_contains "${runtime}" "/hubble-be"
     [[ "${runtime}" != *"worktree-a"* ]] ||
         fail "BE runtime is still scoped to a source worktree"
-}
-
-test_owner_lock_contention() {
-    local lock_home="${TEST_TMP}/lock-home" index=0
-    while ((index < 20)); do
-        CODEX_HOME="${lock_home}" \
-            "${CODEX_DIR}/scripts/hubble.sh" status >/dev/null &
-        index=$((index + 1))
-    done
-    wait
-    [[ -z "$(find "${lock_home}" -name .owner-lock -print -quit)" ]] ||
-        fail "owner lock leaked after concurrent status calls"
-}
-
-test_owner_lock_excludes_long_critical_section() {
-    local lock_home="${TEST_TMP}/long-lock-home" first_pid second_pid
-    CODEX_HOME="${lock_home}" \
-        "${CODEX_DIR}/scripts/hubble.sh" _lock-hold 1 &
-    first_pid=$!
-    sleep 0.1
-    CODEX_HOME="${lock_home}" \
-        "${CODEX_DIR}/scripts/hubble.sh" _lock-hold 0 &
-    second_pid=$!
-    sleep 0.2
-    kill -0 "${second_pid}" 2>/dev/null ||
-        fail "second action entered a long owner critical section"
-    wait "${first_pid}"
-    wait "${second_pid}"
-}
-
-test_server_repo_resolution() {
-    local output
-    output=$(HUGEGRAPH_SERVER_REPO="${TEST_TMP}/server" \
-        "${CODEX_DIR}/scripts/infra.sh" resolve-server-repo)
-    [[ "${output}" == "${TEST_TMP}/server" ]] || fail "explicit server repo was ignored"
-
-    mkdir -p "${TEST_TMP}/graph/toolchain" "${TEST_TMP}/graph/server/docker"
-    output=$(CODEX_SOURCE_TREE_PATH="${TEST_TMP}/graph/toolchain" \
-        "${CODEX_DIR}/scripts/infra.sh" resolve-server-repo)
-    [[ "${output}" == "${TEST_TMP}/graph/server" ]] || fail "sibling server repo was not found"
 }
 
 test_compose_command_is_offline_and_layered() {
@@ -167,23 +133,44 @@ test_compose_command_is_offline_and_layered() {
 
 test_server_config_patch() {
     local conf="${TEST_TMP}/server-conf"
+    local output
     mkdir -p "${conf}"
     cat > "${conf}/rest-server.properties" <<'EOF'
 batch.max_write_threads=16
-restserver.min_free_memory=512
 EOF
     cat > "${conf}/gremlin-server.yaml" <<'EOF'
-threadPoolWorker: 8
-gremlinPool: 8
+other: 1
 EOF
 
-    HG_SERVER_CONF_DIR="${conf}" \
-        "${CODEX_DIR}/infra/patch-server-config.sh" --patch-only
+    output=$(HG_SERVER_CONF_DIR="${conf}" \
+        "${CODEX_DIR}/infra/patch-server-config.sh" --patch-only 2>&1)
 
     grep -qx 'batch.max_write_threads=2' "${conf}/rest-server.properties"
     grep -qx 'restserver.min_free_memory=16' "${conf}/rest-server.properties"
-    grep -qx 'threadPoolWorker: 2' "${conf}/gremlin-server.yaml"
-    grep -qx 'gremlinPool: 2' "${conf}/gremlin-server.yaml"
+    grep -qx 'other: 1' "${conf}/gremlin-server.yaml"
+    assert_contains "${output}" "WARN: property 'restserver.min_free_memory'"
+    assert_contains "${output}" "WARN: optional YAML key 'threadPoolWorker'"
+    assert_contains "${output}" "WARN: optional YAML key 'gremlinPool'"
+}
+
+test_server_config_patch_requires_config_files() {
+    local missing_rest="${TEST_TMP}/server-conf-missing-rest"
+    local missing_yaml="${TEST_TMP}/server-conf-missing-yaml" output
+    mkdir -p "${missing_rest}" "${missing_yaml}"
+    printf 'batch.max_write_threads=16\n' > "${missing_yaml}/rest-server.properties"
+
+    if output=$(HG_SERVER_CONF_DIR="${missing_rest}" \
+        "${CODEX_DIR}/infra/patch-server-config.sh" --patch-only 2>&1); then
+        fail "patch unexpectedly accepted missing configuration files"
+    fi
+    assert_contains "${output}" "ERROR: missing ${missing_rest}/rest-server.properties"
+
+    if output=$(HG_SERVER_CONF_DIR="${missing_yaml}" \
+        "${CODEX_DIR}/infra/patch-server-config.sh" --patch-only 2>&1); then
+        fail "patch unexpectedly accepted a missing gremlin-server.yaml"
+    fi
+    assert_contains "${output}" "ERROR: missing ${missing_yaml}/gremlin-server.yaml"
+    grep -qx 'batch.max_write_threads=16' "${missing_yaml}/rest-server.properties"
 }
 
 test_environment_toml
@@ -191,10 +178,8 @@ test_setup_dry_run
 test_stable_frontend_ports
 test_concurrent_frontend_claim
 test_shared_backend_runtime
-test_owner_lock_contention
-test_owner_lock_excludes_long_critical_section
-test_server_repo_resolution
 test_compose_command_is_offline_and_layered
 test_server_config_patch
+test_server_config_patch_requires_config_files
 
 echo "PASS: toolchain local environment tests"

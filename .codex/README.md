@@ -13,6 +13,17 @@ frontend dependencies without building or starting services.
 - HStore uses the sibling server repository's Compose file plus the tracked
   low-memory override. Images use the local `latest` tag and never pull during
   startup. `Infrastructure Pull` is the explicit update operation.
+- Low-memory Server tuning is best-effort across `latest` image layouts: known
+  properties are applied even when absent from the template, while unavailable
+  YAML settings produce a warning and keep the image default. It is a local
+  functional-test profile, not a memory or compatibility guarantee.
+- HStore starts with Server access control enabled. Connect Hubble to
+  `http://127.0.0.1:8080` as `admin` with password `pa`, or set
+  `HUBBLE_SERVER_PASSWORD` before the first start to use a local alternative.
+  The password only initializes a new local data volume; stopping services
+  preserves the original password. Use `Infrastructure Reset` to initialize
+  fresh local data if that password is lost. This known credential is only for
+  local testing; never reuse it elsewhere.
 - `Infrastructure Stop` preserves HStore data. `Infrastructure Reset` requires
   typing `RESET` before it deletes the Compose volumes.
 - Runtime ownership files live under `~/.codex/run/`, not in a worktree.
