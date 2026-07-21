@@ -37,6 +37,13 @@ shortcut. Build
 the release package with `mvnd package -DskipTests`; these development commands
 do not change packaged runtime behavior.
 
+### Codex worktree workflow (optional)
+
+For Codex users, this repository provides a managed local Hubble environment
+with stable frontend ports, shared backend ownership, optional local HStore
+profiles, and verification actions. See the
+[Codex environment guide](../.codex/README.md).
+
 Native Store metrics use an operator-managed exact-origin allowlist in addition
 to PD topology and metrics-target discovery. The packaged default
 `operations.store.allowed_targets=[http://127.0.0.1:8520,http://[::1]:8520]`

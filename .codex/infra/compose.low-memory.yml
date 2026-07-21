@@ -1,0 +1,90 @@
+services:
+  pd:
+    pull_policy: never
+    mem_limit: 512m
+    cpus: 2.0
+    environment:
+      JAVA_OPTS: >-
+        -Xms64m -Xmx64m
+        -XX:ActiveProcessorCount=2
+        -XX:MaxMetaspaceSize=96m
+        -XX:MaxDirectMemorySize=64m
+        -XX:+UseContainerSupport
+        -Dlog4j2.asyncLoggerConfigRingBufferSize=4096
+        -DAsyncLoggerConfig.RingBufferSize=4096
+        -Dthread.pool.grpc.core=8
+        -Dthread.pool.grpc.max=32
+        -Dthread.pool.grpc.queue=256
+        -Djob.interruptableThreadPool.core=1
+        -Djob.interruptableThreadPool.max=8
+        -Djob.interruptableThreadPool.queue=128
+        -Djob.uninterruptibleThreadPool.core=0
+        -Djob.uninterruptibleThreadPool.max=4
+        -Djob.uninterruptibleThreadPool.queue=64
+        -Dpartition.default-shard-count=1
+        -Dpartition.store-max-shard-count=12
+
+  store:
+    pull_policy: never
+    mem_limit: 512m
+    cpus: 2.0
+    environment:
+      JAVA_OPTS: >-
+        -Xms64m -Xmx64m
+        -XX:ActiveProcessorCount=2
+        -XX:MaxMetaspaceSize=96m
+        -XX:MaxDirectMemorySize=64m
+        -XX:+UseContainerSupport
+        -Dlog4j2.asyncLoggerConfigRingBufferSize=4096
+        -DAsyncLoggerConfig.RingBufferSize=4096
+        -Drocksdb.total_memory_size=67108864
+        -Drocksdb.write_buffer_size=1048576
+        -Drocksdb.min_write_buffer_number_to_merge=2
+        -Dthread.pool.grpc.core=8
+        -Dthread.pool.grpc.max=32
+        -Dthread.pool.grpc.queue=256
+        -Dthread.pool.scan.core=4
+        -Dthread.pool.scan.max=16
+        -Dthread.pool.scan.queue=128
+        -Djob.interruptableThreadPool.core=2
+        -Djob.interruptableThreadPool.max=8
+        -Djob.interruptableThreadPool.queue=128
+        -Djob.uninterruptibleThreadPool.core=0
+        -Djob.uninterruptibleThreadPool.max=4
+        -Djob.uninterruptibleThreadPool.queue=64
+        -Dquery.push-down.threads=8
+        -Dquery.push-down.fetch_batch=1000
+        -Dquery.push-down.fetch_timeout=30000
+        -Dquery.push-down.memory_limit_count=5000
+        -Dquery.push-down.index_size_limit_count=5000
+        -Draft.disruptorBufferSize=256
+        -Draft.metrics=false
+        -Draft.maxReplicatorInflightMsgs=16
+        -Draft.maxEntriesSize=32
+        -Draft.maxBodySize=131072
+
+  server:
+    pull_policy: never
+    mem_limit: 768m
+    cpus: 4.0
+    entrypoint:
+      - /usr/bin/dumb-init
+      - "--"
+      - /opt/toolchain-low-memory/patch-server-config.sh
+    environment:
+      JAVA_OPTS: >-
+        -Xms128m -Xmx192m
+        -XX:ActiveProcessorCount=4
+        -XX:MaxMetaspaceSize=128m
+        -XX:MaxDirectMemorySize=64m
+        -XX:+UseContainerSupport
+        -Dlog4j2.asyncLoggerConfigRingBufferSize=4096
+        -DAsyncLoggerConfig.RingBufferSize=4096
+        --add-exports=java.base/jdk.internal.reflect=ALL-UNNAMED
+        --add-modules=jdk.unsupported
+        --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+    volumes:
+      - type: bind
+        source: ${TOOLCHAIN_CODEX_DIR}/infra/patch-server-config.sh
+        target: /opt/toolchain-low-memory/patch-server-config.sh
+        read_only: true
