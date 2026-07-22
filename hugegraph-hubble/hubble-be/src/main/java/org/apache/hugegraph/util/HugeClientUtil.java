@@ -112,6 +112,10 @@ public final class HugeClientUtil {
             throw e;
         }
 
+        if (StringUtils.isNotBlank(connection.getToken())) {
+            client.setAuthContext("Bearer " + connection.getToken().trim());
+        }
+
         return client;
     }
 
