@@ -135,18 +135,30 @@ test_server_config_patch() {
     local conf="${TEST_TMP}/server-conf"
     local output
     mkdir -p "${conf}"
+    mkdir -p "${conf}/graphs"
     cat > "${conf}/rest-server.properties" <<'EOF'
 batch.max_write_threads=16
 EOF
     cat > "${conf}/gremlin-server.yaml" <<'EOF'
 other: 1
 EOF
+    cat > "${conf}/graphs/hugegraph.properties" <<'EOF'
+backend=hstore
+EOF
 
     output=$(HG_SERVER_CONF_DIR="${conf}" \
         "${CODEX_DIR}/infra/patch-server-config.sh" --patch-only 2>&1)
 
     grep -qx 'batch.max_write_threads=2' "${conf}/rest-server.properties"
-    grep -qx 'restserver.min_free_memory=16' "${conf}/rest-server.properties"
+    grep -qx 'restserver.min_free_memory=0' "${conf}/rest-server.properties"
+    grep -qx 'usePD=true' "${conf}/rest-server.properties"
+    grep -qx 'pd.peers=pd:8686' "${conf}/rest-server.properties"
+    grep -qx 'restserver.url=http://server:8080' "${conf}/rest-server.properties"
+    grep -qx 'auth.token_secret=hugegraph-local-jwt-secret-change-me' \
+        "${conf}/rest-server.properties"
+    grep -qx 'pd.peers=pd:8686' "${conf}/graphs/hugegraph.properties"
+    grep -qx 'auth.token_secret=hugegraph-local-jwt-secret-change-me' \
+        "${conf}/graphs/hugegraph.properties"
     grep -qx 'other: 1' "${conf}/gremlin-server.yaml"
     assert_contains "${output}" "WARN: property 'restserver.min_free_memory'"
     assert_contains "${output}" "WARN: optional YAML key 'threadPoolWorker'"
@@ -157,7 +169,10 @@ test_server_config_patch_requires_config_files() {
     local missing_rest="${TEST_TMP}/server-conf-missing-rest"
     local missing_yaml="${TEST_TMP}/server-conf-missing-yaml" output
     mkdir -p "${missing_rest}" "${missing_yaml}"
+    mkdir -p "${missing_rest}/graphs" "${missing_yaml}/graphs"
     printf 'batch.max_write_threads=16\n' > "${missing_yaml}/rest-server.properties"
+    printf 'backend=hstore\n' > "${missing_rest}/graphs/hugegraph.properties"
+    printf 'backend=hstore\n' > "${missing_yaml}/graphs/hugegraph.properties"
 
     if output=$(HG_SERVER_CONF_DIR="${missing_rest}" \
         "${CODEX_DIR}/infra/patch-server-config.sh" --patch-only 2>&1); then
