@@ -112,6 +112,7 @@ hstore_start() {
     assert_docker
     warn_dirty_server "${server_repo}"
     assert_port_available_for_compose 8080 hg-server
+    assert_port_available_for_compose 8088 hg-hubble
     assert_port_available_for_compose 8520 hg-store
     assert_port_available_for_compose 8620 hg-pd
     compose_files "${profile}" "${server_repo}"
@@ -130,7 +131,7 @@ infra_status() {
     echo
     docker stats --no-stream --format \
         'table {{.Name}}\t{{.MemUsage}}\t{{.CPUPerc}}' \
-        hg-pd hg-store hg-server 2>/dev/null || true
+        hg-pd hg-store hg-server hg-hubble 2>/dev/null || true
     echo
     lsof -nP -iTCP:8080 -sTCP:LISTEN 2>/dev/null || true
 }

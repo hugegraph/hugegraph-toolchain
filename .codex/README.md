@@ -19,7 +19,7 @@ frontend dependencies without building or starting services.
   functional-test profile, not a memory or compatibility guarantee.
 - HStore starts with Server access control enabled. Connect Hubble to
   `http://127.0.0.1:8080` as `admin` with password `pa`, or set
-  `HUBBLE_SERVER_PASSWORD` before the first start to use a local alternative.
+  `HUGEGRAPH_ADMIN_PASSWORD` before the first start to use a local alternative.
   The password only initializes a new local data volume; stopping services
   preserves the original password. Use `Infrastructure Reset` to initialize
   fresh local data if that password is lost. This known credential is only for

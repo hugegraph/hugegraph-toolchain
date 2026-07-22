@@ -23,6 +23,7 @@ unset CDPATH
 CONF_DIR=${HG_SERVER_CONF_DIR:-./conf}
 REST_CONF="${CONF_DIR}/rest-server.properties"
 GREMLIN_CONF="${CONF_DIR}/gremlin-server.yaml"
+GRAPH_CONF="${CONF_DIR}/graphs/hugegraph.properties"
 
 set_property() {
     local file=$1 key=$2 value=$3 escaped
@@ -50,11 +51,21 @@ set_yaml_scalar() {
 
 [[ -f "${REST_CONF}" ]] || { echo "ERROR: missing ${REST_CONF}" >&2; exit 1; }
 [[ -f "${GREMLIN_CONF}" ]] || { echo "ERROR: missing ${GREMLIN_CONF}" >&2; exit 1; }
+[[ -f "${GRAPH_CONF}" ]] || { echo "ERROR: missing ${GRAPH_CONF}" >&2; exit 1; }
 
 set_property "${REST_CONF}" batch.max_write_threads \
     "${HG_SERVER_BATCH_WRITE_THREADS:-2}"
 set_property "${REST_CONF}" restserver.min_free_memory \
-    "${HG_SERVER_MIN_FREE_MEMORY:-16}"
+    "${HG_SERVER_MIN_FREE_MEMORY:-0}"
+set_property "${REST_CONF}" usePD "${HG_SERVER_USE_PD:-true}"
+set_property "${REST_CONF}" pd.peers "${HG_SERVER_PD_PEERS:-pd:8686}"
+set_property "${REST_CONF}" restserver.url \
+    "${HG_SERVER_REST_URL:-http://server:8080}"
+set_property "${REST_CONF}" auth.token_secret \
+    "${HG_SERVER_AUTH_TOKEN_SECRET:-hugegraph-local-jwt-secret-change-me}"
+set_property "${GRAPH_CONF}" pd.peers "${HG_SERVER_PD_PEERS:-pd:8686}"
+set_property "${GRAPH_CONF}" auth.token_secret \
+    "${HG_SERVER_AUTH_TOKEN_SECRET:-hugegraph-local-jwt-secret-change-me}"
 set_yaml_scalar "${GREMLIN_CONF}" threadPoolWorker \
     "${HG_SERVER_GREMLIN_WORKERS:-2}"
 set_yaml_scalar "${GREMLIN_CONF}" gremlinPool \
