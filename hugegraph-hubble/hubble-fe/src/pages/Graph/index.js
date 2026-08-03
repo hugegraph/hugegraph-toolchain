@@ -351,14 +351,14 @@ const Graph = () => {
             dataIndex: 'create_time',
             align: 'center',
             width: 140,
-            render: val => moment(val).format('YYYY-MM-DD'),
+            render: val => (val ? moment(val).format('YYYY-MM-DD') : '--'),
         },
         {
             title: t('graph.detail.update_data'),
             dataIndex: 'update_time',
             align: 'center',
             width: 140,
-            render: val => moment(val).format('YYYY-MM-DD'),
+            render: val => (val ? moment(val).format('YYYY-MM-DD') : '--'),
         },
         {
             title: t('graph.col.creator'),
@@ -615,6 +615,7 @@ const Graph = () => {
                                 columns={columns}
                                 dataSource={data}
                                 rowKey='name'
+                                scroll={{x: 'max-content'}}
                                 locale={{emptyText: listUnavailable ? null : emptyState}}
                                 pagination={pagination}
                                 onChange={handleTable}
