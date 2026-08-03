@@ -32,15 +32,24 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 @Component
 public interface ExecuteHistoryMapper extends BaseMapper<ExecuteHistory> {
 
+    // 单条 DELETE ... IN (...) 允许携带的最大 id 数, 避免超出数据库
+    // 的报文大小与参数个数上限
+    int DELETE_BATCH_SIZE = 500;
+
     // 删除超出限制的记录, 按 (graphspace, graph) 分别保留最新的 limit 条
     default void deleteExceedLimit(int limit) {
         for (ExecuteHistory scope : findScopes()) {
             List<Long> ids = findIdsNewestFirst(scope.getGraphspace(),
                                                 scope.getGraph());
-            if (ids.size() > limit) {
-                // 在 Java 侧切分而不是用 SQL 的 OFFSET: 带绑定参数的
-                // LIMIT/OFFSET 在不同数据库下语义不一致, 会删错行.
-                deleteBatchIds(ids.subList(limit, ids.size()));
+            if (ids.size() <= limit) {
+                continue;
+            }
+            // 在 Java 侧切分而不是用 SQL 的 OFFSET: 带绑定参数的
+            // LIMIT/OFFSET 在不同数据库下语义不一致, 会删错行.
+            List<Long> excess = ids.subList(limit, ids.size());
+            for (int i = 0; i < excess.size(); i += DELETE_BATCH_SIZE) {
+                int end = Math.min(i + DELETE_BATCH_SIZE, excess.size());
+                deleteBatchIds(excess.subList(i, end));
             }
         }
     }

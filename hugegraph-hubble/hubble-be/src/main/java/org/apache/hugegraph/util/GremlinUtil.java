@@ -321,12 +321,33 @@ public final class GremlinUtil {
         StringBuilder statement = new StringBuilder();
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
+        boolean inLineComment = false;
         boolean escaped = false;
         for (int i = 0; i < gremlin.length(); i++) {
             char ch = gremlin.charAt(i);
             if (escaped) {
                 statement.append(ch);
                 escaped = false;
+                continue;
+            }
+            if (inLineComment) {
+                // Quotes inside a comment are literal text, not string
+                // delimiters. The newline still ends the statement.
+                if (ch == '\n') {
+                    result.append(optimizeStatement(statement.toString(),
+                                                    limit));
+                    result.append(ch);
+                    statement.setLength(0);
+                    inLineComment = false;
+                } else {
+                    statement.append(ch);
+                }
+                continue;
+            }
+            if (!inSingleQuote && !inDoubleQuote && ch == '/' &&
+                i + 1 < gremlin.length() && gremlin.charAt(i + 1) == '/') {
+                inLineComment = true;
+                statement.append(ch);
                 continue;
             }
             if ((inSingleQuote || inDoubleQuote) && ch == '\\') {

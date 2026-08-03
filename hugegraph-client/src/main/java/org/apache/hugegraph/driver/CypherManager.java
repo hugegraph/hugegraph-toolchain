@@ -54,7 +54,9 @@ public class CypherManager {
             if (message == null || message.isEmpty()) {
                 message = "Cypher query failed with status code " + status.code();
             }
-            throw new ServerException(message);
+            ServerException exception = new ServerException(message);
+            exception.status(status.code());
+            throw exception;
         }
         response.graphManager(this.graphManager);
         return response.result();

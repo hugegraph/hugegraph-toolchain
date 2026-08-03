@@ -40,7 +40,7 @@ public final class PageUtil {
      * frontend but is turned into a hard cap instead of unbounded.
      */
     public static int boundedSize(int requested) {
-        return requested == -1 ? HARD_CAP : requested;
+        return requested < 0 ? HARD_CAP : requested;
     }
 
     public static long boundedSize(long requested) {

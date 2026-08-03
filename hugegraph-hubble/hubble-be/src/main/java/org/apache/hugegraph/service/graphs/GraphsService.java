@@ -529,7 +529,9 @@ public class GraphsService {
                 Task taskV = taskMap.get(idVE[0]);
                 Task taskE = taskMap.get(idVE[1]);
                 if (taskV == null || taskE == null) {
-                    // Task info is missing, skip this id pair
+                    // The server no longer knows these tasks. Drop the pair,
+                    // otherwise it is re-queried on every call and never drains.
+                    removeIds.add(idPair);
                     continue;
                 }
                 boolean success = taskV.success() && taskE.success();

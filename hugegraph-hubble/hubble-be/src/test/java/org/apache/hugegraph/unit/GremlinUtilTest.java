@@ -49,6 +49,25 @@ public class GremlinUtilTest {
     }
 
     @Test
+    public void testApostropheInCommentDoesNotDisableLimit() {
+        // An apostrophe inside a comment must not be read as a string
+        // delimiter, otherwise the rest of the script is treated as one
+        // unterminated string and never receives its limit.
+        String optimized = GremlinUtil.optimizeLimit(
+                "// don't limit this\ng.V()", 250);
+        Assert.assertTrue(optimized, optimized.endsWith(".limit(250)"));
+        Assert.assertTrue(optimized, optimized.startsWith("// don't limit"));
+    }
+
+    @Test
+    public void testQuoteInCommentDoesNotLeakIntoNextStatement() {
+        String optimized = GremlinUtil.optimizeLimit(
+                "// it's here\ng.V();g.E()", 10);
+        Assert.assertEquals("// it's here\ng.V().limit(10);g.E().limit(10)",
+                            optimized);
+    }
+
+    @Test
     public void testIgnoredCommentLine() {
         Assert.assertEquals("// g.V()\ng.E().limit(250)",
                             GremlinUtil.optimizeLimit(

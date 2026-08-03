@@ -127,14 +127,20 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
 
         for (String[] column : columns) {
             String name = column[0];
-            if (this.columnExists(conn, table, name)) {
-                continue;
+            boolean added = false;
+            if (!this.columnExists(conn, table, name)) {
+                try (Statement statement = conn.createStatement()) {
+                    statement.execute(String.format(
+                            "ALTER TABLE `%s` ADD COLUMN `%s` %s DEFAULT NULL",
+                            table, name, column[1]));
+                }
+                added = true;
             }
-            try (Statement statement = conn.createStatement()) {
-                statement.execute(String.format(
-                        "ALTER TABLE `%s` ADD COLUMN `%s` %s DEFAULT NULL",
-                        table, name, column[1]));
-            }
+            // Backfill unconditionally. The ALTER and the UPDATE commit
+            // separately, so a crash between them would leave the column
+            // present but permanently NULL: the next startup would see the
+            // column already exists and skip the backfill for good. The
+            // statement only touches NULL rows, so repeating it is a no-op.
             if (column[2] != null) {
                 try (Statement statement = conn.createStatement()) {
                     statement.executeUpdate(String.format(
@@ -142,7 +148,9 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
                             table, name, column[2], name));
                 }
             }
-            log.info("Added {}.{} {}", table, name, column[1]);
+            if (added) {
+                log.info("Added {}.{} {}", table, name, column[1]);
+            }
         }
     }
 
