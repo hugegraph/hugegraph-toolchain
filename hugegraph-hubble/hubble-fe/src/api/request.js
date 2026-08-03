@@ -88,9 +88,26 @@ const notifyForbidden = config => {
     }
 };
 
+// Axios buildURL un-escapes [ and ] in query strings, but Tomcat rejects raw
+// brackets in the request target with a plain 400, so encode every character.
+const serializeParams = params => {
+    const parts = [];
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+            return;
+        }
+        const values = Array.isArray(value) ? value : [value];
+        values.forEach(v => {
+            parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(v));
+        });
+    });
+    return parts.join('&');
+};
+
 const instance = axios.create({
     baseURL: '/api/v1.3',
     withCredentials: true,
+    paramsSerializer: serializeParams,
     // Backend times out after 30s; keep this slightly higher to receive its error body.
     timeout: 31000,
     transformResponse: [parseResponse],
