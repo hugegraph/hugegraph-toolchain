@@ -66,6 +66,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -341,6 +342,20 @@ public class QueryService {
                 continue;
             }
             Object object = result.getObject();
+            if (object instanceof Map) {
+                List<Object> elements =
+                        unwrapCypherElements((Map<?, ?>) object);
+                if (elements != null) {
+                    for (Object element : elements) {
+                        Type elementType = element instanceof Vertex ?
+                                           Type.VERTEX : Type.EDGE;
+                        typeVotes.compute(elementType,
+                                          (k, v) -> v == null ? 1 : v + 1);
+                        typedData.add(element);
+                    }
+                    continue;
+                }
+            }
             Type type;
             if (object instanceof Vertex) {
                 type = Type.VERTEX;
@@ -427,6 +442,61 @@ public class QueryService {
         }
     }
 
+    /**
+     * Cypher rows arrive as a map keyed by the RETURN variables whose values
+     * are _type-tagged node/relationship maps. Unwrap them into detached
+     * Vertex/Edge instances so such results can render as a graph; return
+     * null when the row is not purely graph elements.
+     */
+    private static List<Object> unwrapCypherElements(Map<?, ?> row) {
+        if (row.isEmpty()) {
+            return null;
+        }
+        List<Object> elements = new ArrayList<>(row.size());
+        for (Object value : row.values()) {
+            Object element = toGraphElement(value);
+            if (element == null) {
+                return null;
+            }
+            elements.add(element);
+        }
+        return elements;
+    }
+
+    private static Object toGraphElement(Object value) {
+        if (!(value instanceof Map)) {
+            return null;
+        }
+        Map<?, ?> map = (Map<?, ?>) value;
+        Object type = map.get("_type");
+        if ("node".equals(type)) {
+            Vertex vertex = new Vertex(String.valueOf(map.get("_label")));
+            copyElementProperties(map, vertex::property);
+            vertex.id(map.get("_id"));
+            return vertex;
+        }
+        if ("relationship".equals(type)) {
+            Edge edge = new Edge(String.valueOf(map.get("_label")));
+            edge.id(String.valueOf(map.get("_id")));
+            edge.sourceId(map.get("_outV"));
+            edge.targetId(map.get("_inV"));
+            copyElementProperties(map, edge::property);
+            return edge;
+        }
+        return null;
+    }
+
+    private static void copyElementProperties(Map<?, ?> map,
+                                              BiConsumer<String, Object> setter) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            String key = String.valueOf(entry.getKey());
+            if (key.startsWith("_") || entry.getValue() == null) {
+                continue;
+            }
+            setter.accept(key, entry.getValue());
+        }
+    }
+
     private GraphView buildGraphView(TypedResult result, HugeClient client) {
         List<Object> data = result.getData();
         if (!result.getType().isGraph() || CollectionUtils.isEmpty(data)) {
@@ -458,17 +528,23 @@ public class QueryService {
             }
         }
 
-        if (!edges.isEmpty()) {
-            if (vertices.isEmpty()) {
-                vertices = this.verticesOfEdge(result, edges, client);
+        try {
+            if (!edges.isEmpty()) {
+                if (vertices.isEmpty()) {
+                    vertices = this.verticesOfEdge(result, edges, client);
+                } else {
+                    // TODO: reduce the number of requests
+                    vertices.putAll(this.verticesOfEdge(result, edges, client));
+                }
             } else {
-                // TODO: reduce the number of requests
-                vertices.putAll(this.verticesOfEdge(result, edges, client));
+                if (!vertices.isEmpty()) {
+                    edges = this.edgesOfVertex(result, vertices, client);
+                }
             }
-        } else {
-            if (!vertices.isEmpty()) {
-                edges = this.edgesOfVertex(result, vertices, client);
-            }
+        } catch (Exception e) {
+            // The linked-element lookup is best-effort decoration; keep the
+            // elements already returned when it fails (e.g. gremlin rejected)
+            log.warn("Failed to enrich graph view with linked elements", e);
         }
 
         if (!edges.isEmpty()) {
