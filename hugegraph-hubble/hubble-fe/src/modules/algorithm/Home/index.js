@@ -134,6 +134,9 @@ const AlgorithmHome = () => {
 
     const getFavoriteQueriesList = useCallback(
         async () => {
+            if (!graphSpace || !graph) {
+                return;
+            }
             const request = Symbol('algorithm-favorites');
             favoriteQueriesRequest.current = request;
             const params = {
@@ -178,6 +181,9 @@ const AlgorithmHome = () => {
 
     const getExecutionLogsList = useCallback(
         async () => {
+            if (!graphSpace || !graph) {
+                return;
+            }
             const request = Symbol('algorithm-logs');
             executionLogsRequest.current = request;
             const params = {'page_size': pageSize, 'page_no': pageExecute, 'type': TYPE.ALGORITHM};

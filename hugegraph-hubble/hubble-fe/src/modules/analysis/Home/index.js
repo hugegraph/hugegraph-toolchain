@@ -116,7 +116,7 @@ const AnalysisHome = () => {
 
     const getExecutionLogsList = useCallback(
         async () => {
-            if (analysisMode === TEXT2GQL) {
+            if (analysisMode === TEXT2GQL || !graphSpace || !graph) {
                 return;
             }
             const request = Symbol('execution-logs');
@@ -154,7 +154,7 @@ const AnalysisHome = () => {
 
     const getFavoriteQueriesList = useCallback(
         async () => {
-            if (analysisMode === TEXT2GQL) {
+            if (analysisMode === TEXT2GQL || !graphSpace || !graph) {
                 return;
             }
             const request = Symbol('favorite-queries');

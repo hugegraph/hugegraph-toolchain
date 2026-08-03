@@ -169,10 +169,10 @@ const EdgeTable = () => {
     ];
 
     useEffect(() => {
-        api.manage.getMetaPropertyList(graphspace, graph).then(res => {
+        api.manage.getMetaPropertyList(graphspace, graph, {page_size: -1}).then(res => {
             if (res.status === 200) {
                 setPropertyList(res.data.records.map(item => ({
-                    lable: item.name,
+                    label: item.name,
                     value: item.name,
                     data_type: item.data_type,
                 })));

@@ -576,6 +576,7 @@
       "sync_type": "同步类型",
       "status": "状态",
       "create_time": "创建时间",
+      "creator": "创建人",
       "operation": "操作"
     },
     "statistic": {
