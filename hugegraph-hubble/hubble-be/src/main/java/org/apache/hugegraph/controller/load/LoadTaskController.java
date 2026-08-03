@@ -137,6 +137,12 @@ public class LoadTaskController extends BaseController {
         if (task == null) {
             throw new ExternalException("load.task.not-exist.id", id);
         }
+        /*
+         * Removing a task that is still importing would leave the loader
+         * thread writing to the graph with no task to report progress to
+         */
+        Ex.check(!task.getStatus().inRunning(),
+                 "load.task.delete.task-in-running", id);
         this.service.remove(id);
     }
 
@@ -224,7 +230,7 @@ public class LoadTaskController extends BaseController {
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
                  "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
-                 "load.task.pause.no-permission");
+                 "load.task.resume.no-permission");
         try {
             return this.service.resume(taskId, this.getToken());
         } finally {
@@ -244,7 +250,7 @@ public class LoadTaskController extends BaseController {
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
                  "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
-                 "load.task.pause.no-permission");
+                 "load.task.stop.no-permission");
         try {
             return this.service.stop(taskId);
         } finally {
@@ -264,7 +270,7 @@ public class LoadTaskController extends BaseController {
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
                  "load.task.not-exist.id", taskId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.LOADING,
-                 "load.task.pause.no-permission");
+                 "load.task.retry.no-permission");
         try {
             return this.service.retry(taskId, this.getToken());
         } finally {
@@ -288,7 +294,13 @@ public class LoadTaskController extends BaseController {
         Integer fileId = task.getFileId();
         FileMapping mapping = this.fmService.get(graphSpace, graph, jobId,
                                                   fileId);
-        String reason = this.service.readLoadFailedReason(mapping);
+        /*
+         * The file mapping may have been deleted while the task still
+         * references its id, there is no error file to read in that case
+         */
+        String reason = mapping == null ?
+                        LoadTaskService.NO_ERROR_FILE_REASON :
+                        this.service.readLoadFailedReason(mapping);
         return Response.builder()
                        .status(Constant.STATUS_OK)
                        .data(reason)

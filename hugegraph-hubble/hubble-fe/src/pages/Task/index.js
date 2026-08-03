@@ -260,13 +260,17 @@ const Task = () => {
         setLoading(true);
         api.manage.deleteTask(id).then(res => {
             setLoading(false);
-            if (res.status === 200) {
+
+            if (res?.status === 200) {
                 setRefresh(!refresh);
                 message.success(t('common.msg.delete_success'));
 
                 return;
             }
 
+            message.error(t('common.msg.delete_fail'));
+        }).catch(() => {
+            setLoading(false);
             message.error(t('common.msg.delete_fail'));
         });
     }, [refresh, t]);

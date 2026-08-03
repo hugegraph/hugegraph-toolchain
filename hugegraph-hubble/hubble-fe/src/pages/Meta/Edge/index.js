@@ -215,6 +215,7 @@ const EdgeTable = () => {
                 rowKey={rowKey}
                 showExpandColumn={false}
                 loading={loading}
+                scroll={{x: 'max-content'}}
             />
 
             <EditEdgeLayer

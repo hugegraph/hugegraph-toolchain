@@ -952,20 +952,30 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
 
         form.validateFields().then(values => {
             const formatData = formatDatasource(values);
-            // return;
             setLoading(true);
+            // Every exit of this request must clear `loading`: it both drives the
+            // OK spinner and short-circuits `onFinish` above, so a rejected request
+            // (network drop, timeout, unparsable body) used to lock the button for
+            // good, even though the create may already have succeeded server-side.
             api.manage.addDatasource(formatData).then(res => {
                 setLoading(false);
 
-                if (res.status === 200) {
+                if (res?.status === 200) {
                     message.success(t('common.msg.create_success'));
                     onCancel();
                     refresh();
                     return;
                 }
 
-                message.error(res.message);
+                message.error(res?.message || t('common.msg.operation_failed'));
+            }).catch(() => {
+                setLoading(false);
+                message.error(t('common.msg.operation_failed'));
             });
+        }).catch(error => {
+            if (!error?.errorFields) {
+                message.error(t('common.msg.operation_failed'));
+            }
         });
     }, [form, loading, onCancel, refresh, t]);
 
@@ -973,6 +983,8 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
         form.resetFields();
         setSourceType('');
         setSelectedTemplate(undefined);
+        // Reopening must never inherit a stale spinner from a previous attempt.
+        setLoading(false);
     }, [form]);
 
     const handleType = useCallback(val => {

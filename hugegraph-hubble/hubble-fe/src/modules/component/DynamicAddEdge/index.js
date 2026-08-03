@@ -97,8 +97,8 @@ const AddEdgeDrawer = props => {
             api.analysis.fetchEdgeLabels(currentGraphSpace, currentGraph, label)
                 .then(res => {
                     const {data, status, message: errMsg} = res;
-                    const {properties} = data;
                     if (status === 200) {
+                        const {properties} = data;
                         setEdgeProperties(properties);
                     }
                     else {

@@ -78,14 +78,21 @@ public class LoaderScopeControllerTest {
     @Test
     public void testFileClearUsesNestedScope() {
         FileMappingService service = Mockito.mock(FileMappingService.class);
+        JobManagerService jobService = Mockito.mock(JobManagerService.class);
+        LoadTaskService taskService = Mockito.mock(LoadTaskService.class);
         FileMapping mapping = FileMapping.builder().id(11).build();
         Mockito.when(service.listByJob("space-a", "graph-a", 7))
                .thenReturn(Collections.singletonList(mapping));
+        Mockito.when(taskService.taskListByJob(7))
+               .thenReturn(Collections.emptyList());
         FileMappingController controller = new FileMappingController();
         ReflectionTestUtils.setField(controller, "service", service);
+        ReflectionTestUtils.setField(controller, "jobService", jobService);
+        ReflectionTestUtils.setField(controller, "taskService", taskService);
 
         controller.clear("space-a", "graph-a", 7);
 
+        Mockito.verify(service).deleteDiskFile(mapping);
         Mockito.verify(service).remove(11);
         Mockito.verify(service, Mockito.never()).listAll();
     }

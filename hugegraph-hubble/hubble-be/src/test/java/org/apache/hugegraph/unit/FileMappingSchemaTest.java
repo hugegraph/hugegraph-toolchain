@@ -126,6 +126,107 @@ public class FileMappingSchemaTest {
         }
     }
 
+    @Test
+    public void testSchemaMigratorAddsMissingLegacyColumns() throws Exception {
+        String url = "jdbc:h2:mem:legacy_schema_columns;DB_CLOSE_DELAY=-1";
+        try (Connection conn = DriverManager.getConnection(url)) {
+            ScriptUtils.executeSqlScript(conn, new FileSystemResource(
+                                         this.legacySchemaPath()));
+            try (Statement statement = conn.createStatement()) {
+                statement.execute("INSERT INTO `execute_history` " +
+                                  "(`execute_type`, `content`, " +
+                                  "`execute_status`, `duration`, " +
+                                  "`create_time`) VALUES " +
+                                  "(1, 'g.V()', 1, 10, CURRENT_TIMESTAMP)");
+                statement.execute("INSERT INTO `gremlin_collection` " +
+                                  "(`name`, `content`, `create_time`) " +
+                                  "VALUES ('saved', 'g.E()', " +
+                                  "CURRENT_TIMESTAMP)");
+            }
+
+            DatabaseSchemaMigrator migrator = new DatabaseSchemaMigrator();
+            // Running twice must be a no-op the second time
+            migrator.migrate(conn);
+            migrator.migrate(conn);
+
+            for (String column : new String[]{"CONN_ID", "GRAPHSPACE",
+                                              "GRAPH", "ASYNC_ID", "TEXT",
+                                              "ASYNC_STATUS",
+                                              "FAILURE_REASON"}) {
+                this.assertColumnExists(conn, "EXECUTE_HISTORY", column);
+            }
+            for (String column : new String[]{"CONN_ID", "GRAPHSPACE",
+                                              "GRAPH", "TYPE"}) {
+                this.assertColumnExists(conn, "GREMLIN_COLLECTION", column);
+            }
+
+            // The legacy rows survive and the new columns are backfilled
+            try (Statement statement = conn.createStatement();
+                 ResultSet rs = statement.executeQuery(
+                         "SELECT `content`, `graphspace`, `graph`, " +
+                         "`async_id`, `text`, `async_status` " +
+                         "FROM `execute_history`")) {
+                Assert.assertTrue(rs.next());
+                Assert.assertEquals("g.V()", rs.getString(1));
+                Assert.assertEquals("", rs.getString(2));
+                Assert.assertEquals("", rs.getString(3));
+                Assert.assertEquals(0L, rs.getLong(4));
+                Assert.assertEquals("", rs.getString(5));
+                Assert.assertEquals(0, rs.getInt(6));
+            }
+            try (Statement statement = conn.createStatement();
+                 ResultSet rs = statement.executeQuery(
+                         "SELECT `content`, `graphspace`, `graph`, `type` " +
+                         "FROM `gremlin_collection`")) {
+                Assert.assertTrue(rs.next());
+                Assert.assertEquals("g.E()", rs.getString(1));
+                Assert.assertEquals("", rs.getString(2));
+                Assert.assertEquals("", rs.getString(3));
+                Assert.assertEquals("", rs.getString(4));
+            }
+        }
+    }
+
+    @Test
+    public void testSchemaMigratorIsNoopOnFreshSchema() throws Exception {
+        String url = "jdbc:h2:mem:fresh_schema_columns;DB_CLOSE_DELAY=-1";
+        try (Connection conn = DriverManager.getConnection(url)) {
+            ScriptUtils.executeSqlScript(conn, new FileSystemResource(
+                                         this.mainSchemaPath()));
+
+            DatabaseSchemaMigrator migrator = new DatabaseSchemaMigrator();
+            migrator.migrate(conn);
+            migrator.migrate(conn);
+
+            this.assertColumnExists(conn, "EXECUTE_HISTORY", "GRAPHSPACE");
+            this.assertColumnExists(conn, "GREMLIN_COLLECTION", "TYPE");
+            // The fresh schema keeps its own column types untouched
+            try (ResultSet columns = conn.getMetaData().getColumns(
+                    null, null, "EXECUTE_HISTORY", "GRAPHSPACE")) {
+                Assert.assertTrue(columns.next());
+                Assert.assertEquals(48, columns.getInt("COLUMN_SIZE"));
+            }
+        }
+    }
+
+    private void assertColumnExists(Connection conn, String table,
+                                    String column) throws Exception {
+        try (ResultSet columns = conn.getMetaData().getColumns(
+                null, null, table, column)) {
+            Assert.assertTrue(table + "." + column + " should exist",
+                              columns.next());
+        }
+    }
+
+    private Path legacySchemaPath() {
+        Path modulePath = Paths.get("src/test/resources/database/schema.sql");
+        if (Files.exists(modulePath)) {
+            return modulePath;
+        }
+        return Paths.get("hugegraph-hubble/hubble-be/src/test/resources/" +
+                         "database/schema.sql");
+    }
+
     private void insertDeepPath(Connection conn, String deepPath)
             throws Exception {
         try (PreparedStatement insert = conn.prepareStatement(

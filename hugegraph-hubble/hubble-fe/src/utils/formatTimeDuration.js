@@ -27,10 +27,16 @@ import _ from 'lodash';
 
 export default function formatTimeDuration(start, end) {
     const duration = intervalToDuration({start, end});
-    const {days, hours, minutes, seconds} = duration || {};
-    const preFormatedDuration = formatDuration(duration, {format: ['days', 'hours', 'minutes', 'seconds']});
+    const preFormatedDuration = formatDuration(
+        duration,
+        {format: ['years', 'months', 'days', 'hours', 'minutes', 'seconds']}
+    );
 
     const replaceMap = {
+        ' years': 'y',
+        ' year': 'y',
+        ' months': 'mo',
+        ' month': 'mo',
         ' days': 'd',
         ' day': 'd',
         ' hours': 'h',
@@ -47,8 +53,7 @@ export default function formatTimeDuration(start, end) {
             formatedDuration = _.replace(formatedDuration, key, replaceMap[key]);
         }
     );
-    const restMilliSecond = end - start - seconds * 1000 - minutes * 1000 * 60
-    - hours * 1000 * 60 * 60 - days * 1000 * 60 * 60 * 24;
+    const restMilliSecond = (end - start) % 1000;
 
     formatedDuration = formatedDuration + ` ${restMilliSecond}ms`;
     return formatedDuration;

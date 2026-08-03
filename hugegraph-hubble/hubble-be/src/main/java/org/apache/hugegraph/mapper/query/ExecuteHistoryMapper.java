@@ -32,16 +32,28 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 @Component
 public interface ExecuteHistoryMapper extends BaseMapper<ExecuteHistory> {
 
-    // 删除超出限制的记录
+    // 删除超出限制的记录, 按 (graphspace, graph) 分别保留最新的 limit 条
     default void deleteExceedLimit(int limit) {
-        List<Long> ids = findIdsToDelete(limit, limit);
-        if (!ids.isEmpty()) {
-            deleteBatchIds(ids);
+        for (ExecuteHistory scope : findScopes()) {
+            List<Long> ids = findIdsNewestFirst(scope.getGraphspace(),
+                                                scope.getGraph());
+            if (ids.size() > limit) {
+                // 在 Java 侧切分而不是用 SQL 的 OFFSET: 带绑定参数的
+                // LIMIT/OFFSET 在不同数据库下语义不一致, 会删错行.
+                deleteBatchIds(ids.subList(limit, ids.size()));
+            }
         }
     }
 
-    // 查询满足条件的 id 列表
-    @Select("SELECT id FROM `execute_history` ORDER BY `create_time` DESC " +
-            "LIMIT #{limit} OFFSET #{offset}")
-    List<Long> findIdsToDelete(@Param("limit") int limit, @Param("offset") int offset);
+    // 查询所有出现过的 (graphspace, graph) 组合
+    @Select("SELECT `graphspace`, `graph` FROM `execute_history` " +
+            "GROUP BY `graphspace`, `graph`")
+    List<ExecuteHistory> findScopes();
+
+    // 按时间倒序查询该 graphspace/graph 下的全部 id, 最新的在最前
+    @Select("SELECT `id` FROM `execute_history` " +
+            "WHERE `graphspace` = #{graphspace} AND `graph` = #{graph} " +
+            "ORDER BY `create_time` DESC, `id` DESC")
+    List<Long> findIdsNewestFirst(@Param("graphspace") String graphspace,
+                                  @Param("graph") String graph);
 }

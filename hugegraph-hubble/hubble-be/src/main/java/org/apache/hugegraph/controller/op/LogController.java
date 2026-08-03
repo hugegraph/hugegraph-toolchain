@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 
@@ -79,8 +80,13 @@ public class LogController extends BaseController {
     @PostMapping("export")
     public void export(HttpServletResponse response,
                        @RequestBody LogService.LogReq logReq) {
-        String fileName = String.format("log.txt", logReq.startDatetime,
-                                        logReq.endDatetime);
+        SimpleDateFormat dateFormat =
+                new SimpleDateFormat("yyyyMMddHHmmss");
+        String start = logReq.startDatetime == null ?
+                       "begin" : dateFormat.format(logReq.startDatetime);
+        String end = logReq.endDatetime == null ?
+                     "end" : dateFormat.format(logReq.endDatetime);
+        String fileName = String.format("log_%s_%s.txt", start, end);
 
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/octet-stream");

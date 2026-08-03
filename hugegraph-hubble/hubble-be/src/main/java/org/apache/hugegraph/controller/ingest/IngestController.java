@@ -83,6 +83,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -158,6 +159,7 @@ public class IngestController extends BaseController {
         Long limit = this.config.get(HubbleOptions.UPLOAD_SINGLE_FILE_SIZE_LIMIT);
         Ex.check(file.getSize() <= limit, "load.upload.file.exceed-single-size",
                  limit);
+        this.checkFileFormatValid(fileName);
 
         Path uploadRoot = Paths.get(this.config.get(HubbleOptions.UPLOAD_FILE_LOCATION))
                                .toAbsolutePath()
@@ -503,6 +505,26 @@ public class IngestController extends BaseController {
     }
 
     // ===== Helpers =====
+
+    /**
+     * Same format-whitelist check as
+     * FileUploadController#checkFileValid
+     */
+    private void checkFileFormatValid(String fileName) {
+        String format = FilenameUtils.getExtension(fileName);
+        Ex.check(StringUtils.isNotBlank(format),
+                 "load.upload.file.format.unsupported");
+        List<String> formatWhiteList = this.config.get(
+                                       HubbleOptions.UPLOAD_FILE_FORMAT_LIST);
+        String normalizedFormat = format.toLowerCase(Locale.ROOT);
+        boolean supported = formatWhiteList != null &&
+                            formatWhiteList.stream()
+                                           .filter(StringUtils::isNotBlank)
+                                           .map(String::trim)
+                                           .map(item -> item.toLowerCase(Locale.ROOT))
+                                           .anyMatch(normalizedFormat::equals);
+        Ex.check(supported, "load.upload.file.format.unsupported");
+    }
 
     private GraphConnection graphConnection(String graphSpace, String graph) {
         GraphConnection connection = new GraphConnection();

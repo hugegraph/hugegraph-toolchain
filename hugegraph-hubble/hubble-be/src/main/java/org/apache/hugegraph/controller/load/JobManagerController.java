@@ -201,9 +201,17 @@ public class JobManagerController {
             if (task.getStatus() == LoadStatus.FAILED) {
                 FileMapping mapping = this.fmService.get(graphSpace, graph, id,
                                                           fileId);
-                reason = this.taskService.readLoadFailedReason(mapping);
+                if (mapping == null) {
+                    // The file mapping may have been deleted while the task
+                    // still references its file id, keep the same fallback
+                    // message as LoadTaskService.readLoadFailedReason()
+                    reason = "For some reason, the error file was not " +
+                             "generated. Please check the log for details";
+                } else {
+                    reason = this.taskService.readLoadFailedReason(mapping);
+                }
             }
-            reasonResult.setTaskId(task.getJobId());
+            reasonResult.setTaskId(task.getId());
             reasonResult.setFileId(task.getFileId());
             reasonResult.setFileName(task.getFileName());
             reasonResult.setReason(reason);

@@ -46,17 +46,32 @@ const ImportData = props => {
 
     const handleUploadChange = useCallback(
         info => {
-            if (info.file.status === 'uploading') {
+            const {status, response} = info.file;
+
+            if (status === 'uploading') {
                 onUploadChange(LOADING);
+                return;
             }
-            if (info.file.status === 'done') {
-                const {response} = info.fileList[0];
-                if (response.status === 200) {
+
+            // antd emits 'error' on HTTP/network failure. Without this branch the
+            // canvas stays in LOADING forever. An error page body is not JSON, so
+            // `response.message` may be missing entirely.
+            if (status === 'error') {
+                const failure = response?.message || t('analysis.canvas.import_failed');
+                onUploadChange(UPLOAD_FAILED, failure);
+                message.error(failure);
+                return;
+            }
+
+            if (status === 'done') {
+                if (response?.status === 200) {
                     onUploadChange(SUCCESS, t('analysis.canvas.import_success'), response.data);
                     message.success(t('analysis.canvas.import_success'));
                     return;
                 }
-                onUploadChange(UPLOAD_FAILED, response.message);
+
+                const failure = response?.message || t('analysis.canvas.import_failed');
+                onUploadChange(UPLOAD_FAILED, failure);
             }
         },
         [onUploadChange, t]

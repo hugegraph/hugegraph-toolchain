@@ -19,6 +19,8 @@
 package org.apache.hugegraph.controller.load;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.common.Constant;
@@ -30,6 +32,7 @@ import org.apache.hugegraph.entity.load.FileSetting;
 import org.apache.hugegraph.entity.load.ElementMapping;
 import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.entity.load.LoadParameter;
+import org.apache.hugegraph.entity.load.LoadTask;
 import org.apache.hugegraph.entity.load.VertexMapping;
 import org.apache.hugegraph.entity.load.EdgeMapping;
 import org.apache.hugegraph.entity.schema.EdgeLabelEntity;
@@ -37,6 +40,7 @@ import org.apache.hugegraph.entity.schema.VertexLabelEntity;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.service.load.FileMappingService;
 import org.apache.hugegraph.service.load.JobManagerService;
+import org.apache.hugegraph.service.load.LoadTaskService;
 import org.apache.hugegraph.service.schema.EdgeLabelService;
 import org.apache.hugegraph.service.schema.VertexLabelService;
 import org.apache.hugegraph.util.CollectionUtil;
@@ -54,6 +58,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -71,6 +76,8 @@ public class FileMappingController extends BaseController {
     private FileMappingService service;
     @Autowired
     private JobManagerService jobService;
+    @Autowired
+    private LoadTaskService taskService;
 
     @GetMapping
     public IPage<FileMapping> list(@PathVariable("graphspace") String graphSpace,
@@ -108,9 +115,12 @@ public class FileMappingController extends BaseController {
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
         }
+        this.checkNoRunningTask(jobId, ImmutableSet.of(mapping.getId()));
 
         this.service.deleteDiskFile(mapping);
         this.service.remove(id);
+        this.decreaseJobSize(graphSpace, graph, jobId,
+                             ImmutableList.of(mapping));
     }
 
     @DeleteMapping
@@ -119,9 +129,19 @@ public class FileMappingController extends BaseController {
                       @PathVariable("jobId") int jobId) {
         List<FileMapping> mappings = this.service.listByJob(graphSpace, graph,
                                                             jobId);
+        Set<Integer> fileIds = new HashSet<>();
         for (FileMapping mapping : mappings) {
+            fileIds.add(mapping.getId());
+        }
+        // Check them all upfront, don't delete part of the mappings then fail
+        this.checkNoRunningTask(jobId, fileIds);
+
+        for (FileMapping mapping : mappings) {
+            // Otherwise the uploaded files would be leaked on disk forever
+            this.service.deleteDiskFile(mapping);
             this.service.remove(mapping.getId());
         }
+        this.decreaseJobSize(graphSpace, graph, jobId, mappings);
     }
 
     @PostMapping("{id}/file-setting")
@@ -322,6 +342,43 @@ public class FileMappingController extends BaseController {
         jobEntity.setJobStatus(JobStatus.SETTING);
         this.jobService.update(jobEntity);
         return jobEntity;
+    }
+
+    /**
+     * Deleting a file mapping whose data is being imported would make the
+     * loader thread fail in the middle of the import
+     */
+    private void checkNoRunningTask(int jobId, Set<Integer> fileIds) {
+        for (LoadTask task : this.taskService.taskListByJob(jobId)) {
+            if (task.getStatus() != null && task.getStatus().inRunning() &&
+                task.getFileId() != null &&
+                fileIds.contains(task.getFileId())) {
+                throw new ExternalException(
+                          "load.file-mapping.delete.task-in-running",
+                          task.getFileId());
+            }
+        }
+    }
+
+    /**
+     * Give the released size back to the job, otherwise the upload quota
+     * keeps inflating and later uploads are wrongly rejected
+     */
+    private void decreaseJobSize(String graphSpace, String graph, int jobId,
+                                 List<FileMapping> mappings) {
+        if (mappings.isEmpty()) {
+            return;
+        }
+        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
+        if (jobEntity == null) {
+            return;
+        }
+        long jobSize = jobEntity.getJobSize();
+        for (FileMapping mapping : mappings) {
+            jobSize -= mapping.getTotalSize();
+        }
+        jobEntity.setJobSize(Math.max(jobSize, 0L));
+        this.jobService.update(jobEntity);
     }
 
     private void checkVertexMappingValid(HugeClient client,

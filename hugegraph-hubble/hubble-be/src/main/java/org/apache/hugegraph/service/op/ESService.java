@@ -44,8 +44,11 @@ public abstract class ESService {
     @Autowired
     private HugeConfig config;
 
-    public static final String[] LEVELS = new String[]{"TRACE", "OFF",
-        "FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
+    // Ordered from the most severe to the least severe, LogService filters
+    // by Arrays.copyOfRange(LEVELS, 0, index + 1), so the prefix of this
+    // array must be exactly the levels at least as severe as the selected one
+    public static final String[] LEVELS = new String[]{"OFF", "FATAL",
+        "ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
     public static volatile ElasticsearchClient elasticsearchClient;
 

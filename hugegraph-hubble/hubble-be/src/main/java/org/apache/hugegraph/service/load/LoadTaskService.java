@@ -59,6 +59,7 @@ import org.apache.hugegraph.service.schema.EdgeLabelService;
 import org.apache.hugegraph.service.schema.VertexLabelService;
 import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -76,6 +77,8 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +90,10 @@ import org.apache.commons.lang3.StringUtils;
 @Log4j2
 @Service
 public class LoadTaskService {
+
+    public static final String NO_ERROR_FILE_REASON =
+            "For some reason, the error file was not generated. " +
+            "Please check the log for details";
 
     @Autowired
     private LoadTaskMapper mapper;
@@ -134,7 +141,8 @@ public class LoadTaskService {
         query.eq("graph", graph);
         query.eq("job_id", jobId);
         query.orderByDesc("create_time");
-        Page<LoadTask> page = new Page<>(pageNo, pageSize);
+        Page<LoadTask> page = new Page<>(pageNo,
+                                         PageUtil.boundedSize(pageSize));
         return this.mapper.selectPage(page, query);
     }
 
@@ -302,13 +310,24 @@ public class LoadTaskService {
     }
 
     public LoadTask pause(int taskId) {
+        /*
+         * The in-memory container is not repopulated on startup, so a task
+         * that was RUNNING before a restart is only visible in the database
+         */
         LoadTask task = this.runningTaskContainer.get(taskId);
+        boolean loading = task != null;
+        if (!loading) {
+            task = this.get(taskId);
+        }
+        Ex.check(task != null, "load.task.not-exist.id", taskId);
         Ex.check(task.getStatus() == LoadStatus.RUNNING,
                  "Can only pause the RUNNING task");
         // Mark status as paused, should set before context.stopLoading()
         task.setStatus(LoadStatus.PAUSED);
-        // Let HugeGraphLoader stop
-        task.stop();
+        if (loading) {
+            // Let HugeGraphLoader stop
+            task.stop();
+        }
 
         task.lock();
         try {
@@ -342,15 +361,22 @@ public class LoadTaskService {
 
     public LoadTask stop(int taskId) {
         LoadTask task = this.runningTaskContainer.get(taskId);
-        if (task == null) {
+        boolean loading = task != null;
+        if (!loading) {
             task = this.get(taskId);
         }
+        Ex.check(task != null, "load.task.not-exist.id", taskId);
         LoadStatus status = task.getStatus();
         Ex.check(status == LoadStatus.RUNNING || status == LoadStatus.PAUSED,
                  "Can only stop the RUNNING or PAUSED task");
         // Mark status as stopped
         task.setStatus(LoadStatus.STOPPED);
-        if (status == LoadStatus.RUNNING) {
+        /*
+         * Only a task taken from the in-memory container owns a loader, one
+         * restored from the database has nothing running to interrupt, so
+         * just persist the terminal status for it
+         */
+        if (loading && status == LoadStatus.RUNNING) {
             task.stop();
         }
 
@@ -387,6 +413,9 @@ public class LoadTaskService {
     }
 
     public String readLoadFailedReason(FileMapping mapping) {
+        if (mapping == null) {
+            return NO_ERROR_FILE_REASON;
+        }
         String path = mapping.getPath();
         File parentDir = FileUtils.getFile(path).getParentFile();
         File failureDataDir = FileUtils.getFile(parentDir, "mapping",
@@ -395,21 +424,28 @@ public class LoadTaskService {
         File[] errorFiles = failureDataDir.listFiles((dir, name) -> {
             return name.endsWith("error");
         });
-        if (errorFiles == null) {
-            return "For some reason, the error file was not generated. " +
-                   "Please check the log for details";
+        if (errorFiles == null || errorFiles.length == 0) {
+            return NO_ERROR_FILE_REASON;
         }
-        Ex.check(errorFiles.length == 1,
-                 "There should exist only one error file, actual is %s",
-                 errorFiles.length);
-        File errorFile = errorFiles[0];
-        try {
-            return FileUtils.readFileToString(errorFile,
-                                              Charset.defaultCharset());
-        } catch (IOException e) {
-            throw new InternalException("Failed to read error file %s",
-                                        e, errorFile);
+        /*
+         * A single run can legitimately produce both a parse error file and
+         * an insert error file, report the contents of all of them
+         */
+        Arrays.sort(errorFiles, Comparator.comparing(File::getName));
+        StringBuilder reason = new StringBuilder();
+        for (File errorFile : errorFiles) {
+            if (reason.length() > 0) {
+                reason.append(System.lineSeparator());
+            }
+            try {
+                reason.append(FileUtils.readFileToString(
+                              errorFile, Charset.defaultCharset()));
+            } catch (IOException e) {
+                throw new InternalException("Failed to read error file %s",
+                                            e, errorFile);
+            }
         }
+        return reason.toString();
     }
 
     public void pauseAllTasks() {

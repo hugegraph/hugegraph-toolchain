@@ -84,12 +84,21 @@ const BaseForm = ({cancel, visible, loading}) => {
 
     const checkExistName = () => ({
         validator: async (_, value) => {
-            const res = await api.manage.getTaskList({query: value}).then(res => {
+            const res = await api.manage.getTaskList({
+                query: value,
+                // `query` is a substring match, so the exact name can fall outside
+                // the default first page of 10 substring hits.
+                page_size: -1,
+            }).then(res => {
                 if (res.status !== 200) {
                     return t('task.edit.duplicate_check_failed');
                 }
 
-                if (res.data.total > 0) {
+                // The list endpoint treats `query` as a LIKE '%value%' match, so a
+                // non-zero total only means some name contains this one. Compare the
+                // returned names exactly before rejecting.
+                const records = res.data?.records ?? [];
+                if (records.some(item => item.task_name === value)) {
                     return t('task.edit.duplicate_name');
                 }
 

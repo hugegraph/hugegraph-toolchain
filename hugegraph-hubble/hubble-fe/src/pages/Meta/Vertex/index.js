@@ -204,6 +204,7 @@ const VertexTable = () => {
                 onChange={handleTable}
                 rowKey={rowKey}
                 loading={loading}
+                scroll={{x: 'max-content'}}
             />
 
             <EditVertexLayer

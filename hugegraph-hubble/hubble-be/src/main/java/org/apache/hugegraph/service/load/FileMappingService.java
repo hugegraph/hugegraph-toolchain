@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,6 +67,7 @@ import org.apache.hugegraph.mapper.load.JobManagerMapper;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import org.apache.hugegraph.util.StringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -81,6 +83,11 @@ public class FileMappingService {
     public static final String CONN_PREIFX = "graph-connection-";
     public static final String JOB_PREIFX = "job-";
     public static final String FILE_PREIFX = "file-mapping-";
+
+    private static final String TOKEN_SUFFIX_CHARS =
+            "0123456789abcdefghijklmnopqrstuvwxyz";
+    private static final int TOKEN_SUFFIX_LENGTH = 4;
+    private static final SecureRandom TOKEN_RANDOM = new SecureRandom();
 
     @Autowired
     private HugeConfig config;
@@ -149,7 +156,8 @@ public class FileMappingService {
         query.eq("job_id", jobId);
         query.eq("file_status", FileMappingStatus.COMPLETED.getValue());
         query.orderByDesc("create_time");
-        Page<FileMapping> page = new Page<>(pageNo, pageSize);
+        Page<FileMapping> page = new Page<>(pageNo,
+                                            PageUtil.boundedSize(pageSize));
         return this.mapper.selectPage(page, query);
     }
 
@@ -175,8 +183,24 @@ public class FileMappingService {
     }
 
     public String generateFileToken(String fileName) {
+        /*
+         * Append a short random suffix so that tokens cannot be guessed
+         * from the file name and upload time alone. Note that
+         * checkFileNameMatchToken() only checks the md5 prefix, so the
+         * token still passes that check.
+         */
         return this.fileTokenPrefix(fileName) +
-               HubbleUtil.nowTime().getEpochSecond();
+               HubbleUtil.nowTime().getEpochSecond() + "-" +
+               randomTokenSuffix();
+    }
+
+    private static String randomTokenSuffix() {
+        StringBuilder suffix = new StringBuilder(TOKEN_SUFFIX_LENGTH);
+        for (int i = 0; i < TOKEN_SUFFIX_LENGTH; i++) {
+            int index = TOKEN_RANDOM.nextInt(TOKEN_SUFFIX_CHARS.length());
+            suffix.append(TOKEN_SUFFIX_CHARS.charAt(index));
+        }
+        return suffix.toString();
     }
 
     public FileUploadResult uploadFile(MultipartFile srcFile, String fileName,

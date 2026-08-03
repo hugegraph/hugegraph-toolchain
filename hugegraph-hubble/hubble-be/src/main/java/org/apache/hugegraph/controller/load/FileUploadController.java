@@ -95,9 +95,10 @@ public class FileUploadController extends BaseController {
         for (String fileName : fileNames) {
             this.checkFileNameValid(fileName);
             String token = this.service.generateFileToken(fileName);
-            Ex.check(!this.uploadingTokenLocks().containsKey(token),
-                     "load.upload.file.token.existed");
-            this.uploadingTokenLocks().put(token, new ReentrantReadWriteLock());
+            // Atomic reservation to avoid a containsKey-then-put race
+            ReadWriteLock previous = this.uploadingTokenLocks().putIfAbsent(
+                    token, new ReentrantReadWriteLock());
+            Ex.check(previous == null, "load.upload.file.token.existed");
             tokens.put(fileName, token);
         }
         return tokens;

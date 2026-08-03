@@ -370,12 +370,15 @@ public class ExceptionAdvisor {
                     String origin = result.get("message").toString();
                     List<String> attach =
                             HubbleUtil.uncheckedCast(result.get("attach"));
+                    Object[] args = attach != null ? attach.toArray() :
+                                    new Object[0];
                     message = ErrorCodeMessage.getErrorMessage(code, origin,
-                                                               attach.toArray());
+                                                               args);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // Fall back to the original upstream message, never throw
+                // from inside the exception handler
                 log.error("hubble.error_code_parse_failed");
-                throw new RuntimeException("failed_to_handle_error_code");
             }
         }
         return message;

@@ -80,6 +80,7 @@
       "mode_2d": "2D Mode",
       "mode_3d": "3D Mode",
       "import_success": "Imported successfully",
+      "import_failed": "Import failed",
       "export_json": "Export JSON",
       "export_png": "Export image",
       "export_json_title": "Export JSON",

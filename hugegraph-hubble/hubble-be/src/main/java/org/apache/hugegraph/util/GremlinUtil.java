@@ -18,9 +18,7 @@
 
 package org.apache.hugegraph.util;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -312,31 +310,71 @@ public final class GremlinUtil {
     public static String optimizeLimit(String gremlin, int limit) {
         // FIXME: Do not treat suffix matching as a resource-safety boundary. Decide on
         // server-side timeout/result/byte limits without changing aggregation semantics.
-        String[] rawLines = StringUtils.split(gremlin, "\n");
-        List<String> newLines = new ArrayList<>(rawLines.length);
-        for (String rawLine : rawLines) {
-            boolean ignored = IGNORED_PATTERNS.stream().anyMatch(pattern -> {
-                return pattern.matcher(rawLine).find();
-            });
-            if (ignored) {
-                newLines.add(rawLine);
+        /*
+         * Scan the script with quote awareness: track single-quote,
+         * double-quote and backslash-escape state so that ';' and '\n'
+         * are treated as statement separators only when outside quotes.
+         * The suffix-pattern matching and '.limit(N)' appending are
+         * applied only to true statement tails (outside quotes).
+         */
+        StringBuilder result = new StringBuilder(gremlin.length());
+        StringBuilder statement = new StringBuilder();
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean escaped = false;
+        for (int i = 0; i < gremlin.length(); i++) {
+            char ch = gremlin.charAt(i);
+            if (escaped) {
+                statement.append(ch);
+                escaped = false;
                 continue;
             }
-            boolean matched = false;
-            for (Pattern pattern : LIMIT_PATTERNS) {
-                Matcher matcher = pattern.matcher(rawLine);
-                if (matcher.find()) {
-                    matched = true;
-                    break;
-                }
+            if ((inSingleQuote || inDoubleQuote) && ch == '\\') {
+                statement.append(ch);
+                escaped = true;
+                continue;
             }
-            if (matched) {
-                newLines.add(rawLine + ".limit(" + limit + ")");
-            } else {
-                newLines.add(rawLine);
+            if (ch == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+                statement.append(ch);
+                continue;
+            }
+            if (ch == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                statement.append(ch);
+                continue;
+            }
+            if ((ch == ';' || ch == '\n') && !inSingleQuote && !inDoubleQuote) {
+                result.append(optimizeStatement(statement.toString(), limit));
+                result.append(ch);
+                statement.setLength(0);
+                continue;
+            }
+            statement.append(ch);
+        }
+        if (inSingleQuote || inDoubleQuote) {
+            // Unclosed quote: never append '.limit(N)' inside a string
+            result.append(statement);
+        } else {
+            result.append(optimizeStatement(statement.toString(), limit));
+        }
+        return result.toString();
+    }
+
+    private static String optimizeStatement(String statement, int limit) {
+        boolean ignored = IGNORED_PATTERNS.stream().anyMatch(pattern -> {
+            return pattern.matcher(statement).find();
+        });
+        if (ignored) {
+            return statement;
+        }
+        for (Pattern pattern : LIMIT_PATTERNS) {
+            Matcher matcher = pattern.matcher(statement);
+            if (matcher.find()) {
+                return statement + ".limit(" + limit + ")";
             }
         }
-        return StringUtils.join(newLines, "\n");
+        return statement;
     }
 
     private static Set<Pattern> compile(Set<String> texts) {

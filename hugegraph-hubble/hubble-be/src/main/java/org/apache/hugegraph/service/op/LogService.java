@@ -146,8 +146,10 @@ public class LogService extends ESService {
                         HubbleUtil.uncheckedCast(hit.source())));
             }
 
-            int resultCount = (int) (search.hits().total().value());
-            if (resultCount < batchSize) {
+            // Break on the size of the returned batch, not on the total
+            // number of matches: total() may be null and is unrelated to
+            // whether another page exists
+            if (search.hits().hits().size() < batchSize) {
                 break;
             }
         }

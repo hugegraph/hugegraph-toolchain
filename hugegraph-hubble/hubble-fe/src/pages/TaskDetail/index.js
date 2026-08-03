@@ -28,7 +28,7 @@ const createColumns = t => [
     {
         title: t('task.detail.job_id'),
         dataIndex: 'job_id',
-        render: val => val.toString(),
+        render: val => (val === null || val === undefined ? '-' : val.toString()),
     },
     {
         title: t('task.detail.import_count'),
@@ -164,6 +164,7 @@ const TaskDetail = () => {
                         rowKey='job_id'
                         columns={columns}
                         dataSource={visibleData}
+                        scroll={{x: 'max-content'}}
                     />
                 </Spin>
             </div>

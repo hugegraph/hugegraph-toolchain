@@ -989,6 +989,7 @@
       "delete_confirm": "确认删除此边类型？",
       "delete_warning": "删除后无法恢复，请谨慎操作",
       "delete_task_note": "删除元数据耗时较久，详情可在异步任务中查看",
+      "parent_hint": "父边：{{name}}",
       "col": {
         "name": "边类型名称",
         "type": "边类型",

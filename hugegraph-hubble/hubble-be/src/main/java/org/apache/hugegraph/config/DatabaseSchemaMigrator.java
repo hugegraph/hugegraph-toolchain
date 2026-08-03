@@ -50,6 +50,27 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
     private static final String EXECUTE_HISTORY_TABLE = "execute_history";
     private static final String FAILURE_REASON_COLUMN = "failure_reason";
     private static final String LOAD_TASK_TABLE = "load_task";
+    private static final String GREMLIN_COLLECTION_TABLE =
+                                "gremlin_collection";
+    /*
+     * Columns added to `execute_history` after the legacy schema was
+     * released. Each entry is {column, type, backfill value or null}.
+     */
+    private static final String[][] EXECUTE_HISTORY_COLUMNS = {
+        {"conn_id", "INT", null},
+        {"graphspace", "VARCHAR(48)", "''"},
+        {"graph", "VARCHAR(48)", "''"},
+        {"async_id", "BIGINT", "0"},
+        {"text", "TEXT", "''"},
+        {"async_status", "TINYINT", "0"}
+    };
+    /* Columns added to `gremlin_collection` after the legacy schema. */
+    private static final String[][] GREMLIN_COLLECTION_COLUMNS = {
+        {"conn_id", "INT", null},
+        {"graphspace", "VARCHAR(48)", "''"},
+        {"graph", "VARCHAR(48)", "''"},
+        {"type", "VARCHAR(48)", "''"}
+    };
     private static final String[] LOAD_OPTION_CREDENTIALS = {
         "password", "token", "pdToken", "trustStoreToken"
     };
@@ -73,7 +94,56 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
         }
 
         this.migrateExecuteHistoryFailureReason(conn);
+        this.addMissingColumns(conn, EXECUTE_HISTORY_TABLE,
+                               EXECUTE_HISTORY_COLUMNS);
+        this.addMissingColumns(conn, GREMLIN_COLLECTION_TABLE,
+                               GREMLIN_COLLECTION_COLUMNS);
         this.removeLegacyLoadTaskCredentials(conn);
+    }
+
+    /**
+     * Add the columns a legacy Hubble database is missing. `CREATE TABLE IF
+     * NOT EXISTS` is a no-op against a pre-existing table, so an H2 file
+     * created by an older Hubble keeps its old column set and every query
+     * touching the newer columns fails. Each column is added nullable and
+     * then backfilled, which keeps the statement portable and idempotent:
+     * on a fresh database every column already exists and nothing is run.
+     */
+    private void addMissingColumns(Connection conn, String table,
+                                   String[][] columns) throws SQLException {
+        if (!this.tableExists(conn, table)) {
+            return;
+        }
+
+        String product = conn.getMetaData().getDatabaseProductName()
+                             .toLowerCase(Locale.ROOT);
+        if (!product.contains("h2") && !product.contains("mysql") &&
+            !product.contains("mariadb")) {
+            log.warn("Skip {} column migration for unsupported database " +
+                     "product {}", table,
+                     conn.getMetaData().getDatabaseProductName());
+            return;
+        }
+
+        for (String[] column : columns) {
+            String name = column[0];
+            if (this.columnExists(conn, table, name)) {
+                continue;
+            }
+            try (Statement statement = conn.createStatement()) {
+                statement.execute(String.format(
+                        "ALTER TABLE `%s` ADD COLUMN `%s` %s DEFAULT NULL",
+                        table, name, column[1]));
+            }
+            if (column[2] != null) {
+                try (Statement statement = conn.createStatement()) {
+                    statement.executeUpdate(String.format(
+                            "UPDATE `%s` SET `%s` = %s WHERE `%s` IS NULL",
+                            table, name, column[2], name));
+                }
+            }
+            log.info("Added {}.{} {}", table, name, column[1]);
+        }
     }
 
     private void migrateFileMappingPath(Connection conn, int currentLength)
@@ -181,6 +251,24 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
                                                    new String[]{"TABLE"})) {
                 if (rs.next()) {
                     return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean columnExists(Connection conn, String table, String column)
+            throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        String[] tables = {table, table.toUpperCase(Locale.ROOT)};
+        String[] columns = {column, column.toUpperCase(Locale.ROOT)};
+        for (String tableName : tables) {
+            for (String columnName : columns) {
+                try (ResultSet rs = metaData.getColumns(null, null, tableName,
+                                                        columnName)) {
+                    if (rs.next()) {
+                        return true;
+                    }
                 }
             }
         }

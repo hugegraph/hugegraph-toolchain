@@ -40,6 +40,7 @@ import org.apache.hugegraph.mapper.query.ExecuteHistoryMapper;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.structure.Task;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -77,7 +78,8 @@ public class ExecuteHistoryService {
         if (text2Gremlin) {
             query.apply("LENGTH(text) > 0");
         }
-        Page<ExecuteHistory> page = new Page<>(current, pageSize);
+        Page<ExecuteHistory> page = new Page<>(current,
+                                               PageUtil.boundedSize(pageSize));
         IPage<ExecuteHistory> results = this.mapper.selectPage(page, query);
 
         int limit = this.config.get(HubbleOptions.EXECUTE_HISTORY_SHOW_LIMIT);

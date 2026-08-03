@@ -40,6 +40,7 @@ import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.mapper.load.JobManagerMapper;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -100,7 +101,8 @@ public class JobManagerService {
             query.like("job_name", content);
         }
         query.orderByDesc("create_time");
-        Page<JobManager> page = new Page<>(pageNo, pageSize);
+        Page<JobManager> page = new Page<>(pageNo,
+                                           PageUtil.boundedSize(pageSize));
         IPage<JobManager> list = this.mapper.selectPage(page, query);
         list.getRecords().forEach(task -> {
             this.refreshStatus(task);
@@ -122,9 +124,8 @@ public class JobManagerService {
             query.like("job_name", content);
         }
         query.orderByDesc("create_time");
-        IPage<JobManager> list = this.mapper.selectPage(new Page<>(pageNo,
-                                                                   pageSize),
-                                                        query);
+        IPage<JobManager> list = this.mapper.selectPage(
+                new Page<>(pageNo, PageUtil.boundedSize(pageSize)), query);
         list.getRecords().forEach(this::refreshStatus);
         return list;
     }

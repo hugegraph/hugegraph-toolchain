@@ -59,7 +59,12 @@ public class HStoreController extends BaseController {
                                    defaultValue = "10") int pageSize) {
 
         HugeClient client = this.authClient(null, null);
-        return hStoreService.listPage(client, pageNo, pageSize);
+        try {
+            return hStoreService.listPage(client, pageNo, pageSize);
+        } catch (ServerException e) {
+            throw new ServerCapabilityUnavailableException(
+                    "server.capability.hstore-status.unavailable", e);
+        }
     }
 
     @GetMapping("nodes/{id}")
@@ -67,8 +72,14 @@ public class HStoreController extends BaseController {
         HugeClient client = this.authClient(null, null);
         E.checkNotNull(id, "id");
 
-        List<HStoreNodeInfo.HStorePartitionInfo> partitions =
-                client.hStoreManager().get(id).hStorePartitionInfoList();
+        List<HStoreNodeInfo.HStorePartitionInfo> partitions;
+        try {
+            partitions = client.hStoreManager().get(id)
+                               .hStorePartitionInfoList();
+        } catch (ServerException e) {
+            throw new ServerCapabilityUnavailableException(
+                    "server.capability.hstore-status.unavailable", e);
+        }
         return ImmutableMap.of("shards", partitions);
     }
 
@@ -104,7 +115,12 @@ public class HStoreController extends BaseController {
     @GetMapping("split")
     public void triggerSplit() {
         HugeClient client = this.authClient(null, null);
-        client.hStoreManager().startSplit();
+        try {
+            client.hStoreManager().startSplit();
+        } catch (ServerException e) {
+            throw new ServerCapabilityUnavailableException(
+                    "server.capability.hstore-status.unavailable", e);
+        }
     }
 
     /**
@@ -124,6 +140,9 @@ public class HStoreController extends BaseController {
         for (String nodeId: nodes) {
             try {
                 client.hStoreManager().nodeStartup(nodeId);
+            } catch (ServerException e) {
+                throw new ServerCapabilityUnavailableException(
+                        "server.capability.hstore-status.unavailable", e);
             } catch (RuntimeException e) {
                 log.info("startup hstore node({}) success", successNodes);
                 log.warn("startup hstore node({}) error", nodeId, e);
@@ -153,6 +172,9 @@ public class HStoreController extends BaseController {
         for (String nodeId: nodes) {
             try {
                 client.hStoreManager().nodeShutdown(nodeId);
+            } catch (ServerException e) {
+                throw new ServerCapabilityUnavailableException(
+                        "server.capability.hstore-status.unavailable", e);
             } catch (RuntimeException e) {
                 log.info("shutdown hstore node({}) success", successNodes);
                 log.warn("shutdown hstore node({}) error", nodeId, e);

@@ -257,13 +257,8 @@ public class QueryService {
     private String optimize(String content) {
         // Optimize each gremlin statemnts
         int limit = this.config.get(HubbleOptions.GREMLIN_SUFFIX_LIMIT);
-        String[] originalParts = StringUtils.split(content, ";");
-        String[] optimizeParts = new String[originalParts.length];
-        for (int i = 0; i < originalParts.length; i++) {
-            String part = originalParts[i];
-            optimizeParts[i] = GremlinUtil.optimizeLimit(part, limit);
-        }
-        return StringUtils.join(optimizeParts, ";");
+        // The statement splitting is quote-aware, see GremlinUtil
+        return GremlinUtil.optimizeLimit(content, limit);
     }
 
     private ResultSet executeGremlin(String gremlin, HugeClient client) {

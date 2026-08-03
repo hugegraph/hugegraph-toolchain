@@ -32,8 +32,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @Builder
 @TableName("edit_history")
 public class ElementEditHistory implements Identifiable, Mergeable {

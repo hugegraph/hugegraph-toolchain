@@ -32,6 +32,7 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
     const {t} = useTranslation();
     const [form] = Form.useForm();
     const [syncType, setSyncType] = useState('');
+    const [loading, setLoading] = useState(false);
     const datasourceType = data?.ingestion_mapping?.structs[0]?.input?.type;
     const scheduleOptions = datasourceType === 'KAFKA'
         ? [{label: t('task.sync.realtime'), value: 'REALTIME'}]
@@ -51,21 +52,34 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 delete values.task_schedule_extend;
             }
 
+            setLoading(true);
+            // The OK spinner must clear on every outcome, including a rejected
+            // request, otherwise the button stays locked with the modal open.
             api.manage.updateTask(data.task_id, values).then(res => {
-                if (res.status === 200) {
+                setLoading(false);
+
+                if (res?.status === 200) {
                     message.success(t('task.edit.update_success'));
                     onCancel();
                     refresh();
                     return;
                 }
 
-                message.error(res.message);
+                message.error(res?.message || t('common.msg.operation_failed'));
+            }).catch(() => {
+                setLoading(false);
+                message.error(t('common.msg.operation_failed'));
             });
+        }).catch(error => {
+            if (!error?.errorFields) {
+                message.error(t('common.msg.operation_failed'));
+            }
         });
     }, [data.task_id, form, onCancel, refresh, syncType, t]);
 
     useEffect(() => {
         if (!visible) {
+            setLoading(false);
             return;
         }
         api.manage.getTaskDetail(data.task_id).then(res => {
@@ -86,6 +100,7 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
             onCancel={onCancel}
             open={visible}
             onOk={onFinish}
+            confirmLoading={loading}
             destroyOnClose
         >
             <Form
