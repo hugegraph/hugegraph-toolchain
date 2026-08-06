@@ -545,7 +545,8 @@
         "similarity_value": "Similarity Value",
         "rank_score": "Rank Score:",
         "category": "Category {{index}}",
-        "no_neighbor_at_degree": "No {{index}}-hop neighbors in this scenario"
+        "no_neighbor_at_degree": "No {{index}}-hop neighbors in this scenario",
+        "no_graph_result": "This algorithm returned no graph result to display"
       },
       "mode": {
         "OLTP": "Interactive exploration",

@@ -536,7 +536,7 @@ const GraphResult = props => {
                 return (
                     <GraphStatusView
                         status={SUCCESS}
-                        message={t('analysis.query_result.no_graph_result')}
+                        message={t('analysis.algorithm.result.no_graph_result')}
                     />
                 );
             }

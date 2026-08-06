@@ -35,7 +35,7 @@ const RankApiView = props => {
         return (
             <GraphStatusView
                 status={GRAPH_STATUS.SUCCESS}
-                message={t('analysis.query_result.no_graph_result')}
+                message={t('analysis.algorithm.result.no_graph_result')}
             />
         );
     }
