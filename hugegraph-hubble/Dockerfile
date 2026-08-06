@@ -38,6 +38,11 @@ RUN set -x \
 
 FROM eclipse-temurin:11-jre-jammy
 
+RUN apt-get -q update \
+    && apt-get install --no-install-recommends curl -yq \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /pkg/hugegraph-hubble/apache-hugegraph-hubble-*/ /hubble
 WORKDIR /hubble/
 

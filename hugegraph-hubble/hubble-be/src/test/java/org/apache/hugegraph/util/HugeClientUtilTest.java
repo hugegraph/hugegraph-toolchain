@@ -18,6 +18,7 @@
 package org.apache.hugegraph.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +37,17 @@ public class HugeClientUtilTest {
 
     @Test
     public void testTokenClientSendsBearerToGremlin() throws Exception {
+        this.assertAuthorizationHeader("jwt-value", "Bearer jwt-value");
+    }
+
+    @Test
+    public void testTokenClientDoesNotDuplicateBearerScheme() throws Exception {
+        this.assertAuthorizationHeader(" bearer jwt-value ",
+                                       "Bearer jwt-value");
+    }
+
+    private void assertAuthorizationHeader(String token, String expected)
+                                           throws Exception {
         AtomicReference<String> authorization = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1",
                                                                     0), 0);
@@ -59,11 +71,11 @@ public class HugeClientUtilTest {
                                                     .port(server.getAddress()
                                                                 .getPort())
                                                     .timeout(5)
-                                                    .token("jwt-value")
+                                                    .token(token)
                                                     .build();
         try (HugeClient client = HugeClientUtil.tryConnect(connection)) {
             client.gremlin().execute(new GremlinRequest("g.V().count()"));
-            Assert.assertEquals("Bearer jwt-value", authorization.get());
+            Assert.assertEquals(expected, authorization.get());
         } finally {
             server.stop(0);
         }
@@ -72,6 +84,9 @@ public class HugeClientUtilTest {
     private static void respond(HttpExchange exchange, String response)
                                 throws IOException {
         byte[] body = response.getBytes(StandardCharsets.UTF_8);
+        try (InputStream input = exchange.getRequestBody()) {
+            input.transferTo(OutputStream.nullOutputStream());
+        }
         exchange.sendResponseHeaders(200, body.length);
         try (OutputStream output = exchange.getResponseBody()) {
             output.write(body);

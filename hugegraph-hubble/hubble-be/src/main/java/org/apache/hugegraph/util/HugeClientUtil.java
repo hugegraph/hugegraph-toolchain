@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableSet;
 public final class HugeClientUtil {
 
     private static final String DEFAULT_PROTOCOL = "http";
+    private static final String BEARER_SCHEME = "Bearer";
 
     private static final Set<String> ACCEPTABLE_EXCEPTIONS = ImmutableSet.of(
             "Permission denied: execute Resource"
@@ -113,10 +114,22 @@ public final class HugeClientUtil {
         }
 
         if (StringUtils.isNotBlank(connection.getToken())) {
-            client.setAuthContext("Bearer " + connection.getToken().trim());
+            client.setAuthContext(bearerAuthContext(connection.getToken()));
         }
 
         return client;
+    }
+
+    public static String bearerAuthContext(String token) {
+        String normalized = StringUtils.trimToEmpty(token);
+        int schemeLength = BEARER_SCHEME.length();
+        if (normalized.length() >= schemeLength &&
+            normalized.regionMatches(true, 0, BEARER_SCHEME, 0, schemeLength) &&
+            (normalized.length() == schemeLength ||
+             Character.isWhitespace(normalized.charAt(schemeLength)))) {
+            normalized = normalized.substring(schemeLength).trim();
+        }
+        return BEARER_SCHEME + " " + normalized;
     }
 
     private static String normalizeToken(String token) {
