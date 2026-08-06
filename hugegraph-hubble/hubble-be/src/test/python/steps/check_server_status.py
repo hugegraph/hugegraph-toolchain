@@ -30,7 +30,7 @@ use_step_matcher("re")
 @when("scene:(?P<scene>.+) url:(?P<url>.+)")
 def step_impl(context, scene, url):
     http_url = "http://" + url + "/about"
-    context.response = requests.get(http_url)
+    context.response = requests.get(http_url, timeout=5)
     context.code = context.response.status_code
     context.json = context.response.json()
 

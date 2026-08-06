@@ -56,6 +56,7 @@ class HubbleReadinessTest(unittest.TestCase):
             self.assertIn("server.port=19088", configured)
             self.assertNotIn("hubble.host=", configured)
             self.assertNotIn("hubble.port=", configured)
+            self.assertNotIn("server.address=", configured)
 
     def test_readiness_rejects_spa_html(self):
         self.assertFalse(SMOKE.is_hubble_readiness_response(
@@ -63,10 +64,14 @@ class HubbleReadinessTest(unittest.TestCase):
 
     def test_readiness_requires_about_response_shape(self):
         self.assertFalse(SMOKE.is_hubble_readiness_response(
-            {"status": 200, "data": {"name": "HugeGraph-Hubble"}}))
-        self.assertTrue(SMOKE.is_hubble_readiness_response({
+            {"status": 200, "data": {"name": "hugegraph-hubble"}}))
+        self.assertFalse(SMOKE.is_hubble_readiness_response({
             "status": 200,
             "data": {"name": "HugeGraph-Hubble", "version": "3.0.0"}
+        }))
+        self.assertTrue(SMOKE.is_hubble_readiness_response({
+            "status": 200,
+            "data": {"name": "hugegraph-hubble", "version": "3.0.0"}
         }))
 
     @mock.patch.object(SMOKE, "request")

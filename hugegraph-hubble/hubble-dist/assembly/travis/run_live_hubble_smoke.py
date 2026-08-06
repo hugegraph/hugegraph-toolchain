@@ -84,7 +84,7 @@ def is_hubble_readiness_response(response):
         return False
     data = response.get("data")
     return (isinstance(data, dict) and
-            isinstance(data.get("name"), str) and bool(data["name"]) and
+            data.get("name") == "hugegraph-hubble" and
             isinstance(data.get("version"), str) and bool(data["version"]))
 
 

@@ -97,6 +97,28 @@ public class BaseControllerGremlinClientTest {
         Mockito.verify(tokenClient).setAuthContext("Bearer jwt-token");
     }
 
+    @Test
+    public void testInvalidTokenIsRejectedForReusedTemporaryClient() {
+        HugeClient tokenClient = Mockito.mock(HugeClient.class);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "Bearer   ");
+        request.setAttribute("hugeClient", tokenClient);
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+
+        TestController controller = new TestController();
+
+        try {
+            controller.temporaryTokenClient();
+            Assert.fail("Expected a scheme-only Bearer token to be rejected");
+        } catch (IllegalArgumentException ignored) {
+            // Expected
+        }
+        Mockito.verify(tokenClient, Mockito.never())
+               .setAuthContext(Mockito.anyString());
+    }
+
     private MockHttpServletRequest requestWithAuth() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");

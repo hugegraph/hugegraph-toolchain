@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hugegraph.api.gremlin.GremlinRequest;
@@ -46,17 +47,61 @@ public class HugeClientUtilTest {
                                        "Bearer jwt-value");
     }
 
-    private void assertAuthorizationHeader(String token, String expected)
-                                           throws Exception {
-        AtomicReference<String> authorization = new AtomicReference<>();
+    @Test
+    public void testUnauthenticatedClientDoesNotSendAuthorization()
+            throws Exception {
+        this.assertAuthorizationHeader(null, null);
+    }
+
+    @Test
+    public void testBearerAuthContextRejectsMissingPayload() {
+        this.assertInvalidBearerToken(null);
+        this.assertInvalidBearerToken("");
+        this.assertInvalidBearerToken("   ");
+        this.assertInvalidBearerToken("Bearer");
+        this.assertInvalidBearerToken(" bearer   ");
+        this.assertInvalidBearerToken("Bearer\u2003");
+    }
+
+    @Test
+    public void testSchemeOnlyTokenIsRejectedBeforeVersionRequest()
+            throws Exception {
+        AtomicInteger requests = new AtomicInteger();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1",
                                                                     0), 0);
-        server.createContext("/versions", exchange -> respond(exchange,
-                             "{\"versions\":{\"core\":\"1.8.0\"," +
-                             "\"gremlin\":\"3.7.3\",\"api\":\"0.71\"}}"));
+        server.createContext("/versions", exchange -> {
+            requests.incrementAndGet();
+            respond(exchange, "{\"versions\":{\"core\":\"1.8.0\"," +
+                    "\"gremlin\":\"3.7.3\",\"api\":\"0.71\"}}");
+        });
+        server.start();
+
+        GraphConnection connection = this.connection(server, "Bearer\u2003");
+        try {
+            HugeClientUtil.tryConnect(connection);
+            Assert.fail("Expected a scheme-only Bearer token to be rejected");
+        } catch (IllegalArgumentException ignored) {
+            Assert.assertEquals(0, requests.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private void assertAuthorizationHeader(String token, String expected)
+                                           throws Exception {
+        AtomicReference<String> versionAuthorization = new AtomicReference<>();
+        AtomicReference<String> gremlinAuthorization = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1",
+                                                                    0), 0);
+        server.createContext("/versions", exchange -> {
+            versionAuthorization.set(exchange.getRequestHeaders()
+                                             .getFirst("Authorization"));
+            respond(exchange, "{\"versions\":{\"core\":\"1.8.0\"," +
+                    "\"gremlin\":\"3.7.3\",\"api\":\"0.71\"}}");
+        });
         server.createContext("/gremlin", exchange -> {
-            authorization.set(exchange.getRequestHeaders()
-                                      .getFirst("Authorization"));
+            gremlinAuthorization.set(exchange.getRequestHeaders()
+                                             .getFirst("Authorization"));
             respond(exchange, "{\"requestId\":\"1\"," +
                      "\"status\":{\"message\":\"\",\"code\":200," +
                      "\"attributes\":{}}," +
@@ -64,20 +109,33 @@ public class HugeClientUtilTest {
         });
         server.start();
 
-        GraphConnection connection = GraphConnection.builder()
-                                                    .graphSpace("DEFAULT")
-                                                    .graph("hugegraph")
-                                                    .host("127.0.0.1")
-                                                    .port(server.getAddress()
-                                                                .getPort())
-                                                    .timeout(5)
-                                                    .token(token)
-                                                    .build();
+        GraphConnection connection = this.connection(server, token);
         try (HugeClient client = HugeClientUtil.tryConnect(connection)) {
+            Assert.assertEquals(expected, versionAuthorization.get());
             client.gremlin().execute(new GremlinRequest("g.V().count()"));
-            Assert.assertEquals(expected, authorization.get());
+            Assert.assertEquals(expected, gremlinAuthorization.get());
         } finally {
             server.stop(0);
+        }
+    }
+
+    private GraphConnection connection(HttpServer server, String token) {
+        return GraphConnection.builder()
+                              .graphSpace("DEFAULT")
+                              .graph("hugegraph")
+                              .host("127.0.0.1")
+                              .port(server.getAddress().getPort())
+                              .timeout(5)
+                              .token(token)
+                              .build();
+    }
+
+    private void assertInvalidBearerToken(String token) {
+        try {
+            HugeClientUtil.bearerAuthContext(token);
+            Assert.fail("Expected an invalid Bearer token to be rejected");
+        } catch (IllegalArgumentException ignored) {
+            // Expected
         }
     }
 

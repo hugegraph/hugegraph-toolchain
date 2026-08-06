@@ -197,8 +197,11 @@ public abstract class BaseController {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
             HugeClient client = (HugeClient) request.getAttribute("hugeClient");
-            client.setAuthContext(
-                    HugeClientUtil.bearerAuthContext(this.getToken()));
+            String token = this.getToken();
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(token)) {
+                client.setAuthContext(
+                        HugeClientUtil.bearerAuthContext(token));
+            }
             return client;
         }
         HugeClient client = this.hugeClientPoolService.createTempTokenClient(this.getToken());
