@@ -44,8 +44,14 @@ RUN apt-get -q update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /pkg/hugegraph-hubble/apache-hugegraph-hubble-*/ /hubble
-RUN sed -i 's/^server.host=.*/server.host=0.0.0.0/' \
-    /hubble/conf/hugegraph-hubble.properties
+RUN sed -i \
+    -e 's/^server\.host=.*/server.host=0.0.0.0/' \
+    -e 's/^dashboard\.address=.*/dashboard.address=/' \
+    /hubble/conf/hugegraph-hubble.properties \
+    && grep -Fqx 'server.host=0.0.0.0' \
+        /hubble/conf/hugegraph-hubble.properties \
+    && grep -Fqx 'dashboard.address=' \
+        /hubble/conf/hugegraph-hubble.properties
 WORKDIR /hubble/
 
 # SECURITY: This is a plain HTTP port. Do not publish it to an untrusted network;
