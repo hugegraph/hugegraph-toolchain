@@ -138,6 +138,26 @@ public class GraphSpaceServiceTest {
     }
 
     @Test
+    public void testMetricsPreservesUnavailableElementCounts() {
+        GraphSpaceService spy = Mockito.spy(this.service);
+        Mockito.doReturn(java.util.Arrays.asList("available", "unavailable"))
+               .when(spy).listAll(this.client);
+        Mockito.doReturn(statistic("20260712", 2L, 3L))
+               .when(spy).evCount(this.client, "available");
+        Mockito.doReturn(statistic(null, null, null))
+               .when(spy).evCount(this.client, "unavailable");
+        Mockito.when(this.graphsService.listGraphNames(
+                             Mockito.eq(this.client), Mockito.anyString(),
+                             Mockito.eq("")))
+               .thenReturn(java.util.Collections.emptySet());
+
+        Map<String, Long> result = spy.metrics(this.client);
+
+        Assert.assertNull(result.get("vCount"));
+        Assert.assertNull(result.get("eCount"));
+    }
+
+    @Test
     public void testStatisticDoesNotClaimMixedDates() {
         LinkedHashSet<String> graphs = new LinkedHashSet<>();
         graphs.add("g1");
@@ -201,6 +221,27 @@ public class GraphSpaceServiceTest {
         Assert.assertNull(result.get("date"));
         Assert.assertEquals(7L, result.get("vertex"));
         Assert.assertEquals(10L, result.get("edge"));
+    }
+
+    @Test
+    public void testStatisticKeepsUnavailableCountsForGraphSpace() {
+        LinkedHashSet<String> graphs = new LinkedHashSet<>();
+        graphs.add("available");
+        graphs.add("unavailable");
+        Mockito.when(this.graphsService.listGraphNames(this.client, "space", ""))
+               .thenReturn(graphs);
+        Mockito.when(this.graphsService.evCount(this.client, "space",
+                                                "available"))
+               .thenReturn(statistic("20260712", 2L, 3L));
+        Mockito.when(this.graphsService.evCount(this.client, "space",
+                                                "unavailable"))
+               .thenReturn(statistic(null, null, null));
+
+        Map<String, Object> result = this.service.evCount(this.client, "space");
+
+        Assert.assertNull(result.get("date"));
+        Assert.assertNull(result.get("vertex"));
+        Assert.assertNull(result.get("edge"));
     }
 
     @Test

@@ -285,13 +285,13 @@ public class SaaSMetricsController extends BaseController {
         private long vertexLabelCount;
 
         @JsonProperty("vertex-count")
-        private long vertexCount;
+        private Long vertexCount;
 
         @JsonProperty("edge-label-count")
         private long edgeLabelCount;
 
         @JsonProperty("edge-count")
-        private long edgeCount;
+        private Long edgeCount;
 
         @JsonProperty("graph-space-count")
         private long graphSpaceCount;
