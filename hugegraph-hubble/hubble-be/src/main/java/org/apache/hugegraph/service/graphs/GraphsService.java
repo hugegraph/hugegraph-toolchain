@@ -42,6 +42,7 @@ import org.apache.hugegraph.entity.query.GremlinQuery;
 import org.apache.hugegraph.entity.space.BuiltInEntity;
 import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.loader.util.JsonUtil;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.algorithm.AsyncTaskService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.load.LoadTaskService;
@@ -784,11 +785,15 @@ public class GraphsService {
         Long vertexCount = null;
         String statisticDate = HubbleUtil.dateFormatDay(HubbleUtil.nowDate());
         client.assignGraph(graphSpace, graph);
-        GraphMetricsAPI.ElementCount statistic =
-                client.graph().getEVCount(statisticDate);
-        if (statistic == null) {
-            statisticDate = HubbleUtil.dateFormatLastDay();
+        GraphMetricsAPI.ElementCount statistic = null;
+        boolean pdEnabled = this.config != null &&
+                            this.config.get(HubbleOptions.PD_ENABLED);
+        if (!pdEnabled) {
             statistic = client.graph().getEVCount(statisticDate);
+            if (statistic == null) {
+                statisticDate = HubbleUtil.dateFormatLastDay();
+                statistic = client.graph().getEVCount(statisticDate);
+            }
         }
 
         if (statistic != null) {

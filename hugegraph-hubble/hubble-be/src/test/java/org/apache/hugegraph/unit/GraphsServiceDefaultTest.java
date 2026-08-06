@@ -320,6 +320,36 @@ public class GraphsServiceDefaultTest {
     }
 
     @Test
+    public void testElementCountSkipsUnavailableSnapshotsInPdMode() {
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        ReflectionTestUtils.setField(this.service, "config", config);
+
+        QueryService query = Mockito.mock(QueryService.class);
+        ReflectionTestUtils.setField(this.service, "queryService", query);
+
+        GraphManager graph = Mockito.mock(GraphManager.class);
+        Mockito.when(this.client.graph()).thenReturn(graph);
+        Vertex vertex = Mockito.mock(Vertex.class);
+        Edge edge = Mockito.mock(Edge.class);
+        Mockito.when(vertex.label()).thenReturn("person");
+        Mockito.when(edge.label()).thenReturn("knows");
+        Mockito.when(graph.iterateVertices(1000))
+               .thenReturn(Collections.nCopies(2, vertex).iterator());
+        Mockito.when(graph.iterateEdges(1000))
+               .thenReturn(Collections.singletonList(edge).iterator());
+
+        Map<String, Object> result =
+                this.service.evCount(this.client, "DEFAULT", "demo");
+
+        Assert.assertEquals(2L, result.get("vertex"));
+        Assert.assertEquals(1L, result.get("edge"));
+        Assert.assertNotNull(result.get("date"));
+        Mockito.verify(graph, Mockito.never()).getEVCount(Mockito.anyString());
+        Mockito.verifyZeroInteractions(query);
+    }
+
+    @Test
     public void testElementCountReturnsUnavailableWhenLiveFallbackFails() {
         QueryService query = Mockito.mock(QueryService.class);
         Mockito.when(query.executeQueryCount(Mockito.eq(this.client),
