@@ -94,9 +94,9 @@ pid=$!
 echo ${pid} > "${PID_FILE}"
 
 timeout_s=30
-server_host=$(read_property "${CONF_PATH}"/hugegraph-hubble.properties hubble.host)
-server_port=$(read_property "${CONF_PATH}"/hugegraph-hubble.properties hubble.port)
-server_url="http://${server_host}:${server_port}/actuator/health"
+server_host=$(read_property "${CONF_PATH}"/hugegraph-hubble.properties server.host)
+server_port=$(read_property "${CONF_PATH}"/hugegraph-hubble.properties server.port)
+server_url="http://${server_host}:${server_port}/about"
 
 wait_for_startup "${server_url}" ${timeout_s} || {
     cat "${log}"
