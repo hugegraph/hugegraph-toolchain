@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableSet;
 public final class HugeClientUtil {
 
     private static final String DEFAULT_PROTOCOL = "http";
+    private static final String BEARER_SCHEME = "Bearer";
 
     private static final Set<String> ACCEPTABLE_EXCEPTIONS = ImmutableSet.of(
             "Permission denied: execute Resource"
@@ -44,7 +45,12 @@ public final class HugeClientUtil {
         String graph = connection.getGraph();
         String host = connection.getHost();
         Integer port = connection.getPort();
-        String token = normalizeToken(connection.getToken());
+        String tokenInput = connection.getToken();
+        String token = normalizeTokenPayload(tokenInput);
+        String authContext = null;
+        if (StringUtils.isNotBlank(tokenInput)) {
+            authContext = bearerAuthContext(tokenInput);
+        }
         String username = connection.getUsername();
         String password = connection.getPassword();
         int timeout = connection.getTimeout();
@@ -112,14 +118,36 @@ public final class HugeClientUtil {
             throw e;
         }
 
+        if (authContext != null) {
+            client.setAuthContext(authContext);
+        }
+
         return client;
     }
 
-    private static String normalizeToken(String token) {
-        if (StringUtils.isBlank(token) || token.startsWith(" ")) {
-            return token;
+    public static String bearerAuthContext(String token) {
+        String normalized = normalizeTokenPayload(token);
+        if (StringUtils.isBlank(normalized)) {
+            throw new IllegalArgumentException(
+                    "Bearer token must contain a non-blank payload");
         }
-        return " " + token;
+        return BEARER_SCHEME + " " + normalized;
+    }
+
+    private static String normalizeTokenPayload(String token) {
+        String normalized = StringUtils.stripToNull(token);
+        if (normalized == null) {
+            return null;
+        }
+        int schemeLength = BEARER_SCHEME.length();
+        if (normalized.length() >= schemeLength &&
+            normalized.regionMatches(true, 0, BEARER_SCHEME, 0, schemeLength) &&
+            (normalized.length() == schemeLength ||
+             Character.isWhitespace(normalized.charAt(schemeLength)))) {
+            normalized = StringUtils.stripToNull(
+                    normalized.substring(schemeLength));
+        }
+        return normalized;
     }
 
     private static boolean isAcceptable(String message) {

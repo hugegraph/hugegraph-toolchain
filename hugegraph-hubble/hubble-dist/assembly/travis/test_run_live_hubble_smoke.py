@@ -17,6 +17,7 @@
 #
 
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -30,16 +31,47 @@ SPEC.loader.exec_module(SMOKE)
 
 class HubbleReadinessTest(unittest.TestCase):
 
+    def test_configure_endpoint_uses_registered_server_options(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            conf_dir = home / "conf"
+            conf_dir.mkdir()
+            conf = conf_dir / "hugegraph-hubble.properties"
+            conf.write_text(
+                "server.host=localhost\n"
+                "server.port=8088\n"
+                "pd.enabled=true\n",
+                encoding="utf-8"
+            )
+
+            SMOKE.configure_hubble_endpoint(
+                home,
+                "http://127.0.0.1:19088",
+                "0.0.0.0",
+                "http://127.0.0.1:18080"
+            )
+
+            configured = conf.read_text(encoding="utf-8")
+            self.assertIn("server.host=0.0.0.0", configured)
+            self.assertIn("server.port=19088", configured)
+            self.assertNotIn("hubble.host=", configured)
+            self.assertNotIn("hubble.port=", configured)
+            self.assertNotIn("server.address=", configured)
+
     def test_readiness_rejects_spa_html(self):
         self.assertFalse(SMOKE.is_hubble_readiness_response(
             '<div id="root"></div>'))
 
     def test_readiness_requires_about_response_shape(self):
         self.assertFalse(SMOKE.is_hubble_readiness_response(
-            {"status": 200, "data": {"name": "HugeGraph-Hubble"}}))
-        self.assertTrue(SMOKE.is_hubble_readiness_response({
+            {"status": 200, "data": {"name": "hugegraph-hubble"}}))
+        self.assertFalse(SMOKE.is_hubble_readiness_response({
             "status": 200,
             "data": {"name": "HugeGraph-Hubble", "version": "3.0.0"}
+        }))
+        self.assertTrue(SMOKE.is_hubble_readiness_response({
+            "status": 200,
+            "data": {"name": "hugegraph-hubble", "version": "3.0.0"}
         }))
 
     @mock.patch.object(SMOKE, "request")

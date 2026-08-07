@@ -557,6 +557,7 @@ public class LoadTaskService {
         Ex.check(setting.getColumnNames() != null,
                  "Must do file setting firstly");
         source.header(setting.getColumnNames().toArray(new String[]{}));
+        source.hasHeader(setting.isHasHeader());
         // NOTE: format and delimiter must be CSV and "," temporarily
         source.format(FileFormat.valueOf(setting.getFormat()));
         source.delimiter(setting.getDelimiter());

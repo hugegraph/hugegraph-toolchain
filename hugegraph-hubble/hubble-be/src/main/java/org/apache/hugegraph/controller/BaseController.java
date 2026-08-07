@@ -42,6 +42,7 @@ import org.apache.hugegraph.common.Identifiable;
 import org.apache.hugegraph.common.Mergeable;
 import org.apache.hugegraph.util.EntityUtil;
 import org.apache.hugegraph.util.Ex;
+import org.apache.hugegraph.util.HugeClientUtil;
 
 @Component
 public abstract class BaseController {
@@ -196,7 +197,11 @@ public abstract class BaseController {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
             HugeClient client = (HugeClient) request.getAttribute("hugeClient");
-            client.setAuthContext("Basic " + this.getToken());
+            String token = this.getToken();
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(token)) {
+                client.setAuthContext(
+                        HugeClientUtil.bearerAuthContext(token));
+            }
             return client;
         }
         HugeClient client = this.hugeClientPoolService.createTempTokenClient(this.getToken());

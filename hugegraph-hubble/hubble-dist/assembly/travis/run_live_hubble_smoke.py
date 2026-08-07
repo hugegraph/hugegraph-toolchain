@@ -84,7 +84,7 @@ def is_hubble_readiness_response(response):
         return False
     data = response.get("data")
     return (isinstance(data, dict) and
-            isinstance(data.get("name"), str) and bool(data["name"]) and
+            data.get("name") == "hugegraph-hubble" and
             isinstance(data.get("version"), str) and bool(data["version"]))
 
 
@@ -144,23 +144,15 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
     lines = []
     replaced_host = False
     replaced_port = False
-    replaced_server_address = False
-    replaced_server_port = False
     replaced_pd_enabled = False
     replaced_direct_url = False
     for line in text.splitlines():
-        if host and line.startswith("hubble.host="):
-            lines.append(f"hubble.host={host}")
+        if host and line.startswith("server.host="):
+            lines.append(f"server.host={host}")
             replaced_host = True
-        elif port and line.startswith("hubble.port="):
-            lines.append(f"hubble.port={port}")
-            replaced_port = True
-        elif host and line.startswith("server.address="):
-            lines.append(f"server.address={host}")
-            replaced_server_address = True
         elif port and line.startswith("server.port="):
             lines.append(f"server.port={port}")
-            replaced_server_port = True
+            replaced_port = True
         elif line.startswith("pd.enabled="):
             lines.append("pd.enabled=false")
             replaced_pd_enabled = True
@@ -170,12 +162,8 @@ def configure_hubble_endpoint(hubble_home, hubble_url, bind_host, server_url):
         else:
             lines.append(line)
     if host and not replaced_host:
-        lines.append(f"hubble.host={host}")
-    if host and not replaced_server_address:
-        lines.append(f"server.address={host}")
+        lines.append(f"server.host={host}")
     if port and not replaced_port:
-        lines.append(f"hubble.port={port}")
-    if port and not replaced_server_port:
         lines.append(f"server.port={port}")
     if not replaced_pd_enabled:
         lines.append("pd.enabled=false")

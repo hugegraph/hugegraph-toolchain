@@ -81,6 +81,44 @@ public class BaseControllerGremlinClientTest {
         Assert.assertEquals("hugegraph", controller.graph);
     }
 
+    @Test
+    public void testReusedTemporaryClientUsesBearerToken() {
+        HugeClient tokenClient = Mockito.mock(HugeClient.class);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "jwt-token");
+        request.setAttribute("hugeClient", tokenClient);
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+
+        TestController controller = new TestController();
+
+        Assert.assertSame(tokenClient, controller.temporaryTokenClient());
+        Mockito.verify(tokenClient).setAuthContext("Bearer jwt-token");
+    }
+
+    @Test
+    public void testInvalidTokenIsRejectedForReusedTemporaryClient() {
+        HugeClient tokenClient = Mockito.mock(HugeClient.class);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "Bearer   ");
+        request.setAttribute("hugeClient", tokenClient);
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+
+        TestController controller = new TestController();
+
+        try {
+            controller.temporaryTokenClient();
+            Assert.fail("Expected a scheme-only Bearer token to be rejected");
+        } catch (IllegalArgumentException ignored) {
+            // Expected
+        }
+        Mockito.verify(tokenClient, Mockito.never())
+               .setAuthContext(Mockito.anyString());
+    }
+
     private MockHttpServletRequest requestWithAuth() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
@@ -100,6 +138,10 @@ public class BaseControllerGremlinClientTest {
 
         HugeClient gremlinClient(String graphSpace, String graph) {
             return this.authGremlinClient(graphSpace, graph);
+        }
+
+        HugeClient temporaryTokenClient() {
+            return this.tempTokenClient();
         }
 
         @Override

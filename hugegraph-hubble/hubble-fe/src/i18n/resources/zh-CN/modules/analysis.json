@@ -545,7 +545,8 @@
         "similarity_value": "相似度的值",
         "rank_score": "排名得分:",
         "category": "分类{{index}}",
-        "no_neighbor_at_degree": "本场景下没有第{{index}}度邻居"
+        "no_neighbor_at_degree": "本场景下没有第{{index}}度邻居",
+        "no_graph_result": "当前算法没有可显示的图结果"
       },
       "mode": {
         "OLTP": "交互式探索",

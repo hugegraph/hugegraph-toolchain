@@ -26,6 +26,7 @@ import org.apache.hugegraph.loader.source.AbstractSource;
 import org.apache.hugegraph.loader.source.SourceType;
 import org.apache.hugegraph.loader.util.DateUtil;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.collect.ImmutableList;
@@ -58,6 +59,9 @@ public class FileSource extends AbstractSource {
     // Only works for single files
     @JsonProperty("split_count")
     private int splitCount;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("has_header")
+    private Boolean hasHeader;
 
     // Whether header needs to be case-sensitive
     private final boolean headerCaseSensitive;
@@ -66,7 +70,24 @@ public class FileSource extends AbstractSource {
         this(null, new DirFilter(), new FileFilter(), FileFormat.CSV,
              Constants.COMMA_STR, Constants.DATE_FORMAT,
              ImmutableList.of(), Constants.TIME_ZONE,
-             new SkippedLine(), Compression.NONE, 500);
+             new SkippedLine(), Compression.NONE, 500, null);
+    }
+
+    public FileSource(@JsonProperty("path") String path,
+                      @JsonProperty("dir_filter") DirFilter dirFilter,
+                      @JsonProperty("filter") FileFilter filter,
+                      @JsonProperty("format") FileFormat format,
+                      @JsonProperty("delimiter") String delimiter,
+                      @JsonProperty("date_format") String dateFormat,
+                      @JsonProperty("extra_date_formats")
+                      List<String> extraDateFormats,
+                      @JsonProperty("time_zone") String timeZone,
+                      @JsonProperty("skipped_line") SkippedLine skippedLine,
+                      @JsonProperty("compression") Compression compression,
+                      @JsonProperty("batch_size") Integer batchSize) {
+        this(path, dirFilter, filter, format, delimiter, dateFormat,
+             extraDateFormats, timeZone, skippedLine, compression, batchSize,
+             null);
     }
 
     @JsonCreator
@@ -81,7 +102,8 @@ public class FileSource extends AbstractSource {
                       @JsonProperty("time_zone") String timeZone,
                       @JsonProperty("skipped_line") SkippedLine skippedLine,
                       @JsonProperty("compression") Compression compression,
-                      @JsonProperty("batch_size") Integer batchSize) {
+                      @JsonProperty("batch_size") Integer batchSize,
+                      @JsonProperty("has_header") Boolean hasHeader) {
         this.path = path;
         this.dirFilter = dirFilter != null ? dirFilter : new DirFilter();
         this.filter = filter != null ? filter : new FileFilter();
@@ -97,6 +119,7 @@ public class FileSource extends AbstractSource {
         this.skippedLine = skippedLine != null ? skippedLine : new SkippedLine();
         this.compression = compression != null ? compression : Compression.NONE;
         this.batchSize = batchSize != null ? batchSize : 500;
+        this.hasHeader = hasHeader;
 
         // When input is orc/parquet, header is case-insensitive
         if (Compression.ORC.equals(this.compression()) ||
@@ -225,6 +248,14 @@ public class FileSource extends AbstractSource {
         return this.splitCount;
     }
 
+    public Boolean hasHeader() {
+        return this.hasHeader;
+    }
+
+    public void hasHeader(boolean hasHeader) {
+        this.hasHeader = hasHeader;
+    }
+
     @Override
     public FileSource asFileSource() {
         FileSource source = new FileSource();
@@ -240,6 +271,7 @@ public class FileSource extends AbstractSource {
         source.extraDateFormats = this.extraDateFormats;
         source.skippedLine = this.skippedLine;
         source.compression = this.compression;
+        source.hasHeader = this.hasHeader;
         return source;
     }
 

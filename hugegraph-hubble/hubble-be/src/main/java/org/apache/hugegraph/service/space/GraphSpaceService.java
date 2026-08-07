@@ -72,8 +72,8 @@ public class GraphSpaceService {
     public Map<String, Long> metrics(HugeClient client) {
         long gsCount = 0L;
         long gCount = 0L;
-        long vCount = 0L;
-        long eCount = 0L;
+        Long vCount = 0L;
+        Long eCount = 0L;
         long vlCount = 0L;
         long elCount = 0L;
         long preDayTaskCount = 0L;
@@ -86,8 +86,10 @@ public class GraphSpaceService {
                 Map<String, Object> elVl = elAndVlCount(client, gs);
                 Map<String, Object> task = preDayTaskCount(client, gs);
 
-                vCount += ((Number) ev.get("vertex")).longValue();
-                eCount += ((Number) ev.get("edge")).longValue();
+                vCount = addAvailableCount(vCount,
+                                           (Number) ev.get("vertex"));
+                eCount = addAvailableCount(eCount,
+                                           (Number) ev.get("edge"));
                 vlCount += ((Number) elVl.get("vertexlabel")).longValue();
                 elCount += ((Number) elVl.get("edgelabel")).longValue();
                 preDayTaskCount += ((Number) task.get("task")).longValue();
@@ -199,8 +201,8 @@ public class GraphSpaceService {
      * @return
      */
     Map<String, Object> evCount(HugeClient client, String graphSpace) {
-        long vertexTotal = 0L;
-        long edgeTotal = 0L;
+        Long vertexTotal = 0L;
+        Long edgeTotal = 0L;
         Map<String, Object> statisticTotal = new HashMap<>();
         client.assignGraph(graphSpace, "");
         Set<String> graphs = graphsService.listGraphNames(client, graphSpace, "");
@@ -219,8 +221,10 @@ public class GraphSpaceService {
                 statisticDate = null;
             }
 
-            vertexTotal += ((Number) graphEvCount.get("vertex")).longValue();
-            edgeTotal += ((Number) graphEvCount.get("edge")).longValue();
+            Number vertexCount = (Number) graphEvCount.get("vertex");
+            Number edgeCount = (Number) graphEvCount.get("edge");
+            vertexTotal = addAvailableCount(vertexTotal, vertexCount);
+            edgeTotal = addAvailableCount(edgeTotal, edgeCount);
         }
         if (graphs.isEmpty()) {
             statisticDate = HubbleUtil.dateFormatDay(HubbleUtil.nowDate());
@@ -230,6 +234,13 @@ public class GraphSpaceService {
         statisticTotal.put("vertex", vertexTotal);
         statisticTotal.put("edge", edgeTotal);
         return statisticTotal;
+    }
+
+    private static Long addAvailableCount(Long total, Number count) {
+        if (total == null || count == null) {
+            return null;
+        }
+        return Math.addExact(total, count.longValue());
     }
 
     /**

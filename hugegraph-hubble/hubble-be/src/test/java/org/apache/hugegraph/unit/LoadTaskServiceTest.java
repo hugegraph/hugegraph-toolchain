@@ -18,8 +18,8 @@
 
 package org.apache.hugegraph.unit;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,10 +28,13 @@ import org.junit.Test;
 import org.apache.hugegraph.entity.GraphConnection;
 import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
+import org.apache.hugegraph.entity.load.FileSetting;
+import org.apache.hugegraph.entity.load.ListFormat;
 import org.apache.hugegraph.entity.load.LoadParameter;
 import org.apache.hugegraph.entity.load.LoadTask;
 import org.apache.hugegraph.handler.LoadTaskExecutor;
 import org.apache.hugegraph.loader.executor.LoadOptions;
+import org.apache.hugegraph.loader.source.file.FileSource;
 import org.apache.hugegraph.service.load.LoadTaskService;
 import org.apache.hugegraph.mapper.load.LoadTaskMapper;
 import org.apache.hugegraph.testutil.Assert;
@@ -205,6 +208,35 @@ public class LoadTaskServiceTest {
         Assert.assertEquals("session-token", options.token);
         Assert.assertEquals("localhost", options.host);
         Assert.assertEquals(8080, options.port);
+    }
+
+    @Test
+    public void testBuildFileSourcePreservesPhysicalHeaderFlag()
+            throws Exception {
+        LoadTaskService service = new LoadTaskService();
+        Method method = LoadTaskService.class.getDeclaredMethod(
+                "buildFileSource", FileMapping.class);
+        method.setAccessible(true);
+        FileMapping mapping = this.fileMapping();
+        FileSetting setting = FileSetting.builder()
+                                         .columnNames(Arrays.asList("name"))
+                                         .hasHeader(false)
+                                         .format("CSV")
+                                         .delimiter(",")
+                                         .charset("UTF-8")
+                                         .dateFormat("yyyy-MM-dd HH:mm:ss")
+                                         .timeZone("GMT+8")
+                                         .skippedLine("(^#|^//).*")
+                                         .listFormat(new ListFormat())
+                                         .build();
+        mapping.setFileSetting(setting);
+
+        FileSource source = (FileSource) method.invoke(service, mapping);
+
+        Assert.assertFalse(source.hasHeader());
+        setting.setHasHeader(true);
+        source = (FileSource) method.invoke(service, mapping);
+        Assert.assertTrue(source.hasHeader());
     }
 
     @Test
