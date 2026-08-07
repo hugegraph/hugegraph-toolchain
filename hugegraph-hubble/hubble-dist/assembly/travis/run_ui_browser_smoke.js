@@ -135,7 +135,7 @@ async function main() {
     ? { name: 'graphspace', path: '/graphspace',
         requiredApis: ['/api/v1.3/graphspaces'],
         readySelector: '[data-testid="graphspace-page-title"]' }
-    : { name: 'graphspace', path: '/graphspace',
+    : { name: 'graphspace', path: '/graphspace/DEFAULT',
         requiredApis: ['/api/v1.3/graphspaces/DEFAULT/graphs'],
         textPattern: /图管理|Graph Management/ };
   const routes = [
