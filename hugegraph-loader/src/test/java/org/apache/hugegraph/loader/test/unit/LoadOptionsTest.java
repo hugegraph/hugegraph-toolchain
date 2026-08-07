@@ -133,6 +133,33 @@ public class LoadOptionsTest {
         }
     }
 
+    @Test
+    public void testDumpParamsRedactsSensitiveValues() {
+        LoadOptions options = new LoadOptions();
+        options.password = "graph-password";
+        options.trustStoreToken = "trust-store-password";
+        options.token = "graph-jwt";
+        options.pdToken = "pd-token";
+
+        CapturingAppender appender = attachAppender();
+        try {
+            options.dumpParams();
+        } finally {
+            detachAppender(appender);
+        }
+
+        Assert.assertTrue(appender.contains("password=[REDACTED]"));
+        Assert.assertTrue(appender.contains("trustStoreToken=[REDACTED]"));
+        Assert.assertTrue(appender.contains("token=[REDACTED]"));
+        Assert.assertTrue(appender.contains("pdToken=[REDACTED]"));
+        Assert.assertTrue(appender.contains("graph=hugegraph"));
+        Assert.assertTrue(appender.contains("host=localhost"));
+        Assert.assertFalse(appender.contains("graph-password"));
+        Assert.assertFalse(appender.contains("trust-store-password"));
+        Assert.assertFalse(appender.contains("graph-jwt"));
+        Assert.assertFalse(appender.contains("pd-token"));
+    }
+
     private static int readStaticInt(Class<?> type, String name)
                                      throws Exception {
         Field field = type.getDeclaredField(name);

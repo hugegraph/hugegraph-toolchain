@@ -45,6 +45,7 @@ import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.GraphConnection;
 import org.apache.hugegraph.entity.load.Datasource;
+import org.apache.hugegraph.entity.load.FileSetting;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.entity.load.LoadTask;
@@ -123,11 +124,136 @@ public class IngestControllerTest {
                             mapping.getFileStatus());
         Assert.assertEquals(Collections.singletonList("name"),
                             mapping.getFileSetting().getColumnNames());
+        Assert.assertFalse(mapping.getFileSetting().isHasHeader());
         Assert.assertEquals(Collections.singletonList("name"),
                             mapping.getVertexMappings().iterator().next()
                                    .getIdFields());
         Assert.assertEquals(JobStatus.LOADING, jobCaptor.getValue()
                                                         .getJobStatus());
+    }
+
+    @Test
+    public void testDatasourceSchemaUsesPhysicalHeaderWhenNamesOmitted()
+           throws Exception {
+        Path uploadRoot = Files.createTempDirectory("hubble-ingest-schema");
+        Path dataFile = uploadRoot.resolve("data.csv");
+        Files.write(dataFile, List.of("name", "Carol"));
+
+        IngestController controller = new IngestController();
+        DatasourceService datasourceService =
+                Mockito.mock(DatasourceService.class);
+        FileMappingService fileMappingService =
+                Mockito.mock(FileMappingService.class);
+        this.setField(controller, "datasourceService", datasourceService);
+        this.setField(controller, "fileMappingService", fileMappingService);
+
+        Datasource datasource = new Datasource();
+        datasource.setId(1);
+        Map<String, Object> datasourceConfig = new HashMap<>();
+        datasourceConfig.put("type", "FILE");
+        datasourceConfig.put("path", dataFile.toString());
+        datasourceConfig.put("format", "CSV");
+        datasource.setDatasourceConfig(datasourceConfig);
+        Mockito.when(datasourceService.get(1)).thenReturn(datasource);
+        Mockito.when(fileMappingService.requirePathUnderUploadRoot(
+                dataFile.toString())).thenReturn(dataFile.toFile());
+
+        Response response = controller.datasourceSchema(1);
+
+        Assert.assertEquals(Constant.STATUS_OK, response.getStatus());
+        Assert.assertEquals(Collections.singletonList("name"),
+                            response.getData());
+    }
+
+    @Test
+    public void testDatasourceSchemaUsesJsonObjectKeys()
+           throws Exception {
+        Path uploadRoot = Files.createTempDirectory("hubble-ingest-json-schema");
+        Path dataFile = uploadRoot.resolve("data.json");
+        Files.write(dataFile,
+                    Collections.singletonList("{\"name\":\"Carol\",\"age\":1}"));
+
+        IngestController controller = new IngestController();
+        DatasourceService datasourceService =
+                Mockito.mock(DatasourceService.class);
+        FileMappingService fileMappingService =
+                Mockito.mock(FileMappingService.class);
+        this.setField(controller, "datasourceService", datasourceService);
+        this.setField(controller, "fileMappingService", fileMappingService);
+
+        Datasource datasource = new Datasource();
+        datasource.setId(1);
+        Map<String, Object> datasourceConfig = new HashMap<>();
+        datasourceConfig.put("type", "FILE");
+        datasourceConfig.put("path", dataFile.toString());
+        datasourceConfig.put("format", "JSON");
+        datasource.setDatasourceConfig(datasourceConfig);
+        Mockito.when(datasourceService.get(1)).thenReturn(datasource);
+        Mockito.when(fileMappingService.requirePathUnderUploadRoot(
+                dataFile.toString())).thenReturn(dataFile.toFile());
+
+        Response response = controller.datasourceSchema(1);
+
+        Assert.assertEquals(Constant.STATUS_OK, response.getStatus());
+        Assert.assertEquals(List.of("name", "age"), response.getData());
+    }
+
+    @Test
+    public void testDatasourceSchemaDoesNotEchoMalformedJson()
+           throws Exception {
+        Path uploadRoot = Files.createTempDirectory("hubble-ingest-bad-json");
+        Path dataFile = uploadRoot.resolve("data.json");
+        String canary = "private-json-canary";
+        Files.write(dataFile, Collections.singletonList(
+                "{\"password\":\"" + canary + "\""));
+
+        IngestController controller = new IngestController();
+        DatasourceService datasourceService =
+                Mockito.mock(DatasourceService.class);
+        FileMappingService fileMappingService =
+                Mockito.mock(FileMappingService.class);
+        this.setField(controller, "datasourceService", datasourceService);
+        this.setField(controller, "fileMappingService", fileMappingService);
+
+        Datasource datasource = new Datasource();
+        datasource.setId(1);
+        Map<String, Object> datasourceConfig = new HashMap<>();
+        datasourceConfig.put("type", "FILE");
+        datasourceConfig.put("path", dataFile.toString());
+        datasourceConfig.put("format", "JSON");
+        datasource.setDatasourceConfig(datasourceConfig);
+        Mockito.when(datasourceService.get(1)).thenReturn(datasource);
+        Mockito.when(fileMappingService.requirePathUnderUploadRoot(
+                dataFile.toString())).thenReturn(dataFile.toFile());
+
+        try {
+            controller.datasourceSchema(1);
+            Assert.fail("Expected malformed JSON to be rejected");
+        } catch (Exception e) {
+            Assert.assertFalse(e.toString().contains(canary));
+        }
+    }
+
+    @Test
+    public void testCreateFileTaskMarksDetectedHeaderAsPhysical()
+           throws Exception {
+        FileSetting setting = this.captureFileSetting(
+                List.of("name", "Carol"), "CSV");
+
+        Assert.assertTrue(setting.isHasHeader());
+        Assert.assertEquals(Collections.singletonList("name"),
+                            setting.getColumnNames());
+    }
+
+    @Test
+    public void testCreateJsonFileTaskDoesNotMarkPhysicalHeader()
+           throws Exception {
+        FileSetting setting = this.captureFileSetting(
+                Collections.singletonList("{\"name\":\"Carol\"}"), "JSON");
+
+        Assert.assertFalse(setting.isHasHeader());
+        Assert.assertEquals(Collections.singletonList("name"),
+                            setting.getColumnNames());
     }
 
     @Test
@@ -260,6 +386,53 @@ public class IngestControllerTest {
         struct.edges = Collections.emptyList();
         request.ingestionMapping.structs = Collections.singletonList(struct);
         return request;
+    }
+
+    private FileSetting captureFileSetting(List<String> lines, String format)
+            throws Exception {
+        Path uploadRoot = Files.createTempDirectory("hubble-ingest-capture");
+        Path dataFile = uploadRoot.resolve("data." + format.toLowerCase());
+        Files.write(dataFile, lines);
+
+        TestIngestController controller = new TestIngestController();
+        DatasourceService datasourceService =
+                Mockito.mock(DatasourceService.class);
+        JobManagerService jobService = Mockito.mock(JobManagerService.class);
+        FileMappingService fileMappingService =
+                Mockito.mock(FileMappingService.class);
+        this.setField(controller, "config", this.mockConfig(uploadRoot));
+        this.setField(controller, "datasourceService", datasourceService);
+        this.setField(controller, "jobManagerService", jobService);
+        this.setField(controller, "fileMappingService", fileMappingService);
+
+        Datasource datasource = new Datasource();
+        datasource.setId(1);
+        Map<String, Object> datasourceConfig = new HashMap<>();
+        datasourceConfig.put("type", "FILE");
+        datasourceConfig.put("path", dataFile.toString());
+        datasourceConfig.put("format", format);
+        datasource.setDatasourceConfig(datasourceConfig);
+        Mockito.when(datasourceService.get(1)).thenReturn(datasource);
+        Mockito.when(fileMappingService.requirePathUnderUploadRoot(
+                dataFile.toString())).thenReturn(dataFile.toFile());
+        Mockito.when(jobService.createIngestTask(
+                Mockito.any(JobManager.class), Mockito.any(FileMapping.class),
+                Mockito.any(GraphConnection.class), Mockito.any(HugeClient.class)))
+               .thenAnswer(invocation -> {
+                   JobManager job = invocation.getArgument(0);
+                   job.setId(7);
+                   return LoadTask.builder().id(9).build();
+               });
+        this.bindRequestSession("alice");
+
+        controller.createTask(this.request(dataFile));
+
+        ArgumentCaptor<FileMapping> mappingCaptor =
+                ArgumentCaptor.forClass(FileMapping.class);
+        Mockito.verify(jobService).createIngestTask(
+                Mockito.any(JobManager.class), mappingCaptor.capture(),
+                Mockito.any(GraphConnection.class), Mockito.any(HugeClient.class));
+        return mappingCaptor.getValue().getFileSetting();
     }
 
     private HugeConfig mockConfig(Path uploadRoot) {

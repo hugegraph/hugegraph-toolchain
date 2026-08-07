@@ -49,6 +49,8 @@ public final class LoadOptions implements Cloneable {
     private static final int DEFAULT_MAX_CONNECTIONS = CPUS * 4;
     private static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = CPUS * 2;
     private static final int MINIMUM_REQUIRED_ARGS = 3;
+    private static final Set<String> SENSITIVE_PARAMETER_FIELDS =
+            ImmutableSet.of("password", "trustStoreToken", "token", "pdToken");
 
     @Parameter(names = {"-f", "--file"}, required = true, arity = 1,
                validateWith = {FileValidator.class},
@@ -359,7 +361,10 @@ public final class LoadOptions implements Cloneable {
         for (Field field : fields) {
             if (field.isAnnotationPresent(Parameter.class)) {
                 try {
-                    LOG.info("    {}={}", field.getName(), field.get(this));
+                    Object value = SENSITIVE_PARAMETER_FIELDS.contains(
+                                   field.getName()) ? "[REDACTED]" :
+                                   field.get(this);
+                    LOG.info("    {}={}", field.getName(), value);
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                 }

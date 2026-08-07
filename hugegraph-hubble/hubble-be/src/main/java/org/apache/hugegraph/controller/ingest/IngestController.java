@@ -19,6 +19,9 @@ package org.apache.hugegraph.controller.ingest;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -45,6 +48,7 @@ import org.apache.hugegraph.entity.load.NullValues;
 import org.apache.hugegraph.entity.load.ValueMappingItem;
 import org.apache.hugegraph.entity.load.VertexMapping;
 import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.loader.source.file.FileFormat;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.load.DatasourceService;
 import org.apache.hugegraph.service.load.FileMappingService;
@@ -76,6 +80,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +92,10 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping(Constant.API_VERSION + "ingest")
 public class IngestController extends BaseController {
+
+    private static final ObjectMapper JSON_MAPPER =
+            new ObjectMapper().disable(
+                    JsonParser.Feature.INCLUDE_SOURCE_IN_LOCATION);
 
     @Autowired
     private JobManagerService jobManagerService;
@@ -193,10 +202,11 @@ public class IngestController extends BaseController {
                            .data(header).build();
         }
 
+        boolean hasPhysicalHeader = this.hasPhysicalHeader(config);
         FileSetting setting = this.buildFileSetting(config, Collections.emptyList(),
-                                                    false);
+                                                    hasPhysicalHeader);
         ColumnInfo columns = this.readColumns(this.requireUploadFile(config),
-                                             setting, false);
+                                             setting, hasPhysicalHeader);
         return Response.builder().status(Constant.STATUS_OK)
                        .data(columns.names).build();
     }
@@ -234,8 +244,7 @@ public class IngestController extends BaseController {
         File sourceFile = this.requireUploadFile(input);
         long totalSize = sourceFile.length();
         List<String> header = this.stringList(input.get("header"));
-        boolean hasPhysicalHeader = !this.stringList(dsConfig.get("header"))
-                                     .isEmpty();
+        boolean hasPhysicalHeader = this.hasPhysicalHeader(dsConfig);
         FileSetting setting = this.buildFileSetting(input, header,
                                                     hasPhysicalHeader);
         if (setting.getColumnNames() == null ||
@@ -548,6 +557,13 @@ public class IngestController extends BaseController {
         return setting;
     }
 
+    private boolean hasPhysicalHeader(Map<String, Object> config) {
+        FileFormat format = FileFormat.valueOf(
+                this.stringOrDefault(config.get("format"), "CSV"));
+        return format.needHeader() &&
+               this.stringList(config.get("header")).isEmpty();
+    }
+
     private ColumnInfo readColumns(File file, FileSetting setting,
                                    boolean hasPhysicalHeader) {
         try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
@@ -558,6 +574,10 @@ public class IngestController extends BaseController {
                 }
             }
             Ex.check(line != null, "The file has no data line can treat as header");
+
+            if (FileFormat.JSON.name().equals(setting.getFormat())) {
+                return this.readJsonColumns(line, file);
+            }
 
             List<String> firstLine = this.splitLine(line, setting.getDelimiter());
             if (hasPhysicalHeader) {
@@ -576,6 +596,23 @@ public class IngestController extends BaseController {
         } catch (IOException e) {
             throw new InternalException("Failed to read columns from file %s",
                                         e, file);
+        }
+    }
+
+    private ColumnInfo readJsonColumns(String line, File file) {
+        try {
+            Map<String, Object> fields = JSON_MAPPER.readValue(
+                    line, new TypeReference<LinkedHashMap<String, Object>>() {
+                    });
+            List<String> names = new ArrayList<>(fields.keySet());
+            List<String> values = names.stream()
+                                       .map(fields::get)
+                                       .map(String::valueOf)
+                                       .collect(Collectors.toList());
+            return new ColumnInfo(names, values);
+        } catch (IOException ignored) {
+            throw new InternalException(
+                    "Failed to read JSON fields from file %s", file);
         }
     }
 

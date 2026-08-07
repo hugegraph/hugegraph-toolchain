@@ -226,6 +226,7 @@ public class FileLineFetcher extends LineFetcher {
      */
     private boolean checkMatchHeader(String line) {
         if (!this.source().format().needHeader() ||
+            Boolean.FALSE.equals(this.source().hasHeader()) ||
             this.offset() != FIRST_LINE_OFFSET) {
             return false;
         }
