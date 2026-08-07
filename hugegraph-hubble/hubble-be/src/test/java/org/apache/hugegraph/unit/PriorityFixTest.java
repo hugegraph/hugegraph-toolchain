@@ -83,6 +83,16 @@ public class PriorityFixTest {
                                           new Object());
     }
 
+    @Test(expected = ExternalException.class)
+    public void testInterceptorRejectsUnsupportedNegativePageSize() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/list");
+        request.setParameter("page_size", "-2");
+
+        new CustomInterceptor().preHandle(request,
+                                          new MockHttpServletResponse(),
+                                          new Object());
+    }
+
     @Test
     public void testInterceptorKeepsLegacyAllPageSentinel() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/list");
