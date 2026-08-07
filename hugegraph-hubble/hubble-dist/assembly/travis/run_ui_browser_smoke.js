@@ -81,6 +81,59 @@ async function loadPlaywright() {
   }
 }
 
+function createApiEntry(response) {
+  const request = response.request();
+  return {
+    method: request.method(),
+    url: response.url(),
+    httpStatus: response.status(),
+    ok: response.ok(),
+    businessStatus: null
+  };
+}
+
+async function readBusinessStatus(response, entry) {
+  try {
+    const body = await response.json();
+    entry.businessStatus = body && body.status !== undefined ? body.status : null;
+  } catch (_) {
+    // Non-JSON API responses are still represented by HTTP status.
+  }
+  return entry;
+}
+
+function matchesRequiredApi(response, requiredRequest) {
+  try {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET' &&
+           url.pathname === requiredRequest.path &&
+           Object.entries(requiredRequest.query || {}).every(([key, value]) => (
+             url.searchParams.get(key) === value
+           ));
+  } catch (_) {
+    return false;
+  }
+}
+
+async function waitForRequiredResponse(page, requiredRequest) {
+  try {
+    const response = await page.waitForResponse(
+      item => matchesRequiredApi(item, requiredRequest),
+      {timeout: 30000}
+    );
+    return {
+      entry: await readBusinessStatus(response, createApiEntry(response)),
+      error: null
+    };
+  } catch (error) {
+    return {entry: null, error: error.message};
+  }
+}
+
+function apiEntryPassed(entry) {
+  return Boolean(entry && entry.ok && entry.businessStatus === 200);
+}
+
 async function main() {
   const hubbleUrl = (argValue('--hubble-url', process.env.HUBBLE_URL) ||
                      'http://127.0.0.1:8088').replace(/\/$/, '');
@@ -106,23 +159,11 @@ async function main() {
   const auth = await authenticateUi(context, page, hubbleUrl, username, password);
 
   page.on('response', async (response) => {
-    const request = response.request();
     const url = response.url();
     if (url.includes('/api/v1.3/')) {
-      let businessStatus = null;
-      try {
-        const body = await response.json();
-        businessStatus = body && body.status !== undefined ? body.status : null;
-      } catch (_) {
-        // Non-JSON API responses are still represented by HTTP status.
-      }
-      network.push({
-        method: request.method(),
-        url,
-        httpStatus: response.status(),
-        ok: response.ok(),
-        businessStatus
-      });
+      const entry = createApiEntry(response);
+      network.push(entry);
+      await readBusinessStatus(response, entry);
     }
   });
   page.on('console', (message) => {
@@ -133,21 +174,27 @@ async function main() {
 
   const graphspaceRoute = auth.pdEnabled
     ? { name: 'graphspace', path: '/graphspace',
-        requiredApis: ['/api/v1.3/graphspaces'],
+        requiredRequests: [{
+          path: '/api/v1.3/graphspaces',
+          query: {page_no: '1', page_size: '11'}
+        }],
         readySelector: '[data-testid="graphspace-page-title"]' }
     : { name: 'graphspace', path: '/graphspace/DEFAULT',
-        requiredApis: ['/api/v1.3/graphspaces/DEFAULT/graphs'],
+        requiredRequests: [{
+          path: '/api/v1.3/graphspaces/DEFAULT/graphs',
+          query: {page_no: '1', page_size: '11'}
+        }],
         textPattern: /图管理|Graph Management/ };
   const routes = [
     graphspaceRoute,
     { name: 'gremlin', path: '/gremlin',
-      requiredApis: ['/api/v1.3/graphspaces/list'],
+      requiredRequests: [{path: '/api/v1.3/graphspaces/list'}],
       textPattern: /Gremlin|图查询|查询/ },
     { name: 'algorithms', path: '/algorithms',
-      requiredApis: ['/api/v1.3/graphspaces/list'],
+      requiredRequests: [{path: '/api/v1.3/graphspaces/list'}],
       textPattern: /算法|Algorithm|OLTP|OLAP/ },
     { name: 'asyncTasks', path: '/asyncTasks',
-      requiredApis: ['/api/v1.3/graphspaces/list'],
+      requiredRequests: [{path: '/api/v1.3/graphspaces/list'}],
       textPattern: /异步|Async|Task|任务/ }
   ];
 
@@ -155,10 +202,14 @@ async function main() {
   try {
     for (const route of routes) {
       network.length = 0;
+      const requiredResponsePromises = route.requiredRequests.map(requiredRequest => (
+        waitForRequiredResponse(page, requiredRequest)
+      ));
       await page.goto(hubbleUrl + route.path, {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
         timeout: 30000
       });
+      const requiredResponses = await Promise.all(requiredResponsePromises);
       await page.waitForTimeout(500);
       const screenshot = path.join(outputDir, `${route.name}.png`);
       await page.screenshot({ path: screenshot, fullPage: true });
@@ -167,14 +218,15 @@ async function main() {
         '\\b(addition|analysis|async-tasks|common|home|manage|navigation|' +
         'server-data-import|Topbar)\\.[A-Za-z0-9_.-]+'
       );
-      const matchedApis = route.requiredApis.map((requiredApi) => {
-        const entries = network.filter((entry) => entry.url.includes(requiredApi));
+      const matchedApis = route.requiredRequests.map((requiredRequest, index) => {
+        const requiredResponse = requiredResponses[index];
+        const entries = requiredResponse.entry ? [requiredResponse.entry] : [];
         return {
-          requiredApi,
+          requiredApi: requiredRequest.path,
+          requiredQuery: requiredRequest.query || {},
           entries,
-          passed: entries.some((entry) => entry.ok &&
-                                  (entry.businessStatus === null ||
-                                   entry.businessStatus === 200))
+          waitError: requiredResponse.error,
+          passed: entries.some(apiEntryPassed)
         };
       });
       const routeTextMatched = route.readySelector
@@ -217,7 +269,17 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  apiEntryPassed,
+  createApiEntry,
+  matchesRequiredApi,
+  readBusinessStatus,
+  waitForRequiredResponse
+};
