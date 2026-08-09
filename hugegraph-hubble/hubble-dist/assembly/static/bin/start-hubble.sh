@@ -83,6 +83,8 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+MAIN_CLASS="org.apache.hugegraph.HugeGraphHubble"
+
 if [[ -f ${PID_FILE} ]] ; then
     read -r PID PID_START < "${PID_FILE}"
     if [[ ! ${PID} =~ ^[0-9]+$ ]]; then
@@ -90,7 +92,16 @@ if [[ -f ${PID_FILE} ]] ; then
         rm "${PID_FILE}"
     elif kill -0 "${PID}" > /dev/null 2>&1; then
         CURRENT_START=$(process_start_time "${PID}")
-        if [[ -n ${PID_START} && ${PID_START} != "${CURRENT_START}" ]]; then
+        if [[ -z ${PID_START} ]]; then
+            PROCESS_ARGS=$(ps -p "${PID}" -o args= 2>/dev/null || true)
+            if [[ ${PROCESS_ARGS} == *"${MAIN_CLASS}"* &&
+                  ${PROCESS_ARGS} == *"-Dhubble.home.path=${HOME_PATH}"* ]]; then
+                echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
+                exit 1
+            fi
+            echo "Stale HugeGraphHubble PID file, removing it"
+            rm "${PID_FILE}"
+        elif [[ ${PID_START} != "${CURRENT_START}" ]]; then
             echo "Stale HugeGraphHubble PID file, removing it"
             rm "${PID_FILE}"
         else
@@ -102,7 +113,6 @@ if [[ -f ${PID_FILE} ]] ; then
     fi
 fi
 
-MAIN_CLASS="org.apache.hugegraph.HugeGraphHubble"
 ARGS=${CONF_PATH}/hugegraph-hubble.properties
 LOG=${LOG_PATH}/hugegraph-hubble.log
 
