@@ -75,6 +75,25 @@ public class GremlinUtilTest {
     }
 
     @Test
+    public void testTrailingLineCommentKeepsLimitBeforeComment() {
+        Assert.assertEquals("g.V().limit(250) // trailing",
+                            GremlinUtil.optimizeLimit(
+                            "g.V() // trailing", LIMIT));
+    }
+
+    @Test
+    public void testBlockCommentDoesNotAffectStatementParsing() {
+        Assert.assertEquals("g.V().limit(250) /* '; \\\" */;" +
+                            "g.E().limit(250)",
+                            GremlinUtil.optimizeLimit(
+                            "g.V() /* '; \\\" */;g.E()", LIMIT));
+        Assert.assertEquals("g.V().limit(250) /* line one\n" +
+                            "line two */\ng.E().limit(250)",
+                            GremlinUtil.optimizeLimit(
+                            "g.V() /* line one\nline two */\ng.E()", LIMIT));
+    }
+
+    @Test
     public void testPlainMultiStatement() {
         Assert.assertEquals("g.V().limit(250);g.E().limit(250)",
                             GremlinUtil.optimizeLimit("g.V();g.E()", LIMIT));

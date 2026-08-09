@@ -39,17 +39,27 @@ public interface ExecuteHistoryMapper extends BaseMapper<ExecuteHistory> {
     // 删除超出限制的记录, 按 (graphspace, graph) 分别保留最新的 limit 条
     default void deleteExceedLimit(int limit) {
         for (ExecuteHistory scope : findScopes()) {
-            List<Long> ids = findIdsNewestFirst(scope.getGraphspace(),
-                                                scope.getGraph());
-            if (ids.size() <= limit) {
-                continue;
-            }
-            // 在 Java 侧切分而不是用 SQL 的 OFFSET: 带绑定参数的
-            // LIMIT/OFFSET 在不同数据库下语义不一致, 会删错行.
-            List<Long> excess = ids.subList(limit, ids.size());
-            for (int i = 0; i < excess.size(); i += DELETE_BATCH_SIZE) {
-                int end = Math.min(i + DELETE_BATCH_SIZE, excess.size());
-                deleteBatchIds(excess.subList(i, end));
+            while (true) {
+                int excess = countScope(scope.getGraphspace(),
+                                        scope.getGraph()) - limit;
+                if (excess <= 0) {
+                    break;
+                }
+                int batchSize = Math.min(excess, DELETE_BATCH_SIZE);
+                List<Long> ids = findIdsOldestFirst(scope.getGraphspace(),
+                                                    scope.getGraph(),
+                                                    batchSize);
+                if (ids.isEmpty()) {
+                    break;
+                }
+                // Another scheduler may have deleted the same candidates.
+                // Recheck after selection to avoid consuming retained rows.
+                excess = countScope(scope.getGraphspace(), scope.getGraph()) -
+                         limit;
+                if (excess <= 0) {
+                    break;
+                }
+                deleteBatchIds(ids.subList(0, Math.min(excess, ids.size())));
             }
         }
     }
@@ -59,10 +69,16 @@ public interface ExecuteHistoryMapper extends BaseMapper<ExecuteHistory> {
             "GROUP BY `graphspace`, `graph`")
     List<ExecuteHistory> findScopes();
 
-    // 按时间倒序查询该 graphspace/graph 下的全部 id, 最新的在最前
+    @Select("SELECT COUNT(*) FROM `execute_history` " +
+            "WHERE `graphspace` = #{graphspace} AND `graph` = #{graph}")
+    int countScope(@Param("graphspace") String graphspace,
+                   @Param("graph") String graph);
+
     @Select("SELECT `id` FROM `execute_history` " +
             "WHERE `graphspace` = #{graphspace} AND `graph` = #{graph} " +
-            "ORDER BY `create_time` DESC, `id` DESC")
-    List<Long> findIdsNewestFirst(@Param("graphspace") String graphspace,
-                                  @Param("graph") String graph);
+            "ORDER BY `create_time` ASC, `id` ASC " +
+            "LIMIT #{batchSize}")
+    List<Long> findIdsOldestFirst(@Param("graphspace") String graphspace,
+                                  @Param("graph") String graph,
+                                  @Param("batchSize") int batchSize);
 }

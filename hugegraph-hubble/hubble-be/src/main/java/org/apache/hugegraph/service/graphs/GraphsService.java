@@ -466,30 +466,39 @@ public class GraphsService {
                                HugeClient client,
                                String graphSpace,
                                String graph) {
-        if (isBigGraph(pdClient, graphSpace, graph)) {
-            GremlinQuery query = new GremlinQuery(GREMLIN_STATISTICS_VERTEX);
-            long vid = executeAsyncTask(client, graphSpace, graph, query);
-            query.setContent(GREMLIN_STATISTICS_EDGE);
-            long eid = executeAsyncTask(client, graphSpace, graph, query);
-            String idPair = String.valueOf(vid) + "-" + String.valueOf(eid);
-            String graphKey = getStatisticsKey(graphSpace, graph);
-            if (this.graphStatistics.containsKey(graphKey)) {
-                Map<String, Object> graphCache =
-                        this.graphStatistics.get(graphKey);
-                if (graphCache.get(RUNNING_TASKS) != null) {
-                    List<String> idPairs =
-                            HubbleUtil.uncheckedCast(graphCache.get(RUNNING_TASKS));
-                    idPairs.add(idPair);
-                    return;
-                }
-            }
-            List<String> idPairs = new CopyOnWriteArrayList<>();
-            idPairs.add(idPair);
-            Map<String, Object> graphCache = new ConcurrentHashMap<>(2);
-            graphCache.put(RUNNING_TASKS, idPairs);
-            graphCache.put(STATISTICS, GraphStatisticsEntity.emptyEntity());
-            this.graphStatistics.put(graphKey, graphCache);
+        if (!isBigGraph(pdClient, graphSpace, graph)) {
+            return;
         }
+        String graphKey = getStatisticsKey(graphSpace, graph);
+        GremlinQuery query = new GremlinQuery(GREMLIN_STATISTICS_VERTEX);
+        long vid = executeAsyncTask(client, graphSpace, graph, query);
+        long eid;
+        try {
+            query.setContent(GREMLIN_STATISTICS_EDGE);
+            eid = executeAsyncTask(client, graphSpace, graph, query);
+        } catch (RuntimeException e) {
+            try {
+                client.task().cancel(vid);
+            } catch (RuntimeException cleanup) {
+                log.warn("Failed to cancel partial statistics task {}: {}",
+                         vid, cleanup.getMessage());
+            }
+            throw e;
+        }
+        String idPair = String.valueOf(vid) + "-" + String.valueOf(eid);
+        this.graphStatistics.compute(graphKey, (key, graphCache) -> {
+            if (graphCache == null) {
+                graphCache = new ConcurrentHashMap<>(2);
+                graphCache.put(RUNNING_TASKS,
+                               new CopyOnWriteArrayList<String>());
+                graphCache.put(STATISTICS,
+                               GraphStatisticsEntity.emptyEntity());
+            }
+            List<String> idPairs =
+                    HubbleUtil.uncheckedCast(graphCache.get(RUNNING_TASKS));
+            idPairs.add(idPair);
+            return graphCache;
+        });
     }
 
     public GraphStatisticsEntity getLastStatistics(HugeClient client,

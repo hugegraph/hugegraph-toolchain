@@ -92,16 +92,26 @@ public class FileUploadController extends BaseController {
         Ex.check(CollectionUtil.allUnique(fileNames),
                  "load.upload.file.duplicate-name");
         Map<String, String> tokens = new HashMap<>();
-        for (String fileName : fileNames) {
-            this.checkFileNameValid(fileName);
-            String token = this.service.generateFileToken(fileName);
-            // Atomic reservation to avoid a containsKey-then-put race
-            ReadWriteLock previous = this.uploadingTokenLocks().putIfAbsent(
-                    token, new ReentrantReadWriteLock());
-            Ex.check(previous == null, "load.upload.file.token.existed");
-            tokens.put(fileName, token);
+        Map<String, ReadWriteLock> reservations = new HashMap<>();
+        try {
+            for (String fileName : fileNames) {
+                this.checkFileNameValid(fileName);
+                String token = this.service.generateFileToken(fileName);
+                ReadWriteLock lock = new ReentrantReadWriteLock();
+                // Atomic reservation to avoid a containsKey-then-put race
+                ReadWriteLock previous = this.uploadingTokenLocks()
+                                             .putIfAbsent(token, lock);
+                Ex.check(previous == null, "load.upload.file.token.existed");
+                reservations.put(token, lock);
+                tokens.put(fileName, token);
+            }
+            return tokens;
+        } catch (RuntimeException e) {
+            reservations.forEach((token, lock) -> {
+                this.uploadingTokenLocks().remove(token, lock);
+            });
+            throw e;
         }
-        return tokens;
     }
 
     @PostMapping

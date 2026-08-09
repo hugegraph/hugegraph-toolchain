@@ -81,6 +81,8 @@ const createColumns = t => [
     },
 ];
 
+const getRowKey = record => record.id ?? record.job_id;
+
 const TaskDetail = () => {
     const {t} = useTranslation();
     const columns = createColumns(t);
@@ -161,7 +163,7 @@ const TaskDetail = () => {
                 )}
                 <Spin spinning={loading}>
                     <Table
-                        rowKey='job_id'
+                        rowKey={getRowKey}
                         columns={columns}
                         dataSource={visibleData}
                         scroll={{x: 'max-content'}}

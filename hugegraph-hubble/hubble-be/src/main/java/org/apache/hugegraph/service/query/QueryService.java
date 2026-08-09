@@ -523,6 +523,7 @@ public class QueryService {
             }
         }
 
+        boolean enrichmentSucceeded = true;
         try {
             if (!edges.isEmpty()) {
                 if (vertices.isEmpty()) {
@@ -540,9 +541,10 @@ public class QueryService {
             // The linked-element lookup is best-effort decoration; keep the
             // elements already returned when it fails (e.g. gremlin rejected)
             log.warn("Failed to enrich graph view with linked elements", e);
+            enrichmentSucceeded = false;
         }
 
-        if (!edges.isEmpty()) {
+        if (!edges.isEmpty() && enrichmentSucceeded) {
             Ex.check(!vertices.isEmpty(),
                      "gremlin.edges.linked-vertex.not-exist");
         }

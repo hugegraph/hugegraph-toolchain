@@ -135,6 +135,10 @@ const AlgorithmHome = () => {
     const getFavoriteQueriesList = useCallback(
         async () => {
             if (!graphSpace || !graph) {
+                favoriteQueriesRequest.current = null;
+                setFavoriteQueriesLoading(false);
+                setFavoriteQueriesError(false);
+                setFavoriteQueriesData({});
                 return;
             }
             const request = Symbol('algorithm-favorites');
@@ -182,6 +186,10 @@ const AlgorithmHome = () => {
     const getExecutionLogsList = useCallback(
         async () => {
             if (!graphSpace || !graph) {
+                executionLogsRequest.current = null;
+                setExecutionLogsLoading(false);
+                setExecutionLogsError(false);
+                setExecutionLogsData({});
                 return;
             }
             const request = Symbol('algorithm-logs');

@@ -203,10 +203,8 @@ public class JobManagerController {
                                                           fileId);
                 if (mapping == null) {
                     // The file mapping may have been deleted while the task
-                    // still references its file id, keep the same fallback
-                    // message as LoadTaskService.readLoadFailedReason()
-                    reason = "For some reason, the error file was not " +
-                             "generated. Please check the log for details";
+                    // still references its file id
+                    reason = LoadTaskService.NO_ERROR_FILE_REASON;
                 } else {
                     reason = this.taskService.readLoadFailedReason(mapping);
                 }

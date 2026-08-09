@@ -19,6 +19,8 @@
 package org.apache.hugegraph.service.query;
 
 import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -35,8 +37,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import org.apache.hugegraph.entity.query.ExecuteHistory;
 import org.apache.hugegraph.mapper.query.ExecuteHistoryMapper;
 import org.apache.hugegraph.testutil.Assert;
+import org.mockito.Mockito;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = ExecuteHistoryRetentionTest.TestConfiguration.class,
@@ -118,6 +122,44 @@ public class ExecuteHistoryRetentionTest {
         this.mapper.deleteExceedLimit(500);
 
         Assert.assertEquals(2, this.count("small"));
+    }
+
+    @Test
+    public void testDeletesExcessRowsInBoundedBatches() {
+        for (int i = 0; i < 505; i++) {
+            this.insert("busy", "busy-" + i, 1000L + i);
+        }
+
+        this.mapper.deleteExceedLimit(2);
+
+        Assert.assertEquals(2, this.count("busy"));
+        List<String> kept = this.jdbc.queryForList(
+                "SELECT `content` FROM `execute_history` " +
+                "WHERE `graph` = 'busy' ORDER BY `create_time` DESC",
+                String.class);
+        Assert.assertEquals("busy-504", kept.get(0));
+        Assert.assertEquals("busy-503", kept.get(1));
+    }
+
+    @Test
+    public void testRechecksExcessAfterSelectingCandidates() {
+        ExecuteHistoryMapper concurrent = Mockito.mock(
+                ExecuteHistoryMapper.class, Mockito.CALLS_REAL_METHODS);
+        ExecuteHistory scope = new ExecuteHistory();
+        scope.setGraphspace(SPACE);
+        scope.setGraph("busy");
+        Mockito.when(concurrent.findScopes()).thenReturn(
+                Collections.singletonList(scope));
+        Mockito.when(concurrent.countScope(SPACE, "busy")).thenReturn(4, 2);
+        Mockito.when(concurrent.findIdsOldestFirst(SPACE, "busy", 2))
+               .thenReturn(Arrays.asList(1L, 2L));
+
+        concurrent.deleteExceedLimit(2);
+
+        Mockito.verify(concurrent, Mockito.times(2))
+               .countScope(SPACE, "busy");
+        Mockito.verify(concurrent, Mockito.never())
+               .deleteBatchIds(Mockito.anyList());
     }
 
     private void insert(String graph, String content, long millis) {

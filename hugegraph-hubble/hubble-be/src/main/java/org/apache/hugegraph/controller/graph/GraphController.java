@@ -176,11 +176,13 @@ public class GraphController extends BaseController {
                                List<String> elementIds) {
         HugeClient client = this.authClient(graphSpace, graph);
         ArrayList<ElementEditHistory> list = new ArrayList<>();
-        HashSet<String> set = new HashSet<>(elementIds);
+        HashSet<String> set = new HashSet<>();
+        for (String elementId : elementIds) {
+            set.add(UriUtils.decode(elementId, Constant.CHARSET));
+        }
         try {
             if ("VERTEX".equals(type)) {
                 for (String vertexId : set) {
-                    vertexId = UriUtils.decode(vertexId, Constant.CHARSET);
                     Vertex vertex = client.graph().getVertex(vertexId);
                     String label = vertex.label();
                     this.graphService.deleteVertex(client, vertexId);
@@ -191,7 +193,6 @@ public class GraphController extends BaseController {
                 // Dedupe edge ids the same way as vertex ids, deleting the
                 // same edge twice fails after the first delete
                 for (String edgeId : set) {
-                    edgeId = UriUtils.decode(edgeId, Constant.CHARSET);
                     Edge edge = client.graph().getEdge(edgeId);
                     String label = edge.label();
                     this.graphService.deleteEdge(client, edgeId);

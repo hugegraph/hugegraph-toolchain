@@ -74,6 +74,15 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
     private static final String[] LOAD_OPTION_CREDENTIALS = {
         "password", "token", "pdToken", "trustStoreToken"
     };
+    private static final String[][] REQUIRED_INDEXES = {
+        {"execute_history", "execute_history_graph_create_time",
+         "graphspace", "graph", "create_time"},
+        {"file_mapping", "file_mapping_job_id", "job_id"},
+        {"load_task", "load_task_job_id", "job_id"},
+        {"job_manager", "job_manager_graph_create_time",
+         "graphspace", "graph", "create_time"},
+        {"async_task", "async_task_graph", "graphspace", "graph"}
+    };
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @Autowired
@@ -98,6 +107,7 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
                                EXECUTE_HISTORY_COLUMNS);
         this.addMissingColumns(conn, GREMLIN_COLLECTION_TABLE,
                                GREMLIN_COLLECTION_COLUMNS);
+        this.addMissingIndexes(conn);
         this.removeLegacyLoadTaskCredentials(conn);
     }
 
@@ -152,6 +162,63 @@ public class DatabaseSchemaMigrator implements ApplicationRunner {
                 log.info("Added {}.{} {}", table, name, column[1]);
             }
         }
+    }
+
+    private void addMissingIndexes(Connection conn) throws SQLException {
+        for (String[] definition : REQUIRED_INDEXES) {
+            String table = definition[0];
+            String index = definition[1];
+            if (!this.tableExists(conn, table) ||
+                this.indexExists(conn, table, index)) {
+                continue;
+            }
+            boolean columnsExist = true;
+            for (int i = 2; i < definition.length; i++) {
+                columnsExist &= this.columnExists(conn, table, definition[i]);
+            }
+            if (!columnsExist) {
+                continue;
+            }
+
+            StringBuilder columns = new StringBuilder();
+            for (int i = 2; i < definition.length; i++) {
+                if (columns.length() > 0) {
+                    columns.append(", ");
+                }
+                columns.append('`').append(definition[i]).append('`');
+            }
+            try (Statement statement = conn.createStatement()) {
+                statement.execute(String.format(
+                        "CREATE INDEX `%s` ON `%s`(%s)", index, table,
+                        columns));
+            } catch (SQLException e) {
+                if (!this.indexExists(conn, table, index)) {
+                    throw e;
+                }
+                log.info("Index {} on {} was added concurrently", index,
+                         table);
+                continue;
+            }
+            log.info("Added index {} on {}", index, table);
+        }
+    }
+
+    private boolean indexExists(Connection conn, String table, String index)
+            throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        String[] tables = {table, table.toUpperCase(Locale.ROOT)};
+        for (String tableName : tables) {
+            try (ResultSet rs = metaData.getIndexInfo(conn.getCatalog(), null,
+                                                      tableName, false,
+                                                      false)) {
+                while (rs.next()) {
+                    if (index.equalsIgnoreCase(rs.getString("INDEX_NAME"))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void migrateFileMappingPath(Connection conn, int currentLength)

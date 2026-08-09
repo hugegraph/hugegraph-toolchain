@@ -56,6 +56,7 @@ public class HugeClient implements Closeable {
      * every assignGraph() call
      */
     private volatile boolean apiVersionChecked;
+    private final Object apiVersionLock = new Object();
     private VersionManager version;
     private GraphsManager graphs;
     private SchemaManager schema;
@@ -154,8 +155,14 @@ public class HugeClient implements Closeable {
         // Check hugegraph-server api version (once per client instance)
         this.version = new VersionManager(client);
         if (!this.apiVersionChecked) {
-            this.checkServerApiVersion();
-            this.apiVersionChecked = true;
+            synchronized (this.apiVersionLock) {
+                if (!this.apiVersionChecked) {
+                    this.checkServerApiVersion();
+                    // Failed handshakes leave the flag false so a later
+                    // assignment can retry.
+                    this.apiVersionChecked = true;
+                }
+            }
         }
 
         this.graphs = new GraphsManager(client, graphSpace);

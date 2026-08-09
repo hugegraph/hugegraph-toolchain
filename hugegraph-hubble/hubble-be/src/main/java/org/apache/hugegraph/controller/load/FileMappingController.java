@@ -140,8 +140,9 @@ public class FileMappingController extends BaseController {
             // Otherwise the uploaded files would be leaked on disk forever
             this.service.deleteDiskFile(mapping);
             this.service.remove(mapping.getId());
+            this.decreaseJobSize(graphSpace, graph, jobId,
+                                 ImmutableList.of(mapping));
         }
-        this.decreaseJobSize(graphSpace, graph, jobId, mappings);
     }
 
     @PostMapping("{id}/file-setting")

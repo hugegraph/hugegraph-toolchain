@@ -200,12 +200,55 @@ public class FileMappingSchemaTest {
 
             this.assertColumnExists(conn, "EXECUTE_HISTORY", "GRAPHSPACE");
             this.assertColumnExists(conn, "GREMLIN_COLLECTION", "TYPE");
+            this.assertIndexExists(conn, "EXECUTE_HISTORY",
+                                   "EXECUTE_HISTORY_GRAPH_CREATE_TIME");
+            this.assertIndexExists(conn, "FILE_MAPPING",
+                                   "FILE_MAPPING_JOB_ID");
+            this.assertIndexExists(conn, "LOAD_TASK", "LOAD_TASK_JOB_ID");
+            this.assertIndexExists(conn, "JOB_MANAGER",
+                                   "JOB_MANAGER_GRAPH_CREATE_TIME");
+            this.assertIndexExists(conn, "ASYNC_TASK", "ASYNC_TASK_GRAPH");
             // The fresh schema keeps its own column types untouched
             try (ResultSet columns = conn.getMetaData().getColumns(
                     null, null, "EXECUTE_HISTORY", "GRAPHSPACE")) {
                 Assert.assertTrue(columns.next());
                 Assert.assertEquals(48, columns.getInt("COLUMN_SIZE"));
             }
+        }
+    }
+
+    @Test
+    public void testSchemaMigratorAddsMissingIndexesIdempotently()
+           throws Exception {
+        String url = "jdbc:h2:mem:legacy_schema_indexes;DB_CLOSE_DELAY=-1";
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE `execute_history` (" +
+                              "`id` INT, `graphspace` VARCHAR(48), " +
+                              "`graph` VARCHAR(48), `create_time` DATETIME)");
+            statement.execute("CREATE TABLE `file_mapping` (" +
+                              "`id` INT, `job_id` INT)");
+            statement.execute("CREATE TABLE `load_task` (" +
+                              "`id` INT, `job_id` INT, `options` TEXT)");
+            statement.execute("CREATE TABLE `job_manager` (" +
+                              "`id` INT, `graphspace` VARCHAR(48), " +
+                              "`graph` VARCHAR(48), `create_time` DATETIME)");
+            statement.execute("CREATE TABLE `async_task` (" +
+                              "`id` INT, `graphspace` VARCHAR(48), " +
+                              "`graph` VARCHAR(48))");
+
+            DatabaseSchemaMigrator migrator = new DatabaseSchemaMigrator();
+            migrator.migrate(conn);
+            migrator.migrate(conn);
+
+            this.assertIndexExists(conn, "EXECUTE_HISTORY",
+                                   "EXECUTE_HISTORY_GRAPH_CREATE_TIME");
+            this.assertIndexExists(conn, "FILE_MAPPING",
+                                   "FILE_MAPPING_JOB_ID");
+            this.assertIndexExists(conn, "LOAD_TASK", "LOAD_TASK_JOB_ID");
+            this.assertIndexExists(conn, "JOB_MANAGER",
+                                   "JOB_MANAGER_GRAPH_CREATE_TIME");
+            this.assertIndexExists(conn, "ASYNC_TASK", "ASYNC_TASK_GRAPH");
         }
     }
 
@@ -216,6 +259,19 @@ public class FileMappingSchemaTest {
             Assert.assertTrue(table + "." + column + " should exist",
                               columns.next());
         }
+    }
+
+    private void assertIndexExists(Connection conn, String table,
+                                   String index) throws Exception {
+        try (ResultSet indexes = conn.getMetaData().getIndexInfo(
+                conn.getCatalog(), null, table, false, false)) {
+            while (indexes.next()) {
+                if (index.equalsIgnoreCase(indexes.getString("INDEX_NAME"))) {
+                    return;
+                }
+            }
+        }
+        Assert.fail(table + "." + index + " should exist");
     }
 
     private Path legacySchemaPath() {

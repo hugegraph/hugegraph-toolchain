@@ -375,7 +375,7 @@ public class ExceptionAdvisor {
                     message = ErrorCodeMessage.getErrorMessage(code, origin,
                                                                args);
                 }
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 // Fall back to the original upstream message, never throw
                 // from inside the exception handler
                 log.error("hubble.error_code_parse_failed");

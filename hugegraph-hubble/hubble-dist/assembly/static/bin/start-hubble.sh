@@ -28,6 +28,15 @@ LIB_PATH=${HOME_PATH}/lib
 LOG_PATH=${HOME_PATH}/logs
 PID_FILE=${BIN_PATH}/pid
 
+process_start_time() {
+    local process_pid=$1
+    if [[ -r /proc/${process_pid}/stat ]]; then
+        awk '{print $22}' "/proc/${process_pid}/stat"
+    else
+        LC_ALL=C ps -o lstart= -p "${process_pid}" 2>/dev/null
+    fi
+}
+
 . "${BIN_PATH}"/common_functions
 
 java_env_check
@@ -75,10 +84,19 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -f ${PID_FILE} ]] ; then
-    PID=$(cat "${PID_FILE}")
-    if kill -0 "${PID}" > /dev/null 2>&1; then
-        echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
-        exit 1
+    read -r PID PID_START < "${PID_FILE}"
+    if [[ ! ${PID} =~ ^[0-9]+$ ]]; then
+        echo "Invalid HugeGraphHubble PID file, removing it"
+        rm "${PID_FILE}"
+    elif kill -0 "${PID}" > /dev/null 2>&1; then
+        CURRENT_START=$(process_start_time "${PID}")
+        if [[ -n ${PID_START} && ${PID_START} != "${CURRENT_START}" ]]; then
+            echo "Stale HugeGraphHubble PID file, removing it"
+            rm "${PID_FILE}"
+        else
+            echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
+            exit 1
+        fi
     else
         rm "${PID_FILE}"
     fi
@@ -99,7 +117,8 @@ else
 fi
 
 PID=$!
-echo ${PID} > "${PID_FILE}"
+PID_START=$(process_start_time "${PID}")
+echo "${PID} ${PID_START}" > "${PID_FILE}"
 
 # wait hubble start
 TIMEOUT_S=30
