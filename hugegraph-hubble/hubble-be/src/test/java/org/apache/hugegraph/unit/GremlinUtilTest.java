@@ -49,6 +49,18 @@ public class GremlinUtilTest {
     }
 
     @Test
+    public void testMultilineChainReceivesOnlyOneTailLimit() {
+        Assert.assertEquals("g.V()\n  .hasLabel(\"person\")\n  " +
+                            ".out().limit(250)",
+                            GremlinUtil.optimizeLimit(
+                            "g.V()\n  .hasLabel(\"person\")\n  .out()",
+                            LIMIT));
+        Assert.assertEquals("g.V() // continue\n  .out().limit(250)",
+                            GremlinUtil.optimizeLimit(
+                            "g.V() // continue\n  .out()", LIMIT));
+    }
+
+    @Test
     public void testApostropheInCommentDoesNotDisableLimit() {
         // An apostrophe inside a comment must not be read as a string
         // delimiter, otherwise the rest of the script is treated as one

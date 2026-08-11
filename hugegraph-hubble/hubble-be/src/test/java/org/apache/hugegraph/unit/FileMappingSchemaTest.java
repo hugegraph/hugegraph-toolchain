@@ -25,7 +25,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.junit.Test;
 import org.springframework.core.io.FileSystemResource;
@@ -133,6 +136,11 @@ public class FileMappingSchemaTest {
             ScriptUtils.executeSqlScript(conn, new FileSystemResource(
                                          this.legacySchemaPath()));
             try (Statement statement = conn.createStatement()) {
+                statement.execute("INSERT INTO `graph_connection` " +
+                                  "(`name`, `graph`, `host`, `port`, " +
+                                  "`create_time`) VALUES " +
+                                  "('legacy', 'legacygraph', 'localhost', " +
+                                  "8080, CURRENT_TIMESTAMP)");
                 statement.execute("INSERT INTO `execute_history` " +
                                   "(`execute_type`, `content`, " +
                                   "`execute_status`, `duration`, " +
@@ -163,26 +171,45 @@ public class FileMappingSchemaTest {
             // The legacy rows survive and the new columns are backfilled
             try (Statement statement = conn.createStatement();
                  ResultSet rs = statement.executeQuery(
-                         "SELECT `content`, `graphspace`, `graph`, " +
+                         "SELECT `content`, `conn_id`, `graphspace`, `graph`, " +
                          "`async_id`, `text`, `async_status` " +
                          "FROM `execute_history`")) {
                 Assert.assertTrue(rs.next());
                 Assert.assertEquals("g.V()", rs.getString(1));
-                Assert.assertEquals("", rs.getString(2));
-                Assert.assertEquals("", rs.getString(3));
-                Assert.assertEquals(0L, rs.getLong(4));
-                Assert.assertEquals("", rs.getString(5));
-                Assert.assertEquals(0, rs.getInt(6));
+                Assert.assertNull(rs.getObject(2));
+                Assert.assertEquals("DEFAULT", rs.getString(3));
+                Assert.assertEquals("legacygraph", rs.getString(4));
+                Assert.assertEquals(0L, rs.getLong(5));
+                Assert.assertEquals("", rs.getString(6));
+                Assert.assertEquals(0, rs.getInt(7));
             }
             try (Statement statement = conn.createStatement();
                  ResultSet rs = statement.executeQuery(
-                         "SELECT `content`, `graphspace`, `graph`, `type` " +
+                         "SELECT `content`, `conn_id`, `graphspace`, `graph`, " +
+                         "`type` " +
                          "FROM `gremlin_collection`")) {
                 Assert.assertTrue(rs.next());
                 Assert.assertEquals("g.E()", rs.getString(1));
-                Assert.assertEquals("", rs.getString(2));
-                Assert.assertEquals("", rs.getString(3));
-                Assert.assertEquals("", rs.getString(4));
+                Assert.assertNull(rs.getObject(2));
+                Assert.assertEquals("DEFAULT", rs.getString(3));
+                Assert.assertEquals("legacygraph", rs.getString(4));
+                Assert.assertEquals("GREMLIN", rs.getString(5));
+            }
+
+            // Names are unique only inside the application-visible scope.
+            try (Statement statement = conn.createStatement()) {
+                statement.execute("INSERT INTO `gremlin_collection` " +
+                                  "(`conn_id`, `graphspace`, `graph`, `name`, " +
+                                  "`type`, `content`, `create_time`) VALUES " +
+                                  "(1, 'DEFAULT', 'othergraph', 'saved', " +
+                                  "'GREMLIN', 'g.V()', CURRENT_TIMESTAMP)");
+                Assert.assertThrows(SQLException.class, () ->
+                    statement.execute("INSERT INTO `gremlin_collection` " +
+                                      "(`conn_id`, `graphspace`, `graph`, " +
+                                      "`name`, `type`, `content`, " +
+                                      "`create_time`) VALUES (1, 'DEFAULT', " +
+                                      "'legacygraph', 'saved', 'GREMLIN', " +
+                                      "'g.V()', CURRENT_TIMESTAMP)"));
             }
         }
     }
@@ -214,6 +241,98 @@ public class FileMappingSchemaTest {
                 Assert.assertTrue(columns.next());
                 Assert.assertEquals(48, columns.getInt("COLUMN_SIZE"));
             }
+        }
+    }
+
+    @Test
+    public void testSchemaMigratorRecoversScopeFromExistingConnectionId()
+           throws Exception {
+        String url = "jdbc:h2:mem:legacy_schema_conn_id;DB_CLOSE_DELAY=-1";
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement statement = conn.createStatement()) {
+            ScriptUtils.executeSqlScript(conn, new FileSystemResource(
+                                         this.legacySchemaPath()));
+            statement.execute("INSERT INTO `graph_connection` " +
+                              "(`name`, `graph`, `host`, `port`, " +
+                              "`create_time`) VALUES " +
+                              "('first', 'graph_a', 'host_a', 8080, " +
+                              "CURRENT_TIMESTAMP), " +
+                              "('second', 'graph_b', 'host_b', 8080, " +
+                              "CURRENT_TIMESTAMP)");
+            statement.execute("ALTER TABLE `execute_history` ADD COLUMN " +
+                              "`conn_id` INT");
+            statement.execute("ALTER TABLE `execute_history` ADD COLUMN " +
+                              "`graphspace` VARCHAR(48)");
+            statement.execute("ALTER TABLE `execute_history` ADD COLUMN " +
+                              "`graph` VARCHAR(48)");
+            statement.execute("INSERT INTO `execute_history` " +
+                              "(`conn_id`, `graphspace`, `graph`, " +
+                              "`execute_type`, `content`, `execute_status`, " +
+                              "`duration`, `create_time`) VALUES " +
+                              "(2, '', '', 0, 'g.V()', 1, 1, " +
+                              "CURRENT_TIMESTAMP)");
+
+            new DatabaseSchemaMigrator().migrate(conn);
+
+            try (ResultSet rows = statement.executeQuery(
+                    "SELECT `graphspace`, `graph` FROM `execute_history`")) {
+                Assert.assertTrue(rows.next());
+                Assert.assertEquals("DEFAULT", rows.getString(1));
+                Assert.assertEquals("graph_b", rows.getString(2));
+            }
+        }
+    }
+
+    @Test
+    public void testSchemaMigratorPreservesCollidingLegacyCollections()
+           throws Exception {
+        String url = "jdbc:h2:mem:legacy_collection_collision;DB_CLOSE_DELAY=-1";
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE `graph_connection` (" +
+                              "`id` INT NOT NULL AUTO_INCREMENT, " +
+                              "`graphspace` VARCHAR(48), " +
+                              "`graph` VARCHAR(48), PRIMARY KEY (`id`))");
+            statement.execute("CREATE TABLE `gremlin_collection` (" +
+                              "`id` INT NOT NULL AUTO_INCREMENT, " +
+                              "`conn_id` INT, `graphspace` VARCHAR(48), " +
+                              "`graph` VARCHAR(48), `name` VARCHAR(48), " +
+                              "`type` VARCHAR(48), `content` TEXT, " +
+                              "PRIMARY KEY (`id`), UNIQUE (`conn_id`, `name`))");
+            statement.execute("INSERT INTO `graph_connection` " +
+                              "(`graphspace`, `graph`) VALUES " +
+                              "('DEFAULT', 'shared'), ('DEFAULT', 'shared')");
+            statement.execute("INSERT INTO `gremlin_collection` " +
+                              "(`conn_id`, `name`, `content`) VALUES " +
+                              "(NULL, 'saved', 'first'), " +
+                              "(NULL, 'saved', 'second'), " +
+                              "(NULL, 'saved_2', 'reserved')");
+
+            DatabaseSchemaMigrator migrator = new DatabaseSchemaMigrator();
+            migrator.migrate(conn);
+            migrator.migrate(conn);
+
+            Set<String> names = new HashSet<>();
+            Set<String> contents = new HashSet<>();
+            try (ResultSet rows = statement.executeQuery(
+                    "SELECT `conn_id`, `name`, `content` " +
+                    "FROM `gremlin_collection`")) {
+                while (rows.next()) {
+                    Assert.assertNull(rows.getObject(1));
+                    names.add(rows.getString(2));
+                    contents.add(rows.getString(3));
+                }
+            }
+            Assert.assertEquals(3, names.size());
+            Assert.assertTrue(names.contains("saved"));
+            Assert.assertTrue(names.contains("saved_2"));
+            Assert.assertTrue(names.stream().anyMatch(
+                    name -> name.startsWith("saved_2_") &&
+                            !name.equals("saved_2")));
+            Assert.assertEquals(3, contents.size());
+            Assert.assertTrue(contents.contains("first"));
+            Assert.assertTrue(contents.contains("second"));
+            Assert.assertTrue(contents.contains("reserved"));
         }
     }
 

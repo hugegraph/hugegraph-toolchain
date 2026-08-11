@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import lombok.extern.log4j.Log4j2;
 import org.apache.hugegraph.service.space.HStoreService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,8 +63,7 @@ public class HStoreController extends BaseController {
         try {
             return hStoreService.listPage(client, pageNo, pageSize);
         } catch (ServerException e) {
-            throw new ServerCapabilityUnavailableException(
-                    "server.capability.hstore-status.unavailable", e);
+            throw mapHstoreFailure(e);
         }
     }
 
@@ -77,8 +77,7 @@ public class HStoreController extends BaseController {
             partitions = client.hStoreManager().get(id)
                                .hStorePartitionInfoList();
         } catch (ServerException e) {
-            throw new ServerCapabilityUnavailableException(
-                    "server.capability.hstore-status.unavailable", e);
+            throw mapHstoreFailure(e, id);
         }
         return ImmutableMap.of("shards", partitions);
     }
@@ -102,8 +101,7 @@ public class HStoreController extends BaseController {
         try {
             status = client.hStoreManager().status();
         } catch (ServerException e) {
-            throw new ServerCapabilityUnavailableException(
-                    "server.capability.hstore-status.unavailable", e);
+            throw mapHstoreFailure(e);
         }
 
         return ImmutableMap.of("status", status);
@@ -118,8 +116,7 @@ public class HStoreController extends BaseController {
         try {
             client.hStoreManager().startSplit();
         } catch (ServerException e) {
-            throw new ServerCapabilityUnavailableException(
-                    "server.capability.hstore-status.unavailable", e);
+            throw mapHstoreFailure(e);
         }
     }
 
@@ -141,8 +138,10 @@ public class HStoreController extends BaseController {
             try {
                 client.hStoreManager().nodeStartup(nodeId);
             } catch (ServerException e) {
-                throw new ServerCapabilityUnavailableException(
-                        "server.capability.hstore-status.unavailable", e);
+                log.warn("Startup of HStore node {} failed after nodes {} " +
+                         "succeeded", nodeId, successNodes);
+                throw mapHstoreFailure(e, nodeId,
+                                       ImmutableList.copyOf(successNodes));
             } catch (RuntimeException e) {
                 log.info("startup hstore node({}) success", successNodes);
                 log.warn("startup hstore node({}) error", nodeId, e);
@@ -173,8 +172,10 @@ public class HStoreController extends BaseController {
             try {
                 client.hStoreManager().nodeShutdown(nodeId);
             } catch (ServerException e) {
-                throw new ServerCapabilityUnavailableException(
-                        "server.capability.hstore-status.unavailable", e);
+                log.warn("Shutdown of HStore node {} failed after nodes {} " +
+                         "succeeded", nodeId, successNodes);
+                throw mapHstoreFailure(e, nodeId,
+                                       ImmutableList.copyOf(successNodes));
             } catch (RuntimeException e) {
                 log.info("shutdown hstore node({}) success", successNodes);
                 log.warn("shutdown hstore node({}) error", nodeId, e);
@@ -185,5 +186,18 @@ public class HStoreController extends BaseController {
 
             successNodes.add(nodeId);
         }
+    }
+
+    static RuntimeException mapHstoreFailure(ServerException exception,
+                                             Object... context) {
+        int status = exception.status();
+        if (status == HttpStatus.NOT_FOUND.value() ||
+            status == HttpStatus.METHOD_NOT_ALLOWED.value() ||
+            status == HttpStatus.NOT_IMPLEMENTED.value()) {
+            return new ServerCapabilityUnavailableException(
+                    "server.capability.hstore-status.unavailable", exception,
+                    context);
+        }
+        return exception;
     }
 }

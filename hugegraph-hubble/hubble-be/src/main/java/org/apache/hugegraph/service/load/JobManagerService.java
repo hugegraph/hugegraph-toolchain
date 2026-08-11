@@ -182,6 +182,39 @@ public class JobManagerService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void completeUpload(FileMapping mapping) {
+        Integer jobId = mapping.getJobId();
+        if (jobId == null) {
+            throw new InternalException("File mapping has no job id");
+        }
+        this.fileMappingService.update(mapping);
+        if (this.mapper.increaseJobSize(jobId, mapping.getTotalSize()) != 1) {
+            throw new InternalException("entity.update.failed", jobId);
+        }
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void deleteMappings(int jobId, List<FileMapping> mappings) {
+        if (mappings.isEmpty()) {
+            return;
+        }
+        long releasedSize = 0L;
+        for (FileMapping mapping : mappings) {
+            if (mapping.getJobId() == null || mapping.getJobId() != jobId) {
+                throw new InternalException("File mapping does not belong to " +
+                                            "job %s", jobId);
+            }
+            releasedSize = Math.addExact(releasedSize,
+                                         mapping.getTotalSize());
+            this.fileMappingService.detachFromJob(mapping.getId(), jobId);
+        }
+        if (this.mapper.decreaseJobSize(jobId, releasedSize) != 1) {
+            throw new InternalException("entity.update.failed", jobId);
+        }
+        this.deleteDiskFilesAfterCommit(mappings);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void remove(int id) {
         if (this.mapper.deleteById(id) != 1) {
             throw new InternalException("entity.delete.failed", id);

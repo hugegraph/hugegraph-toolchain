@@ -92,8 +92,10 @@ public class LoaderScopeControllerTest {
 
         controller.clear("space-a", "graph-a", 7);
 
-        Mockito.verify(service).deleteDiskFile(mapping);
-        Mockito.verify(service).remove(11);
+        Mockito.verify(jobService).deleteMappings(
+                7, Collections.singletonList(mapping));
+        Mockito.verify(service, Mockito.never()).deleteDiskFile(mapping);
+        Mockito.verify(service, Mockito.never()).remove(11);
         Mockito.verify(service, Mockito.never()).listAll();
     }
 

@@ -312,8 +312,9 @@ public final class GremlinUtil {
         // server-side timeout/result/byte limits without changing aggregation semantics.
         /*
          * Scan the script with quote awareness: track single-quote,
-         * double-quote and backslash-escape state so that ';' and '\n'
-         * are treated as statement separators only when outside quotes.
+         * double-quote and backslash-escape state so that ';' and true
+         * statement-ending newlines are treated as separators only when
+         * outside quotes.
          * The suffix-pattern matching and '.limit(N)' appending are
          * applied only to true statement tails (outside quotes).
          */
@@ -335,12 +336,17 @@ public final class GremlinUtil {
             }
             if (inLineComment) {
                 if (ch == '\n') {
-                    result.append(optimizeStatement(statement.toString(),
-                                                    matchable.toString(),
-                                                    limit));
-                    result.append(ch);
-                    statement.setLength(0);
-                    matchable.setLength(0);
+                    if (chainContinues(gremlin, i)) {
+                        statement.append(ch);
+                        matchable.append(ch);
+                    } else {
+                        result.append(optimizeStatement(statement.toString(),
+                                                        matchable.toString(),
+                                                        limit));
+                        result.append(ch);
+                        statement.setLength(0);
+                        matchable.setLength(0);
+                    }
                     inLineComment = false;
                 } else {
                     statement.append(ch);
@@ -390,7 +396,10 @@ public final class GremlinUtil {
                 matchable.append(ch);
                 continue;
             }
-            if ((ch == ';' || ch == '\n') && !inSingleQuote && !inDoubleQuote) {
+            boolean separator = ch == ';' ||
+                                ch == '\n' &&
+                                !chainContinues(gremlin, i);
+            if (separator && !inSingleQuote && !inDoubleQuote) {
                 result.append(optimizeStatement(statement.toString(),
                                                 matchable.toString(), limit));
                 result.append(ch);
@@ -409,6 +418,19 @@ public final class GremlinUtil {
                                             matchable.toString(), limit));
         }
         return result.toString();
+    }
+
+    private static boolean chainContinues(String gremlin, int newline) {
+        for (int i = newline + 1; i < gremlin.length(); i++) {
+            char next = gremlin.charAt(i);
+            if (!Character.isWhitespace(next)) {
+                if (next == '.') {
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
     }
 
     private static String optimizeStatement(String statement,

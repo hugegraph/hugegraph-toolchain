@@ -27,6 +27,7 @@ import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.enums.JobStatus;
+import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.FileSetting;
 import org.apache.hugegraph.entity.load.ElementMapping;
@@ -117,10 +118,7 @@ public class FileMappingController extends BaseController {
         }
         this.checkNoRunningTask(jobId, ImmutableSet.of(mapping.getId()));
 
-        this.service.deleteDiskFile(mapping);
-        this.service.remove(id);
-        this.decreaseJobSize(graphSpace, graph, jobId,
-                             ImmutableList.of(mapping));
+        this.jobService.deleteMappings(jobId, ImmutableList.of(mapping));
     }
 
     @DeleteMapping
@@ -136,13 +134,7 @@ public class FileMappingController extends BaseController {
         // Check them all upfront, don't delete part of the mappings then fail
         this.checkNoRunningTask(jobId, fileIds);
 
-        for (FileMapping mapping : mappings) {
-            // Otherwise the uploaded files would be leaked on disk forever
-            this.service.deleteDiskFile(mapping);
-            this.service.remove(mapping.getId());
-            this.decreaseJobSize(graphSpace, graph, jobId,
-                                 ImmutableList.of(mapping));
-        }
+        this.jobService.deleteMappings(jobId, mappings);
     }
 
     @PostMapping("{id}/file-setting")
@@ -346,12 +338,17 @@ public class FileMappingController extends BaseController {
     }
 
     /**
-     * Deleting a file mapping whose data is being imported would make the
-     * loader thread fail in the middle of the import
+     * Keep source and progress files while a task can still run, resume, or
+     * retry from them.
      */
     private void checkNoRunningTask(int jobId, Set<Integer> fileIds) {
         for (LoadTask task : this.taskService.taskListByJob(jobId)) {
-            if (task.getStatus() != null && task.getStatus().inRunning() &&
+            LoadStatus status = task.getStatus();
+            boolean needsSource = status == LoadStatus.RUNNING ||
+                                  status == LoadStatus.PAUSED ||
+                                  status == LoadStatus.FAILED ||
+                                  status == LoadStatus.STOPPED;
+            if (needsSource &&
                 task.getFileId() != null &&
                 fileIds.contains(task.getFileId())) {
                 throw new ExternalException(
@@ -359,27 +356,6 @@ public class FileMappingController extends BaseController {
                           task.getFileId());
             }
         }
-    }
-
-    /**
-     * Give the released size back to the job, otherwise the upload quota
-     * keeps inflating and later uploads are wrongly rejected
-     */
-    private void decreaseJobSize(String graphSpace, String graph, int jobId,
-                                 List<FileMapping> mappings) {
-        if (mappings.isEmpty()) {
-            return;
-        }
-        JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
-        if (jobEntity == null) {
-            return;
-        }
-        long jobSize = jobEntity.getJobSize();
-        for (FileMapping mapping : mappings) {
-            jobSize -= mapping.getTotalSize();
-        }
-        jobEntity.setJobSize(Math.max(jobSize, 0L));
-        this.jobService.update(jobEntity);
     }
 
     private void checkVertexMappingValid(HugeClient client,

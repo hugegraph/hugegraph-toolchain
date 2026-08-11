@@ -213,11 +213,7 @@ public class FileUploadController extends BaseController {
                 String newPath = this.service.moveToNextLevelDir(mapping);
                 // Update file mapping stored path
                 mapping.setPath(newPath);
-                this.service.update(mapping);
-                // Update Job Manager size
-                long jobSize = currentJob.getJobSize() + mapping.getTotalSize();
-                currentJob.setJobSize(jobSize);
-                this.jobService.update(currentJob);
+                this.jobService.completeUpload(mapping);
                 result.setId(mapping.getId());
                 // Remove uploading file token
                 this.uploadingTokenLocks().remove(token);
@@ -250,12 +246,8 @@ public class FileUploadController extends BaseController {
             lock.writeLock().lock();
         }
         try {
-            this.service.deleteDiskFile(mapping);
-            log.info("Prepare to remove file mapping {}", mapping.getId());
-            this.service.remove(mapping.getId());
-            long jobSize = jobEntity.getJobSize() - mapping.getTotalSize();
-            jobEntity.setJobSize(jobSize);
-            this.jobService.update(jobEntity);
+            this.jobService.deleteMappings(jobId,
+                                           Collections.singletonList(mapping));
             if (lock != null) {
                 this.uploadingTokenLocks().remove(token);
             }

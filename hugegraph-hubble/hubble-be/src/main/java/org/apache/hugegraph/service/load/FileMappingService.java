@@ -182,6 +182,13 @@ public class FileMappingService {
         }
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void detachFromJob(int mappingId, int jobId) {
+        if (this.mapper.detachFromJob(mappingId, jobId) != 1) {
+            throw new InternalException("entity.update.failed", mappingId);
+        }
+    }
+
     public String generateFileToken(String fileName) {
         /*
          * Append a short random suffix so that tokens cannot be guessed
