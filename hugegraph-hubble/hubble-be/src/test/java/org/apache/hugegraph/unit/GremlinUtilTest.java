@@ -58,6 +58,11 @@ public class GremlinUtilTest {
         Assert.assertEquals("g.V() // continue\n  .out().limit(250)",
                             GremlinUtil.optimizeLimit(
                             "g.V() // continue\n  .out()", LIMIT));
+        Assert.assertEquals("g.V()\n/* keep traversing */\n" +
+                            ".out().limit(250)",
+                            GremlinUtil.optimizeLimit(
+                            "g.V()\n/* keep traversing */\n.out()",
+                            LIMIT));
     }
 
     @Test
@@ -162,5 +167,24 @@ public class GremlinUtilTest {
         String gremlin = "g.V().hasLabel('unclosed";
         Assert.assertEquals(gremlin,
                             GremlinUtil.optimizeLimit(gremlin, LIMIT));
+    }
+
+    @Test
+    public void testUnsupportedGroovyLiteralsAreNotOptimized() {
+        String slashy = "def x = /g.V()\\n/\ng.E()";
+        Assert.assertEquals(slashy,
+                            GremlinUtil.optimizeLimit(slashy, LIMIT));
+
+        String dollarSlashy = "def x = $/g.V()/$\ng.E()";
+        Assert.assertEquals(dollarSlashy,
+                            GremlinUtil.optimizeLimit(dollarSlashy, LIMIT));
+
+        String tripleQuoted = "def x = '''g.V()\ng.E()'''\ng.V()";
+        Assert.assertEquals(tripleQuoted,
+                            GremlinUtil.optimizeLimit(tripleQuoted, LIMIT));
+
+        String division = "def half = 4 / 2\ng.V()";
+        Assert.assertEquals(division,
+                            GremlinUtil.optimizeLimit(division, LIMIT));
     }
 }

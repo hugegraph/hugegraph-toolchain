@@ -91,7 +91,7 @@ if [[ -f ${PID_FILE} ]] ; then
         echo "Invalid HugeGraphHubble PID file, removing it"
         rm "${PID_FILE}"
     elif kill -0 "${PID}" > /dev/null 2>&1; then
-        CURRENT_START=$(process_start_time "${PID}")
+        CURRENT_START=$(process_start_time "${PID}") || CURRENT_START=""
         if [[ -z ${PID_START} ]]; then
             PROCESS_ARGS=$(ps -p "${PID}" -o args= 2>/dev/null || true)
             if [[ ${PROCESS_ARGS} == *"${MAIN_CLASS}"* &&
@@ -127,7 +127,12 @@ else
 fi
 
 PID=$!
-PID_START=$(process_start_time "${PID}")
+PID_START=$(process_start_time "${PID}") || PID_START=""
+if ! kill -0 "${PID}" > /dev/null 2>&1; then
+    wait "${PID}" || true
+    cat "${LOG}" || true
+    exit 1
+fi
 echo "${PID} ${PID_START}" > "${PID_FILE}"
 
 # wait hubble start

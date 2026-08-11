@@ -171,8 +171,9 @@ public class ExecuteHistoryService {
 
     @Async
     @Scheduled(fixedDelay = 24 * 60 * 60 * 1000)
-    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void removeExceedLimit() {
+        // Do not wrap the complete cleanup in one transaction. Without an
+        // outer transaction, each bounded mapper DELETE commits independently.
         int limit = this.config.get(HubbleOptions.EXECUTE_HISTORY_SHOW_LIMIT);
         this.mapper.deleteExceedLimit(limit);
     }

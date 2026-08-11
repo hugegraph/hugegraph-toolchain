@@ -366,6 +366,16 @@ public final class GremlinUtil {
                 }
                 continue;
             }
+            if (!inSingleQuote && !inDoubleQuote &&
+                (gremlin.startsWith("'''", i) ||
+                 gremlin.startsWith("\"\"\"", i))) {
+                return gremlin;
+            }
+            if (!inSingleQuote && !inDoubleQuote && ch == '$' &&
+                i + 1 < gremlin.length() &&
+                gremlin.charAt(i + 1) == '/') {
+                return gremlin;
+            }
             if (!inSingleQuote && !inDoubleQuote && ch == '/' &&
                 i + 1 < gremlin.length()) {
                 char next = gremlin.charAt(i + 1);
@@ -377,6 +387,9 @@ public final class GremlinUtil {
                     inBlockComment = next == '*';
                     continue;
                 }
+                // This may be a slashy literal or division. Both need a real
+                // Groovy lexer to distinguish safely.
+                return gremlin;
             }
             if ((inSingleQuote || inDoubleQuote) && ch == '\\') {
                 statement.append(ch);
@@ -423,12 +436,29 @@ public final class GremlinUtil {
     private static boolean chainContinues(String gremlin, int newline) {
         for (int i = newline + 1; i < gremlin.length(); i++) {
             char next = gremlin.charAt(i);
-            if (!Character.isWhitespace(next)) {
-                if (next == '.') {
-                    return true;
-                }
-                break;
+            if (Character.isWhitespace(next)) {
+                continue;
             }
+            if (next == '/' && i + 1 < gremlin.length()) {
+                char afterSlash = gremlin.charAt(i + 1);
+                if (afterSlash == '/') {
+                    int lineEnd = gremlin.indexOf('\n', i + 2);
+                    if (lineEnd < 0) {
+                        return false;
+                    }
+                    i = lineEnd;
+                    continue;
+                }
+                if (afterSlash == '*') {
+                    int commentEnd = gremlin.indexOf("*/", i + 2);
+                    if (commentEnd < 0) {
+                        return false;
+                    }
+                    i = commentEnd + 1;
+                    continue;
+                }
+            }
+            return next == '.';
         }
         return false;
     }

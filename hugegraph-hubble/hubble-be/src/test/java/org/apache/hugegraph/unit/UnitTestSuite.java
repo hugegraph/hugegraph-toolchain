@@ -60,6 +60,7 @@ import org.junit.runners.Suite;
     GraphSpaceAuthOwnershipTest.class,
     GraphSpaceServiceTest.class,
     GraphsControllerCanonicalTest.class,
+    GremlinUtilTest.class,
     GremlinHistoryFailureTest.class,
     HubbleOptionsTest.class,
     IngestControllerTest.class,
