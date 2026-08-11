@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.sql.DataSource;
@@ -95,12 +96,15 @@ public class LegacySchemaStartupTest {
     private HugeClient client;
 
     @Before
-    public void setup() {
+    public void setup() throws Exception {
         Mockito.when(this.config.get(HubbleOptions.EXECUTE_HISTORY_SHOW_LIMIT))
                .thenReturn(500);
         this.client = Mockito.mock(HugeClient.class);
         Mockito.when(this.client.getGraphSpaceName()).thenReturn("DEFAULT");
         Mockito.when(this.client.getGraphName()).thenReturn("legacygraph");
+        try (Connection conn = this.dataSource.getConnection()) {
+            this.migrator.migrate(conn);
+        }
     }
 
     @Test
@@ -117,7 +121,6 @@ public class LegacySchemaStartupTest {
         Assert.assertEquals("saved", collections.getRecords().get(0).getName());
 
         try (Connection conn = this.dataSource.getConnection()) {
-            this.migrator.migrate(conn);
             this.assertScopedRows(conn);
         }
     }
@@ -134,6 +137,40 @@ public class LegacySchemaStartupTest {
                               "`type`, `content`, `create_time`) VALUES " +
                               "(1, 'DEFAULT', 'othergraph', 'saved', " +
                               "'GREMLIN', 'g.E()', CURRENT_TIMESTAMP)");
+            try (ResultSet rows = statement.executeQuery(
+                    "SELECT COUNT(*) FROM `gremlin_collection` WHERE " +
+                    "`graphspace` = 'DEFAULT' AND `graph` = 'othergraph' " +
+                    "AND `name` = 'saved' AND `type` = 'GREMLIN'")) {
+                Assert.assertTrue(rows.next());
+                Assert.assertEquals(1L, rows.getLong(1));
+            }
+            Assert.assertThrows(SQLException.class, () ->
+                    statement.execute("INSERT INTO `gremlin_collection` " +
+                                      "(`conn_id`, `graphspace`, `graph`, " +
+                                      "`name`, `type`, `content`, " +
+                                      "`create_time`) VALUES " +
+                                      "(1, 'DEFAULT', 'legacygraph', " +
+                                      "'saved', 'GREMLIN', 'g.E()', " +
+                                      "CURRENT_TIMESTAMP)"));
+        }
+    }
+
+    @Test
+    public void testLegacyScopeBackfillRequiresAllTargetColumns()
+            throws Exception {
+        try (Connection conn = this.dataSource.getConnection();
+             Statement statement = conn.createStatement()) {
+            statement.execute("DROP TABLE IF EXISTS `scope_guard`");
+            statement.execute("CREATE TABLE `scope_guard` (`conn_id` INT)");
+            Assert.assertFalse(this.migrator.scopeColumnsExist(conn,
+                                                               "scope_guard"));
+            statement.execute("ALTER TABLE `scope_guard` ADD COLUMN " +
+                              "`graphspace` VARCHAR(48)");
+            statement.execute("ALTER TABLE `scope_guard` ADD COLUMN " +
+                              "`graph` VARCHAR(48)");
+            Assert.assertTrue(this.migrator.scopeColumnsExist(conn,
+                                                              "scope_guard"));
+            statement.execute("DROP TABLE `scope_guard`");
         }
     }
 

@@ -209,11 +209,7 @@ public class FileUploadController extends BaseController {
                 mapping.setTotalLines(FileUtil.countLines(mapping.getPath()));
                 mapping.setTotalSize(actualFileSize);
 
-                // Move to the directory corresponding to the file mapping Id
-                String newPath = this.service.moveToNextLevelDir(mapping);
-                // Update file mapping stored path
-                mapping.setPath(newPath);
-                this.jobService.completeUpload(mapping);
+                this.finalizeUpload(mapping);
                 result.setId(mapping.getId());
                 // Remove uploading file token
                 this.uploadingTokenLocks().remove(token);
@@ -221,6 +217,33 @@ public class FileUploadController extends BaseController {
             return result;
         } finally {
             lock.readLock().unlock();
+        }
+    }
+
+    private void finalizeUpload(FileMapping mapping) {
+        String originalPath = mapping.getPath();
+        String movedPath = this.service.moveToNextLevelDir(mapping);
+        mapping.setPath(movedPath);
+        try {
+            this.jobService.completeUpload(mapping);
+        } catch (RuntimeException failure) {
+            mapping.setPath(originalPath);
+            mapping.setFileStatus(FileMappingStatus.UPLOADING);
+            try {
+                this.service.restoreMovedUpload(movedPath, originalPath);
+            } catch (RuntimeException compensationFailure) {
+                // Keep the database cleanup record pointed at the real file
+                // when restoring the original path is impossible.
+                mapping.setPath(movedPath);
+                mapping.setFileStatus(FileMappingStatus.FAILURE);
+                try {
+                    this.service.update(mapping);
+                } catch (RuntimeException recordFailure) {
+                    compensationFailure.addSuppressed(recordFailure);
+                }
+                failure.addSuppressed(compensationFailure);
+            }
+            throw failure;
         }
     }
 

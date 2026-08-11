@@ -241,6 +241,55 @@ public class FileUploadControllerTest {
     }
 
     @Test
+    public void testRestoreMovedUploadRestoresFileAndRemovesDirectory()
+           throws Exception {
+        Path uploadRoot = Files.createTempDirectory("hubble-upload-restore");
+        try {
+            Path movedDir = Files.createDirectories(
+                            uploadRoot.resolve("file-mapping-2"));
+            Path movedFile = Files.write(movedDir.resolve("data.csv"),
+                                         "id,name".getBytes());
+            Path originalFile = uploadRoot.resolve("data.csv");
+            FileMappingService service = this.fileMappingService(uploadRoot);
+
+            service.restoreMovedUpload(movedFile.toString(),
+                                       originalFile.toString());
+
+            Assert.assertTrue(Files.exists(originalFile));
+            Assert.assertFalse(Files.exists(movedFile));
+            Assert.assertFalse(Files.exists(movedDir));
+        } finally {
+            FileUtils.deleteDirectory(uploadRoot.toFile());
+        }
+    }
+
+    @Test
+    public void testRestoreMovedUploadRejectsSymlinkedDestinationParent()
+           throws Exception {
+        Path uploadRoot = Files.createTempDirectory("hubble-upload-root");
+        Path outsideRoot = Files.createTempDirectory("hubble-upload-outside");
+        try {
+            Path movedDir = Files.createDirectories(
+                            uploadRoot.resolve("file-mapping-2"));
+            Path movedFile = Files.write(movedDir.resolve("data.csv"),
+                                         "id,name".getBytes());
+            Path linkedParent = uploadRoot.resolve("linked");
+            Files.createSymbolicLink(linkedParent, outsideRoot);
+            Path originalFile = linkedParent.resolve("data.csv");
+            FileMappingService service = this.fileMappingService(uploadRoot);
+
+            Assert.assertThrows(InternalException.class, () ->
+                    service.restoreMovedUpload(movedFile.toString(),
+                                               originalFile.toString()));
+            Assert.assertTrue(Files.exists(movedFile));
+            Assert.assertFalse(Files.exists(outsideRoot.resolve("data.csv")));
+        } finally {
+            FileUtils.deleteDirectory(uploadRoot.toFile());
+            FileUtils.deleteDirectory(outsideRoot.toFile());
+        }
+    }
+
+    @Test
     public void testTryMergePartFilesReplacesStaleAllFile() throws Exception {
         Path parent = Files.createTempDirectory("hubble-merge");
         File dest = parent.resolve("data.csv").toFile();
@@ -262,6 +311,78 @@ public class FileUploadControllerTest {
         }
     }
 
+    @Test
+    public void testFinalizeUploadRestoresMovedFileAfterDatabaseFailure()
+           throws Exception {
+        FileUploadController controller = this.controller("csv");
+        FileMappingService service = Mockito.mock(FileMappingService.class);
+        JobManagerService jobService = Mockito.mock(JobManagerService.class);
+        FileMapping mapping = this.completedMapping("upload/data.csv");
+        Mockito.when(service.moveToNextLevelDir(mapping))
+               .thenReturn("upload/file-mapping-2/data.csv");
+        Mockito.doThrow(new InternalException("database failure"))
+               .when(jobService).completeUpload(mapping);
+        this.setField(controller, "service", service);
+        this.setField(controller, "jobService", jobService);
+
+        Assert.assertThrows(InternalException.class,
+                            () -> this.finalizeUpload(controller, mapping));
+
+        Mockito.verify(service).restoreMovedUpload(
+                "upload/file-mapping-2/data.csv", "upload/data.csv");
+        Mockito.verify(service, Mockito.never()).update(mapping);
+        Assert.assertEquals("upload/data.csv", mapping.getPath());
+        Assert.assertEquals(FileMappingStatus.UPLOADING,
+                            mapping.getFileStatus());
+    }
+
+    @Test
+    public void testFinalizeUploadRetainsCleanupPathWhenRestoreFails()
+           throws Exception {
+        FileUploadController controller = this.controller("csv");
+        FileMappingService service = Mockito.mock(FileMappingService.class);
+        JobManagerService jobService = Mockito.mock(JobManagerService.class);
+        FileMapping mapping = this.completedMapping("upload/data.csv");
+        String movedPath = "upload/file-mapping-2/data.csv";
+        Mockito.when(service.moveToNextLevelDir(mapping)).thenReturn(movedPath);
+        Mockito.doThrow(new InternalException("database failure"))
+               .when(jobService).completeUpload(mapping);
+        Mockito.doThrow(new InternalException("restore failure"))
+               .when(service).restoreMovedUpload(movedPath,
+                                                 "upload/data.csv");
+        this.setField(controller, "service", service);
+        this.setField(controller, "jobService", jobService);
+
+        Assert.assertThrows(InternalException.class,
+                            () -> this.finalizeUpload(controller, mapping));
+
+        Mockito.verify(service).update(mapping);
+        Assert.assertEquals(movedPath, mapping.getPath());
+        Assert.assertEquals(FileMappingStatus.FAILURE,
+                            mapping.getFileStatus());
+
+        JobManager job = JobManager.builder().id(1).jobSize(0L).build();
+        Mockito.when(jobService.get("DEFAULT", "hugegraph", 1))
+               .thenReturn(job);
+        Mockito.when(service.get("DEFAULT", "hugegraph", 1, "data.csv"))
+               .thenReturn(mapping);
+        Assert.assertThrows(ExternalException.class, () ->
+                this.reserveUploadQuota(controller, "DEFAULT", "hugegraph",
+                                        1, "data.csv", "upload/data.csv",
+                                        10L));
+        Mockito.verify(service).update(mapping);
+    }
+
+    private FileMapping completedMapping(String path) {
+        FileMapping mapping = new FileMapping("DEFAULT", "hugegraph",
+                                              "data.csv", path);
+        mapping.setId(2);
+        mapping.setJobId(1);
+        mapping.setFileStatus(FileMappingStatus.COMPLETED);
+        mapping.setTotalSize(10L);
+        return mapping;
+    }
+
     private FileUploadController controller(String... formats) throws Exception {
         FileUploadController controller = new FileUploadController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
@@ -273,6 +394,16 @@ public class FileUploadControllerTest {
                .thenReturn(2048L);
         this.setField(controller, "config", config);
         return controller;
+    }
+
+    private FileMappingService fileMappingService(Path uploadRoot)
+            throws Exception {
+        FileMappingService service = new FileMappingService();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.UPLOAD_FILE_LOCATION))
+               .thenReturn(uploadRoot.toString());
+        this.setField(service, "config", config);
+        return service;
     }
 
     private void checkFileValid(FileUploadController controller, JobManager job,
@@ -312,6 +443,22 @@ public class FileUploadControllerTest {
             return (FileMapping) method.invoke(controller, graphSpace, graph,
                                                jobId, fileName, filePath,
                                                sourceFileSize);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw e;
+        }
+    }
+
+    private void finalizeUpload(FileUploadController controller,
+                                FileMapping mapping) throws Exception {
+        Method method = FileUploadController.class.getDeclaredMethod(
+                        "finalizeUpload", FileMapping.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(controller, mapping);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             if (cause instanceof Exception) {

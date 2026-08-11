@@ -31,6 +31,7 @@ import lombok.extern.log4j.Log4j2;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.GraphConnection;
+import org.apache.hugegraph.entity.enums.FileMappingStatus;
 import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
@@ -204,8 +205,10 @@ public class JobManagerService {
                 throw new InternalException("File mapping does not belong to " +
                                             "job %s", jobId);
             }
-            releasedSize = Math.addExact(releasedSize,
-                                         mapping.getTotalSize());
+            if (mapping.getFileStatus() == FileMappingStatus.COMPLETED) {
+                releasedSize = Math.addExact(releasedSize,
+                                             mapping.getTotalSize());
+            }
             this.fileMappingService.detachFromJob(mapping.getId(), jobId);
         }
         if (this.mapper.decreaseJobSize(jobId, releasedSize) != 1) {

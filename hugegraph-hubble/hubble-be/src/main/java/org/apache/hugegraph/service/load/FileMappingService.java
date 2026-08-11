@@ -27,6 +27,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
@@ -403,6 +404,35 @@ public class FileMappingService {
         return Paths.get(destPath, currFile.getName()).toString();
     }
 
+    public void restoreMovedUpload(String movedPath, String originalPath) {
+        File movedFile = this.requirePathUnderUploadRoot(movedPath);
+        File originalFile = this.requirePathUnderUploadRoot(originalPath);
+        if (!movedFile.exists()) {
+            if (originalFile.exists()) {
+                return;
+            }
+            throw new InternalException(
+                      "Failed to restore upload file after database rollback");
+        }
+        try {
+            originalFile = this.requirePathUnderUploadRoot(originalPath);
+            FileUtils.moveFile(movedFile, originalFile);
+        } catch (IOException e) {
+            throw new InternalException(
+                      "Failed to restore upload file after database rollback",
+                      e);
+        }
+
+        File movedDirectory = movedFile.getParentFile();
+        String[] children = movedDirectory == null ? null :
+                            movedDirectory.list();
+        if (children != null && children.length == 0 &&
+            !movedDirectory.delete()) {
+            log.warn("Failed to remove empty upload directory {}",
+                     movedDirectory);
+        }
+    }
+
     public void deleteDiskFile(FileMapping mapping) {
         File file = this.requirePathUnderUploadRoot(mapping.getPath());
         if (file.isDirectory()) {
@@ -434,7 +464,8 @@ public class FileMappingService {
     @Scheduled(fixedRate = 10 * 60 * 1000)
     public void deleteUnfinishedFile() {
         QueryWrapper<FileMapping> query = Wrappers.query();
-        query.in("file_status", FileMappingStatus.UPLOADING.getValue());
+        query.in("file_status", FileMappingStatus.UPLOADING.getValue(),
+                 FileMappingStatus.FAILURE.getValue());
         List<FileMapping> mappings = this.mapper.selectList(query);
         long threshold = this.config.get(
                          HubbleOptions.UPLOAD_FILE_MAX_TIME_CONSUMING) * 1000;
@@ -532,25 +563,38 @@ public class FileMappingService {
     }
 
     private Path normalizePath(File file) {
-        Path path = file.toPath();
+        Path path = file.toPath().toAbsolutePath().normalize();
         try {
             if (file.exists()) {
                 return path.toRealPath();
+            }
+            Path existing = path.getParent();
+            while (existing != null && !Files.exists(existing)) {
+                existing = existing.getParent();
+            }
+            if (existing != null) {
+                Path resolvedParent = existing.toRealPath();
+                return resolvedParent.resolve(existing.relativize(path))
+                                     .normalize();
             }
         } catch (IOException e) {
             throw new InternalException("Failed to resolve upload path '%s'",
                                         e, file);
         }
-        return path.toAbsolutePath().normalize();
+        return path;
     }
 
     private void tryDeleteUnfinishedMapping(FileMapping mapping) {
         String filePath = mapping.getPath();
         try {
-            FileUtils.forceDelete(this.requirePathUnderUploadRoot(filePath));
+            File file = this.requirePathUnderUploadRoot(filePath);
+            if (file.exists()) {
+                FileUtils.forceDelete(file);
+            }
         } catch (IOException e) {
             log.warn("Failed to delete expired uploading file {}",
                      filePath, e);
+            return;
         } catch (RuntimeException e) {
             log.warn("Skip deleting expired uploading file {} because the " +
                      "path is invalid", filePath, e);

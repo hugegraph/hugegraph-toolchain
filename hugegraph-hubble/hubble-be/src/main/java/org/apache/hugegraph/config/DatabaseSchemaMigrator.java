@@ -146,11 +146,12 @@ public class DatabaseSchemaMigrator implements BeanPostProcessor,
                                new LegacyScope(null, DEFAULT_GRAPHSPACE,
                                                DEFAULT_GRAPH) : scopes.get(0);
         int updated = 0;
-        if (this.tableExists(conn, EXECUTE_HISTORY_TABLE)) {
+        if (this.scopeColumnsExist(conn, EXECUTE_HISTORY_TABLE)) {
             updated += this.backfillScopes(conn, EXECUTE_HISTORY_TABLE, scopes,
                                            fallback);
         }
-        if (this.tableExists(conn, GREMLIN_COLLECTION_TABLE)) {
+        if (this.scopeColumnsExist(conn, GREMLIN_COLLECTION_TABLE) &&
+            this.columnExists(conn, GREMLIN_COLLECTION_TABLE, "type")) {
             updated += this.backfillScopes(conn, GREMLIN_COLLECTION_TABLE,
                                            scopes, fallback);
             try (PreparedStatement statement = conn.prepareStatement(
@@ -163,6 +164,14 @@ public class DatabaseSchemaMigrator implements BeanPostProcessor,
         if (updated > 0) {
             log.info("Recovered scope for {} legacy query records", updated);
         }
+    }
+
+    boolean scopeColumnsExist(Connection conn, String table)
+            throws SQLException {
+        return this.tableExists(conn, table) &&
+               this.columnExists(conn, table, "conn_id") &&
+               this.columnExists(conn, table, "graphspace") &&
+               this.columnExists(conn, table, "graph");
     }
 
     private int backfillScopes(Connection conn, String table,

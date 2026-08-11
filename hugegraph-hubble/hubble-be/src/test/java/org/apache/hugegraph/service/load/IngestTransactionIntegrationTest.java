@@ -249,6 +249,22 @@ public class IngestTransactionIntegrationTest {
     }
 
     @Test
+    public void testFailedMappingDeletionDoesNotReleaseCompletedQuota() {
+        JobManager job = this.job();
+        job.setJobSize(8L);
+        this.jobService.save(job);
+        this.persistedMapping(job.getId(), "completed.csv");
+        FileMapping failed = this.persistedMapping(job.getId(), "failed.csv");
+        failed.setFileStatus(FileMappingStatus.FAILURE);
+        this.mappingService.update(failed);
+
+        this.jobService.deleteMappings(
+                job.getId(), Collections.singletonList(failed));
+
+        Assert.assertEquals(8L, this.jobService.get(job.getId()).getJobSize());
+    }
+
+    @Test
     public void testFailedDiskCleanupLeavesRetryableOrphanRecord() {
         JobManager job = this.job();
         job.setJobSize(8L);
