@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS `execute_history` (
     );
 
 CREATE INDEX IF NOT EXISTS `execute_history_conn_id` ON `execute_history`(`conn_id`);
+CREATE INDEX IF NOT EXISTS `execute_history_graph_create_time` ON `execute_history`(`graphspace`, `graph`, `create_time`);
 
 
 // DROP TABLE IF EXISTS `edit_history`;
@@ -120,7 +121,7 @@ CREATE TABLE IF NOT EXISTS `gremlin_collection` (
     `content` VARCHAR(65535) NOT NULL,
     `create_time` DATETIME(6) NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE (`conn_id`, `name`)
+    UNIQUE (`graphspace`, `graph`, `name`, `type`)
 );
 CREATE INDEX IF NOT EXISTS `gremlin_collection_conn_id` ON `gremlin_collection`(`conn_id`);
 
@@ -145,6 +146,7 @@ CREATE TABLE IF NOT EXISTS `file_mapping` (
     UNIQUE (`conn_id`, `job_id`, `name`)
 );
 CREATE INDEX IF NOT EXISTS `file_mapping_conn_id` ON `file_mapping`(`conn_id`);
+CREATE INDEX IF NOT EXISTS `file_mapping_job_id` ON `file_mapping`(`job_id`);
 
 CREATE TABLE IF NOT EXISTS `load_task` (
     `id` INT NOT NULL AUTO_INCREMENT,
@@ -201,6 +203,9 @@ CREATE TABLE IF NOT EXISTS `async_task` (
 
 CREATE INDEX IF NOT EXISTS `load_task_conn_id` ON `load_task`(`conn_id`);
 CREATE INDEX IF NOT EXISTS `load_task_file_id` ON `load_task`(`file_id`);
+CREATE INDEX IF NOT EXISTS `load_task_job_id` ON `load_task`(`job_id`);
+CREATE INDEX IF NOT EXISTS `job_manager_graph_create_time` ON `job_manager`(`graphspace`, `graph`, `create_time`);
+CREATE INDEX IF NOT EXISTS `async_task_graph` ON `async_task`(`graphspace`, `graph`);
 
 CREATE TABLE IF NOT EXISTS `datasource` (
     `id` INT NOT NULL AUTO_INCREMENT,

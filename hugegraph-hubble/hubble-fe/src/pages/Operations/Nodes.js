@@ -192,7 +192,9 @@ const Nodes = () => {
     const changeTable = useCallback((pagination, filters, sorter) => update({
         page: String(pagination.current),
         page_size: String(pagination.pageSize),
-        sort: sorter.field || 'name',
+        // Columns without a dataIndex (observed_at) leave sorter.field undefined,
+        // so fall back to the column key that sortOrder() also matches on.
+        sort: (sorter.columnKey ?? sorter.field) || 'name',
         order: sorter.order === 'descend' ? 'desc' : 'asc',
     }), [update]);
     const sortOrder = field => {

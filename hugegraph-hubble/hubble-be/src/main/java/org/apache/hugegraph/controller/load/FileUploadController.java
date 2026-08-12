@@ -92,15 +92,26 @@ public class FileUploadController extends BaseController {
         Ex.check(CollectionUtil.allUnique(fileNames),
                  "load.upload.file.duplicate-name");
         Map<String, String> tokens = new HashMap<>();
-        for (String fileName : fileNames) {
-            this.checkFileNameValid(fileName);
-            String token = this.service.generateFileToken(fileName);
-            Ex.check(!this.uploadingTokenLocks().containsKey(token),
-                     "load.upload.file.token.existed");
-            this.uploadingTokenLocks().put(token, new ReentrantReadWriteLock());
-            tokens.put(fileName, token);
+        Map<String, ReadWriteLock> reservations = new HashMap<>();
+        try {
+            for (String fileName : fileNames) {
+                this.checkFileNameValid(fileName);
+                String token = this.service.generateFileToken(fileName);
+                ReadWriteLock lock = new ReentrantReadWriteLock();
+                // Atomic reservation to avoid a containsKey-then-put race
+                ReadWriteLock previous = this.uploadingTokenLocks()
+                                             .putIfAbsent(token, lock);
+                Ex.check(previous == null, "load.upload.file.token.existed");
+                reservations.put(token, lock);
+                tokens.put(fileName, token);
+            }
+            return tokens;
+        } catch (RuntimeException e) {
+            reservations.forEach((token, lock) -> {
+                this.uploadingTokenLocks().remove(token, lock);
+            });
+            throw e;
         }
-        return tokens;
     }
 
     @PostMapping
@@ -198,15 +209,7 @@ public class FileUploadController extends BaseController {
                 mapping.setTotalLines(FileUtil.countLines(mapping.getPath()));
                 mapping.setTotalSize(actualFileSize);
 
-                // Move to the directory corresponding to the file mapping Id
-                String newPath = this.service.moveToNextLevelDir(mapping);
-                // Update file mapping stored path
-                mapping.setPath(newPath);
-                this.service.update(mapping);
-                // Update Job Manager size
-                long jobSize = currentJob.getJobSize() + mapping.getTotalSize();
-                currentJob.setJobSize(jobSize);
-                this.jobService.update(currentJob);
+                this.finalizeUpload(mapping);
                 result.setId(mapping.getId());
                 // Remove uploading file token
                 this.uploadingTokenLocks().remove(token);
@@ -214,6 +217,33 @@ public class FileUploadController extends BaseController {
             return result;
         } finally {
             lock.readLock().unlock();
+        }
+    }
+
+    private void finalizeUpload(FileMapping mapping) {
+        String originalPath = mapping.getPath();
+        String movedPath = this.service.moveToNextLevelDir(mapping);
+        mapping.setPath(movedPath);
+        try {
+            this.jobService.completeUpload(mapping);
+        } catch (RuntimeException failure) {
+            mapping.setPath(originalPath);
+            mapping.setFileStatus(FileMappingStatus.UPLOADING);
+            try {
+                this.service.restoreMovedUpload(movedPath, originalPath);
+            } catch (RuntimeException compensationFailure) {
+                // Keep the database cleanup record pointed at the real file
+                // when restoring the original path is impossible.
+                mapping.setPath(movedPath);
+                mapping.setFileStatus(FileMappingStatus.FAILURE);
+                try {
+                    this.service.update(mapping);
+                } catch (RuntimeException recordFailure) {
+                    compensationFailure.addSuppressed(recordFailure);
+                }
+                failure.addSuppressed(compensationFailure);
+            }
+            throw failure;
         }
     }
 
@@ -239,12 +269,8 @@ public class FileUploadController extends BaseController {
             lock.writeLock().lock();
         }
         try {
-            this.service.deleteDiskFile(mapping);
-            log.info("Prepare to remove file mapping {}", mapping.getId());
-            this.service.remove(mapping.getId());
-            long jobSize = jobEntity.getJobSize() - mapping.getTotalSize();
-            jobEntity.setJobSize(jobSize);
-            this.jobService.update(jobEntity);
+            this.jobService.deleteMappings(jobId,
+                                           Collections.singletonList(mapping));
             if (lock != null) {
                 this.uploadingTokenLocks().remove(token);
             }

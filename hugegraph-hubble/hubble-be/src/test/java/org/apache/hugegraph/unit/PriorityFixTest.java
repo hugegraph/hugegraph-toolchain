@@ -73,10 +73,30 @@ public class PriorityFixTest {
         PageUtil.checkPositivePage(1, -1);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testBoundedIntRejectsUnsupportedNegativePageSize() {
+        PageUtil.boundedSize(-2);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testBoundedLongRejectsUnsupportedNegativePageSize() {
+        PageUtil.boundedSize(-2L);
+    }
+
     @Test(expected = ExternalException.class)
     public void testInterceptorRejectsOversizedPage() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/list");
         request.setParameter("page_size", "501");
+
+        new CustomInterceptor().preHandle(request,
+                                          new MockHttpServletResponse(),
+                                          new Object());
+    }
+
+    @Test(expected = ExternalException.class)
+    public void testInterceptorRejectsUnsupportedNegativePageSize() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/list");
+        request.setParameter("page_size", "-2");
 
         new CustomInterceptor().preHandle(request,
                                           new MockHttpServletResponse(),

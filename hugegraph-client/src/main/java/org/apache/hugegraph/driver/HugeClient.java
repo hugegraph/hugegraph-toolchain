@@ -50,6 +50,13 @@ public class HugeClient implements Closeable {
 
     private final boolean borrowedClient;
     private final RestClient client;
+    /*
+     * Whether the server api-version handshake has been performed for
+     * this client instance, so that it runs only once instead of on
+     * every assignGraph() call
+     */
+    private volatile boolean apiVersionChecked;
+    private final Object apiVersionLock = new Object();
     private VersionManager version;
     private GraphsManager graphs;
     private SchemaManager schema;
@@ -145,9 +152,18 @@ public class HugeClient implements Closeable {
     public void initManagers(RestClient client, String graphSpace,
                              String graph) {
         assert client != null;
-        // Check hugegraph-server api version
+        // Check hugegraph-server api version (once per client instance)
         this.version = new VersionManager(client);
-        this.checkServerApiVersion();
+        if (!this.apiVersionChecked) {
+            synchronized (this.apiVersionLock) {
+                if (!this.apiVersionChecked) {
+                    this.checkServerApiVersion();
+                    // Failed handshakes leave the flag false so a later
+                    // assignment can retry.
+                    this.apiVersionChecked = true;
+                }
+            }
+        }
 
         this.graphs = new GraphsManager(client, graphSpace);
         this.auth = new AuthManager(client, graphSpace, graph);
@@ -171,6 +187,19 @@ public class HugeClient implements Closeable {
             this.variable = new VariablesManager(client, graphSpace, graph);
             this.job = new JobManager(client, graphSpace, graph);
             this.task = new TaskManager(client, graphSpace, graph);
+        } else {
+            /*
+             * No graph is assigned: reset all graph-scoped managers so
+             * that stale managers from a previous graph cannot be used
+             */
+            this.schema = null;
+            this.graph = null;
+            this.gremlin = null;
+            this.cypher = null;
+            this.traverser = null;
+            this.variable = null;
+            this.job = null;
+            this.task = null;
         }
     }
 

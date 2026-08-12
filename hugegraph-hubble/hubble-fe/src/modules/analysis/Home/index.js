@@ -116,7 +116,11 @@ const AnalysisHome = () => {
 
     const getExecutionLogsList = useCallback(
         async () => {
-            if (analysisMode === TEXT2GQL) {
+            if (analysisMode === TEXT2GQL || !graphSpace || !graph) {
+                executionLogsRequest.current = null;
+                setExecutionLogsLoading(false);
+                setExecutionLogsError(false);
+                setExecutionLogsData({});
                 return;
             }
             const request = Symbol('execution-logs');
@@ -154,7 +158,11 @@ const AnalysisHome = () => {
 
     const getFavoriteQueriesList = useCallback(
         async () => {
-            if (analysisMode === TEXT2GQL) {
+            if (analysisMode === TEXT2GQL || !graphSpace || !graph) {
+                favoriteQueriesRequest.current = null;
+                setFavoriteQueriesLoading(false);
+                setFavoriteQueriesError(false);
+                setFavoriteQueriesData({});
                 return;
             }
             const request = Symbol('favorite-queries');

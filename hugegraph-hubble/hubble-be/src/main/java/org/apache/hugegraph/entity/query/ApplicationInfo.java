@@ -21,14 +21,18 @@ package org.apache.hugegraph.entity.query;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.hugegraph.annotation.MergeProperty;
 import org.apache.hugegraph.common.AppType;
 import org.apache.hugegraph.common.Mergeable;
 import org.apache.hugegraph.util.JsonUtil;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @TableName("app_info")
 public class ApplicationInfo implements Mergeable {

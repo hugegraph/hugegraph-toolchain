@@ -18,9 +18,7 @@
 
 package org.apache.hugegraph.util;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -312,31 +310,181 @@ public final class GremlinUtil {
     public static String optimizeLimit(String gremlin, int limit) {
         // FIXME: Do not treat suffix matching as a resource-safety boundary. Decide on
         // server-side timeout/result/byte limits without changing aggregation semantics.
-        String[] rawLines = StringUtils.split(gremlin, "\n");
-        List<String> newLines = new ArrayList<>(rawLines.length);
-        for (String rawLine : rawLines) {
-            boolean ignored = IGNORED_PATTERNS.stream().anyMatch(pattern -> {
-                return pattern.matcher(rawLine).find();
-            });
-            if (ignored) {
-                newLines.add(rawLine);
+        /*
+         * Scan the script with quote awareness: track single-quote,
+         * double-quote and backslash-escape state so that ';' and true
+         * statement-ending newlines are treated as separators only when
+         * outside quotes.
+         * The suffix-pattern matching and '.limit(N)' appending are
+         * applied only to true statement tails (outside quotes).
+         */
+        StringBuilder result = new StringBuilder(gremlin.length());
+        StringBuilder statement = new StringBuilder();
+        StringBuilder matchable = new StringBuilder();
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+        boolean escaped = false;
+        for (int i = 0; i < gremlin.length(); i++) {
+            char ch = gremlin.charAt(i);
+            if (escaped) {
+                statement.append(ch);
+                matchable.append(ch);
+                escaped = false;
                 continue;
             }
-            boolean matched = false;
-            for (Pattern pattern : LIMIT_PATTERNS) {
-                Matcher matcher = pattern.matcher(rawLine);
-                if (matcher.find()) {
-                    matched = true;
-                    break;
+            if (inLineComment) {
+                if (ch == '\n') {
+                    if (chainContinues(gremlin, i)) {
+                        statement.append(ch);
+                        matchable.append(ch);
+                    } else {
+                        result.append(optimizeStatement(statement.toString(),
+                                                        matchable.toString(),
+                                                        limit));
+                        result.append(ch);
+                        statement.setLength(0);
+                        matchable.setLength(0);
+                    }
+                    inLineComment = false;
+                } else {
+                    statement.append(ch);
+                    matchable.append(' ');
+                }
+                continue;
+            }
+            if (inBlockComment) {
+                statement.append(ch);
+                matchable.append(' ');
+                if (ch == '*' && i + 1 < gremlin.length() &&
+                    gremlin.charAt(i + 1) == '/') {
+                    statement.append('/');
+                    matchable.append(' ');
+                    i++;
+                    inBlockComment = false;
+                }
+                continue;
+            }
+            if (!inSingleQuote && !inDoubleQuote &&
+                (gremlin.startsWith("'''", i) ||
+                 gremlin.startsWith("\"\"\"", i))) {
+                return gremlin;
+            }
+            if (!inSingleQuote && !inDoubleQuote && ch == '$' &&
+                i + 1 < gremlin.length() &&
+                gremlin.charAt(i + 1) == '/') {
+                return gremlin;
+            }
+            if (!inSingleQuote && !inDoubleQuote && ch == '/' &&
+                i + 1 < gremlin.length()) {
+                char next = gremlin.charAt(i + 1);
+                if (next == '/' || next == '*') {
+                    statement.append(ch).append(next);
+                    matchable.append("  ");
+                    i++;
+                    inLineComment = next == '/';
+                    inBlockComment = next == '*';
+                    continue;
+                }
+                // This may be a slashy literal or division. Both need a real
+                // Groovy lexer to distinguish safely.
+                return gremlin;
+            }
+            if ((inSingleQuote || inDoubleQuote) && ch == '\\') {
+                statement.append(ch);
+                matchable.append(ch);
+                escaped = true;
+                continue;
+            }
+            if (ch == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+                statement.append(ch);
+                matchable.append(ch);
+                continue;
+            }
+            if (ch == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                statement.append(ch);
+                matchable.append(ch);
+                continue;
+            }
+            boolean separator = ch == ';' ||
+                                ch == '\n' &&
+                                !chainContinues(gremlin, i);
+            if (separator && !inSingleQuote && !inDoubleQuote) {
+                result.append(optimizeStatement(statement.toString(),
+                                                matchable.toString(), limit));
+                result.append(ch);
+                statement.setLength(0);
+                matchable.setLength(0);
+                continue;
+            }
+            statement.append(ch);
+            matchable.append(ch);
+        }
+        if (inSingleQuote || inDoubleQuote || inBlockComment) {
+            // Unclosed quote: never append '.limit(N)' inside a string
+            result.append(statement);
+        } else {
+            result.append(optimizeStatement(statement.toString(),
+                                            matchable.toString(), limit));
+        }
+        return result.toString();
+    }
+
+    private static boolean chainContinues(String gremlin, int newline) {
+        for (int i = newline + 1; i < gremlin.length(); i++) {
+            char next = gremlin.charAt(i);
+            if (Character.isWhitespace(next)) {
+                continue;
+            }
+            if (next == '/' && i + 1 < gremlin.length()) {
+                char afterSlash = gremlin.charAt(i + 1);
+                if (afterSlash == '/') {
+                    int lineEnd = gremlin.indexOf('\n', i + 2);
+                    if (lineEnd < 0) {
+                        return false;
+                    }
+                    i = lineEnd;
+                    continue;
+                }
+                if (afterSlash == '*') {
+                    int commentEnd = gremlin.indexOf("*/", i + 2);
+                    if (commentEnd < 0) {
+                        return false;
+                    }
+                    i = commentEnd + 1;
+                    continue;
                 }
             }
-            if (matched) {
-                newLines.add(rawLine + ".limit(" + limit + ")");
-            } else {
-                newLines.add(rawLine);
+            return next == '.';
+        }
+        return false;
+    }
+
+    private static String optimizeStatement(String statement,
+                                            String matchable, int limit) {
+        int codeEnd = matchable.length();
+        while (codeEnd > 0 && Character.isWhitespace(
+                                  matchable.charAt(codeEnd - 1))) {
+            codeEnd--;
+        }
+        String code = matchable.substring(0, codeEnd);
+        boolean ignored = IGNORED_PATTERNS.stream().anyMatch(pattern -> {
+            return pattern.matcher(code).find();
+        });
+        if (ignored) {
+            return statement;
+        }
+        for (Pattern pattern : LIMIT_PATTERNS) {
+            Matcher matcher = pattern.matcher(code);
+            if (matcher.find()) {
+                return statement.substring(0, codeEnd) + ".limit(" + limit +
+                       ")" + statement.substring(codeEnd);
             }
         }
-        return StringUtils.join(newLines, "\n");
+        return statement;
     }
 
     private static Set<Pattern> compile(Set<String> texts) {

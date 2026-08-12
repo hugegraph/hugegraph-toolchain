@@ -176,31 +176,41 @@ public class GraphController extends BaseController {
                                List<String> elementIds) {
         HugeClient client = this.authClient(graphSpace, graph);
         ArrayList<ElementEditHistory> list = new ArrayList<>();
-        HashSet<String> set = new HashSet<>(elementIds);
-        if ("VERTEX".equals(type)) {
-            for (String vertexId : set) {
-                vertexId = UriUtils.decode(vertexId, Constant.CHARSET);
-                Vertex vertex = client.graph().getVertex(vertexId);
-                String label = vertex.label();
-                this.graphService.deleteVertex(client, vertexId);
-                list.add(getEditEleHistory(graphSpace, graph, vertexId, label,
-                                  vertex.properties().size(), OptionType.DELETE, ""));
-            }
-        } else if ("EDGE".equals(type)) {
-            for (String edgeId : elementIds) {
-                edgeId = UriUtils.decode(edgeId, Constant.CHARSET);
-                Edge edge = client.graph().getEdge(edgeId);
-                String label = edge.label();
-                this.graphService.deleteEdge(client, edgeId);
-                list.add(getEditEleHistory(graphSpace, graph, edgeId, label,
-                                           edge.properties().size(),
-                                           OptionType.DELETE, ""));
-            }
-        } else {
-            throw new IllegalArgumentException(
-                    "type must in [VERTEX, EDGE], but got '" + type + "'");
+        HashSet<String> set = new HashSet<>();
+        for (String elementId : elementIds) {
+            set.add(UriUtils.decode(elementId, Constant.CHARSET));
         }
-        editEleHisService.add(list);
+        try {
+            if ("VERTEX".equals(type)) {
+                for (String vertexId : set) {
+                    Vertex vertex = client.graph().getVertex(vertexId);
+                    String label = vertex.label();
+                    this.graphService.deleteVertex(client, vertexId);
+                    list.add(getEditEleHistory(graphSpace, graph, vertexId, label,
+                                      vertex.properties().size(), OptionType.DELETE, ""));
+                }
+            } else if ("EDGE".equals(type)) {
+                // Dedupe edge ids the same way as vertex ids, deleting the
+                // same edge twice fails after the first delete
+                for (String edgeId : set) {
+                    Edge edge = client.graph().getEdge(edgeId);
+                    String label = edge.label();
+                    this.graphService.deleteEdge(client, edgeId);
+                    list.add(getEditEleHistory(graphSpace, graph, edgeId, label,
+                                               edge.properties().size(),
+                                               OptionType.DELETE, ""));
+                }
+            } else {
+                throw new IllegalArgumentException(
+                        "type must in [VERTEX, EDGE], but got '" + type + "'");
+            }
+        } finally {
+            // Persist the history of what was actually deleted even if the
+            // batch failed part way through
+            if (!list.isEmpty()) {
+                editEleHisService.add(list);
+            }
+        }
     }
 
     @GetMapping("edgelabel/{label}")

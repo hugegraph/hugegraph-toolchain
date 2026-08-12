@@ -20,6 +20,11 @@ package org.apache.hugegraph.service.load;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
@@ -55,6 +60,7 @@ import org.apache.hugegraph.entity.load.LoadParameter;
 import org.apache.hugegraph.entity.load.LoadTask;
 import org.apache.hugegraph.handler.LoadTaskExecutor;
 import org.apache.hugegraph.loader.executor.LoadOptions;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.schema.EdgeLabelService;
 import org.apache.hugegraph.service.schema.VertexLabelService;
 import org.apache.hugegraph.testutil.Assert;
@@ -79,14 +85,21 @@ import org.apache.hugegraph.testutil.Assert;
                 })
 public class IngestTransactionIntegrationTest {
 
+    private static final String UPLOAD_ROOT =
+            "/tmp/hubble-ingest-transaction-test";
+
     @Autowired
     private JobManagerService jobService;
+    @Autowired
+    private FileMappingService mappingService;
     @Autowired
     private TestLoadTaskService taskService;
     @Autowired
     private RecordingLoadTaskExecutor executor;
     @Autowired
     private DataSource dataSource;
+    @Autowired
+    private HugeConfig config;
     @MockBean
     private VertexLabelService vertexLabelService;
     @MockBean
@@ -100,6 +113,8 @@ public class IngestTransactionIntegrationTest {
         this.cleanup();
         this.executor.reset();
         this.taskService.failTaskInsert(false);
+        Mockito.when(this.config.get(HubbleOptions.UPLOAD_FILE_LOCATION))
+               .thenReturn(UPLOAD_ROOT);
     }
 
     @After
@@ -181,6 +196,99 @@ public class IngestTransactionIntegrationTest {
     }
 
     @Test
+    public void testConcurrentQuotaChangesAreAtomic() throws Exception {
+        JobManager job = this.job();
+        job.setJobSize(0L);
+        this.jobService.save(job);
+        FileMapping first = this.persistedMapping(job.getId(), "first.csv");
+        FileMapping second = this.persistedMapping(job.getId(), "second.csv");
+
+        this.runConcurrently(
+                () -> this.jobService.completeUpload(first),
+                () -> this.jobService.completeUpload(second));
+
+        Assert.assertEquals(16L, this.jobService.get(job.getId()).getJobSize());
+
+        this.runConcurrently(
+                () -> this.jobService.deleteMappings(
+                        job.getId(), Collections.singletonList(first)),
+                () -> this.jobService.deleteMappings(
+                        job.getId(), Collections.singletonList(second)));
+
+        Assert.assertEquals(0L, this.jobService.get(job.getId()).getJobSize());
+        Assert.assertEquals(0, this.count("file_mapping"));
+    }
+
+    @Test
+    public void testQuotaFailureRollsBackMappingDeletion() {
+        FileMapping mapping = this.persistedMapping(999, "orphan.csv");
+
+        Assert.assertThrows(RuntimeException.class, () ->
+            this.jobService.deleteMappings(
+                    999, Collections.singletonList(mapping)));
+
+        Assert.assertEquals(1, this.count("file_mapping"));
+    }
+
+    @Test
+    public void testQuotaFailureRollsBackUploadCompletion() {
+        FileMapping mapping = this.mapping();
+        mapping.setJobId(999);
+        mapping.setFileStatus(FileMappingStatus.UPLOADING);
+        this.mappingService.save(mapping);
+
+        mapping.setFileStatus(FileMappingStatus.COMPLETED);
+        Assert.assertThrows(RuntimeException.class, () ->
+            this.jobService.completeUpload(mapping));
+
+        Integer status = this.jdbc.queryForObject(
+                         "SELECT file_status FROM file_mapping WHERE id = ?",
+                         Integer.class, mapping.getId());
+        Assert.assertEquals((int) FileMappingStatus.UPLOADING.getValue(),
+                            status.intValue());
+    }
+
+    @Test
+    public void testFailedMappingDeletionDoesNotReleaseCompletedQuota() {
+        JobManager job = this.job();
+        job.setJobSize(8L);
+        this.jobService.save(job);
+        this.persistedMapping(job.getId(), "completed.csv");
+        FileMapping failed = this.persistedMapping(job.getId(), "failed.csv");
+        failed.setFileStatus(FileMappingStatus.FAILURE);
+        this.mappingService.update(failed);
+
+        this.jobService.deleteMappings(
+                job.getId(), Collections.singletonList(failed));
+
+        Assert.assertEquals(8L, this.jobService.get(job.getId()).getJobSize());
+    }
+
+    @Test
+    public void testFailedDiskCleanupLeavesRetryableOrphanRecord() {
+        JobManager job = this.job();
+        job.setJobSize(8L);
+        this.jobService.save(job);
+        FileMapping mapping = this.persistedMapping(job.getId(), "orphan.csv");
+        mapping.setPath("/outside-upload-root/orphan.csv");
+        this.mappingService.update(mapping);
+
+        this.jobService.deleteMappings(
+                job.getId(), Collections.singletonList(mapping));
+
+        Assert.assertEquals(1, this.count("file_mapping"));
+        Assert.assertEquals(-mapping.getId(),
+                            this.jdbc.queryForObject(
+                            "SELECT job_id FROM file_mapping WHERE id = ?",
+                            Integer.class, mapping.getId()).intValue());
+
+        this.jdbc.update("UPDATE file_mapping SET path = ? WHERE id = ?",
+                         UPLOAD_ROOT + "/retry/orphan.csv", mapping.getId());
+        this.mappingService.deleteOrphanedJobFiles();
+        Assert.assertEquals(0, this.count("file_mapping"));
+    }
+
+    @Test
     public void testRejectedDispatchCommitsFailedTaskAndJobWithoutThrowing() {
         this.executor.reject(true);
 
@@ -232,6 +340,48 @@ public class IngestTransactionIntegrationTest {
         mapping.setCreateTime(new Date());
         mapping.setUpdateTime(new Date());
         return mapping;
+    }
+
+    private FileMapping persistedMapping(int jobId, String name) {
+        FileMapping mapping = this.mapping();
+        mapping.setJobId(jobId);
+        mapping.setName(name);
+        mapping.setPath(UPLOAD_ROOT + "/" + name + "/" + name);
+        this.mappingService.save(mapping);
+        return mapping;
+    }
+
+    private void runConcurrently(Runnable first, Runnable second)
+            throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<?> firstFuture = pool.submit(
+                    () -> runAfterSignal(first, ready, start));
+            Future<?> secondFuture = pool.submit(
+                    () -> runAfterSignal(second, ready, start));
+            Assert.assertTrue(ready.await(5L, TimeUnit.SECONDS));
+            start.countDown();
+            firstFuture.get(10L, TimeUnit.SECONDS);
+            secondFuture.get(10L, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private static void runAfterSignal(Runnable action, CountDownLatch ready,
+                                       CountDownLatch start) {
+        ready.countDown();
+        try {
+            if (!start.await(5L, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Concurrent test start timed out");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Concurrent test interrupted", e);
+        }
+        action.run();
     }
 
     private GraphConnection connection() {

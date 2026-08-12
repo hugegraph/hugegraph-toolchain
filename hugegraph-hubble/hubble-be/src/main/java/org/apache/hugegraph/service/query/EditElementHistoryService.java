@@ -43,8 +43,9 @@ public class EditElementHistoryService {
     @Autowired
     private EditElementHistoryMapper mapper;
 
-    public List<ElementEditHistory> queryByLimit(int limit) {
-        return mapper.queryByLimit(limit);
+    public List<ElementEditHistory> queryByLimit(String graphspace,
+                                                 String graph, int limit) {
+        return mapper.queryByLimit(graphspace, graph, limit);
     }
 
     public int add(ElementEditHistory history) {

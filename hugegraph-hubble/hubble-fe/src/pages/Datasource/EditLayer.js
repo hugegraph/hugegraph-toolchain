@@ -18,7 +18,7 @@
 
 import {Modal, Button, Form, Input, Typography, Select,
     Divider, Upload, Radio, AutoComplete, Checkbox, message, Space} from 'antd';
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useEffect, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
@@ -937,6 +937,20 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
     const [selectedTemplate, setSelectedTemplate] = useState(undefined);
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
+    const requestEpoch = useRef(0);
+    const visibleRef = useRef(visible);
+    visibleRef.current = visible;
+
+    const invalidateRequests = useCallback(() => {
+        requestEpoch.current += 1;
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        if (!visible) {
+            invalidateRequests();
+        }
+    }, [invalidateRequests, visible]);
 
     const sourceTypeOptions = [
         {label: 'HDFS', value: 'HDFS'},
@@ -950,30 +964,59 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
             return;
         }
 
+        const session = requestEpoch.current;
         form.validateFields().then(values => {
+            if (!visibleRef.current || session !== requestEpoch.current) {
+                return;
+            }
             const formatData = formatDatasource(values);
-            // return;
+            const request = ++requestEpoch.current;
             setLoading(true);
+            // Every active exit clears `loading`; callbacks from an invalidated
+            // modal session are ignored so they cannot affect a reopened form.
             api.manage.addDatasource(formatData).then(res => {
+                if (!visibleRef.current || request !== requestEpoch.current) {
+                    return;
+                }
                 setLoading(false);
 
-                if (res.status === 200) {
+                if (res?.status === 200) {
                     message.success(t('common.msg.create_success'));
+                    requestEpoch.current += 1;
                     onCancel();
                     refresh();
                     return;
                 }
 
-                message.error(res.message);
+                message.error(res?.message || t('common.msg.operation_failed'));
+            }).catch(() => {
+                if (!visibleRef.current || request !== requestEpoch.current) {
+                    return;
+                }
+                setLoading(false);
+                message.error(t('common.msg.operation_failed'));
             });
+        }).catch(error => {
+            if (!visibleRef.current || session !== requestEpoch.current) {
+                return;
+            }
+            if (!error?.errorFields) {
+                message.error(t('common.msg.operation_failed'));
+            }
         });
     }, [form, loading, onCancel, refresh, t]);
 
+    const handleCancel = useCallback(() => {
+        invalidateRequests();
+        onCancel();
+    }, [invalidateRequests, onCancel]);
+
     const handleClose = useCallback(() => {
+        invalidateRequests();
         form.resetFields();
         setSourceType('');
         setSelectedTemplate(undefined);
-    }, [form]);
+    }, [form, invalidateRequests]);
 
     const handleType = useCallback(val => {
         form.resetFields(SOURCE_CONFIG_FIELDS);
@@ -989,7 +1032,7 @@ const EditLayer = ({edit, visible, onCancel, refresh}) => {
     return (
         <Modal
             title={edit ? t('datasource.form.title_edit') : t('datasource.form.title_create')}
-            onCancel={onCancel}
+            onCancel={handleCancel}
             open={visible}
             width={600}
             onOk={onFinish}

@@ -215,7 +215,7 @@ const AsyncTaskDetail = props => {
             title: t('analysis.async_task.column.create_time'),
             dataIndex: 'task_create',
             render: (task_create, rowData, index) => {
-                const convertedDate = format(new Date(task_create), 'yyyy-MM-dd H:m:ss');
+                const convertedDate = task_create ? format(new Date(task_create), 'yyyy-MM-dd HH:mm:ss') : '--';
                 return (<>{convertedDate}</>);
             },
         },

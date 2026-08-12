@@ -258,10 +258,14 @@ public class LoadTask implements Runnable {
         if (this.fileTotalLines == null || this.fileTotalLines == 0) {
             return 0;
         }
-        Ex.check(this.fileTotalLines >= this.fileReadLines,
-                 "The file total lines must be >= read lines, " +
-                 "but got total lines %s, read lines %s",
-                 this.fileTotalLines, this.fileReadLines);
+        // Clamp instead of throwing: this getter runs during JSON
+        // serialization, an exception here would fail the whole response
+        if (this.fileReadLines == null) {
+            return 0;
+        }
+        if (this.fileReadLines >= this.fileTotalLines) {
+            return 100;
+        }
         float actualProgress = (float) this.fileReadLines / this.fileTotalLines;
         return ((int) (actualProgress * 10000)) / 100.0F;
     }
@@ -279,7 +283,7 @@ public class LoadTask implements Runnable {
 
     @JsonProperty("load_rate")
     public String getLoadRate() {
-        long readLines = this.fileReadLines;
+        long readLines = this.fileReadLines == null ? 0L : this.fileReadLines;
         long duration = this.getDuration();
         float rate;
         if (readLines == 0L || duration == 0L) {

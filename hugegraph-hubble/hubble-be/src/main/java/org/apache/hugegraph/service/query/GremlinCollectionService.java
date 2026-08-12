@@ -79,7 +79,7 @@ public class GremlinCollectionService {
                 // order by relativity
                 checkSingleOrder(nameOrderAsc, timeOrderAsc);
                 return this.mapper.selectByContentInPage(page, graphSpace, graph,
-                                                         content, type);
+                                                         value, type);
             }
         } else {
             // Select all

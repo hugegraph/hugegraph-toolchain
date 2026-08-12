@@ -70,7 +70,11 @@ div.add_card {
 
 .element_counts {
     display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
     white-space: nowrap;
+    text-overflow: ellipsis;
+    vertical-align: middle;
     color: #667085;
     cursor: default;
 }

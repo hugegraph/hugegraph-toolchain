@@ -23,7 +23,7 @@ import {
     Radio,
     message,
 } from 'antd';
-import {useEffect, useState, useCallback} from 'react';
+import {useEffect, useState, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as rules from '../../../utils/rules';
 import * as api from '../../../api';
@@ -32,6 +32,8 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
     const {t} = useTranslation();
     const [form] = Form.useForm();
     const [syncType, setSyncType] = useState('');
+    const [loading, setLoading] = useState(false);
+    const updateRequest = useRef(null);
     const datasourceType = data?.ingestion_mapping?.structs[0]?.input?.type;
     const scheduleOptions = datasourceType === 'KAFKA'
         ? [{label: t('task.sync.realtime'), value: 'REALTIME'}]
@@ -51,20 +53,44 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
                 delete values.task_schedule_extend;
             }
 
+            const request = Symbol('task-update');
+            updateRequest.current = request;
+            setLoading(true);
+            // The OK spinner must clear on every outcome, including a rejected
+            // request, otherwise the button stays locked with the modal open.
             api.manage.updateTask(data.task_id, values).then(res => {
-                if (res.status === 200) {
+                if (updateRequest.current !== request) {
+                    return;
+                }
+                updateRequest.current = null;
+                setLoading(false);
+
+                if (res?.status === 200) {
                     message.success(t('task.edit.update_success'));
                     onCancel();
                     refresh();
                     return;
                 }
 
-                message.error(res.message);
+                message.error(res?.message || t('common.msg.operation_failed'));
+            }).catch(() => {
+                if (updateRequest.current !== request) {
+                    return;
+                }
+                updateRequest.current = null;
+                setLoading(false);
+                message.error(t('common.msg.operation_failed'));
             });
+        }).catch(error => {
+            if (!error?.errorFields) {
+                message.error(t('common.msg.operation_failed'));
+            }
         });
     }, [data.task_id, form, onCancel, refresh, syncType, t]);
 
     useEffect(() => {
+        updateRequest.current = null;
+        setLoading(false);
         if (!visible) {
             return;
         }
@@ -78,14 +104,24 @@ const EditLayer = ({visible, onCancel, data, refresh}) => {
             message.error(res.message);
         });
 
+        return () => {
+            updateRequest.current = null;
+        };
     }, [visible, data.task_id, form]);
+
+    const handleCancel = useCallback(() => {
+        updateRequest.current = null;
+        setLoading(false);
+        onCancel();
+    }, [onCancel]);
 
     return (
         <Modal
             title={t('task.edit_title_edit')}
-            onCancel={onCancel}
+            onCancel={handleCancel}
             open={visible}
             onOk={onFinish}
+            confirmLoading={loading}
             destroyOnClose
         >
             <Form

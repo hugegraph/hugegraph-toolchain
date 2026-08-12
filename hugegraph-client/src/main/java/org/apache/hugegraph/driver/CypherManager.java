@@ -18,6 +18,7 @@
 package org.apache.hugegraph.driver;
 
 import org.apache.hugegraph.api.gremlin.CypherAPI;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.api.job.CypherJobAPI;
 import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.structure.gremlin.Response;
@@ -47,8 +48,17 @@ public class CypherManager {
 
     public ResultSet execute(String cypher) {
         Response response = this.cypherAPI.post(this.graphSpace, this.graph, cypher);
+        Response.Status status = response.status();
+        if (status != null && status.code() != 200) {
+            String message = status.message();
+            if (message == null || message.isEmpty()) {
+                message = "Cypher query failed with status code " + status.code();
+            }
+            ServerException exception = new ServerException(message);
+            exception.status(status.code());
+            throw exception;
+        }
         response.graphManager(this.graphManager);
-        // TODO: Can add some checks later
         return response.result();
     }
 

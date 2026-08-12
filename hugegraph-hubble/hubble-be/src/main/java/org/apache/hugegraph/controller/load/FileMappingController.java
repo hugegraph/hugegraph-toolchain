@@ -19,17 +19,21 @@
 package org.apache.hugegraph.controller.load;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.enums.JobStatus;
+import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.FileSetting;
 import org.apache.hugegraph.entity.load.ElementMapping;
 import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.entity.load.LoadParameter;
+import org.apache.hugegraph.entity.load.LoadTask;
 import org.apache.hugegraph.entity.load.VertexMapping;
 import org.apache.hugegraph.entity.load.EdgeMapping;
 import org.apache.hugegraph.entity.schema.EdgeLabelEntity;
@@ -37,6 +41,7 @@ import org.apache.hugegraph.entity.schema.VertexLabelEntity;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.service.load.FileMappingService;
 import org.apache.hugegraph.service.load.JobManagerService;
+import org.apache.hugegraph.service.load.LoadTaskService;
 import org.apache.hugegraph.service.schema.EdgeLabelService;
 import org.apache.hugegraph.service.schema.VertexLabelService;
 import org.apache.hugegraph.util.CollectionUtil;
@@ -54,6 +59,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -71,6 +77,8 @@ public class FileMappingController extends BaseController {
     private FileMappingService service;
     @Autowired
     private JobManagerService jobService;
+    @Autowired
+    private LoadTaskService taskService;
 
     @GetMapping
     public IPage<FileMapping> list(@PathVariable("graphspace") String graphSpace,
@@ -108,9 +116,9 @@ public class FileMappingController extends BaseController {
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
         }
+        this.checkNoRunningTask(jobId, ImmutableSet.of(mapping.getId()));
 
-        this.service.deleteDiskFile(mapping);
-        this.service.remove(id);
+        this.jobService.deleteMappings(jobId, ImmutableList.of(mapping));
     }
 
     @DeleteMapping
@@ -119,9 +127,14 @@ public class FileMappingController extends BaseController {
                       @PathVariable("jobId") int jobId) {
         List<FileMapping> mappings = this.service.listByJob(graphSpace, graph,
                                                             jobId);
+        Set<Integer> fileIds = new HashSet<>();
         for (FileMapping mapping : mappings) {
-            this.service.remove(mapping.getId());
+            fileIds.add(mapping.getId());
         }
+        // Check them all upfront, don't delete part of the mappings then fail
+        this.checkNoRunningTask(jobId, fileIds);
+
+        this.jobService.deleteMappings(jobId, mappings);
     }
 
     @PostMapping("{id}/file-setting")
@@ -322,6 +335,27 @@ public class FileMappingController extends BaseController {
         jobEntity.setJobStatus(JobStatus.SETTING);
         this.jobService.update(jobEntity);
         return jobEntity;
+    }
+
+    /**
+     * Keep source and progress files while a task can still run, resume, or
+     * retry from them.
+     */
+    private void checkNoRunningTask(int jobId, Set<Integer> fileIds) {
+        for (LoadTask task : this.taskService.taskListByJob(jobId)) {
+            LoadStatus status = task.getStatus();
+            boolean needsSource = status == LoadStatus.RUNNING ||
+                                  status == LoadStatus.PAUSED ||
+                                  status == LoadStatus.FAILED ||
+                                  status == LoadStatus.STOPPED;
+            if (needsSource &&
+                task.getFileId() != null &&
+                fileIds.contains(task.getFileId())) {
+                throw new ExternalException(
+                          "load.file-mapping.delete.task-in-running",
+                          task.getFileId());
+            }
+        }
     }
 
     private void checkVertexMappingValid(HugeClient client,

@@ -40,6 +40,7 @@ import org.apache.hugegraph.mapper.query.ExecuteHistoryMapper;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.structure.Task;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -77,7 +78,8 @@ public class ExecuteHistoryService {
         if (text2Gremlin) {
             query.apply("LENGTH(text) > 0");
         }
-        Page<ExecuteHistory> page = new Page<>(current, pageSize);
+        Page<ExecuteHistory> page = new Page<>(current,
+                                               PageUtil.boundedSize(pageSize));
         IPage<ExecuteHistory> results = this.mapper.selectPage(page, query);
 
         int limit = this.config.get(HubbleOptions.EXECUTE_HISTORY_SHOW_LIMIT);
@@ -169,8 +171,9 @@ public class ExecuteHistoryService {
 
     @Async
     @Scheduled(fixedDelay = 24 * 60 * 60 * 1000)
-    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void removeExceedLimit() {
+        // Do not wrap the complete cleanup in one transaction. Without an
+        // outer transaction, each bounded mapper DELETE commits independently.
         int limit = this.config.get(HubbleOptions.EXECUTE_HISTORY_SHOW_LIMIT);
         this.mapper.deleteExceedLimit(limit);
     }

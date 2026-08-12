@@ -32,8 +32,12 @@ import java.util.List;
 @Component
 public interface EditElementHistoryMapper extends
                                       BaseMapper<ElementEditHistory> {
-    @Select("SELECT * FROM `edit_history` LIMIT #{limit}")
-    List<ElementEditHistory> queryByLimit(@Param("limit") int limit);
+    @Select("SELECT * FROM `edit_history` WHERE graphspace = #{graphspace} " +
+            "AND graph = #{graph} ORDER BY option_time DESC LIMIT #{limit}")
+    List<ElementEditHistory> queryByLimit(
+            @Param("graphspace") String graphspace,
+            @Param("graph") String graph,
+            @Param("limit") int limit);
 
     @Select("SELECT * FROM `edit_history` WHERE graphspace = #{graphspace} " +
             "AND graph = #{graph} AND element_id = #{elementId}")

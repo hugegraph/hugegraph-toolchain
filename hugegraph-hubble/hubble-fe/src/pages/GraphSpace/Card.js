@@ -55,7 +55,7 @@ const TitleField = ({item, onClick, onKeyDown}) => {
                 {item.default && (
                     <span className={style.default}>{t('graphspace.card.set_default')}</span>
                 )}
-                {moment(item.create_time).format('YYYY-MM-DD')} {t('graphspace.card.created')}
+                {item.create_time ? moment(item.create_time).format('YYYY-MM-DD') : '--'} {t('graphspace.card.created')}
             </div>
         </>
     );

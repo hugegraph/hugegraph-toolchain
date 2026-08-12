@@ -25,6 +25,7 @@ import org.apache.hugegraph.entity.load.Datasource;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.mapper.load.DatasourceMapper;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -46,7 +47,8 @@ public class DatasourceService {
             wrapper.like("datasource_name", query);
         }
         wrapper.orderByDesc("create_time");
-        return this.mapper.selectPage(new Page<>(pageNo, pageSize), wrapper);
+        return this.mapper.selectPage(
+                new Page<>(pageNo, PageUtil.boundedSize(pageSize)), wrapper);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

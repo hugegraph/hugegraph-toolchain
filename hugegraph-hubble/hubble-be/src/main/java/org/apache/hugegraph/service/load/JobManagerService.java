@@ -31,6 +31,7 @@ import lombok.extern.log4j.Log4j2;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.GraphConnection;
+import org.apache.hugegraph.entity.enums.FileMappingStatus;
 import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
@@ -40,6 +41,7 @@ import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.mapper.load.JobManagerMapper;
 import org.apache.hugegraph.util.HubbleUtil;
+import org.apache.hugegraph.util.PageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -100,7 +102,8 @@ public class JobManagerService {
             query.like("job_name", content);
         }
         query.orderByDesc("create_time");
-        Page<JobManager> page = new Page<>(pageNo, pageSize);
+        Page<JobManager> page = new Page<>(pageNo,
+                                           PageUtil.boundedSize(pageSize));
         IPage<JobManager> list = this.mapper.selectPage(page, query);
         list.getRecords().forEach(task -> {
             this.refreshStatus(task);
@@ -122,9 +125,8 @@ public class JobManagerService {
             query.like("job_name", content);
         }
         query.orderByDesc("create_time");
-        IPage<JobManager> list = this.mapper.selectPage(new Page<>(pageNo,
-                                                                   pageSize),
-                                                        query);
+        IPage<JobManager> list = this.mapper.selectPage(
+                new Page<>(pageNo, PageUtil.boundedSize(pageSize)), query);
         list.getRecords().forEach(this::refreshStatus);
         return list;
     }
@@ -178,6 +180,41 @@ public class JobManagerService {
         if (this.mapper.updateById(entity) != 1) {
             throw new InternalException("entity.update.failed", entity);
         }
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void completeUpload(FileMapping mapping) {
+        Integer jobId = mapping.getJobId();
+        if (jobId == null) {
+            throw new InternalException("File mapping has no job id");
+        }
+        this.fileMappingService.update(mapping);
+        if (this.mapper.increaseJobSize(jobId, mapping.getTotalSize()) != 1) {
+            throw new InternalException("entity.update.failed", jobId);
+        }
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void deleteMappings(int jobId, List<FileMapping> mappings) {
+        if (mappings.isEmpty()) {
+            return;
+        }
+        long releasedSize = 0L;
+        for (FileMapping mapping : mappings) {
+            if (mapping.getJobId() == null || mapping.getJobId() != jobId) {
+                throw new InternalException("File mapping does not belong to " +
+                                            "job %s", jobId);
+            }
+            if (mapping.getFileStatus() == FileMappingStatus.COMPLETED) {
+                releasedSize = Math.addExact(releasedSize,
+                                             mapping.getTotalSize());
+            }
+            this.fileMappingService.detachFromJob(mapping.getId(), jobId);
+        }
+        if (this.mapper.decreaseJobSize(jobId, releasedSize) != 1) {
+            throw new InternalException("entity.update.failed", jobId);
+        }
+        this.deleteDiskFilesAfterCommit(mappings);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

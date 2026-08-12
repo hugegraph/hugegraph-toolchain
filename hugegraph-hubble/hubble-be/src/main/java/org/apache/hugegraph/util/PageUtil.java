@@ -29,6 +29,30 @@ public final class PageUtil {
 
     public static final int MAX_PAGE_SIZE = 500;
 
+    /*
+     * Hard cap used instead of an unbounded query when the frontend
+     * passes page_size=-1 (meaning "all records")
+     */
+    public static final int HARD_CAP = 10000;
+
+    /**
+     * Bound the requested page size: page_size=-1 is accepted from the
+     * frontend but is turned into a hard cap instead of unbounded.
+     */
+    public static int boundedSize(int requested) {
+        if (requested < -1) {
+            throw new IllegalArgumentException("page_size must be >= -1");
+        }
+        return requested == -1 ? HARD_CAP : requested;
+    }
+
+    public static long boundedSize(long requested) {
+        if (requested < -1L) {
+            throw new IllegalArgumentException("page_size must be >= -1");
+        }
+        return requested == -1L ? HARD_CAP : requested;
+    }
+
     public static void checkPage(int pageNo, int pageSize) {
         boolean invalidSize = pageSize != -1 &&
                               (pageSize < 1 || pageSize > MAX_PAGE_SIZE);

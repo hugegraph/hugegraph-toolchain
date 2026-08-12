@@ -244,7 +244,11 @@ const My = () => {
                                     <Form.Item label={t('my.col.name')} name='user_name'>
                                         <Input disabled />
                                     </Form.Item>
-                                    <Form.Item label={t('my.edit.old_password')} name='old_password'>
+                                    <Form.Item
+                                        label={t('my.edit.old_password')}
+                                        name='old_password'
+                                        rules={[rules.required()]}
+                                    >
                                         <Input.Password
                                             autoComplete='new-password'
                                             placeholder={t('my.edit.old_password_placeholder')}

@@ -260,13 +260,17 @@ const Task = () => {
         setLoading(true);
         api.manage.deleteTask(id).then(res => {
             setLoading(false);
-            if (res.status === 200) {
+
+            if (res?.status === 200) {
                 setRefresh(!refresh);
                 message.success(t('common.msg.delete_success'));
 
                 return;
             }
 
+            message.error(t('common.msg.delete_fail'));
+        }).catch(() => {
+            setLoading(false);
             message.error(t('common.msg.delete_fail'));
         });
     }, [refresh, t]);
@@ -382,19 +386,19 @@ const Task = () => {
         {
             title: t('task.col.target_space'),
             dataIndex: 'ingestion_option',
-            render: val => val.graphspace,
+            render: val => val?.graphspace ?? '-',
         },
         {
             title: t('task.col.target_graph'),
             dataIndex: 'ingestion_option',
-            render: val => val.graph,
+            render: val => val?.graph ?? '-',
         },
         {
             title: t('task.col.create_time'),
             dataIndex: 'create_time',
         },
         {
-            title: t('account.col.id'),
+            title: t('task.col.creator'),
             dataIndex: 'creator',
         },
         {
@@ -617,6 +621,7 @@ const Task = () => {
                     <Table
                         columns={columns}
                         rowKey={rowKey}
+                        scroll={{x: 'max-content'}}
                         dataSource={data}
                         pagination={pagination}
                         onChange={handleTable}

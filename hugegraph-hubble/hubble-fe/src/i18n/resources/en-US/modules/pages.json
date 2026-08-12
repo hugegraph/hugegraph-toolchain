@@ -576,6 +576,7 @@
       "sync_type": "Sync Type",
       "status": "Status",
       "create_time": "Created At",
+      "creator": "Creator",
       "operation": "Actions"
     },
     "statistic": {
@@ -988,6 +989,7 @@
       "delete_confirm": "Confirm deleting this edge type?",
       "delete_warning": "This action cannot be undone. Please proceed with caution.",
       "delete_task_note": "Deleting metadata may take a while. Check Async Tasks for progress.",
+      "parent_hint": "Parent: {{name}}",
       "col": {
         "name": "Edge Type Name",
         "type": "Edge Type",

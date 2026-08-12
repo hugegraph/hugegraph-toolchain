@@ -28,6 +28,15 @@ LIB_PATH=${HOME_PATH}/lib
 LOG_PATH=${HOME_PATH}/logs
 PID_FILE=${BIN_PATH}/pid
 
+process_start_time() {
+    local process_pid=$1
+    if [[ -r /proc/${process_pid}/stat ]]; then
+        awk '{print $22}' "/proc/${process_pid}/stat"
+    else
+        LC_ALL=C ps -o lstart= -p "${process_pid}" 2>/dev/null
+    fi
+}
+
 . "${BIN_PATH}"/common_functions
 
 java_env_check
@@ -74,17 +83,36 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+MAIN_CLASS="org.apache.hugegraph.HugeGraphHubble"
+
 if [[ -f ${PID_FILE} ]] ; then
-    PID=$(cat "${PID_FILE}")
-    if kill -0 "${PID}" > /dev/null 2>&1; then
-        echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
-        exit 1
+    read -r PID PID_START < "${PID_FILE}"
+    if [[ ! ${PID} =~ ^[0-9]+$ ]]; then
+        echo "Invalid HugeGraphHubble PID file, removing it"
+        rm "${PID_FILE}"
+    elif kill -0 "${PID}" > /dev/null 2>&1; then
+        CURRENT_START=$(process_start_time "${PID}") || CURRENT_START=""
+        if [[ -z ${PID_START} ]]; then
+            PROCESS_ARGS=$(ps -p "${PID}" -o args= 2>/dev/null || true)
+            if [[ ${PROCESS_ARGS} == *"${MAIN_CLASS}"* &&
+                  ${PROCESS_ARGS} == *"-Dhubble.home.path=${HOME_PATH}"* ]]; then
+                echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
+                exit 1
+            fi
+            echo "Stale HugeGraphHubble PID file, removing it"
+            rm "${PID_FILE}"
+        elif [[ ${PID_START} != "${CURRENT_START}" ]]; then
+            echo "Stale HugeGraphHubble PID file, removing it"
+            rm "${PID_FILE}"
+        else
+            echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
+            exit 1
+        fi
     else
         rm "${PID_FILE}"
     fi
 fi
 
-MAIN_CLASS="org.apache.hugegraph.HugeGraphHubble"
 ARGS=${CONF_PATH}/hugegraph-hubble.properties
 LOG=${LOG_PATH}/hugegraph-hubble.log
 
@@ -99,7 +127,13 @@ else
 fi
 
 PID=$!
-echo ${PID} > "${PID_FILE}"
+PID_START=$(process_start_time "${PID}") || PID_START=""
+if ! kill -0 "${PID}" > /dev/null 2>&1; then
+    wait "${PID}" || true
+    cat "${LOG}" || true
+    exit 1
+fi
+echo "${PID} ${PID_START}" > "${PID_FILE}"
 
 # wait hubble start
 TIMEOUT_S=30
