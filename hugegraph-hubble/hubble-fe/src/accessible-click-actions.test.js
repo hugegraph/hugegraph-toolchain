@@ -77,8 +77,23 @@ test('task-name columns constrain long values and preserve the full name', () =>
         'utf8'
     );
 
-    [taskList, asyncList].forEach(source => {
-        expect(source).toMatch(/dataIndex:\s*['"]task_name['"][\s\S]{0,200}width:\s*\d+/);
-        expect(source).toMatch(/ellipsis=\{\{tooltip:\s*task_name\}\}/);
-    });
+    const taskWidthConfig = taskList.match(
+        /const TASK_COLUMN_WIDTHS = \{([\s\S]*?)\};/
+    )?.[1] || '';
+    const taskNameWidth = Number(
+        taskWidthConfig.match(/\bname:\s*(\d+)/)?.[1]
+    );
+
+    expect(taskList).toMatch(
+        /dataIndex:\s*['"]task_name['"][\s\S]{0,200}width:\s*TASK_COLUMN_WIDTHS\.name/
+    );
+    expect(taskNameWidth).toBeGreaterThan(0);
+    expect(taskNameWidth).toBeGreaterThanOrEqual(120);
+    expect(taskNameWidth).toBeLessThanOrEqual(220);
+    expect(taskList).toMatch(/ellipsis=\{\{tooltip:\s*task_name\}\}/);
+
+    expect(asyncList).toMatch(
+        /dataIndex:\s*['"]task_name['"][\s\S]{0,200}width:\s*\d+/
+    );
+    expect(asyncList).toMatch(/ellipsis=\{\{tooltip:\s*task_name\}\}/);
 });

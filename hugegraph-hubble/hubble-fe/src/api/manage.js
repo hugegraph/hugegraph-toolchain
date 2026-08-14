@@ -331,8 +331,8 @@ const getTaskList = params => {
     return request.get(`${testhost}/tasks/list`, {params});
 };
 
-const getTaskDetail = id => {
-    return request.get(`${testhost}/tasks/${id}`);
+const getTaskDetail = (id, config) => {
+    return request.get(`${testhost}/tasks/${id}`, config);
 };
 
 const deleteTask = id => {

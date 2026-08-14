@@ -100,6 +100,17 @@ test('keeps task-run error ownership controls out of query parameters', () => {
     );
 });
 
+test('forwards task-detail error ownership controls', () => {
+    const config = {suppressBusinessErrorToast: true};
+
+    manage.getTaskDetail('42', config);
+
+    expect(request.get).toHaveBeenCalledWith(
+        '/ingest/tasks/42',
+        config
+    );
+});
+
 test('reads the default graph from the canonical route', () => {
     manage.getDefaultGraph('DEFAULT');
     expect(request.get).toHaveBeenCalledWith(
