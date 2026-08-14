@@ -48,13 +48,25 @@ import ViewLayer from './components/ViewLayer';
 import TopStatistic from './components/TopStatistic';
 import {useNavigate, Link} from 'react-router-dom';
 import * as api from '../../api';
-import {StatusField} from '../../components/Status';
 import {sourceType, syncType} from './config';
 import TableHeader from '../../components/TableHeader';
 import DataPreparationNav from '../../components/DataPreparationNav';
 import {readWorkbenchGraphContext} from '../../utils/workbenchGraphContext';
+import {TaskStatus} from './status';
 
 const {Text} = Typography;
+
+const TASK_COLUMN_WIDTHS = {
+    name: 150,
+    source: 80,
+    graphspace: 100,
+    graph: 100,
+    created: 145,
+    creator: 70,
+    status: 80,
+    sync: 90,
+    actions: 190,
+};
 
 const DetailTip = ({row}) => {
     const {t} = useTranslation();
@@ -347,6 +359,7 @@ const Task = () => {
     }, [t]);
     const loadHlmDemo = useCallback(() => loadDemo('hlm'), [loadDemo]);
     const loadLoaderDemo = useCallback(() => loadDemo('loader'), [loadDemo]);
+    const loadRankDemo = useCallback(() => loadDemo('rank'), [loadDemo]);
     const chooseDemoGraph = useCallback(() => navigate('/graphspace'), [navigate]);
 
     const handleHideEditLayer = useCallback(() => setEditLayer(false), []);
@@ -354,12 +367,14 @@ const Task = () => {
     const handleHideViewLayer = useCallback(() => setViewLayer(false), []);
 
     const rowKey = useCallback(record => record.task_id, []);
+    const hasCreator = data.some(row => Boolean(row?.creator));
 
     const columns = [
         {
             title: t('task.col.name'),
             dataIndex: 'task_name',
-            width: 220,
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.name,
             ellipsis: true,
             render: task_name => (
                 <Text
@@ -373,6 +388,9 @@ const Task = () => {
         {
             title: t('task.col.source_type'),
             dataIndex: 'ingestion_mapping',
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.source,
+            ellipsis: true,
             render: val => {
                 const {structs} = val ?? {};
                 if (!structs?.length) {
@@ -386,31 +404,47 @@ const Task = () => {
         {
             title: t('task.col.target_space'),
             dataIndex: 'ingestion_option',
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.graphspace,
+            ellipsis: true,
             render: val => val?.graphspace ?? '-',
         },
         {
             title: t('task.col.target_graph'),
             dataIndex: 'ingestion_option',
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.graph,
+            ellipsis: true,
             render: val => val?.graph ?? '-',
         },
         {
             title: t('task.col.create_time'),
             dataIndex: 'create_time',
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.created,
+            ellipsis: true,
         },
-        {
+        ...(hasCreator ? [{
             title: t('task.col.creator'),
             dataIndex: 'creator',
-        },
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.creator,
+            ellipsis: true,
+        }] : []),
         {
             title: t('task.col.status'),
             dataIndex: 'last_metrics',
+            className: style.no_wrap,
             align: 'center',
-            width: 120,
-            render: val => <StatusField status={val} />,
+            width: TASK_COLUMN_WIDTHS.status,
+            render: val => <TaskStatus status={val} />,
         },
         {
             title: t('task.col.sync_type'),
             dataIndex: 'task_schedule_type',
+            className: style.no_wrap,
+            width: TASK_COLUMN_WIDTHS.sync,
+            ellipsis: true,
             render: val => {
                 return syncTypes.find(item => item.value === val)?.label ?? val;
             },
@@ -418,7 +452,7 @@ const Task = () => {
         {
             title: t('graphspace.col.operation'),
             align: 'center',
-            width: 160,
+            width: TASK_COLUMN_WIDTHS.actions,
             render: row => {
                 return (
                     <TaskActions
@@ -581,6 +615,13 @@ const Task = () => {
                             >
                                 {t('graph.menu.load_loader_sample')}
                             </Button>
+                            <Button
+                                loading={demoLoading === 'rank'}
+                                disabled={Boolean(demoLoading)}
+                                onClick={loadRankDemo}
+                            >
+                                {t('graph.menu.load_rank_sample')}
+                            </Button>
                         </Space>
                     ) : (
                         <Button onClick={chooseDemoGraph}>
@@ -619,6 +660,7 @@ const Task = () => {
                         </Button>
                     </TableHeader>
                     <Table
+                        className={style.task_table}
                         columns={columns}
                         rowKey={rowKey}
                         scroll={{x: 'max-content'}}
