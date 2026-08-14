@@ -105,7 +105,8 @@ go.env
 # AI-IDE prompt files (We only keep AGENTS.md, other files could soft-linked it when needed)
 # Local AI-agent workspaces and run evidence
 .codex-task/*
-!.codex-task/GLOBAL-TODO.md
+.goal-task/*
+!.goal-task/GLOBAL-TODO.md
 .autonomous/
 .claude/
 superpowers/
