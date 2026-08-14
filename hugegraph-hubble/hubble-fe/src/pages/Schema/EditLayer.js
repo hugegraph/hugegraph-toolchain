@@ -49,7 +49,27 @@ export const schemaTemplateBusinessError = (res, t, action, name) => {
     return t(`schema_template.${action}_failed`);
 };
 
-const EditLayer = ({visible, onCancel, graphspace, refresh, mode, detail}) => {
+export const validateSchemaTemplateFields = async form => {
+    try {
+        return await form.validateFields();
+    }
+    catch (error) {
+        if (Array.isArray(error?.errorFields)) {
+            return null;
+        }
+        throw error;
+    }
+};
+
+const EditLayer = ({
+    visible,
+    onCancel,
+    graphspace,
+    refresh,
+    mode,
+    detail,
+    validateForm = validateSchemaTemplateFields,
+}) => {
     const {t} = useTranslation();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -100,17 +120,26 @@ const EditLayer = ({visible, onCancel, graphspace, refresh, mode, detail}) => {
         });
     }, [graphspace, onCancel, refresh, t]);
 
-    const onFinish = useCallback(() => {
-        form.validateFields().then(values => {
-            setLoading(true);
-            if (mode === 'create') {
-                addSchema(values);
-                return;
-            }
+    const onFinish = useCallback(async () => {
+        let values;
+        try {
+            values = await validateForm(form);
+        }
+        catch {
+            message.error(t('common.msg.operation_failed'));
+            return;
+        }
+        if (!values) {
+            return;
+        }
+        setLoading(true);
+        if (mode === 'create') {
+            addSchema(values);
+            return;
+        }
 
-            updateSchema(detailName, values);
-        });
-    }, [addSchema, detailName, form, mode, updateSchema]);
+        updateSchema(detailName, values);
+    }, [addSchema, detailName, form, mode, t, updateSchema, validateForm]);
 
     useEffect(() => {
         if (!visible) {
