@@ -15,9 +15,11 @@
  * limitations under the License.
  */
 
-import {render, screen} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {message} from 'antd';
 import EditLayer, {BUILTIN_SCHEMA_TEMPLATES} from './EditLayer';
+import * as api from '../../api/index';
 
 jest.mock('../../api/index', () => ({
     manage: {
@@ -50,6 +52,10 @@ beforeAll(() => {
         addListener: jest.fn(),
         removeListener: jest.fn(),
     }));
+});
+
+beforeEach(() => {
+    jest.clearAllMocks();
 });
 
 test('offers built-in starting points in create mode and fills an empty draft', async () => {
@@ -129,4 +135,121 @@ test('does not show the starting-point selector while editing', () => {
     );
 
     expect(screen.queryByText('schema_template.form.starting_point')).not.toBeInTheDocument();
+});
+
+test('keeps empty-field errors in the form without rejecting or calling the API', async () => {
+    const unhandledRejection = jest.fn(event => event.preventDefault());
+    window.addEventListener('unhandledrejection', unhandledRejection);
+    render(
+        <EditLayer
+            visible
+            mode='create'
+            detail={{}}
+            graphspace='DEFAULT'
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+        />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
+    expect(api.manage.addSchema).not.toHaveBeenCalled();
+    expect(api.manage.updateSchema).not.toHaveBeenCalled();
+    expect(unhandledRejection).not.toHaveBeenCalled();
+    window.removeEventListener('unhandledrejection', unhandledRejection);
+});
+
+test('keeps invalid-name errors in the form without calling the API', async () => {
+    render(
+        <EditLayer
+            visible
+            mode='create'
+            detail={{}}
+            graphspace='DEFAULT'
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+        />
+    );
+
+    await userEvent.type(
+        screen.getByPlaceholderText('schema_template.form.name_placeholder'),
+        'INVALID-NAME'
+    );
+    await userEvent.type(
+        screen.getByPlaceholderText('schema_template.form.schema_placeholder'),
+        'schema = graph.schema()'
+    );
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
+    expect(api.manage.addSchema).not.toHaveBeenCalled();
+    expect(api.manage.updateSchema).not.toHaveBeenCalled();
+});
+
+test('keeps valid create submission behavior after validation passes', async () => {
+    api.manage.addSchema.mockResolvedValue({status: 200});
+    const onCancel = jest.fn();
+    const refresh = jest.fn();
+    render(
+        <EditLayer
+            visible
+            mode='create'
+            detail={{}}
+            graphspace='DEFAULT'
+            onCancel={onCancel}
+            refresh={refresh}
+        />
+    );
+
+    await userEvent.type(
+        screen.getByPlaceholderText('schema_template.form.name_placeholder'),
+        'valid_name'
+    );
+    await userEvent.type(
+        screen.getByPlaceholderText('schema_template.form.schema_placeholder'),
+        'schema = graph.schema()'
+    );
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(api.manage.addSchema).toHaveBeenCalledWith(
+        'DEFAULT',
+        {
+            name: 'valid_name',
+            schema: 'schema = graph.schema()',
+        },
+        {suppressBusinessErrorToast: true}
+    ));
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+    expect(refresh).toHaveBeenCalled();
+});
+
+test('reports unexpected validation failures without an unhandled rejection', async () => {
+    const error = new Error('validation infrastructure failed');
+    const validateForm = jest.fn().mockRejectedValue(error);
+    const unhandledRejection = jest.fn(event => event.preventDefault());
+    const messageError = jest.spyOn(message, 'error').mockImplementation(() => undefined);
+    window.addEventListener('unhandledrejection', unhandledRejection);
+    render(
+        <EditLayer
+            visible
+            mode='create'
+            detail={{}}
+            graphspace='DEFAULT'
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+            validateForm={validateForm}
+        />
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(messageError).toHaveBeenCalledWith(
+        'common.msg.operation_failed'
+    ));
+    expect(validateForm).toHaveBeenCalled();
+    expect(api.manage.addSchema).not.toHaveBeenCalled();
+    expect(api.manage.updateSchema).not.toHaveBeenCalled();
+    expect(unhandledRejection).not.toHaveBeenCalled();
+    window.removeEventListener('unhandledrejection', unhandledRejection);
 });
