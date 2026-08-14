@@ -50,9 +50,16 @@ const redirectToLogin = () => {
 };
 
 const showRequestError = res => {
-    message.error(i18n.t('request.error', {
-        message: res?.message ?? '',
-        path: res?.path ?? '',
+    const errorMessage = res?.message;
+    if (!errorMessage) {
+        message.error(i18n.t('request.failed'));
+        return;
+    }
+    const path = typeof res?.path === 'string' ? res.path.trim() : '';
+    const key = path ? 'request.error_with_path' : 'request.error';
+    message.error(i18n.t(key, {
+        message: errorMessage,
+        path,
     }));
 };
 
