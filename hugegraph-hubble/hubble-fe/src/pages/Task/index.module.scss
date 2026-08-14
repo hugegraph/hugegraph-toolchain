@@ -57,3 +57,22 @@
         color: #fff;
     }
 }
+
+.task_table {
+    :global(.ant-table-cell) {
+        white-space: nowrap;
+    }
+}
+
+.no_wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.task_status {
+    min-width: 64px;
+    margin-right: 0;
+    text-align: center;
+    white-space: nowrap;
+}
