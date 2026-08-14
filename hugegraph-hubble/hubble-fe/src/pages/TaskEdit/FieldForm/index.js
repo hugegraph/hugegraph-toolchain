@@ -28,7 +28,7 @@ import {
     Popconfirm,
 } from 'antd';
 import {PlusOutlined, MinusSquareOutlined} from '@ant-design/icons';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api';
 import * as rules from '../../../utils/rules';
@@ -97,6 +97,7 @@ const FieldForm = ({visible, prev, datasourceID}) => {
     const [loadError, setLoadError] = useState(false);
     const [retry, setRetry] = useState(0);
     const [fieldForm] = Form.useForm();
+    const selectionError = useRef(null);
 
     const setSourceData = useCallback(data => {
         setData(data);
@@ -181,6 +182,17 @@ const FieldForm = ({visible, prev, datasourceID}) => {
 
     const renderField = useCallback(item => item.key, []);
     const retryFields = useCallback(() => setRetry(value => value + 1), []);
+    const handleFinishFailed = useCallback(({errorFields}) => {
+        if (errorFields.some(({name}) => name[0] === 'target_keys')) {
+            setTransferStatus('error');
+        }
+    }, []);
+
+    useEffect(() => {
+        if (transferStatus === 'error') {
+            selectionError.current?.focus();
+        }
+    }, [transferStatus]);
 
     useEffect(() => {
         if (!datasourceID) {
@@ -191,6 +203,7 @@ const FieldForm = ({visible, prev, datasourceID}) => {
         setSourceData([]);
         setTargetKeys([]);
         fieldForm.setFieldValue('target_keys', []);
+        setTransferStatus('');
         setLoadError(false);
         api.manage.getDatasourceSchema(datasourceID).then(res => {
             if (!active) {
@@ -211,7 +224,11 @@ const FieldForm = ({visible, prev, datasourceID}) => {
 
     return (
         <div style={{display: visible ? '' : 'none'}} className={style.transfer}>
-            <Form form={fieldForm} name='field_form'>
+            <Form
+                form={fieldForm}
+                name='field_form'
+                onFinishFailed={handleFinishFailed}
+            >
                 <Typography.Title level={5}>{t('task.edit.step_source_fields')}</Typography.Title>
                 <Alert
                     showIcon
@@ -260,6 +277,15 @@ const FieldForm = ({visible, prev, datasourceID}) => {
                         }}
                     </Transfer>
                 </Form.Item>
+                {transferStatus === 'error' && (
+                    <div ref={selectionError} tabIndex={-1}>
+                        <Alert
+                            showIcon
+                            type='error'
+                            message={t('task.edit.select_source_fields')}
+                        />
+                    </div>
+                )}
                 <Form.Item
                     name='target_keys'
                     rules={[rules.required(t('task.edit.select_source_fields'))]}

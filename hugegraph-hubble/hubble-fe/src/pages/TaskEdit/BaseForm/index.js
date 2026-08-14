@@ -328,6 +328,7 @@ const BaseForm = ({cancel, visible, loading}) => {
 
     const loadHlmDemo = useCallback(() => confirmDemo('hlm'), [confirmDemo]);
     const loadLoaderDemo = useCallback(() => confirmDemo('loader'), [confirmDemo]);
+    const loadRankDemo = useCallback(() => confirmDemo('rank'), [confirmDemo]);
     const retryDemo = useCallback(() => prepareDemo(lastDemo), [lastDemo, prepareDemo]);
 
     return (
@@ -388,6 +389,7 @@ const BaseForm = ({cancel, visible, loading}) => {
                         />
                     )}
                     name='task_name'
+                    validateFirst
                     validateTrigger={['onBlur', 'onChange']}
                     rules={[
                         rules.required(),
@@ -496,6 +498,13 @@ const BaseForm = ({cancel, visible, loading}) => {
                                 onClick={loadLoaderDemo}
                             >
                                 {t('graph.menu.load_loader_sample')}
+                            </Button>
+                            <Button
+                                loading={demoLoading === 'rank'}
+                                disabled={!selectedGraph || Boolean(demoLoading)}
+                                onClick={loadRankDemo}
+                            >
+                                {t('graph.menu.load_rank_sample')}
                             </Button>
                         </Space>
                     )}
