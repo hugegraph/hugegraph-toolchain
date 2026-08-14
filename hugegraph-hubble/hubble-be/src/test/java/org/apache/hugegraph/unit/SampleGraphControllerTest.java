@@ -17,6 +17,8 @@
 
 package org.apache.hugegraph.unit;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 import org.junit.Test;
@@ -28,6 +30,9 @@ import org.apache.hugegraph.api.gremlin.GremlinRequest;
 import org.apache.hugegraph.driver.GremlinManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.SchemaManager;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.structure.schema.EdgeLabel;
+import org.apache.hugegraph.structure.schema.PropertyKey;
 import org.apache.hugegraph.structure.schema.VertexLabel;
 import org.apache.hugegraph.testutil.Assert;
 
@@ -156,6 +161,166 @@ public class SampleGraphControllerTest {
                           SampleGraphController.hlmData()));
         Assert.assertEquals(14, result.get("vertices"));
         Assert.assertEquals(15, result.get("edges"));
+    }
+
+    @Test
+    public void testRejectsIncompatibleRankSchemaBeforeMutation() {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        SchemaManager schema = Mockito.mock(SchemaManager.class,
+                                            Mockito.RETURNS_DEEP_STUBS);
+        PropertyKey name = new PropertyKey.BuilderImpl("name", schema)
+                           .asText().build();
+        VertexLabel person = new VertexLabel.BuilderImpl("person", schema)
+                             .properties("name", "age", "city")
+                             .primaryKeys("name")
+                             .nullableKeys("age", "city")
+                             .build();
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+        Mockito.when(client.schema()).thenReturn(schema);
+        Mockito.when(schema.getPropertyKeys()).thenReturn(
+                Collections.singletonList(name));
+        Mockito.when(schema.getVertexLabels()).thenReturn(
+                Collections.singletonList(person));
+        Mockito.when(schema.getEdgeLabels()).thenReturn(Collections.emptyList());
+        SampleGraphController controller = new TestController(client);
+
+        ExternalException error = (ExternalException) Assert.assertThrows(
+                ExternalException.class,
+                () -> controller.load("DEFAULT", "hugegraph", "rank"));
+
+        Assert.assertEquals("graph.sample.schema-incompatible",
+                            error.getMessage());
+        Assert.assertEquals("rank", error.args()[0]);
+        Assert.assertEquals("vertex label", error.args()[1]);
+        Assert.assertEquals("person", error.args()[2]);
+        Mockito.verify(schema, Mockito.never())
+               .propertyKey(Mockito.anyString());
+        Mockito.verify(schema, Mockito.never())
+               .vertexLabel(Mockito.anyString());
+        Mockito.verify(schema, Mockito.never())
+               .edgeLabel(Mockito.anyString());
+        Mockito.verify(gremlin, Mockito.never()).gremlin(Mockito.anyString());
+    }
+
+    @Test
+    public void testCompletesCompatiblePartialRankSchema() {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        SchemaManager schema = Mockito.mock(SchemaManager.class,
+                                            Mockito.RETURNS_DEEP_STUBS);
+        PropertyKey name = new PropertyKey.BuilderImpl("name", schema)
+                           .asText().build();
+        VertexLabel person = new VertexLabel.BuilderImpl("person", schema)
+                             .useCustomizeStringId()
+                             .properties("name")
+                             .build();
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+        Mockito.when(client.schema()).thenReturn(schema);
+        Mockito.when(schema.getPropertyKeys()).thenReturn(
+                Collections.singletonList(name));
+        Mockito.when(schema.getVertexLabels()).thenReturn(
+                Collections.singletonList(person));
+        Mockito.when(schema.getEdgeLabels()).thenReturn(Collections.emptyList());
+        Mockito.when(gremlin.gremlin(Mockito.anyString()))
+               .thenAnswer(invocation -> new GremlinRequest.Builder(
+                       invocation.getArgument(0), gremlin));
+        SampleGraphController controller = new TestController(client);
+
+        Map<String, Object> result = controller.load("DEFAULT", "hugegraph",
+                                                     "rank");
+
+        Mockito.verify(schema, Mockito.never()).propertyKey("name");
+        Mockito.verify(schema, Mockito.never()).vertexLabel("person");
+        Mockito.verify(schema).vertexLabel("movie");
+        Mockito.verify(schema).edgeLabel("follow");
+        Mockito.verify(schema).edgeLabel("like");
+        Mockito.verify(schema).edgeLabel("directedBy");
+        Mockito.verify(gremlin).execute(Mockito.any(GremlinRequest.class));
+        Assert.assertEquals("rank", result.get("dataset"));
+        Assert.assertEquals(true, result.get("idempotent"));
+    }
+
+    @Test
+    public void testRejectsIncompatibleEdgeBeforeMutation() {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        SchemaManager schema = Mockito.mock(SchemaManager.class,
+                                            Mockito.RETURNS_DEEP_STUBS);
+        PropertyKey name = new PropertyKey.BuilderImpl("name", schema)
+                           .asText().build();
+        VertexLabel person = new VertexLabel.BuilderImpl("person", schema)
+                             .useCustomizeStringId()
+                             .properties("name")
+                             .build();
+        VertexLabel movie = new VertexLabel.BuilderImpl("movie", schema)
+                            .useCustomizeStringId()
+                            .properties("name")
+                            .build();
+        EdgeLabel follow = new EdgeLabel.BuilderImpl("follow", schema)
+                           .sourceLabel("person")
+                           .targetLabel("person")
+                           .ttl(1L)
+                           .build();
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+        Mockito.when(client.schema()).thenReturn(schema);
+        Mockito.when(schema.getPropertyKeys()).thenReturn(
+                Collections.singletonList(name));
+        Mockito.when(schema.getVertexLabels()).thenReturn(
+                Arrays.asList(person, movie));
+        Mockito.when(schema.getEdgeLabels()).thenReturn(
+                Collections.singletonList(follow));
+        SampleGraphController controller = new TestController(client);
+
+        ExternalException error = (ExternalException) Assert.assertThrows(
+                ExternalException.class,
+                () -> controller.load("DEFAULT", "hugegraph", "rank"));
+
+        Assert.assertEquals("edge label", error.args()[1]);
+        Assert.assertEquals("follow", error.args()[2]);
+        Mockito.verify(schema, Mockito.never())
+               .propertyKey(Mockito.anyString());
+        Mockito.verify(schema, Mockito.never())
+               .vertexLabel(Mockito.anyString());
+        Mockito.verify(schema, Mockito.never())
+               .edgeLabel(Mockito.anyString());
+        Mockito.verify(gremlin, Mockito.never()).gremlin(Mockito.anyString());
+    }
+
+    @Test
+    public void testRejectsExtraRequiredVertexPropertyBeforeMutation() {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        SchemaManager schema = Mockito.mock(SchemaManager.class,
+                                            Mockito.RETURNS_DEEP_STUBS);
+        PropertyKey name = new PropertyKey.BuilderImpl("name", schema)
+                           .asText().build();
+        VertexLabel person = new VertexLabel.BuilderImpl("person", schema)
+                             .useCustomizeStringId()
+                             .properties("name", "tenant")
+                             .build();
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+        Mockito.when(client.schema()).thenReturn(schema);
+        Mockito.when(schema.getPropertyKeys()).thenReturn(
+                Collections.singletonList(name));
+        Mockito.when(schema.getVertexLabels()).thenReturn(
+                Collections.singletonList(person));
+        Mockito.when(schema.getEdgeLabels()).thenReturn(Collections.emptyList());
+        SampleGraphController controller = new TestController(client);
+
+        ExternalException error = (ExternalException) Assert.assertThrows(
+                ExternalException.class,
+                () -> controller.load("DEFAULT", "hugegraph", "rank"));
+
+        Assert.assertEquals("vertex label", error.args()[1]);
+        Assert.assertEquals("person", error.args()[2]);
+        Mockito.verify(schema, Mockito.never())
+               .propertyKey(Mockito.anyString());
+        Mockito.verify(schema, Mockito.never())
+               .vertexLabel(Mockito.anyString());
+        Mockito.verify(schema, Mockito.never())
+               .edgeLabel(Mockito.anyString());
+        Mockito.verify(gremlin, Mockito.never()).gremlin(Mockito.anyString());
     }
 
     private static int occurrences(String value, String token) {
