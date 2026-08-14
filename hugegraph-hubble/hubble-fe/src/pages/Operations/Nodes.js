@@ -19,12 +19,20 @@
 import {Alert, Button, Input, message, Select, Space, Table, Tag, Tooltip} from 'antd';
 import {CopyOutlined, CrownOutlined, SearchOutlined} from '@ant-design/icons';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Link, useNavigate, useSearchParams} from 'react-router-dom';
+import {Link, useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import {getNodes} from '../../api/operations';
 import {isPdEnabled} from '../../utils/config';
-import {displayNodeType, HealthStatus, RefreshButton, TierIcon} from './components';
+import {
+    displayNodeType,
+    displayHealthStatus,
+    HealthStatus,
+    nodeRoleLabel,
+    RefreshButton,
+    TierIcon,
+} from './components';
 import {formatObservedAt, hasStaleMetrics} from './topology';
+import {operationsReturnState} from './navigation';
 import './operations.scss';
 
 const stopRowNavigation = event => event.stopPropagation();
@@ -34,7 +42,7 @@ const shortNodeId = id => {
     return normalized.length > 12 ? `…${normalized.slice(-12)}` : normalized;
 };
 
-const NodeIdentityCell = ({record, unavailable, t}) => {
+const NodeIdentityCell = ({record, returnState, unavailable, t}) => {
     const name = record.name ?? unavailable;
     const copyId = useCallback(async event => {
         stopRowNavigation(event);
@@ -52,6 +60,7 @@ const NodeIdentityCell = ({record, unavailable, t}) => {
         <span className='operations-node-identity-cell' aria-label={identityLabel}>
             <Link
                 to={`/operations/nodes/${record.id}`}
+                state={returnState}
                 onClick={stopRowNavigation}
                 aria-label={t('operations.view_node_details', {name})}
             >
@@ -67,13 +76,14 @@ const NodeIdentityCell = ({record, unavailable, t}) => {
                     </span>
                 </span>
             </Link>
-            {record.role && (
+            {(record.role || record.type === 'STORE') && (
                 <Tag
                     className={leader ? 'operations-node-role is-leader' : 'operations-node-role'}
                     icon={leader ? <CrownOutlined aria-hidden='true' /> : null}
-                    aria-label={leader ? t('operations.leader_role') : record.role}
+                    aria-label={leader
+                        ? t('operations.leader_role') : nodeRoleLabel(record, t)}
                 >
-                    {record.role}
+                    {record.role ?? nodeRoleLabel(record, t)}
                 </Tag>
             )}
             <Tooltip title={record.id}>
@@ -96,6 +106,7 @@ const Nodes = () => {
     const {t, i18n} = useTranslation();
     const pdMode = isPdEnabled();
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [data, setData] = useState({items: [], total: 0, observed_at: null, stale: false});
     const [loading, setLoading] = useState(true);
@@ -172,6 +183,18 @@ const Nodes = () => {
     const changeStatus = useCallback(value => update({status: value}), [update]);
     const search = useCallback(() => update({query: searchValue}), [searchValue, update]);
     const clearSearch = useCallback(() => update({query: undefined}), [update]);
+    const hasUserFilters = Boolean(
+        (pdMode && params.type) || params.status || params.query
+    );
+    const clearFilters = useCallback(() => {
+        setSearchValue('');
+        update({
+            type: undefined,
+            status: undefined,
+            query: undefined,
+            page: '1',
+        });
+    }, [update]);
     const changeSearch = useCallback(event => {
         const value = event.currentTarget.value;
         setSearchValue(value);
@@ -181,14 +204,20 @@ const Nodes = () => {
     }, [clearSearch]);
     const row = useCallback(record => ({
         tabIndex: 0,
-        onClick: () => navigate(`/operations/nodes/${record.id}`),
+        onClick: () => navigate(
+            `/operations/nodes/${record.id}`,
+            {state: operationsReturnState(location)}
+        ),
         onKeyDown: event => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                navigate(`/operations/nodes/${record.id}`);
+                navigate(
+                    `/operations/nodes/${record.id}`,
+                    {state: operationsReturnState(location)}
+                );
             }
         },
-    }), [navigate]);
+    }), [location, navigate]);
     const changeTable = useCallback((pagination, filters, sorter) => update({
         page: String(pagination.current),
         page_size: String(pagination.pageSize),
@@ -209,7 +238,12 @@ const Nodes = () => {
         {title: t('operations.node'), dataIndex: 'name', key: 'name', sorter: true,
             width: 330,
             sortOrder: sortOrder('name'), render: (_, record) => (
-                <NodeIdentityCell record={record} unavailable={unavailable} t={t} />
+                <NodeIdentityCell
+                    record={record}
+                    returnState={operationsReturnState(location)}
+                    unavailable={unavailable}
+                    t={t}
+                />
             )},
         {title: t('operations.type'), dataIndex: 'type', key: 'type', width: 86,
             sorter: true, sortOrder: sortOrder('type'), render: displayNodeType},
@@ -264,7 +298,10 @@ const Nodes = () => {
                             aria-label={t('operations.node_status_filter')}
                             onChange={changeStatus}
                             options={['UP', 'DEGRADED', 'DOWN', 'UNKNOWN']
-                                .map(value => ({value}))}
+                                .map(value => ({
+                                    value,
+                                    label: displayHealthStatus(value, t),
+                                }))}
                         />
                         <Input
                             allowClear
@@ -275,6 +312,11 @@ const Nodes = () => {
                             onPressEnter={search}
                             onChange={changeSearch}
                         />
+                        {hasUserFilters && (
+                            <Button onClick={clearFilters}>
+                                {t('operations.clear_filters')}
+                            </Button>
+                        )}
                     </Space>
                     <strong className='operations-result-count'>
                         {t('operations.result_count', {count: Number(data.total)})}
