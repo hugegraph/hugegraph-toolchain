@@ -48,6 +48,8 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
         label: item.name,
         value: item.name,
     })), [selectLabel]);
+    const requiresIdColumn = Boolean(selectLabel.id_strategy)
+        && !['PRIMARY_KEY', 'AUTOMATIC'].includes(selectLabel.id_strategy);
 
     const autoSelect = useCallback(() => {
         const list = vertexForm.getFieldValue('attr') ?? [];
@@ -207,7 +209,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                     />
                 </Form.Item>
                 <Form.Item
-                    // required={selectLabel.id_strategy !== 'PRIMARY_KEY'}
+                    required={requiresIdColumn}
                     label={(
                         <FormHelpLabel
                             label={t('task.edit.id_column')}
@@ -217,7 +219,7 @@ const VertexForm = ({open, onCancel, sourceField, targetField, vertexList, index
                         />
                     )}
                     name={'id'}
-                    rules={[!['PRIMARY_KEY', 'AUTOMATIC'].includes(selectLabel.id_strategy) ? rules.required() : null]}
+                    rules={requiresIdColumn ? [rules.required()] : []}
                 >
                     <Select
                         disabled={['PRIMARY_KEY', 'AUTOMATIC'].includes(selectLabel.id_strategy)

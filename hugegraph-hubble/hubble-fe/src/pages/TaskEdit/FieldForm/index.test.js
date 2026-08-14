@@ -15,8 +15,10 @@
  * limitations under the License.
  */
 
-import {fireEvent, render, screen} from '@testing-library/react';
+import {Form} from 'antd';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import FieldForm from './index';
+import * as api from '../../../api';
 
 jest.mock('../../../api', () => ({manage: {getDatasourceSchema: jest.fn()}}));
 jest.mock('react-i18next', () => ({
@@ -28,12 +30,17 @@ jest.mock('react-i18next', () => ({
 }));
 
 beforeEach(() => {
+    jest.clearAllMocks();
     window.matchMedia = jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
         addListener: jest.fn(),
         removeListener: jest.fn(),
     }));
+    api.manage.getDatasourceSchema.mockResolvedValue({
+        status: 200,
+        data: ['name'],
+    });
 });
 
 it('exposes custom source-field deletion as a named keyboard-focusable button', () => {
@@ -47,4 +54,75 @@ it('exposes custom source-field deletion as a named keyboard-focusable button', 
     const remove = screen.getByRole('button', {name: 'Delete field customer_id'});
     expect(remove).toHaveAttribute('type', 'button');
     expect(remove).toHaveAttribute('title', 'Delete field customer_id');
+});
+
+it('focuses a visible error until at least one source field is selected', async () => {
+    const onFormFinish = jest.fn();
+    render(
+        <Form.Provider onFormFinish={onFormFinish}>
+            <FieldForm visible prev={jest.fn()} datasourceID='9' />
+        </Form.Provider>
+    );
+
+    expect(await screen.findByText('name')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.next'}));
+
+    const errorMessage = await screen.findByText('task.edit.select_source_fields');
+    const error = errorMessage.closest('[role="alert"]');
+    await waitFor(() => expect(error.parentElement).toHaveFocus());
+    expect(onFormFinish).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('tree')
+        .querySelector('.ant-tree-checkbox'));
+    const move = document.querySelector('.ant-transfer-operation button');
+    fireEvent.click(move);
+
+    await waitFor(() => expect(
+        screen.queryByText('task.edit.select_source_fields')
+    ).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.next'}));
+    await waitFor(() => expect(onFormFinish).toHaveBeenCalledWith(
+        'field_form',
+        expect.objectContaining({
+            values: expect.objectContaining({target_keys: ['name']}),
+        })
+    ));
+});
+
+it('clears the selection error before entering with a different data source', async () => {
+    api.manage.getDatasourceSchema.mockImplementation(id => Promise.resolve({
+        status: 200,
+        data: [id === 'A' ? 'old_name' : 'new_name'],
+    }));
+    const onFormFinish = jest.fn();
+    const view = datasourceID => (
+        <Form.Provider onFormFinish={onFormFinish}>
+            <FieldForm visible prev={jest.fn()} datasourceID={datasourceID} />
+        </Form.Provider>
+    );
+    const {rerender} = render(view('A'));
+
+    expect(await screen.findByText('old_name')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.next'}));
+    const oldError = await screen.findByText('task.edit.select_source_fields');
+    await waitFor(() => expect(
+        oldError.closest('[role="alert"]').parentElement
+    ).toHaveFocus());
+
+    rerender(
+        <Form.Provider onFormFinish={onFormFinish}>
+            <FieldForm visible={false} prev={jest.fn()} datasourceID='A' />
+        </Form.Provider>
+    );
+    rerender(view('B'));
+
+    expect(await screen.findByText('new_name')).toBeInTheDocument();
+    await waitFor(() => expect(
+        screen.queryByText('task.edit.select_source_fields')
+    ).not.toBeInTheDocument());
+    expect(document.querySelector('.ant-transfer')).not.toHaveClass(
+        'ant-transfer-status-error'
+    );
+    expect(document.activeElement).not.toBe(oldError.parentElement);
+    expect(onFormFinish).not.toHaveBeenCalled();
 });

@@ -71,6 +71,70 @@ it('does not submit a vertex drawer with a half-filled property mapping row', as
     await waitFor(() => expect(onCancel).not.toHaveBeenCalled());
 });
 
+it('validates the ID column only after the selected vertex strategy requires it', async () => {
+    render(
+        <VertexForm
+            open
+            onCancel={jest.fn()}
+            sourceField={[
+                {
+                    name: 'custom_vertex',
+                    id_strategy: 'CUSTOMIZE_STRING',
+                    properties: [],
+                },
+            ]}
+            targetField={['id']}
+            vertexList={[]}
+            index={-1}
+        />
+    );
+
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.confirm'}));
+    await waitFor(() => expect(
+        document.querySelectorAll('.ant-form-item-explain-error')
+    ).toHaveLength(1));
+    const idItem = document.querySelector('#vertex_form_id').closest('.ant-form-item');
+    expect(idItem).not.toHaveClass('ant-form-item-has-error');
+
+    const labelSelect = document.querySelector('#vertex_form_label');
+    fireEvent.mouseDown(labelSelect);
+    fireEvent.click(await screen.findByText('custom_vertex', {
+        selector: '.ant-select-item-option-content',
+    }));
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.confirm'}));
+    await waitFor(() => expect(idItem).toHaveClass('ant-form-item-has-error'));
+});
+
+it.each(['PRIMARY_KEY', 'AUTOMATIC'])(
+    'does not require an ID column for the %s vertex strategy',
+    async idStrategy => {
+        const onCancel = jest.fn();
+        const label = idStrategy.toLowerCase();
+        render(
+            <VertexForm
+                open
+                onCancel={onCancel}
+                sourceField={[{
+                    name: label,
+                    id_strategy: idStrategy,
+                    properties: [],
+                }]}
+                targetField={['id']}
+                vertexList={[]}
+                index={-1}
+            />
+        );
+
+        fireEvent.mouseDown(document.querySelector('#vertex_form_label'));
+        fireEvent.click(await screen.findByText(label, {
+            selector: '.ant-select-item-option-content',
+        }));
+        expect(document.querySelector('#vertex_form_id')).toBeDisabled();
+        fireEvent.click(screen.getByRole('button', {name: 'common.action.confirm'}));
+        await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+    }
+);
+
 it('does not submit an edge drawer with a half-filled value mapping row', async () => {
     const onCancel = jest.fn();
     render(
