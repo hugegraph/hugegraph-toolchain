@@ -16,7 +16,11 @@
  * under the License.
  */
 
-import {BUILTIN_SCHEMA_TEMPLATES, schemaTemplateBusinessError} from './EditLayer';
+import {
+    BUILTIN_SCHEMA_TEMPLATES,
+    schemaTemplateBusinessError,
+    validateSchemaTemplateFields,
+} from './EditLayer';
 
 jest.mock('../../components/CodeEditor', () => () => null);
 
@@ -40,6 +44,23 @@ test('uses an input-oriented fallback for other business failures', () => {
         key: 'schema_template.update_failed',
         values: undefined,
     });
+});
+
+test('handles only Ant Design field-validation rejections', async () => {
+    const validationError = {
+        errorFields: [{name: ['name'], errors: ['Required']}],
+        values: {name: ''},
+    };
+    const form = {validateFields: jest.fn().mockRejectedValue(validationError)};
+
+    await expect(validateSchemaTemplateFields(form)).resolves.toBeNull();
+});
+
+test('does not swallow unexpected validation or application failures', async () => {
+    const error = new Error('unexpected');
+    const form = {validateFields: jest.fn().mockRejectedValue(error)};
+
+    await expect(validateSchemaTemplateFields(form)).rejects.toBe(error);
 });
 
 test.each(Object.entries(BUILTIN_SCHEMA_TEMPLATES))(
