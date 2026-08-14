@@ -23,18 +23,48 @@
 import React from 'react';
 import c from './index.module.scss';
 import classnames from 'classnames';
+import {useTranslation} from 'react-i18next';
+
+const isLoadingCount = value => {
+    if (value === null || value === undefined
+        || (typeof value === 'string' && value.trim() === '')) {
+        return false;
+    }
+    const count = Number(value);
+    return Number.isFinite(count) && count < 0;
+};
+
+const getCountDisplay = (value, t) => {
+    if (isLoadingCount(value)) {
+        return t('analysis.canvas.number_card.loading');
+    }
+    if (value === null || value === undefined
+        || (typeof value === 'string' && value.trim() === '')) {
+        return t('analysis.canvas.number_card.unavailable');
+    }
+    const count = Number(value);
+    return Number.isFinite(count)
+        ? value
+        : t('analysis.canvas.number_card.unavailable');
+};
 
 const NumberCard = props => {
+    const {t} = useTranslation();
     const {pathNum, data, hasPadding} = props;
     const {currentGraphNodesNum, currentGraphEdgesNum, allGraphNodesNum, allGraphEdgesNum} = data;
 
-    let showLoading = false;
-    if (currentGraphNodesNum < 0 || currentGraphEdgesNum < 0 || +allGraphNodesNum < 0 || +allGraphEdgesNum < 0) {
-        showLoading = true;
-    }
-
-    const allGraphNodes = showLoading ? 'loading...' : allGraphNodesNum;
-    const allGraphEdges = showLoading ? 'loading...' : allGraphEdgesNum;
+    const currentGraphNodes = getCountDisplay(currentGraphNodesNum, t);
+    const currentGraphEdges = getCountDisplay(currentGraphEdgesNum, t);
+    const allGraphNodes = getCountDisplay(allGraphNodesNum, t);
+    const allGraphEdges = getCountDisplay(allGraphEdgesNum, t);
+    const nodeSummary = t('analysis.canvas.number_card.node_summary', {
+        current: currentGraphNodes,
+        total: allGraphNodes,
+    });
+    const edgeSummary = t('analysis.canvas.number_card.edge_summary', {
+        current: currentGraphEdges,
+        total: allGraphEdges,
+    });
 
     const graphClassName = classnames(
         c.numberCard,
@@ -45,28 +75,48 @@ const NumberCard = props => {
         <div className={graphClassName}>
             {pathNum && (
                 <div className={c.numberCardItem}>
-                    <div className={c.numberCardTitle}>Paths</div>
+                    <div className={c.numberCardTitle}>
+                        {t('analysis.canvas.number_card.paths')}
+                    </div>
                     <div className={c.numberCardInfo}>
                         <span className={c.numberCur}>{pathNum}</span>
                     </div>
                 </div>
             )}
             <div className={c.numberCardItem}>
-                <div className={c.numberCardTitle}>Nodes</div>
-                <div className={c.numberCardInfo}>
-                    <span className={c.numberCur}>{currentGraphNodesNum}</span>
-                    <span>/</span>
-                    <span className={c.numberAll}>
+                <div className={c.numberCardTitle}>
+                    {t('analysis.canvas.number_card.nodes')}
+                </div>
+                <div
+                    className={c.numberCardInfo}
+                    role='group'
+                    aria-label={nodeSummary}
+                    title={nodeSummary}
+                >
+                    <span className={c.numberCur} aria-hidden='true'>
+                        {currentGraphNodes}
+                    </span>
+                    <span aria-hidden='true'>/</span>
+                    <span className={c.numberAll} aria-hidden='true'>
                         {allGraphNodes}
                     </span>
                 </div>
             </div>
             <div className={c.numberCardItem}>
-                <div className={c.numberCardTitle}>Edges</div>
-                <div className={c.numberCardInfo}>
-                    <span className={c.numberCur}>{currentGraphEdgesNum}</span>
-                    <span>/</span>
-                    <span className={c.numberAll}>
+                <div className={c.numberCardTitle}>
+                    {t('analysis.canvas.number_card.edges')}
+                </div>
+                <div
+                    className={c.numberCardInfo}
+                    role='group'
+                    aria-label={edgeSummary}
+                    title={edgeSummary}
+                >
+                    <span className={c.numberCur} aria-hidden='true'>
+                        {currentGraphEdges}
+                    </span>
+                    <span aria-hidden='true'>/</span>
+                    <span className={c.numberAll} aria-hidden='true'>
                         {allGraphEdges}
                     </span>
                 </div>
