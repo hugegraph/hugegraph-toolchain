@@ -22,6 +22,8 @@ import {MemoryRouter, useLocation, useNavigate} from 'react-router-dom';
 import Nodes from './Nodes';
 import {getNodes} from '../../api/operations';
 import '../../i18n';
+import enPages from '../../i18n/resources/en-US/modules/pages.json';
+import zhPages from '../../i18n/resources/zh-CN/modules/pages.json';
 
 jest.mock('../../api/operations');
 
@@ -70,6 +72,8 @@ test('limits standalone node details to Server nodes and filters', async () => {
     expect(screen.getByRole('link', {name: /Server A/})).toBeInTheDocument();
     expect(screen.queryByRole('link', {name: /PD A/})).not.toBeInTheDocument();
     expect(screen.queryByRole('link', {name: /Store A/})).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', {name: /Refresh/}))
+        .not.toHaveClass('ant-btn-loading'));
 });
 
 afterEach(() => {
@@ -90,6 +94,106 @@ const HistoryControls = () => {
         </>
     );
 };
+
+const FilterLocationProbe = () => {
+    const location = useLocation();
+    return <output aria-label='filter location'>{location.search}</output>;
+};
+
+test('clears all user filters while preserving paging size and sort preferences', async () => {
+    getNodes.mockResolvedValue({items: [], total: 0, observed_at: 1000, stale: false});
+
+    render(
+        <MemoryRouter
+            initialEntries={[
+                '/operations/nodes?type=PD&status=DOWN&query=node&page=4'
+                + '&page_size=50&sort=status&order=desc',
+            ]}
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <FilterLocationProbe />
+            <Nodes />
+        </MemoryRouter>
+    );
+
+    const clearFilters = await screen.findByRole('button', {name: 'Clear filters'});
+    expect(screen.getByRole('textbox', {name: /search node/i})).toHaveValue('node');
+    fireEvent.click(clearFilters);
+
+    await waitFor(() => {
+        const params = new URLSearchParams(
+            screen.getByLabelText('filter location').textContent
+        );
+        expect(params.has('type')).toBe(false);
+        expect(params.has('status')).toBe(false);
+        expect(params.has('query')).toBe(false);
+        expect(params.get('page')).toBe('1');
+        expect(params.get('page_size')).toBe('50');
+        expect(params.get('sort')).toBe('status');
+        expect(params.get('order')).toBe('desc');
+    });
+    expect(screen.getByRole('textbox', {name: /search node/i})).toHaveValue('');
+    await waitFor(() => expect(getNodes).toHaveBeenLastCalledWith({
+        type: undefined,
+        status: undefined,
+        query: undefined,
+        page: 1,
+        page_size: 50,
+        sort: 'status',
+        order: 'desc',
+    }));
+    await waitFor(() => expect(screen.getByRole('button', {name: /Refresh/}))
+        .not.toHaveClass('ant-btn-loading'));
+    expect(screen.queryByRole('button', {name: 'Clear filters'}))
+        .not.toBeInTheDocument();
+});
+
+test('hides clear filters when no user-controlled filter is active', async () => {
+    getNodes.mockResolvedValue({items: [], total: 0, observed_at: 1000, stale: false});
+
+    render(
+        <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
+            <Nodes />
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByText('0 nodes')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', {name: /Refresh/}))
+        .not.toHaveClass('ant-btn-loading'));
+    expect(screen.queryByRole('button', {name: 'Clear filters'}))
+        .not.toBeInTheDocument();
+});
+
+test('does not treat the standalone fixed SERVER type as a clearable filter', async () => {
+    sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: false}));
+    getNodes.mockResolvedValue({
+        items: [{id: 'server-1', name: 'Server A', type: 'SERVER', status: 'UP'}],
+        total: 1,
+        observed_at: 1000,
+        stale: false,
+    });
+
+    render(
+        <MemoryRouter
+            initialEntries={['/operations/nodes?type=STORE']}
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <Nodes />
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('link', {name: /Server A/})).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', {name: /Refresh/}))
+        .not.toHaveClass('ant-btn-loading'));
+    expect(screen.queryByRole('button', {name: 'Clear filters'}))
+        .not.toBeInTheDocument();
+    expect(getNodes).toHaveBeenCalledWith(expect.objectContaining({type: 'SERVER'}));
+});
+
+test('ships the clear-filters action in Chinese and English', () => {
+    expect(zhPages.operations.clear_filters).toBe('清空筛选');
+    expect(enPages.operations.clear_filters).toBe('Clear filters');
+});
 
 test('shows stale observation metadata and exposes real detail links', async () => {
     getNodes.mockResolvedValue({
@@ -113,6 +217,9 @@ test('shows stale observation metadata and exposes real detail links', async () 
     expect(screen.getByText(/Stale/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Observed/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('combobox', {name: /node type/i})).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole('combobox', {name: /node status/i}));
+    expect(await screen.findByRole('option', {name: 'Attention'})).toBeInTheDocument();
+    expect(screen.queryByRole('option', {name: 'DEGRADED'})).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: /search node/i})).toBeInTheDocument();
     expect(screen.getByText('Browse, filter and inspect every discovered service node'))
         .toBeInTheDocument();
@@ -275,4 +382,30 @@ test('merges role into node identity and keeps the full ID explainable and copya
 
     fireEvent.click(within(identity).getByRole('button', {name: 'Copy full node ID'}));
     expect(writeText).toHaveBeenCalledWith('store-c410c1adb107-full-id');
+});
+
+test('renders a Store leader-shard count without an explicit node role', async () => {
+    getNodes.mockResolvedValue({
+        items: [{
+            id: 'store-shards',
+            name: 'store-shards',
+            type: 'STORE',
+            role: null,
+            status: 'UP',
+            metrics: {backend: {leaders: 3}},
+        }],
+        total: 1,
+        observed_at: 1000,
+        stale: false,
+    });
+
+    render(
+        <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
+            <Nodes />
+        </MemoryRouter>
+    );
+
+    const identity = (await screen.findByText('store-shards'))
+        .closest('.operations-node-identity-cell');
+    expect(within(identity).getByText('3 leader shards')).toBeInTheDocument();
 });

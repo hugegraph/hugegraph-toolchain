@@ -28,7 +28,7 @@ import {
 } from '@ant-design/icons';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Link} from 'react-router-dom';
+import {Link, useLocation, useSearchParams} from 'react-router-dom';
 import {getDashboard} from '../../api/auth';
 import {getOverview} from '../../api/operations';
 import {normalizeDashboardUrl} from '../../modules/navigation/ConsoleItem/dashboard';
@@ -36,6 +36,7 @@ import {
     ClusterTopology,
     displayNodeType,
     HealthStatus,
+    nodeRoleLabel,
     RefreshButton,
     SourceStrip,
 } from './components';
@@ -46,18 +47,21 @@ import {
     hasStaleMetrics,
     selectAttentionNodes,
 } from './topology';
-import './operations.scss';
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
+import {operationsReturnState} from './navigation';
+import './operations.scss';
 
 const Overview = () => {
     const {t, i18n} = useTranslation();
+    const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
-    const [view, setView] = useState('topology');
     const [dashboard, setDashboard] = useState({status: 'checking', url: ''});
     const requestSequence = useRef(0);
+    const view = searchParams.get('view') === 'nodes' ? 'nodes' : 'topology';
 
     const load = useCallback(async refresh => {
         const request = ++requestSequence.current;
@@ -129,7 +133,12 @@ const Overview = () => {
     }, []);
 
     const refresh = useCallback(() => load(true), [load]);
-    const changeView = useCallback(event => setView(event.target.value), []);
+    const changeView = useCallback(event => {
+        const next = new URLSearchParams(searchParams);
+        event.target.value === 'nodes'
+            ? next.set('view', 'nodes') : next.delete('view');
+        setSearchParams(next, {replace: true});
+    }, [searchParams, setSearchParams]);
     const openDashboard = useCallback(() => {
         const popup = window.open(
             `${dashboard.url}/monitor/machine`,
@@ -199,11 +208,17 @@ const Overview = () => {
             title: t('operations.node'),
             dataIndex: 'name',
             render: (name, node) => (
-                <Link to={`/operations/nodes/${node.id}`}>{name ?? unavailable}</Link>
+                <Link
+                    to={`/operations/nodes/${node.id}`}
+                    state={operationsReturnState(location)}
+                >
+                    {name ?? unavailable}
+                </Link>
             ),
         },
         {title: t('operations.tier_header'), dataIndex: 'type', render: displayNodeType},
-        {title: t('operations.role'), dataIndex: 'role', render: value => value ?? '—'},
+        {title: t('operations.role'), dataIndex: 'role',
+            render: (value, node) => nodeRoleLabel(node, t)},
         {
             title: t('operations.status'),
             dataIndex: 'status',
@@ -219,7 +234,8 @@ const Overview = () => {
             render: name => <strong>{name ?? unavailable}</strong>,
         },
         {title: t('operations.tier_header'), dataIndex: 'type', render: displayNodeType},
-        {title: t('operations.role'), dataIndex: 'role', render: value => value ?? '—'},
+        {title: t('operations.role'), dataIndex: 'role',
+            render: (value, node) => nodeRoleLabel(node, t)},
         {
             title: t('operations.status'),
             dataIndex: 'status',
@@ -238,7 +254,10 @@ const Overview = () => {
             title: t('operations.action'),
             key: 'action',
             render: (_, node) => (
-                <Link to={`/operations/nodes/${node.id}`}>
+                <Link
+                    to={`/operations/nodes/${node.id}`}
+                    state={operationsReturnState(location)}
+                >
                     {t('operations.view_details')}
                 </Link>
             ),
@@ -370,7 +389,12 @@ const Overview = () => {
                                 {nodes.length === 0
                                     ? <Empty description={t('operations.empty_cluster')} />
                                     : view === 'topology'
-                                        ? <ClusterTopology nodes={nodes} />
+                                        ? (
+                                            <ClusterTopology
+                                                nodes={nodes}
+                                                returnState={operationsReturnState(location)}
+                                            />
+                                        )
                                         : (
                                             <Table
                                                 components={{
