@@ -80,6 +80,15 @@
       "mode_2d": "2D Mode",
       "mode_3d": "3D Mode",
       "import_success": "Imported successfully",
+      "number_card": {
+        "paths": "Paths",
+        "nodes": "Nodes",
+        "edges": "Edges",
+        "loading": "Loading",
+        "unavailable": "Unavailable",
+        "node_summary": "Nodes: {{current}} in this result, {{total}} in the full graph",
+        "edge_summary": "Edges: {{current}} in this result, {{total}} in the full graph"
+      },
       "import_failed": "Import failed",
       "export_json": "Export JSON",
       "export_png": "Export image",

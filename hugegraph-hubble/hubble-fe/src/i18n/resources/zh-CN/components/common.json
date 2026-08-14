@@ -98,6 +98,7 @@
   },
   "request": {
     "failed": "请求失败",
-    "error": "请求出错：{{message}}，path：{{path}}"
+    "error": "请求失败：{{message}}",
+    "error_with_path": "请求失败：{{message}}（{{path}}）"
   }
 }
