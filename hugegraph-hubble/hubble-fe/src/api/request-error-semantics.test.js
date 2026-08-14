@@ -106,7 +106,7 @@ describe.each(['./request'])('%s error semantics', modulePath => {
             };
 
             expect(reject(error)).toBe(error.response);
-            expect(messageError).toHaveBeenCalledWith('request.error');
+            expect(messageError).toHaveBeenCalledWith('request.error_with_path');
         });
 
     it('keeps network errors rejected after showing the fallback message', async () => {
@@ -114,7 +114,46 @@ describe.each(['./request'])('%s error semantics', modulePath => {
         const error = new Error('Network Error');
 
         await expect(reject(error)).rejects.toBe(error);
+        expect(messageError).toHaveBeenCalledWith('request.failed');
+    });
+
+    it('keeps fallback and detailed copy from repeating the failure prefix',
+        () => {
+            const en = require('../i18n/resources/en-US/components/common.json');
+            const zh = require('../i18n/resources/zh-CN/components/common.json');
+            const interpolate = (template, values) => Object.entries(values)
+                .reduce((text, [key, value]) => text.replace(
+                    `{{${key}}}`,
+                    value
+                ), template);
+
+            expect(en.request.failed).toBe('Request failed');
+            expect(interpolate(en.request.error, {
+                message: 'Connection unavailable',
+            })).toBe('Request failed: Connection unavailable');
+            expect(zh.request.failed).toBe('请求失败');
+            expect(interpolate(zh.request.error, {
+                message: '暂时无法连接',
+            })).toBe('请求失败：暂时无法连接');
+        });
+
+    it('omits the path label when the server does not provide a path', () => {
+        const {reject, messageError} = loadResponseHandlers(modulePath);
+        const error = {
+            config: {},
+            response: {
+                status: 500,
+                data: {
+                    status: 500,
+                    message: 'No service available',
+                    path: '   ',
+                },
+            },
+        };
+
+        expect(reject(error)).toBe(error.response);
         expect(messageError).toHaveBeenCalledWith('request.error');
+        expect(messageError).not.toHaveBeenCalledWith('request.error_with_path');
     });
 
     it('redacts secrets and absolute paths before errors reach the DOM', async () => {

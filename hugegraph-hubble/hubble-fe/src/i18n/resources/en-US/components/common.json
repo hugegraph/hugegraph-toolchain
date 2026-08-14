@@ -98,6 +98,7 @@
   },
   "request": {
     "failed": "Request failed",
-    "error": "Request failed: {{message}}, path: {{path}}"
+    "error": "Request failed: {{message}}",
+    "error_with_path": "Request failed: {{message}} ({{path}})"
   }
 }
