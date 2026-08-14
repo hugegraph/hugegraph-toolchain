@@ -20,6 +20,12 @@ import {fireEvent, render, screen, waitFor, within} from '@testing-library/react
 import Graph from './index';
 import * as api from '../../api';
 
+let mockAuthContext;
+
+jest.mock('../../auth/AuthContext', () => ({
+    useAuthContext: () => mockAuthContext,
+}));
+
 jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: key => key}),
 }));
@@ -91,6 +97,9 @@ beforeEach(() => {
     jest.clearAllMocks();
     installMatchMedia();
     sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
+    mockAuthContext = {
+        context: {role: 'SUPERADMIN', scopes: {all_graphspaces: true}},
+    };
     api.manage.getGraphSpace.mockResolvedValue({
         status: 200,
         data: {name: 'space', nickname: 'Space'},
@@ -170,16 +179,64 @@ test('shows clone as unavailable instead of exposing a failing action', async ()
     expect(clone.closest('a')).toBeNull();
 });
 
-test('keeps exactly the five requested graph card actions', async () => {
+test('keeps the graph card actions including example datasets', async () => {
     render(<Graph />);
 
     const menu = await screen.findByTestId('graph-card-menu');
-    expect(within(menu).getAllByRole('menuitem')).toHaveLength(5);
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(8);
     expect(within(menu).getByText('graph.menu.clear_graph')).toBeInTheDocument();
     expect(within(menu).getByText('graph.menu.set_default')).toBeInTheDocument();
     expect(within(menu).getByText('common.action.edit')).toBeInTheDocument();
+    expect(within(menu).getByText('graph.menu.load_hlm_sample')).toBeInTheDocument();
+    expect(within(menu).getByText('graph.menu.load_rank_sample')).toBeInTheDocument();
+    expect(within(menu).getByText('graph.menu.load_loader_sample')).toBeInTheDocument();
     expect(within(menu).getByText('common.action.delete')).toBeInTheDocument();
     expect(within(menu).getByText('graph.menu.clone')).toBeInTheDocument();
+});
+
+test('disables example dataset writes for the protected built-in graphspace', async () => {
+    api.manage.getGraphList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{
+                name: 'protected-graph',
+                nickname: 'Protected graph',
+                graphspace: 'neizhianli',
+                default: false,
+            }],
+            total: 1,
+        },
+    });
+
+    render(<Graph />);
+
+    const menu = await screen.findByTestId('graph-card-menu');
+    [
+        'graph.menu.load_hlm_sample',
+        'graph.menu.load_rank_sample',
+        'graph.menu.load_loader_sample',
+    ].forEach(label => {
+        expect(within(menu).getByText(label).closest('[role="menuitem"]'))
+            .toHaveAttribute('aria-disabled', 'true');
+    });
+});
+
+test('disables example dataset writes without graphspace update permission', async () => {
+    mockAuthContext = {
+        context: {role: 'USER', scopes: {admin_graphspaces: []}},
+    };
+
+    render(<Graph />);
+
+    const menu = await screen.findByTestId('graph-card-menu');
+    [
+        'graph.menu.load_hlm_sample',
+        'graph.menu.load_rank_sample',
+        'graph.menu.load_loader_sample',
+    ].forEach(label => {
+        expect(within(menu).getByText(label).closest('[role="menuitem"]'))
+            .toHaveAttribute('aria-disabled', 'true');
+    });
 });
 
 test('places the new-graph card after existing graphs', async () => {

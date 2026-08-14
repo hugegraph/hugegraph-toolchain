@@ -103,6 +103,7 @@ const Graph = () => {
     const [loading, setLoading] = useState(false);
     const [listUnavailable, setListUnavailable] = useState(false);
     const [clearSelection, setClearSelection] = useState(null);
+    const [sampleLoading, setSampleLoading] = useState('');
     const {graphspace} = useParams();
     const navigate = useNavigate();
     const {context: authContext} = useAuthContext();
@@ -171,6 +172,40 @@ const Graph = () => {
     const handleClearConfirm = useCallback(() => {
         return api.manage.clearGraph(graphspace, clearSelection.graph);
     }, [clearSelection, graphspace]);
+
+    const loadSample = useCallback((graph, dataset) => {
+        Modal.confirm({
+            title: t(`graph.sample.${dataset}_title`),
+            content: t(`graph.sample.${dataset}_description`, {graph}),
+            okText: t('graph.sample.confirm'),
+            cancelText: t('common.action.cancel'),
+            onOk: async () => {
+                setSampleLoading(`${graph}:${dataset}`);
+                try {
+                    const res = await api.manage.loadSampleGraph(
+                        graphspace,
+                        graph,
+                        dataset,
+                        {suppressBusinessErrorToast: true}
+                    );
+                    if (res.status !== 200) {
+                        throw new Error(res.message || t('graph.sample.failed'));
+                    }
+                    message.success(t('graph.sample.success', {
+                        vertices: res.data.vertices,
+                        edges: res.data.edges,
+                    }));
+                    setRefresh(value => !value);
+                }
+                catch (error) {
+                    message.error(error.message || t('graph.sample.failed'));
+                }
+                finally {
+                    setSampleLoading('');
+                }
+            },
+        });
+    }, [graphspace, t]);
 
     const showSchema = useCallback(graph => {
         setViewLayer(true);
@@ -421,57 +456,84 @@ const Graph = () => {
         },
     ];
 
-    const getMenus = item => [
-        {
-            key: 'clear',
-            danger: true,
-            disabled: item.default,
-            label: item.default
-                ? <span className={style.disable}>{t('graph.menu.clear_graph')}</span>
-                : t('graph.menu.clear_graph'),
-            onClick: item.default ? undefined : () => clearGraph(item.name),
-        },
-        graphDefaultMutationEnabled && {
-            key: 'default',
-            disabled: item.default,
-            label: item.default
-                ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
-                : t('graph.menu.set_default'),
-            onClick: item.default ? undefined : () => handleSetDefault(item.name),
-        },
-        {
-            key: 'edit',
-            disabled: item.graphspace === 'neizhianli',
-            label: item.graphspace === 'neizhianli'
-                ? <span className={style.disable}>{t('common.action.edit')}</span>
-                : t('common.action.edit'),
-            onClick: item.graphspace === 'neizhianli'
-                ? undefined : () => editGraph(item.name),
-        },
-        {
-            key: 'delete',
-            danger: true,
-            disabled: item.graphspace === 'neizhianli',
-            label: item.graphspace === 'neizhianli'
-                ? <span className={style.disable}>{t('common.action.delete')}</span>
-                : t('common.action.delete'),
-            onClick: item.graphspace === 'neizhianli'
-                ? undefined : () => deleteGraph(item.name),
-        },
-        graphCreateEnabled && {
-            key: 'clone',
-            disabled: true,
-            label: (
-                <Tooltip title={t('graph.clone.unavailable')}>
-                    <span
-                        aria-label={`${t('graph.menu.clone')}: ${t('graph.clone.unavailable')}`}
-                    >
-                        {t('graph.menu.clone')}
-                    </span>
-                </Tooltip>
-            ),
-        },
-    ].filter(Boolean);
+    const getMenus = item => {
+        const itemGraphspace = item.graphspace || graphspace;
+        const immutable = itemGraphspace === 'neizhianli';
+        const readOnly = !canUpdateGraphspace(itemGraphspace);
+        const sampleDisabled = immutable || readOnly || Boolean(sampleLoading);
+        return [
+            {
+                key: 'clear',
+                danger: true,
+                disabled: item.default,
+                label: item.default
+                    ? <span className={style.disable}>{t('graph.menu.clear_graph')}</span>
+                    : t('graph.menu.clear_graph'),
+                onClick: item.default ? undefined : () => clearGraph(item.name),
+            },
+            graphDefaultMutationEnabled && {
+                key: 'default',
+                disabled: item.default,
+                label: item.default
+                    ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
+                    : t('graph.menu.set_default'),
+                onClick: item.default ? undefined : () => handleSetDefault(item.name),
+            },
+            {
+                key: 'edit',
+                disabled: immutable,
+                label: immutable
+                    ? <span className={style.disable}>{t('common.action.edit')}</span>
+                    : t('common.action.edit'),
+                onClick: immutable
+                    ? undefined : () => editGraph(item.name),
+            },
+            {
+                key: 'sample-hlm',
+                disabled: sampleDisabled,
+                label: sampleLoading === `${item.name}:hlm`
+                    ? t('graph.sample.loading') : t('graph.menu.load_hlm_sample'),
+                onClick: sampleDisabled ? undefined : () => loadSample(item.name, 'hlm'),
+            },
+            {
+                key: 'sample-rank',
+                disabled: sampleDisabled,
+                label: sampleLoading === `${item.name}:rank`
+                    ? t('graph.sample.loading') : t('graph.menu.load_rank_sample'),
+                onClick: sampleDisabled ? undefined : () => loadSample(item.name, 'rank'),
+            },
+            {
+                key: 'sample-loader',
+                disabled: sampleDisabled,
+                label: sampleLoading === `${item.name}:loader`
+                    ? t('graph.sample.loading') : t('graph.menu.load_loader_sample'),
+                onClick: sampleDisabled ? undefined : () => loadSample(item.name, 'loader'),
+            },
+            {
+                key: 'delete',
+                danger: true,
+                disabled: immutable,
+                label: immutable
+                    ? <span className={style.disable}>{t('common.action.delete')}</span>
+                    : t('common.action.delete'),
+                onClick: immutable
+                    ? undefined : () => deleteGraph(item.name),
+            },
+            graphCreateEnabled && {
+                key: 'clone',
+                disabled: true,
+                label: (
+                    <Tooltip title={t('graph.clone.unavailable')}>
+                        <span
+                            aria-label={`${t('graph.menu.clone')}: ${t('graph.clone.unavailable')}`}
+                        >
+                            {t('graph.menu.clone')}
+                        </span>
+                    </Tooltip>
+                ),
+            },
+        ].filter(Boolean);
+    };
 
     useEffect(() => {
         setLoading(true);
