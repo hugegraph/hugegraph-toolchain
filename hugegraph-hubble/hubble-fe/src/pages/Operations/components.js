@@ -20,6 +20,7 @@ import {
     CheckCircleFilled,
     ClockCircleFilled,
     CloseCircleFilled,
+    CrownOutlined,
     DatabaseOutlined,
     DeploymentUnitOutlined,
     ExclamationCircleFilled,
@@ -35,6 +36,7 @@ import {
     formatObservedAt,
     hasStaleMetrics,
     selectTierNodes,
+    storeLeaderCount,
 } from './topology';
 
 const STATUS_ICON = {
@@ -58,20 +60,43 @@ const NODE_TYPE_LABELS = {
 
 const displayNodeType = type => NODE_TYPE_LABELS[type] ?? type ?? '—';
 
+const displayHealthStatus = (status, t) => (
+    status === 'DEGRADED' ? t('operations.status_degraded') : status
+);
+
 const HealthStatus = ({status = 'UNKNOWN', reason, stale = false, size = 'normal'}) => {
     const {t} = useTranslation();
     const normalized = STATUS_ICON[status] ? status : 'UNKNOWN';
     const Icon = STATUS_ICON[normalized];
+    const details = [
+        normalized === 'UNKNOWN' ? t('operations.status_unknown') : null,
+        normalized === 'DEGRADED' ? t('operations.status_degraded_help') : null,
+        reason ? formatReason(reason, t) : null,
+        stale ? t('operations.stale_help') : null,
+    ].filter(Boolean);
+    const icon = details.length > 0 ? (
+        <Tooltip title={details.join(' · ')}>
+            <span
+                role='img'
+                aria-label={details.join(' · ')}
+                className='operations-health-info'
+            >
+                <Icon aria-hidden='true' />
+            </span>
+        </Tooltip>
+    ) : <Icon aria-hidden='true' />;
     return (
         <span className={`operations-health status-${normalized.toLowerCase()} is-${size}`}>
-            <Icon aria-hidden='true' />
-            <span>{normalized}</span>
+            {icon}
+            <span>
+                {displayHealthStatus(normalized, t)}
+            </span>
             {stale && (
                 <span className='operations-health-stale'>
                     <ClockCircleFilled aria-hidden='true' /> {t('operations.stale')}
                 </span>
             )}
-            {reason && (
+            {reason && size === 'large' && (
                 <span className='operations-health-reason'>{formatReason(reason, t)}</span>
             )}
         </span>
@@ -106,7 +131,10 @@ const SourceStrip = ({sources = {}, detailed = false,
                             {displayNodeType(name === 'stores'
                                 ? 'STORE' : name.toUpperCase())}
                         </strong>
-                        <HealthStatus status={source.status} />
+                        <HealthStatus
+                            status={source.status}
+                            reason={source.reason}
+                        />
                         <span className='operations-source-state'>
                             {t(`operations.availability_${(
                                 source.availability ?? 'UNSUPPORTED'
@@ -164,26 +192,52 @@ const RefreshButton = ({loading = false, onClick}) => {
     );
 };
 
-const TierNode = ({node}) => (
-    <Link
-        className={[
-            'operations-topology-node',
-            `status-${node.status?.toLowerCase()}`,
-            node.type === 'PD' && node.role === 'LEADER' ? 'is-axis-node' : '',
-        ].filter(Boolean).join(' ')}
-        to={`/operations/nodes/${node.id}`}
-        aria-label={`${node.type} ${node.name} ${node.role ?? ''} ${node.status}`}
-    >
-        <TierIcon type={node.type} />
-        <span className='operations-node-copy'>
-            <strong>{node.name}</strong>
-            <span>{node.role ?? node.version ?? '—'}</span>
-        </span>
-        <HealthStatus status={node.status} stale={hasStaleMetrics(node)} />
-    </Link>
-);
+const nodeRoleLabel = (node, t) => {
+    if (node?.role) {
+        return node.role;
+    }
+    const leaders = storeLeaderCount(node);
+    return leaders === null ? '—' : t(
+        leaders === 1 ? 'operations.leader_shard' : 'operations.leader_shards',
+        {count: leaders}
+    );
+};
 
-const TopologyTier = ({type, nodes}) => {
+const TierNode = ({node, returnState}) => {
+    const {t} = useTranslation();
+    return (
+        <Link
+            className={[
+                'operations-topology-node',
+                `status-${node.status?.toLowerCase()}`,
+                node.type === 'PD' && node.role === 'LEADER'
+                    ? 'is-axis-node' : '',
+            ].filter(Boolean).join(' ')}
+            to={`/operations/nodes/${node.id}`}
+            state={returnState}
+            aria-label={`${node.type} ${node.name} ${node.role ?? ''} ${
+                displayHealthStatus(node.status, t)}`}
+        >
+            <TierIcon type={node.type} />
+            <span className='operations-node-copy'>
+                <strong>{node.name}</strong>
+                <span>
+                    {node.type === 'PD' && node.role === 'LEADER' && (
+                        <CrownOutlined
+                            aria-label={t('operations.leader_role')}
+                            role='img'
+                        />
+                    )}
+                    {nodeRoleLabel(node, t) === '—'
+                        ? (node.version ?? '—') : nodeRoleLabel(node, t)}
+                </span>
+            </span>
+            <HealthStatus status={node.status} stale={hasStaleMetrics(node)} />
+        </Link>
+    );
+};
+
+const TopologyTier = ({type, nodes, returnState}) => {
     const {t} = useTranslation();
     const tier = selectTierNodes(nodes, type);
     return (
@@ -203,6 +257,7 @@ const TopologyTier = ({type, nodes}) => {
                     <TierNode
                         key={node.id}
                         node={node}
+                        returnState={returnState}
                         index={index}
                     />
                 ))}
@@ -220,7 +275,7 @@ const TopologyTier = ({type, nodes}) => {
     );
 };
 
-const ClusterTopology = ({nodes = []}) => {
+const ClusterTopology = ({nodes = [], returnState}) => {
     const {t} = useTranslation();
     return (
         <div className='operations-topology' aria-label={t('operations.topology_label')}>
@@ -229,6 +284,7 @@ const ClusterTopology = ({nodes = []}) => {
                     key={type}
                     type={type}
                     nodes={Array.isArray(nodes) ? nodes : []}
+                    returnState={returnState}
                 />
             ))}
         </div>
@@ -237,10 +293,12 @@ const ClusterTopology = ({nodes = []}) => {
 
 export {
     HealthStatus,
+    nodeRoleLabel,
     SourceStrip,
     ClusterTopology,
     TierIcon,
     RefreshButton,
     formatReason,
+    displayHealthStatus,
     displayNodeType,
 };

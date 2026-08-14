@@ -77,7 +77,7 @@ test('keeps unknown and partial source states explicit', async () => {
 
     renderOverview();
 
-    expect(await screen.findByText('DEGRADED')).toBeInTheDocument();
+    expect(await screen.findByText('Attention')).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', {name: 'Overview view'}))
         .toBeInTheDocument();
     expect(screen.getByText('Malformed')).toBeInTheDocument();

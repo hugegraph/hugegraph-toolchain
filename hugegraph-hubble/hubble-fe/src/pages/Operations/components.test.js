@@ -18,7 +18,7 @@
 
 import {render, screen, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
-import {ClusterTopology, SourceStrip} from './components';
+import {ClusterTopology, HealthStatus, SourceStrip} from './components';
 import i18n from '../../i18n';
 
 afterEach(() => i18n.changeLanguage('en-US'));
@@ -46,6 +46,8 @@ test('localizes the standalone deployment reason code', async () => {
                     status: 'UNKNOWN',
                     availability: 'UNSUPPORTED',
                     reason: 'deployment_mode_unsupported',
+                    observed_at: 1000,
+                    last_success_at: 500,
                 },
             }}
         />
@@ -53,6 +55,19 @@ test('localizes the standalone deployment reason code', async () => {
 
     expect(screen.getByText(/当前部署模式不支持/)).toBeInTheDocument();
     expect(screen.queryByText(/deployment mode unsupported/)).not.toBeInTheDocument();
+    const statusInfo = screen.getAllByRole('img', {name: /当前无法确认/})
+        .find(element => element.getAttribute('aria-label').includes('当前部署模式不支持'));
+    expect(statusInfo).toHaveAccessibleName(/当前部署模式不支持/);
+    expect(statusInfo).not.toHaveAccessibleName(/观测时间|最近成功/);
+});
+
+test('uses a concise Attention label and explains the degraded state', () => {
+    render(<HealthStatus status='DEGRADED' reason='refresh_failed' />);
+
+    expect(screen.getByText('Attention')).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: /Some sources or metrics are unhealthy/}))
+        .toHaveAccessibleName(/Refresh failed/);
+    expect(screen.queryByText('DEGRADED')).not.toBeInTheDocument();
 });
 
 test('uses semantic tier icons and keeps the PD leader on the visual axis', () => {
@@ -72,6 +87,8 @@ test('uses semantic tier icons and keeps the PD leader on the visual axis', () =
     expect(screen.getAllByLabelText('PD icon')).toHaveLength(2);
     expect(screen.getByLabelText('STORE icon')).toBeInTheDocument();
     expect(screen.getByText('pd-1').closest('a')).toHaveClass('is-axis-node');
+    expect(within(screen.getByText('pd-1').closest('a'))
+        .getByLabelText('Leader role')).toBeInTheDocument();
     expect(screen.getByText('pd-2').closest('a')).not.toHaveClass('is-axis-node');
     expect(screen.getByRole('link', {name: 'Server tier'})).toBeInTheDocument();
     expect(screen.getByRole('link', {name: 'Store tier'})).toBeInTheDocument();
