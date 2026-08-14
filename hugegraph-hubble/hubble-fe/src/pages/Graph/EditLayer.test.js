@@ -18,7 +18,8 @@
 
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {EditLayer, ViewLayer} from './EditLayer';
+import {message} from 'antd';
+import {EditLayer, validateGraphFields, ViewLayer} from './EditLayer';
 import * as api from '../../api';
 import {BUILTIN_SCHEMA_TEMPLATES} from '../Schema/builtinSchemaTemplates';
 
@@ -36,7 +37,9 @@ jest.mock('../../api', () => ({
         addSchema: jest.fn(),
         addGraphSchema: jest.fn(),
         addGraph: jest.fn(),
+        loadSampleGraph: jest.fn(),
         getGraph: jest.fn(),
+        updateGraph: jest.fn(),
     },
 }));
 
@@ -143,9 +146,218 @@ test('offers built-in Graph Schema choices and a direct create-template route', 
     expect(await screen.findByRole('link', {name: 'graph.form.schema_create'}))
         .toHaveAttribute('href', '/graphspace/DEFAULT/schema?create=true');
     await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
     await userEvent.click(screen.getByRole('combobox'));
     expect(screen.getByText('schema_template.builtin.people_network')).toBeInTheDocument();
     expect(screen.getByText('schema_template.builtin.product_catalog')).toBeInTheDocument();
+});
+
+test('keeps empty create errors in the form without an unhandled rejection or API call', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    const unhandledRejection = jest.fn(event => event.preventDefault());
+    window.addEventListener('unhandledrejection', unhandledRejection);
+    render(
+        <EditLayer
+            visible
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+            graphspace='DEFAULT'
+        />
+    );
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
+    expect(api.manage.addGraph).not.toHaveBeenCalled();
+    expect(api.manage.updateGraph).not.toHaveBeenCalled();
+    expect(unhandledRejection).not.toHaveBeenCalled();
+    window.removeEventListener('unhandledrejection', unhandledRejection);
+});
+
+test('reports unexpected validation rejection at the Modal event boundary', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    const validateForm = jest.fn().mockRejectedValue(new Error('validation failed'));
+    const unhandledRejection = jest.fn(event => event.preventDefault());
+    const messageError = jest.spyOn(message, 'error').mockImplementation(() => undefined);
+    window.addEventListener('unhandledrejection', unhandledRejection);
+    render(
+        <EditLayer
+            visible
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+            graphspace='DEFAULT'
+            validateForm={validateForm}
+        />
+    );
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(messageError).toHaveBeenCalledWith(
+        'common.msg.operation_failed'
+    ));
+    expect(api.manage.addGraph).not.toHaveBeenCalled();
+    expect(api.manage.updateGraph).not.toHaveBeenCalled();
+    expect(unhandledRejection).not.toHaveBeenCalled();
+    window.removeEventListener('unhandledrejection', unhandledRejection);
+    messageError.mockRestore();
+});
+
+test('recognizes only Ant Design field-validation rejection as a form error', async () => {
+    const form = {
+        validateFields: jest.fn().mockRejectedValue({
+            errorFields: [{name: ['graph'], errors: ['Required']}],
+        }),
+    };
+
+    await expect(validateGraphFields(form)).resolves.toBeNull();
+});
+
+test('submits a valid create after field validation passes', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    api.manage.addGraph.mockResolvedValue({status: 200});
+    render(
+        <EditLayer
+            visible
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+            graphspace='DEFAULT'
+        />
+    );
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    await userEvent.type(
+        screen.getByPlaceholderText('graph.form.name_placeholder'),
+        'valid_graph'
+    );
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalledWith(
+        'DEFAULT',
+        expect.objectContaining({
+            graph: 'valid_graph',
+            auth: false,
+            graphspace: 'DEFAULT',
+        })
+    ));
+});
+
+test('submits a valid alias update after field validation passes', async () => {
+    api.manage.getGraph.mockResolvedValue({
+        status: 200,
+        data: {name: 'movie_graph', nickname: 'Movies'},
+    });
+    api.manage.updateGraph.mockResolvedValue({status: 200});
+    const onCancel = jest.fn();
+    const refresh = jest.fn();
+    render(
+        <EditLayer
+            visible
+            onCancel={onCancel}
+            refresh={refresh}
+            graphspace='DEFAULT'
+            graph='movie_graph'
+        />
+    );
+
+    const alias = screen.getByPlaceholderText('graph.form.nickname_placeholder');
+    await waitFor(() => expect(alias).toHaveValue('Movies'));
+    await userEvent.clear(alias);
+    await userEvent.type(alias, 'Movie_Catalog');
+    await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(api.manage.updateGraph).toHaveBeenCalledWith(
+        'DEFAULT',
+        'movie_graph',
+        {nickname: 'Movie_Catalog'},
+        {suppressBusinessErrorToast: true}
+    ));
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+    expect(refresh).toHaveBeenCalled();
+});
+
+test('recovers from an update request rejection and allows retry', async () => {
+    api.manage.getGraph.mockResolvedValue({
+        status: 200,
+        data: {name: 'movie_graph', nickname: 'Movies'},
+    });
+    api.manage.updateGraph
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({status: 200});
+    const onCancel = jest.fn();
+    const refresh = jest.fn();
+    const unhandledRejection = jest.fn(event => event.preventDefault());
+    const messageError = jest.spyOn(message, 'error').mockImplementation(() => undefined);
+    window.addEventListener('unhandledrejection', unhandledRejection);
+    render(
+        <EditLayer
+            visible
+            onCancel={onCancel}
+            refresh={refresh}
+            graphspace='DEFAULT'
+            graph='movie_graph'
+        />
+    );
+
+    const alias = screen.getByPlaceholderText('graph.form.nickname_placeholder');
+    await waitFor(() => expect(alias).toHaveValue('Movies'));
+    await userEvent.clear(alias);
+    await userEvent.type(alias, 'Movie_Catalog');
+    const confirm = screen.getByRole('button', {name: 'OK'});
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(messageError).toHaveBeenCalledWith(
+        'common.msg.operation_failed'
+    ));
+    expect(confirm).not.toHaveClass('ant-btn-loading');
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(unhandledRejection).not.toHaveBeenCalled();
+
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(api.manage.updateGraph).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+    expect(refresh).toHaveBeenCalled();
+    window.removeEventListener('unhandledrejection', unhandledRejection);
+    messageError.mockRestore();
+});
+
+test('keeps the resolved update business-error message and resets loading', async () => {
+    api.manage.getGraph.mockResolvedValue({
+        status: 200,
+        data: {name: 'movie_graph', nickname: 'Movies'},
+    });
+    api.manage.updateGraph.mockResolvedValue({
+        status: 409,
+        message: 'nickname conflict',
+    });
+    const onCancel = jest.fn();
+    const refresh = jest.fn();
+    const messageError = jest.spyOn(message, 'error').mockImplementation(() => undefined);
+    render(
+        <EditLayer
+            visible
+            onCancel={onCancel}
+            refresh={refresh}
+            graphspace='DEFAULT'
+            graph='movie_graph'
+        />
+    );
+
+    const alias = screen.getByPlaceholderText('graph.form.nickname_placeholder');
+    await waitFor(() => expect(alias).toHaveValue('Movies'));
+    const confirm = screen.getByRole('button', {name: 'OK'});
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(messageError).toHaveBeenCalledWith(
+        'nickname conflict'
+    ));
+    expect(confirm).not.toHaveClass('ant-btn-loading');
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    messageError.mockRestore();
 });
 
 test('persists a selected built-in template before creating the graph', async () => {
@@ -418,4 +630,78 @@ test('does not leak an old graph export failure into the next graph', async () =
     expect(screen.queryByText('graph.schema_view.export_failed')).not.toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'graph.schema_view.export'}))
         .not.toHaveClass('ant-btn-loading');
+});
+
+test('creates the graph before importing a selected example dataset', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    api.manage.addGraph.mockResolvedValue({status: 200, data: {name: 'demo_hlm'}});
+    api.manage.loadSampleGraph.mockResolvedValue({
+        status: 200, data: {vertices: 14, edges: 15},
+    });
+    const onCancel = jest.fn();
+
+    render(
+        <EditLayer
+            visible
+            onCancel={onCancel}
+            refresh={jest.fn()}
+            graphspace='DEFAULT'
+        />
+    );
+
+    await userEvent.type(
+        screen.getByPlaceholderText('graph.form.name_placeholder'),
+        'demo_hlm'
+    );
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByText('schema_template.builtin.people_network'));
+    await userEvent.click(screen.getByRole('radio', {
+        name: 'graph.form.sample_hlm',
+    }));
+    fireEvent.click(document.querySelector('.ant-modal-footer .ant-btn-primary'));
+
+    await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalled());
+    expect(api.manage.addGraph).toHaveBeenCalledWith(
+        'DEFAULT',
+        expect.not.objectContaining({schema: 'people_network'})
+    );
+    expect(api.manage.loadSampleGraph).toHaveBeenCalledWith(
+        'DEFAULT',
+        'demo_hlm',
+        'hlm',
+        {suppressBusinessErrorToast: true}
+    );
+    expect(onCancel).toHaveBeenCalled();
+});
+
+test('lets users clear the optional example dataset choice', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    api.manage.addGraph.mockResolvedValue({status: 200, data: {name: 'empty_graph'}});
+    const onCancel = jest.fn();
+
+    render(
+        <EditLayer
+            visible
+            onCancel={onCancel}
+            refresh={jest.fn()}
+            graphspace='DEFAULT'
+        />
+    );
+
+    await userEvent.type(
+        screen.getByPlaceholderText('graph.form.name_placeholder'),
+        'empty_graph'
+    );
+    await userEvent.click(screen.getByRole('radio', {
+        name: 'graph.form.sample_hlm',
+    }));
+    await userEvent.click(screen.getByRole('radio', {
+        name: 'graph.form.sample_none',
+    }));
+    fireEvent.click(document.querySelector('.ant-modal-footer .ant-btn-primary'));
+
+    await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalled());
+    expect(api.manage.loadSampleGraph).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalled();
 });
