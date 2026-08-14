@@ -56,6 +56,7 @@ jest.mock('react-i18next', () => ({
         'task.demo.select_graph': 'Choose graph',
         'graph.menu.load_hlm_sample': 'Build Red Chamber Demo',
         'graph.menu.load_loader_sample': 'Build People & Software Demo',
+        'graph.menu.load_rank_sample': 'Build Rank Movie Demo',
         'graph.sample.hlm_title': 'Build demo?',
         'graph.sample.hlm_description': 'Safe demo',
         'graph.sample.confirm': 'Build demo',
@@ -67,12 +68,23 @@ jest.mock('react-i18next', () => ({
         'task.col.target_space': 'Graph space',
         'task.col.target_graph': 'Graph',
         'task.col.create_time': 'Created',
+        'task.col.creator': 'Creator',
         'task.col.status': 'Status',
         'task.col.sync_type': 'Schedule',
+        'task.status.pending': 'Pending',
+        'task.status.running': 'Running',
+        'task.status.success': 'Completed',
+        'task.status.failed': 'Failed',
+        'task.status.paused': 'Paused',
+        'task.status.stopped': 'Stopped',
+        'task.status.initializing': 'Initializing',
+        'task.status.cancelling': 'Cancelling',
+        'task.status.cancelled': 'Cancelled',
+        'task.status.unknown': 'Unknown',
         'account.col.id': 'Creator',
         'graphspace.col.operation': 'Actions',
         'task.action.detail': 'View execution history',
-        'task.action.config': 'View task configuration',
+        'task.action.config': 'View task information',
         'task.action.edit': 'Edit task',
         'task.action.pause': 'Pause task',
         'task.action.run': 'Run task',
@@ -113,6 +125,8 @@ it('offers quick demos for the current target graph on the import page', async (
     expect(screen.getByRole('button', {name: 'Build Red Chamber Demo'}))
         .toBeEnabled();
     expect(screen.getByRole('button', {name: 'Build People & Software Demo'}))
+        .toBeEnabled();
+    expect(screen.getByRole('button', {name: 'Build Rank Movie Demo'}))
         .toBeEnabled();
     await act(async () => Promise.resolve());
 });
@@ -238,9 +252,78 @@ it('gives every task-row action an accessible name and disables unsafe actions',
         name: 'View execution history',
     })).toBeInTheDocument();
     expect(screen.getByRole('button', {
-        name: 'View task configuration',
+        name: 'View task information',
     })).toBeEnabled();
     expect(screen.getByRole('button', {name: 'Edit task'})).toBeDisabled();
     expect(screen.getByRole('button', {name: 'Pause task'})).toBeEnabled();
     expect(screen.getByRole('button', {name: 'Delete task'})).toBeDisabled();
+    expect(screen.queryByRole('columnheader', {name: 'Creator'}))
+        .not.toBeInTheDocument();
+});
+
+it('shows the compact creator column only when task data contains it', async () => {
+    api.manage.getTaskList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{
+                task_id: 8,
+                task_name: 'owned import',
+                ingestion_mapping: {structs: []},
+                ingestion_option: {graphspace: 'DEFAULT', graph: 'hugegraph'},
+                task_schedule_status: 'DISABLE',
+                task_schedule_type: 'ONCE',
+                creator: 'admin',
+            }],
+            total: 1,
+            size: 10,
+        },
+    });
+    api.manage.getMetricsTask.mockResolvedValue({status: 200, data: {}});
+
+    render(<Task />);
+
+    expect(await screen.findByRole('columnheader', {name: 'Creator'}))
+        .toBeInTheDocument();
+    expect(screen.getByText('admin')).toBeInTheDocument();
+});
+
+it('localizes common Loader task statuses instead of exposing backend codes', async () => {
+    const statuses = [
+        ['NEW', 'Pending'],
+        ['SUCCEED', 'Completed'],
+        ['SUCCESS', 'Completed'],
+        ['FAILED', 'Failed'],
+        ['PAUSED', 'Paused'],
+        ['STOPPED', 'Stopped'],
+        ['INIT', 'Initializing'],
+        ['CANCELLING', 'Cancelling'],
+        ['UNRECOGNIZED', 'Unknown'],
+        ['CANCELLED', 'Cancelled'],
+        ['RUNNING', 'Running'],
+    ];
+    api.manage.getTaskList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: statuses.map(([status], index) => ({
+                task_id: index + 1,
+                task_name: `task ${index + 1}`,
+                ingestion_mapping: {structs: []},
+                ingestion_option: {graphspace: 'DEFAULT', graph: 'hugegraph'},
+                task_schedule_status: 'DISABLE',
+                task_schedule_type: 'ONCE',
+                last_metrics: {status},
+            })),
+            total: statuses.length,
+            size: statuses.length,
+        },
+    });
+    api.manage.getMetricsTask.mockResolvedValue({status: 200, data: {}});
+
+    render(<Task />);
+
+    for (const [, label] of statuses) {
+        expect((await screen.findAllByText(label)).length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByText('SUCCEED')).not.toBeInTheDocument();
+    expect(screen.queryByText('UNRECOGNIZED')).not.toBeInTheDocument();
 });
