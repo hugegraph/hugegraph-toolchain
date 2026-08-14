@@ -23,6 +23,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,6 +44,13 @@ import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.SchemaManager;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.structure.constant.Cardinality;
+import org.apache.hugegraph.structure.constant.DataType;
+import org.apache.hugegraph.structure.constant.Frequency;
+import org.apache.hugegraph.structure.constant.IdStrategy;
+import org.apache.hugegraph.structure.schema.EdgeLabel;
+import org.apache.hugegraph.structure.schema.PropertyKey;
+import org.apache.hugegraph.structure.schema.VertexLabel;
 import org.apache.hugegraph.util.Ex;
 
 @RestController
@@ -152,8 +162,10 @@ public class SampleGraphController extends BaseController {
         Ex.check(loader || rank || hlm, "common.param.should-belong-to",
                  "dataset", "[loader, hlm, rank]");
         HugeClient client = this.authGremlinClient(graphSpace, graph);
+        SchemaManager schema = client.schema();
+        validateSchemaCompatibility(schema, dataset);
         try {
-            createSchema(client, dataset);
+            createSchema(schema, dataset);
             String script = IDEMPOTENT_TRAVERSAL_FALLBACK_MARKER +
                             data(dataset);
             client.gremlin().gremlin(script).execute();
@@ -176,8 +188,7 @@ public class SampleGraphController extends BaseController {
         return result;
     }
 
-    private static void createSchema(HugeClient client, String dataset) {
-        SchemaManager schema = client.schema();
+    private static void createSchema(SchemaManager schema, String dataset) {
         Set<String> propertyKeys = new HashSet<>();
         schema.getPropertyKeys().forEach(key -> propertyKeys.add(key.name()));
         Set<String> vertexLabels = new HashSet<>();
@@ -191,6 +202,149 @@ public class SampleGraphController extends BaseController {
         } else {
             createHlmSchema(schema, propertyKeys, vertexLabels, edgeLabels);
         }
+    }
+
+    private static void validateSchemaCompatibility(SchemaManager schema,
+                                                    String dataset) {
+        Map<String, PropertyKey> propertyKeys = new HashMap<>();
+        schema.getPropertyKeys().forEach(key -> propertyKeys.put(key.name(), key));
+        Map<String, VertexLabel> vertexLabels = new HashMap<>();
+        schema.getVertexLabels().forEach(label ->
+                vertexLabels.put(label.name(), label));
+        Map<String, EdgeLabel> edgeLabels = new HashMap<>();
+        schema.getEdgeLabels().forEach(label ->
+                edgeLabels.put(label.name(), label));
+
+        if ("loader".equals(dataset)) {
+            validateLoaderSchema(dataset, propertyKeys, vertexLabels, edgeLabels);
+        } else if ("rank".equals(dataset)) {
+            validateRankSchema(dataset, propertyKeys, vertexLabels, edgeLabels);
+        } else {
+            validateHlmSchema(dataset, propertyKeys, vertexLabels, edgeLabels);
+        }
+    }
+
+    private static void validateLoaderSchema(
+            String dataset, Map<String, PropertyKey> propertyKeys,
+            Map<String, VertexLabel> vertexLabels,
+            Map<String, EdgeLabel> edgeLabels) {
+        requireProperty(dataset, propertyKeys, "name", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "age", DataType.INT);
+        requireProperty(dataset, propertyKeys, "city", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "weight", DataType.DOUBLE);
+        requireProperty(dataset, propertyKeys, "lang", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "date", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "price", DataType.DOUBLE);
+        requireVertex(dataset, vertexLabels, "person", IdStrategy.PRIMARY_KEY,
+                      names("name", "age", "city"),
+                      Collections.singletonList("name"),
+                      names("age", "city"));
+        requireVertex(dataset, vertexLabels, "software",
+                      IdStrategy.CUSTOMIZE_NUMBER,
+                      names("name", "lang", "price"),
+                      Collections.emptyList(), Collections.emptySet());
+        requireEdge(dataset, edgeLabels, "knows", "person", "person",
+                    names("date", "weight"));
+        requireEdge(dataset, edgeLabels, "created", "person", "software",
+                    names("date", "weight"));
+    }
+
+    private static void validateRankSchema(
+            String dataset, Map<String, PropertyKey> propertyKeys,
+            Map<String, VertexLabel> vertexLabels,
+            Map<String, EdgeLabel> edgeLabels) {
+        requireProperty(dataset, propertyKeys, "name", DataType.TEXT);
+        requireVertex(dataset, vertexLabels, "person",
+                      IdStrategy.CUSTOMIZE_STRING,
+                      names("name"), Collections.emptyList(),
+                      Collections.emptySet());
+        requireVertex(dataset, vertexLabels, "movie",
+                      IdStrategy.CUSTOMIZE_STRING,
+                      names("name"), Collections.emptyList(),
+                      Collections.emptySet());
+        requireEdge(dataset, edgeLabels, "follow", "person", "person",
+                    Collections.emptySet());
+        requireEdge(dataset, edgeLabels, "like", "person", "movie",
+                    Collections.emptySet());
+        requireEdge(dataset, edgeLabels, "directedBy", "movie", "person",
+                    Collections.emptySet());
+    }
+
+    private static void validateHlmSchema(
+            String dataset, Map<String, PropertyKey> propertyKeys,
+            Map<String, VertexLabel> vertexLabels,
+            Map<String, EdgeLabel> edgeLabels) {
+        requireProperty(dataset, propertyKeys, "name", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "gender", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "age", DataType.INT);
+        requireProperty(dataset, propertyKeys, "title", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "feature", DataType.TEXT);
+        requireProperty(dataset, propertyKeys, "intimacy", DataType.TEXT);
+        requireVertex(dataset, vertexLabels, "人物", IdStrategy.PRIMARY_KEY,
+                      names("name", "gender", "age", "title", "feature"),
+                      Collections.singletonList("name"),
+                      Collections.emptySet());
+        requireEdge(dataset, edgeLabels, "关系", "人物", "人物",
+                    names("intimacy"));
+    }
+
+    private static void requireProperty(String dataset,
+                                        Map<String, PropertyKey> existing,
+                                        String name, DataType dataType) {
+        PropertyKey propertyKey = existing.get(name);
+        if (propertyKey != null &&
+            (propertyKey.dataType() != dataType ||
+             propertyKey.cardinality() != Cardinality.SINGLE)) {
+            incompatible(dataset, "property key", name);
+        }
+    }
+
+    private static void requireVertex(String dataset,
+                                      Map<String, VertexLabel> existing,
+                                      String name, IdStrategy idStrategy,
+                                      Set<String> properties,
+                                      List<String> primaryKeys,
+                                      Set<String> nullableKeys) {
+        VertexLabel vertexLabel = existing.get(name);
+        if (vertexLabel != null &&
+            (vertexLabel.idStrategy() != idStrategy ||
+             !vertexLabel.properties().equals(properties) ||
+             !vertexLabel.primaryKeys().equals(primaryKeys) ||
+             !vertexLabel.nullableKeys().containsAll(nullableKeys) ||
+             !hasDefaultTtl(vertexLabel.ttl(), vertexLabel.ttlStartTime()))) {
+            incompatible(dataset, "vertex label", name);
+        }
+    }
+
+    private static void requireEdge(String dataset,
+                                    Map<String, EdgeLabel> existing,
+                                    String name, String source, String target,
+                                    Set<String> properties) {
+        EdgeLabel edgeLabel = existing.get(name);
+        Map<String, String> expectedLink = new HashMap<>();
+        expectedLink.put(source, target);
+        if (edgeLabel != null &&
+            (!edgeLabel.properties().equals(properties) ||
+             edgeLabel.links().size() != 1 ||
+             !edgeLabel.links().contains(expectedLink) ||
+             edgeLabel.frequency() == Frequency.MULTIPLE ||
+             !edgeLabel.sortKeys().isEmpty() ||
+             !hasDefaultTtl(edgeLabel.ttl(), edgeLabel.ttlStartTime()))) {
+            incompatible(dataset, "edge label", name);
+        }
+    }
+
+    private static boolean hasDefaultTtl(long ttl, String ttlStartTime) {
+        return ttl == 0L && ttlStartTime == null;
+    }
+
+    private static Set<String> names(String... values) {
+        return new HashSet<>(Arrays.asList(values));
+    }
+
+    private static void incompatible(String dataset, String type, String name) {
+        throw new ExternalException("graph.sample.schema-incompatible",
+                                    dataset, type, name);
     }
 
     private static void createLoaderSchema(SchemaManager schema,
