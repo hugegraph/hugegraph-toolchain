@@ -19,7 +19,7 @@
 import {Alert, Button, Descriptions, Progress, Skeleton, Space, Statistic} from 'antd';
 import {ArrowLeftOutlined} from '@ant-design/icons';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import {getNode} from '../../api/operations';
 import {isPdEnabled} from '../../utils/config';
@@ -31,6 +31,7 @@ import {
     TierIcon,
 } from './components';
 import {formatMetricValue, formatObservedAt} from './topology';
+import {operationsReturnTo} from './navigation';
 import './operations.scss';
 
 const GROUPS_BY_TYPE = {
@@ -409,6 +410,7 @@ const NodeDetail = () => {
     const pdMode = isPdEnabled();
     const {nodeId} = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -442,7 +444,9 @@ const NodeDetail = () => {
     useEffect(() => {
         load(false);
     }, [load]);
-    const back = useCallback(() => navigate(-1), [navigate]);
+    const back = useCallback(() => {
+        navigate(operationsReturnTo(location), {replace: true});
+    }, [location, navigate]);
     const refresh = useCallback(() => load(true), [load]);
 
     if (loading && !data) {
@@ -460,7 +464,7 @@ const NodeDetail = () => {
                     message={t('operations.node_unavailable')}
                     action={(
                         <Space>
-                            <Button href='/operations/nodes' size='small'>
+                            <Button size='small' onClick={back}>
                                 {t('operations.back_to_nodes')}
                             </Button>
                             <Button size='small' type='primary' onClick={refresh}>
