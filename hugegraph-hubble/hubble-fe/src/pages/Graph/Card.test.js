@@ -16,16 +16,22 @@
  * limitations under the License.
  */
 
+import fs from 'fs';
+import path from 'path';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter, useLocation} from 'react-router-dom';
 import GraphCard from './Card';
 import {formatToGraphInData} from '../../utils/formatGraphInData';
 
-const mockT = (key, values) => (
-    key === 'graph.card.element_counts'
-        ? `${key}:${values.vertices}/${values.edges}`
-        : key
-);
+const mockT = (key, values) => {
+    if (key === 'graph.card.element_counts') {
+        return `${key}:${values.vertices}/${values.edges}`;
+    }
+    if (key === 'graph.card.view_schema') {
+        return `${key}:${values.graph}`;
+    }
+    return key;
+};
 
 jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: mockT}),
@@ -130,6 +136,8 @@ test('ships the requested graph creation and schema labels', () => {
     expect(en.graph.form.schema).toBe('Graph Schema');
     expect(zh.graph.form.name_help).toContain(' / ');
     expect(en.graph.form.name_help).toContain(' / ');
+    expect(zh.graph.card.view_schema).toBe('查看 {{graph}} 的 Schema');
+    expect(en.graph.card.view_schema).toBe('View Schema for {{graph}}');
 });
 
 test('opens Schema from the graph preview and keeps Gremlin as the footer action', () => {
@@ -162,10 +170,57 @@ test('opens Schema from the graph preview and keeps Gremlin as the footer action
     expect(screen.getByRole('link', {name: 'graph.card.query_graph'}))
         .toHaveAttribute('href', '/gremlin/DEFAULT/hugegraph');
 
-    fireEvent.click(screen.getByText('graph preview').closest('[role="button"]'));
+    const schemaPreview = screen.getByRole('button', {
+        name: 'graph.card.view_schema:HugeGraph',
+    });
+    expect(schemaPreview).toHaveAttribute('tabindex', '0');
+    fireEvent.click(schemaPreview);
     expect(screen.getByTestId('location')).toHaveTextContent(
         '/graphspace/DEFAULT/graph/hugegraph/meta'
     );
+});
+
+test.each(['Enter', ' '])(
+    'opens Schema from the named graph preview with the %p key',
+    key => {
+        formatToGraphInData.mockReturnValue({nodes: [{id: 'person'}], edges: []});
+        render(
+            <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
+                <GraphCard
+                    item={{
+                        name: 'hugegraph',
+                        nickname: 'HugeGraph',
+                        graphspace: 'DEFAULT',
+                        graphspace_nickname: 'Default',
+                        storage: 1024,
+                        create_time: '2026-07-12',
+                        schemaview: {vertices: [{name: 'person'}], edges: []},
+                    }}
+                    menus={[]}
+                />
+                <LocationProbe />
+            </MemoryRouter>
+        );
+
+        const schemaPreview = screen.getByRole('button', {
+            name: 'graph.card.view_schema:HugeGraph',
+        });
+        fireEvent.keyDown(schemaPreview, {key});
+
+        expect(screen.getByTestId('location')).toHaveTextContent(
+            '/graphspace/DEFAULT/graph/hugegraph/meta'
+        );
+    }
+);
+
+test('gives the keyboard-focusable schema preview a visible design-system focus ring', () => {
+    const stylesheet = fs.readFileSync(path.join(__dirname, 'index.module.scss'), 'utf8');
+    const previewRule = stylesheet.match(
+        /\.card_content\s*\{[\s\S]*?&:focus-visible\s*\{([^}]*)\}/
+    )?.[1] || '';
+
+    expect(previewRule).toContain('outline: 2px solid #1890ff');
+    expect(previewRule).toContain('outline-offset: -2px');
 });
 
 test('does not invent point and edge counts when the list API omits them', () => {
