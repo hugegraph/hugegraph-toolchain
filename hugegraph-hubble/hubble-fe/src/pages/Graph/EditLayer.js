@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Alert, Button, Modal, Form, Input, Select, Spin, message} from 'antd';
+import {Alert, Button, Modal, Form, Input, Radio, Select, Spin, message} from 'antd';
 import {useState, useEffect, useCallback, useMemo, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api/index';
@@ -46,7 +46,26 @@ const isDuplicateSchemaError = error => (
     (error?.message || error?.response?.data?.message) === DUPLICATE_SCHEMA_TEMPLATE
 );
 
-const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
+export const validateGraphFields = async form => {
+    try {
+        return await form.validateFields();
+    }
+    catch (error) {
+        if (Array.isArray(error?.errorFields)) {
+            return null;
+        }
+        throw error;
+    }
+};
+
+const EditLayer = ({
+    visible,
+    onCancel,
+    refresh,
+    graphspace,
+    graph,
+    validateForm = validateGraphFields,
+}) => {
     const [schemaList, setSchemaList] = useState([]);
     const [schemaLoading, setSchemaLoading] = useState(false);
     const [schemaError, setSchemaError] = useState(false);
@@ -134,83 +153,148 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
         }).catch(() => setSchemaError(true))
             .finally(() => setSchemaLoading(false));
     }, [graphspace, pdMode]);
+    const chooseSchema = useCallback(() => {
+        form.setFieldValue('sample', undefined);
+    }, [form]);
+    const chooseSample = useCallback(() => {
+        form.setFieldValue('schema', undefined);
+    }, [form]);
 
-    const onFinish = useCallback(() => {
-        form.validateFields().then(values => {
-            setLoading(true);
+    const onFinish = useCallback(async () => {
+        let values;
+        try {
+            values = await validateForm(form);
+        }
+        catch {
+            message.error(t('common.msg.operation_failed'));
+            return;
+        }
+        if (!values) {
+            return;
+        }
+        setLoading(true);
 
-            if (graph) {
-                api.manage.updateGraph(graphspace, graph, {nickname: values.nickname}).then(res => {
-                    setLoading(false);
-                    if (res.status === 200) {
-                        message.success(t('graph.form.update_success'));
-                        onCancel();
-                        refresh();
-                        return;
-                    }
-                    message.error(res.message);
-                });
-                return;
-            }
-
-            const builtinSchema = BUILTIN_SCHEMA_TEMPLATES[values.schema];
-            const ensureTemplate = pdMode && builtinSchema
-                ? ensureBuiltinTemplate(values.schema, builtinSchema)
-                : Promise.resolve();
-
-            ensureTemplate.then(async () => {
-                const graphRequest = {...values, auth: false, graphspace};
-                if (!pdMode) {
-                    delete graphRequest.schema;
-                }
-                const result = await api.manage.addGraph(graphspace, graphRequest);
-                if (result.status !== 200 || pdMode || !builtinSchema) {
-                    return result;
-                }
-                try {
-                    const schemaResult = await api.manage.addGraphSchema(
-                        graphspace,
-                        values.graph,
-                        {'schema-groovy': toGraphSchemaGroovy(builtinSchema)},
-                        PAGE_ERROR_CONFIG
-                    );
-                    if (schemaResult.status !== 200) {
-                        throw new Error(schemaResult.message
-                                        || t('graph.form.schema_apply_failed'));
-                    }
-                }
-                catch (error) {
-                    const messageText = errorMessage(error)
-                        || t('graph.form.schema_apply_failed');
-                    const partialError = error instanceof Error
-                        ? error
-                        : new Error(messageText);
-                    if (!partialError.message) {
-                        partialError.message = messageText;
-                    }
-                    partialError.graphCreated = true;
-                    throw partialError;
-                }
-                return result;
-            }).then(res => {
+        if (graph) {
+            api.manage.updateGraph(
+                graphspace,
+                graph,
+                {nickname: values.nickname},
+                PAGE_ERROR_CONFIG
+            ).then(res => {
                 setLoading(false);
                 if (res.status === 200) {
-                    message.success(t('graph.form.create_success'));
+                    message.success(t('graph.form.update_success'));
                     onCancel();
                     refresh();
                     return;
                 }
                 message.error(res.message);
-            }).catch(error => {
+            }).catch(() => {
                 setLoading(false);
-                if (error.graphCreated) {
-                    onCancel();
-                    refresh();
-                }
-                message.error(error.message || t('common.msg.operation_failed'));
+                message.error(t('common.msg.operation_failed'));
             });
+            return;
+        }
+
+        const sample = values.sample === 'none' ? undefined : values.sample;
+        const builtinSchema = BUILTIN_SCHEMA_TEMPLATES[values.schema];
+        const ensureTemplate = pdMode && builtinSchema
+            ? ensureBuiltinTemplate(values.schema, builtinSchema)
+            : Promise.resolve();
+
+        ensureTemplate.then(async () => {
+            const graphRequest = {...values, auth: false, graphspace};
+            delete graphRequest.sample;
+            if (!pdMode) {
+                delete graphRequest.schema;
+            }
+            const result = await api.manage.addGraph(graphspace, graphRequest);
+            if (result.status === 200 && sample) {
+                try {
+                    const sampleResult = await api.manage.loadSampleGraph(
+                        graphspace,
+                        values.graph,
+                        sample,
+                        PAGE_ERROR_CONFIG
+                    );
+                    if (sampleResult.status !== 200) {
+                        throw new Error(sampleResult.message
+                            || t('graph.form.sample_apply_failed'));
+                    }
+                    result.sampleResult = sampleResult;
+                }
+                catch (error) {
+                    const partialError = error instanceof Error
+                        ? error
+                        : new Error(errorMessage(error) || t('graph.form.sample_apply_failed'));
+                    partialError.graphCreated = true;
+                    throw partialError;
+                }
+            }
+            if (result.status !== 200 || pdMode || !builtinSchema) {
+                return result;
+            }
+            try {
+                const schemaResult = await api.manage.addGraphSchema(
+                    graphspace,
+                    values.graph,
+                    {'schema-groovy': toGraphSchemaGroovy(builtinSchema)},
+                    PAGE_ERROR_CONFIG
+                );
+                if (schemaResult.status !== 200) {
+                    throw new Error(schemaResult.message
+                                    || t('graph.form.schema_apply_failed'));
+                }
+            }
+            catch (error) {
+                const messageText = errorMessage(error)
+                    || t('graph.form.schema_apply_failed');
+                const partialError = error instanceof Error
+                    ? error
+                    : new Error(messageText);
+                if (!partialError.message) {
+                    partialError.message = messageText;
+                }
+                partialError.graphCreated = true;
+                throw partialError;
+            }
+            return result;
+        }).then(res => {
+            setLoading(false);
+            if (res.status === 200) {
+                if (res.sampleResult?.data) {
+                    message.success(t('graph.sample.success', {
+                        vertices: res.sampleResult.data.vertices,
+                        edges: res.sampleResult.data.edges,
+                    }));
+                }
+                else {
+                    message.success(t('graph.form.create_success'));
+                }
+                onCancel();
+                refresh();
+                return;
+            }
+            message.error(res.message);
+        }).catch(error => {
+            setLoading(false);
+            if (error.graphCreated) {
+                onCancel();
+                refresh();
+            }
+            message.error(error.message || t('common.msg.operation_failed'));
         });
-    }, [form, graphspace, graph, refresh, onCancel, ensureBuiltinTemplate, pdMode, t]);
+    }, [
+        ensureBuiltinTemplate,
+        form,
+        graph,
+        graphspace,
+        onCancel,
+        pdMode,
+        refresh,
+        t,
+        validateForm,
+    ]);
 
     useEffect(() => {
         if (!visible) {
@@ -297,9 +381,25 @@ const EditLayer = ({visible, onCancel, refresh, graphspace, graph}) => {
                             <Select
                                 loading={schemaLoading}
                                 disabled={schemaLoading || schemaError}
+                                allowClear
                                 placeholder={t('graph.form.schema_placeholder')}
                                 options={schemaOptions}
+                                onChange={chooseSchema}
                             />
+                        </Form.Item>
+                        <Form.Item
+                            label={t('graph.form.sample')}
+                            name='sample'
+                            extra={t('graph.form.sample_hint')}
+                        >
+                            <Radio.Group
+                                onChange={chooseSample}
+                            >
+                                <Radio value='hlm'>{t('graph.form.sample_hlm')}</Radio>
+                                <Radio value='rank'>{t('graph.form.sample_rank')}</Radio>
+                                <Radio value='loader'>{t('graph.form.sample_loader')}</Radio>
+                                <Radio value='none'>{t('graph.form.sample_none')}</Radio>
+                            </Radio.Group>
                         </Form.Item>
                     </>
                 )}

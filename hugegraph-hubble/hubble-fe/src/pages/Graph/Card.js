@@ -171,6 +171,7 @@ const GraphCard = ({item, menus}) => {
                     onKeyDown={handleSchemaKeyDown}
                     role='button'
                     tabIndex={0}
+                    aria-label={t('graph.card.view_schema', {graph: graphName})}
                 >
                     <GraphView
                         data={graphinData}
