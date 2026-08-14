@@ -366,7 +366,8 @@ public final class LoadOptions implements Cloneable {
                                    field.get(this);
                     LOG.info("    {}={}", field.getName(), value);
                 } catch (IllegalAccessException e) {
-                    e.printStackTrace();
+                    LOG.warn("Failed to read loader parameter '{}'",
+                             field.getName(), e);
                 }
             }
         }
