@@ -16,35 +16,48 @@
  * under the License.
  */
 
-import {Alert, Button, PageHeader, Spin, Table} from 'antd';
+import {Alert, Button, PageHeader, Spin, Table, Tooltip} from 'antd';
 import {useState, useEffect, useCallback, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router-dom';
 import * as api from '../../api';
-import {StatusField} from '../../components/Status';
 import DataPreparationNav from '../../components/DataPreparationNav';
+import {TaskStatus} from '../Task/status';
+import style from './index.module.scss';
 
 const createColumns = t => [
     {
         title: t('task.detail.job_id'),
         dataIndex: 'job_id',
+        className: style.no_wrap,
+        width: 110,
+        ellipsis: true,
         render: val => (val === null || val === undefined ? '-' : val.toString()),
     },
     {
         title: t('task.detail.import_count'),
         dataIndex: 'job_metrics',
+        className: style.no_wrap,
         align: 'right',
+        width: 120,
+        ellipsis: true,
         render: val => val?.total_count,
     },
     {
         title: t('task.detail.create_time'),
         dataIndex: 'create_time',
+        className: style.no_wrap,
         align: 'center',
+        width: 180,
+        ellipsis: true,
     },
     {
         title: t('task.detail.average_rate'),
         dataIndex: 'job_metrics',
+        className: style.no_wrap,
         align: 'right',
+        width: 150,
+        ellipsis: true,
         render: (val, row) => {
             if (val) {
                 const rate = row.job_status?.toLowerCase() === 'running' ? val.cur_rate : val.avg_rate;
@@ -57,7 +70,10 @@ const createColumns = t => [
     {
         title: t('task.detail.duration'),
         dataIndex: 'job_metrics',
+        className: style.no_wrap,
         align: 'right',
+        width: 120,
+        ellipsis: true,
         render: val => {
             if (val) {
                 return t('task.detail.seconds', {seconds: val.total_time / 1000});
@@ -69,15 +85,21 @@ const createColumns = t => [
     {
         title: t('task.detail.status'),
         dataIndex: 'job_status',
+        className: style.no_wrap,
         align: 'center',
-        render: val => <StatusField status={val} />,
+        width: 110,
+        render: val => <TaskStatus status={val} />,
     },
     {
         title: t('task.detail.other'),
-        width: 400,
+        className: style.no_wrap,
+        width: 240,
+        ellipsis: true,
         align: 'center',
         dataIndex: 'job_message',
-        render: val => val ?? '-',
+        render: val => (
+            val ? <Tooltip title={val}><span>{val}</span></Tooltip> : '-'
+        ),
     },
 ];
 
@@ -163,6 +185,7 @@ const TaskDetail = () => {
                 )}
                 <Spin spinning={loading}>
                     <Table
+                        className={style.task_detail_table}
                         rowKey={getRowKey}
                         columns={columns}
                         dataSource={visibleData}
