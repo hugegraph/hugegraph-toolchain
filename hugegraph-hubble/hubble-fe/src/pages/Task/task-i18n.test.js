@@ -60,3 +60,30 @@ test('Task translations are symmetric and English values contain no Chinese copy
     expect(zhKeys.filter(key => !enKeys.includes(key))).toEqual([]);
     expect(enEntries.filter(([, value]) => /[\u3400-\u9fff]/u.test(value))).toEqual([]);
 });
+
+test('Task status labels localize common Loader backend states', () => {
+    expect(zhPages.task.status).toEqual({
+        pending: '待执行',
+        running: '运行中',
+        success: '已完成',
+        failed: '失败',
+        paused: '已暂停',
+        stopped: '已停止',
+        initializing: '初始化中',
+        cancelling: '正在取消',
+        cancelled: '已取消',
+        unknown: '未知状态',
+    });
+    expect(enPages.task.status).toEqual({
+        pending: 'Pending',
+        running: 'Running',
+        success: 'Completed',
+        failed: 'Failed',
+        paused: 'Paused',
+        stopped: 'Stopped',
+        initializing: 'Initializing',
+        cancelling: 'Cancelling',
+        cancelled: 'Cancelled',
+        unknown: 'Unknown',
+    });
+});
