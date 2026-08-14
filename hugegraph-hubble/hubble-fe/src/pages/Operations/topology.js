@@ -27,6 +27,14 @@ const hasStaleMetrics = node => Object.values(node?.metric_statuses ?? {})
     .some(status => status?.stale || status?.availability === 'UNAVAILABLE'
         || status?.availability === 'MALFORMED');
 
+const storeLeaderCount = node => {
+    if (node?.type !== 'STORE') {
+        return null;
+    }
+    const value = Number(node?.metrics?.backend?.leaders);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+};
+
 const selectAttentionNodes = (nodes = [], limit = 5) => {
     if (!Array.isArray(nodes)) {
         return [];
@@ -114,4 +122,5 @@ export {
     formatMetricValue,
     formatObservedAge,
     formatObservedAt,
+    storeLeaderCount,
 };
