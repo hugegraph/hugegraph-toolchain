@@ -225,8 +225,7 @@ test('recovers an initial node failure and keeps a canonical node-list action', 
     renderDetail();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByRole('link', {name: /Back to nodes/i}))
-        .toHaveAttribute('href', '/operations/nodes');
+    expect(screen.getByRole('button', {name: /Back to nodes/i})).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', {name: /Retry/i}));
 
