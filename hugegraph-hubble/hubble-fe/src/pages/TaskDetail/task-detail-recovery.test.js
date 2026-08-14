@@ -26,9 +26,6 @@ jest.mock('../../api', () => ({manage: {getJobsList: jest.fn()}}));
 jest.mock('../../components/DataPreparationNav', () => () => (
     <nav aria-label='Data preparation journey' />
 ));
-jest.mock('../../components/Status', () => ({
-    StatusField: ({status}) => <span>{status}</span>,
-}));
 jest.mock('react-router-dom', () => ({
     useNavigate: () => jest.fn(),
     useParams: () => ({taskid: mockTaskId}),
@@ -45,6 +42,16 @@ jest.mock('react-i18next', () => ({
         'task.detail.duration': 'Duration',
         'task.detail.status': 'Status',
         'task.detail.other': 'Details',
+        'task.status.pending': 'Pending',
+        'task.status.running': 'Running',
+        'task.status.success': 'Completed',
+        'task.status.failed': 'Failed',
+        'task.status.paused': 'Paused',
+        'task.status.stopped': 'Stopped',
+        'task.status.initializing': 'Initializing',
+        'task.status.cancelling': 'Cancelling',
+        'task.status.cancelled': 'Cancelled',
+        'task.status.unknown': 'Unknown',
         'task.detail.records_per_second': `${values?.rate} records/s`,
         'task.detail.seconds': `${values?.seconds} s`,
     })[key] || key}),
@@ -87,6 +94,8 @@ it('uses the import-task title and recovers a failed run list', async () => {
 
     fireEvent.click(screen.getByRole('button', {name: 'Retry task runs'}));
     await waitFor(() => expect(screen.getByText('7')).toBeInTheDocument());
+    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.queryByText('SUCCEED')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
