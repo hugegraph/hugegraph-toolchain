@@ -16,17 +16,25 @@
  * under the License.
  */
 
-import {Modal, Input, Form, Select, message, Spin, Switch} from 'antd';
+import {Modal, Input, Form, Select, message, Spin} from 'antd';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
 import style from './index.module.scss';
 import FormHelpLabel from '../../components/FormHelpLabel';
-import {getAccountLevel} from './level';
+import {
+    getAccountPreset,
+    getPresetSpaces,
+    PERMISSION_PRESETS,
+    toPermissionPayload,
+} from './permissionPresets';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
+const permissionPresetChanged = (prev, next) => (
+    prev.permission_preset !== next.permission_preset
+);
 
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel
@@ -60,7 +68,7 @@ const EditLayer = ({
     };
 
     const createUser = useCallback(values => {
-        return api.auth.addUser(values, PAGE_ERROR_CONFIG).then(res => {
+        return api.auth.addUser(toPermissionPayload(values), PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.create_success'));
                 onCancel();
@@ -71,7 +79,9 @@ const EditLayer = ({
         }).catch(() => message.error(t('common.msg.operation_failed')));
     }, [onCancel, refresh, t]);
     const updateUser = useCallback(values => {
-        return api.auth.updateUser(data.id, values, PAGE_ERROR_CONFIG).then(res => {
+        return api.auth.updateUser(
+            data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
+        ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.update_success'));
                 onCancel();
@@ -85,7 +95,13 @@ const EditLayer = ({
     }, [onCancel, refresh, data.id, t]);
 
     const updateUserAuth = useCallback(values => {
-        return api.auth.updateAdminspace(data.id, values.adminSpaces, PAGE_ERROR_CONFIG).then(res => {
+        const payload = toPermissionPayload({
+            ...values,
+            permission_preset: PERMISSION_PRESETS.GS_ADMIN,
+        });
+        return api.auth.updateAdminspace(
+            data.id, payload.adminSpaces, PAGE_ERROR_CONFIG
+        ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.set_success'));
                 onCancel();
@@ -176,7 +192,11 @@ const EditLayer = ({
 
                 if (res.status === 200) {
                     if (op !== 'detail') {
-                        form.setFieldsValue(res.data);
+                        form.setFieldsValue({
+                            ...res.data,
+                            permission_preset: getAccountPreset(res.data),
+                            graphspaces: getPresetSpaces(res.data),
+                        });
                     }
                     setDetail(res.data);
                     return;
@@ -233,17 +253,14 @@ const EditLayer = ({
                             <Form.Item label={t('account.form.name')} className={style.item}>
                                 {detail.user_nickname}
                             </Form.Item>
-                            <Form.Item label={t('account.form.is_superadmin')} className={style.item}>
-                                {detail.is_superadmin ? t('common.yes') : t('common.no')}
-                            </Form.Item>
-                            <Form.Item label={t('account.form.level')} className={style.item}>
-                                {t(`account.level.${getAccountLevel(detail)}`)}
+                            <Form.Item label={t('account.form.permission_preset')} className={style.item}>
+                                {t(`account.permission_preset.${getAccountPreset(detail)}`)}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
                             </Form.Item>
-                            <Form.Item label={t('account.form.permission')} className={style.item}>
-                                {detail.adminSpaces ? detail.adminSpaces.join(',') : ''}
+                            <Form.Item label={t('account.form.graphspaces')} className={style.item}>
+                                {getPresetSpaces(detail).join(', ')}
                             </Form.Item>
                             <Form.Item label={t('account.col.create_time')} className={style.item}>
                                 {detail.user_create}
@@ -291,11 +308,16 @@ const EditLayer = ({
                                         <Input placeholder={t('account.form.name_placeholder')} />
                                     </Form.Item>
                                     <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.is_superadmin' />}
-                                        name="is_superadmin"
-                                        valuePropName="checked"
+                                        label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
+                                        name="permission_preset"
+                                        rules={[rules.required()]}
                                     >
-                                        <Switch />
+                                        <Select
+                                            options={Object.values(PERMISSION_PRESETS).map(value => ({
+                                                value,
+                                                label: t(`account.permission_preset.${value}`),
+                                            }))}
+                                        />
                                     </Form.Item>
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.remark' />}
@@ -316,20 +338,42 @@ const EditLayer = ({
                                         />
                                     </Form.Item>
                                     <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.permission' />}
-                                        name="adminSpaces"
+                                        noStyle
+                                        shouldUpdate={permissionPresetChanged}
                                     >
-                                        <Select options={graphspaceList} mode="multiple" />
+                                        {({getFieldValue}) => (getFieldValue('permission_preset')
+                                            !== PERMISSION_PRESETS.GS_ADMIN ? null : (
+                                                <Form.Item
+                                                    label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
+                                                    name="graphspaces"
+                                                >
+                                                    <Select options={graphspaceList} mode="multiple" />
+                                                </Form.Item>
+                                            ))}
                                     </Form.Item>
                                 </>
                             )}
                             {op === 'auth' && (
-                                <Form.Item
-                                    label={<HelpLabel t={t} labelKey='account.form.permission' />}
-                                    name="adminSpaces"
-                                >
-                                    <Select options={graphspaceList} mode="multiple" />
-                                </Form.Item>
+                                <>
+                                    <Form.Item
+                                        label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
+                                        name="permission_preset"
+                                        rules={[rules.required()]}
+                                    >
+                                        <Select
+                                            options={[PERMISSION_PRESETS.GS_ADMIN].map(value => ({
+                                                value,
+                                                label: t(`account.permission_preset.${value}`),
+                                            }))}
+                                        />
+                                    </Form.Item>
+                                    <Form.Item
+                                        label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
+                                        name="graphspaces"
+                                    >
+                                        <Select options={graphspaceList} mode="multiple" />
+                                    </Form.Item>
+                                </>
                             )}
                         </Form>
                     </Spin>

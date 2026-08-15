@@ -68,7 +68,7 @@ graph TB
     CLIENT --> HUBBLE
     CLIENT --> TOOLS
     CLIENT --> SPARK
-    HUBBLE -.->|WIP: pd-client| PD
+    HUBBLE -.->|PD discovery UI| PD
 
     LOADER -.->|Sources| SRC["CSV | JSON | HDFS<br/>MySQL | Kafka"]
     SPARK -.->|I/O| SPK["Spark DataFrames"]

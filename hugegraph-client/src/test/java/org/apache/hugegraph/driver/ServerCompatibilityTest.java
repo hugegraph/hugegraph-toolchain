@@ -33,6 +33,7 @@ public class ServerCompatibilityTest {
     @Test
     public void shouldExposeGraphSpaceForModernServers() {
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace("1.7.0"));
+        Assert.assertTrue(ServerCompatibility.supportsGraphSpace(" 1.7.0 "));
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace("1.8.0"));
         Assert.assertEquals(ServerCompatibility.Profile.MODERN,
                             ServerCompatibility.profile("1.7.1"));

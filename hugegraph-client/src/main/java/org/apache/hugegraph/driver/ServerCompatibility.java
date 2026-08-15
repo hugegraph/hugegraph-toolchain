@@ -38,7 +38,8 @@ public final class ServerCompatibility {
             return Profile.LEGACY;
         }
         try {
-            return VersionUtil.gte(coreVersion, GRAPHSPACE_MIN_VERSION) ?
+            String normalized = coreVersion.trim();
+            return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ?
                    Profile.MODERN : Profile.LEGACY;
         } catch (RuntimeException ignored) {
             return Profile.LEGACY;

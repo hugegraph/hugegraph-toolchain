@@ -32,6 +32,7 @@ import {
     clearPersistedAlgorithmFormsForUser,
 } from '../../modules/algorithm/algorithmsForm/algorithmFormPersistence';
 import {useAuthContext} from '../../auth/AuthContext';
+import {isAuthEnabled} from '../../utils/config';
 
 const Topbar = () => {
     const userInfo = user.getUser();
@@ -50,7 +51,7 @@ const Topbar = () => {
     useEffect(() => {
         let cancelled = false;
 
-        if (!userInfo || !userInfo.id) {
+        if (isAuthEnabled() && (!userInfo || !userInfo.id)) {
             return undefined;
         }
 
@@ -69,7 +70,7 @@ const Topbar = () => {
         };
     }, [redirectToLogin, userInfo]);
 
-    if (!userInfo || !userInfo.id) {
+    if (isAuthEnabled() && (!userInfo || !userInfo.id)) {
         redirectToLogin();
     }
 
@@ -138,24 +139,26 @@ const Topbar = () => {
                     title={t('workbench.shortcuts.open_button')}
                     onClick={showShortcutHelp}
                 />
-                <Dropdown menu={userMenu} trigger={['click']}>
-                    <Button
-                        type='text'
-                        className={`${style.right} ${style.userMenuTrigger}`}
-                        aria-label={t('Topbar.user_menu', {name: userLabel})}
-                        aria-haspopup='menu'
-                        title={userLabel}
-                    >
-                        <Avatar
-                            size={'small'}
-                            icon={avatarLabel ? undefined : <UserOutlined />}
-                            aria-label={userLabel}
+                {isAuthEnabled() && userInfo?.id && (
+                    <Dropdown menu={userMenu} trigger={['click']}>
+                        <Button
+                            type='text'
+                            className={`${style.right} ${style.userMenuTrigger}`}
+                            aria-label={t('Topbar.user_menu', {name: userLabel})}
+                            aria-haspopup='menu'
                             title={userLabel}
                         >
-                            {avatarLabel}
-                        </Avatar>
-                    </Button>
-                </Dropdown>
+                            <Avatar
+                                size={'small'}
+                                icon={avatarLabel ? undefined : <UserOutlined />}
+                                aria-label={userLabel}
+                                title={userLabel}
+                            >
+                                {avatarLabel}
+                            </Avatar>
+                        </Button>
+                    </Dropdown>
+                )}
             </div>
         </Layout.Header>
     );

@@ -30,6 +30,7 @@ import org.apache.hugegraph.common.Identifiable;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -74,6 +75,12 @@ public class UserEntity implements Identifiable {
 
     @JsonProperty("resSpaces")
     protected List<String> resSpaces;
+
+    @JsonProperty("permission_preset")
+    private String permissionPreset;
+
+    @JsonProperty("graphspace_permissions")
+    private List<Map<String, String>> graphspacePermissions;
 
     @JsonProperty("spacenum")
     protected Integer spacenum;

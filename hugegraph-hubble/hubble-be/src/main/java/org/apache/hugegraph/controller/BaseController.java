@@ -146,10 +146,10 @@ public abstract class BaseController {
             client.assignGraph(graphSpace, graph);
             return client;
         }
-        HugeClient client = this.authMode.anonymous()
-                            ? this.hugeClientPoolService.createUnauthClient()
-                            : this.hugeClientPoolService.createAuthClient(
-                                  graphSpace, graph, this.getToken());
+        HugeClient client = this.authMode.anonymous() ?
+                            this.hugeClientPoolService.createUnauthClient() :
+                            this.hugeClientPoolService.createAuthClient(
+                                graphSpace, graph, this.getToken());
         if (graphSpace != null || graph != null) {
             client.assignGraph(graphSpace, graph);
         }

@@ -34,7 +34,7 @@ import TableHeader from '../../components/TableHeader';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import {useAuthContext} from '../../auth/AuthContext';
-import {getAccountLevel} from './level';
+import {getAccountPreset, PERMISSION_PRESETS} from './permissionPresets';
 import SpaceAccess from './SpaceAccess';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
@@ -136,10 +136,10 @@ const GlobalAccounts = () => {
             title: t('account.col.level'),
             width: 140,
             render: row => {
-                const level = getAccountLevel(row);
-                const color = level === 'ADMIN' ? 'red'
-                    : level === 'SPACEADMIN' ? 'blue' : 'default';
-                return <Tag color={color}>{t(`account.level.${level}`)}</Tag>;
+                const preset = getAccountPreset(row);
+                const color = preset === PERMISSION_PRESETS.SUPER_ADMIN ? 'red'
+                    : preset === PERMISSION_PRESETS.GS_ADMIN ? 'blue' : 'default';
+                return <Tag color={color}>{t(`account.permission_preset.${preset}`)}</Tag>;
             },
         },
         {

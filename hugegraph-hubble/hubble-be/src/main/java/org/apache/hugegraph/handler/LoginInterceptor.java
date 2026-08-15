@@ -40,7 +40,7 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
-        if (this.authMode.anonymous()) {
+        if (this.authMode != null && this.authMode.anonymous()) {
             return true;
         }
 

@@ -64,8 +64,12 @@ const isLoggedIn = () => {
 
 const ProtectedRoute = ({children}) => {
     const location = useLocation();
+    // Keep older test/integration shims that only expose PD configuration
+    // conservative until they learn the auth capability.
+    const authEnabled = typeof isAuthEnabled === 'function'
+        ? isAuthEnabled() : true;
 
-    if (!isAuthEnabled() || isLoggedIn()) {
+    if (!authEnabled || isLoggedIn()) {
         return children;
     }
 
