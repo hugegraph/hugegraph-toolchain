@@ -75,6 +75,10 @@ public class LoginController extends BaseController {
 
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
+        if (this.authMode.anonymous()) {
+            throw new ExternalException(HttpStatus.FORBIDDEN.value(),
+                                        "Authentication is disabled");
+        }
         String address = this.getRequest().getRemoteAddr();
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
         this.loginAttemptGuard.checkAllowed(login.name(), address);
