@@ -26,6 +26,7 @@ import javax.servlet.http.HttpSession;
 
 //import org.apache.hugegraph.license.LicenseVerifier; // TODO C Remove Licence
 import org.apache.hugegraph.service.HugeClientPoolService;
+import org.apache.hugegraph.service.auth.AuthModeService;
 //import org.apache.hugegraph.service.license.LicenseService;// TODO C Remove Licence
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -47,6 +48,8 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
     //private LicenseService licenseService;// TODO C Remove Licence
     @Autowired
     protected HugeClientPoolService hugeClientPoolService;
+    @Autowired
+    protected AuthModeService authMode;
 
     private static final Pattern CHECK_API_PATTERN =
                          Pattern.compile(".*/graph-connections/\\d+/.+");
@@ -119,23 +122,26 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
             if (this.isLogoutRequest(uri)) {
                 return;
             }
-            if (!this.hasAuthSession(request)) {
+            if (this.authMode.anonymous()) {
+                client = unauthClient();
+            } else if (!this.hasAuthSession(request)) {
                 return;
-            }
-            String token =
-                    (String) request.getSession().getAttribute(Constant.TOKEN_KEY);
-            String [] res = uri.split("/");
-            String graphSpace = null;
-            String graph = null;
-            for (int i = 0; i < res.length; i++) {
-                if ("graphspaces".equals(res[i]) && i < res.length - 1) {
-                    graphSpace = res[i + 1];
+            } else {
+                String token =
+                        (String) request.getSession().getAttribute(Constant.TOKEN_KEY);
+                String [] res = uri.split("/");
+                String graphSpace = null;
+                String graph = null;
+                for (int i = 0; i < res.length; i++) {
+                    if ("graphspaces".equals(res[i]) && i < res.length - 1) {
+                        graphSpace = res[i + 1];
+                    }
+                    if ("graphs".equals(res[i]) && i < res.length - 1) {
+                        graph = res[i + 1];
+                    }
                 }
-                if ("graphs".equals(res[i]) && i < res.length - 1) {
-                    graph = res[i + 1];
-                }
+                client = this.authClient(graphSpace, graph, token);
             }
-            client = this.authClient(graphSpace, graph, token);
         }
 
         request.setAttribute("hugeClient", client);

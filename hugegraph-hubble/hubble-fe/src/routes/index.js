@@ -42,7 +42,7 @@ import OperationsRoute, {
 // 图分析的路由
 import GraphAnalysis from '../pages/GraphAnalysis';
 import AsyncTaskResultPage from '../pages/AsyncTaskResult';
-import {isPdEnabled} from '../utils/config';
+import {isAuthEnabled, isPdEnabled} from '../utils/config';
 import {
     DEFAULT_GRAPHSPACE,
     shouldUseNonPdDefaultGraphspace,
@@ -65,7 +65,7 @@ const isLoggedIn = () => {
 const ProtectedRoute = ({children}) => {
     const location = useLocation();
 
-    if (isLoggedIn()) {
+    if (!isAuthEnabled() || isLoggedIn()) {
         return children;
     }
 
