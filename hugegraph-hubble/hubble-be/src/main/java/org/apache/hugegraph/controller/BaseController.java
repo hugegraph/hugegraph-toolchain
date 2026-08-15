@@ -26,6 +26,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hugegraph.config.HugeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,8 @@ public abstract class BaseController {
 
     @Autowired
     protected UserService userService;
+    @Autowired
+    protected AuthModeService authMode;
 
     public static final String ORDER_ASC = "asc";
     public static final String ORDER_DESC = "desc";
@@ -143,8 +146,13 @@ public abstract class BaseController {
             client.assignGraph(graphSpace, graph);
             return client;
         }
-        HugeClient client = this.hugeClientPoolService.createAuthClient(
-                graphSpace, graph, this.getToken());
+        HugeClient client = this.authMode.anonymous() ?
+                            this.hugeClientPoolService.createUnauthClient() :
+                            this.hugeClientPoolService.createAuthClient(
+                                graphSpace, graph, this.getToken());
+        if (graphSpace != null || graph != null) {
+            client.assignGraph(graphSpace, graph);
+        }
         request.setAttribute("hugeClient", client);
         return client;
     }

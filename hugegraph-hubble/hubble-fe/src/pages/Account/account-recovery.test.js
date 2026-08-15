@@ -111,9 +111,12 @@ test('labels administrators, space administrators, and regular users in the list
 
     render(<Account />);
 
-    expect(await screen.findByText('account.level.ADMIN')).toBeInTheDocument();
-    expect(screen.getByText('account.level.SPACEADMIN')).toBeInTheDocument();
-    expect(screen.getByText('account.level.USER')).toBeInTheDocument();
+    expect(await screen.findByText('account.permission_preset.SUPER_ADMIN'))
+        .toBeInTheDocument();
+    expect(screen.getByText('account.permission_preset.GS_ADMIN'))
+        .toBeInTheDocument();
+    expect(screen.getByText('account.permission_preset.GS_READ_ONLY'))
+        .toBeInTheDocument();
 });
 
 test('space administrators use scoped management without loading global accounts', async () => {

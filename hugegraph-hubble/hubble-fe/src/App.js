@@ -23,9 +23,49 @@ import './App.css';
 import './styles/workbench.scss';
 import Layout from './layout.ant';
 import {AuthContextProvider} from './auth/AuthContext';
+import * as api from './api';
+import {setConfig} from './utils/config';
+import {useEffect, useState} from 'react';
 
 function App() {
+    const [configReady, setConfigReady] = useState(false);
+    const [configError, setConfigError] = useState(false);
 
+    useEffect(() => {
+        let active = true;
+        api.config.getConfig()
+            .then(response => {
+                if (response?.status !== 200 || !response.data) {
+                    throw new Error('invalid_hubble_config');
+                }
+                if (active) {
+                    setConfig(response.data);
+                    setConfigReady(true);
+                }
+            })
+            .catch(() => {
+                if (active) {
+                    setConfigError(true);
+                }
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    if (configError) {
+        return (
+            <div role='alert'>
+                Unable to load Hubble configuration.
+                <button type='button' onClick={() => window.location.reload()}>
+                    Retry
+                </button>
+            </div>
+        );
+    }
+    if (!configReady) {
+        return null;
+    }
     return (
         <div>
             <AuthContextProvider>
