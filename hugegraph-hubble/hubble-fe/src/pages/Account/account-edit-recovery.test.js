@@ -146,7 +146,7 @@ test('loads graphspaces into the visible create account form', async () => {
         status: 200,
         data: {records: [{name: 'analytics'}]},
     }));
-    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[1]);
 
     expect(await screen.findByRole('option', {name: 'analytics'})).toBeInTheDocument();
 });
@@ -172,5 +172,7 @@ test('shows the derived space administrator level in account details', async () 
 
     render(<EditLayer {...props} data={{id: 'space-admin'}} op='detail' />);
 
-    expect(await screen.findByText('account.level.SPACEADMIN')).toBeInTheDocument();
+    expect(await screen.findByText(
+        'account.permission_preset.GS_ADMIN'
+    )).toBeInTheDocument();
 });

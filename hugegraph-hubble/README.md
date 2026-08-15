@@ -7,6 +7,43 @@
 hugegraph-hubble is a graph management and analysis platform that provides features:
 graph data load, schema management, graph relationship analysis, and graphical display.
 
+## Authentication, connections, and compatibility
+
+Hubble uses one capability-driven connection boundary for `1.8/master`.
+`auth.enabled=true` creates an authenticated session; when it is `false`, Hubble
+uses an unauthenticated client and does not create a fake user. Account and
+permission entry points are hidden in anonymous mode. Connection switching
+always goes through the backend resolver. In PD mode, a valid server address
+returned by discovery is sufficient; a manually configured server URL is not
+required.
+
+The UI presents four stable permission meanings: super administrator, GraphSpace
+read-only, GraphSpace read-write, and GraphSpace administrator. The last one
+means member management plus read/write within that GraphSpace; low-level
+`role`, `target`, `access`, and `belong` fields are not exposed.
+
+The compatibility boundary is deliberately small. Server 1.7 uses a thin
+legacy-response fallback. Server 1.5 standalone is limited to core graph,
+schema, data, and Gremlin operations; GraphSpace management is reported as
+unsupported. Version checks stay in the client adapter/resolver rather than
+being scattered through controllers or pages. See
+[`AGENTS.md`](AGENTS.md) for the support matrix and verification rules.
+
+### UI reference captures
+
+The following captures are collected from Chrome against the running Hubble
+application and document the supported states:
+
+![Authenticated connection and GraphSpace switch](docs/images/hubble-auth-connection.png)
+
+![Anonymous mode with account controls hidden](docs/images/hubble-non-auth.png)
+
+![GraphSpace permission presets](docs/images/hubble-graphspace-permissions.png)
+
+![PD connection discovered server address](docs/images/hubble-pd-connection.png)
+
+![Legacy compatibility capability notice](docs/images/hubble-legacy-capability.png)
+
 ## Local development feedback loop
 
 Run the frontend with third-party source-map noise disabled:

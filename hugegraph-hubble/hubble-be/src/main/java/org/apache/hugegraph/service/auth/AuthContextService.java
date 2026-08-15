@@ -87,6 +87,9 @@ public class AuthContextService {
     }
 
     public Map<String, Object> context(HugeClient client, String username) {
+        if (!this.config.get(HubbleOptions.AUTH_ENABLED)) {
+            return anonymousContext(this.config.get(HubbleOptions.PD_ENABLED));
+        }
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
         String mode = pdEnabled ? "PD" : "NON_PD";
         String role;
@@ -121,6 +124,28 @@ public class AuthContextService {
         context.put("role", role);
         context.put("capabilities", capabilities);
         context.put("actions", actions);
+        context.put("scopes", scopes);
+        return Collections.unmodifiableMap(context);
+    }
+
+    private static Map<String, Object> anonymousContext(boolean pdEnabled) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("schema_version", SCHEMA_VERSION);
+        context.put("context_version", "anonymous-v1");
+        context.put("mode", "NON_AUTH");
+        context.put("username", null);
+        context.put("role", "ANONYMOUS");
+        Map<String, Set<String>> actions = new LinkedHashMap<>();
+        actions.put("graphspaces", pdEnabled ?
+                    Collections.singleton("read") : Collections.emptySet());
+        context.put("capabilities", pdEnabled ?
+                    set(GRAPH_RESOURCES_ACCESS, GRAPHSPACES_READ) :
+                    Collections.singleton(GRAPH_RESOURCES_ACCESS));
+        context.put("actions", actions);
+        Map<String, Object> scopes = new LinkedHashMap<>();
+        scopes.put("all_graphspaces", pdEnabled);
+        scopes.put("admin_graphspaces", Collections.emptyList());
+        scopes.put("graph_resources", "SERVER_ANONYMOUS");
         context.put("scopes", scopes);
         return Collections.unmodifiableMap(context);
     }

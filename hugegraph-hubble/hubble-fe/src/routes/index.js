@@ -42,7 +42,7 @@ import OperationsRoute, {
 // 图分析的路由
 import GraphAnalysis from '../pages/GraphAnalysis';
 import AsyncTaskResultPage from '../pages/AsyncTaskResult';
-import {isPdEnabled} from '../utils/config';
+import {isAuthEnabled, isPdEnabled} from '../utils/config';
 import {
     DEFAULT_GRAPHSPACE,
     shouldUseNonPdDefaultGraphspace,
@@ -64,8 +64,12 @@ const isLoggedIn = () => {
 
 const ProtectedRoute = ({children}) => {
     const location = useLocation();
+    // Keep older test/integration shims that only expose PD configuration
+    // conservative until they learn the auth capability.
+    const authEnabled = typeof isAuthEnabled === 'function'
+        ? isAuthEnabled() : true;
 
-    if (isLoggedIn()) {
+    if (!authEnabled || isLoggedIn()) {
         return children;
     }
 

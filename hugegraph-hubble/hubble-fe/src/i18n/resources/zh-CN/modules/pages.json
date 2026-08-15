@@ -387,6 +387,12 @@
       "SPACEADMIN": "空间管理员",
       "USER": "普通用户"
     },
+    "permission_preset": {
+      "SUPER_ADMIN": "超级管理员",
+      "GS_READ_ONLY": "GraphSpace 只读",
+      "GS_READ_WRITE": "GraphSpace 读写",
+      "GS_ADMIN": "GraphSpace 管理员"
+    },
     "form": {
       "title_detail": "查看账号",
       "title_edit": "编辑账号",
@@ -408,7 +414,11 @@
       "default_password_help": "创建账号时设置的初始密码；用户登录后应尽快修改",
       "default_password_placeholder": "请输入 5–16 位初始密码",
       "permission": "管理权限",
-      "permission_help": "选择该账号可以管理的图空间；普通访问权限由 HugeGraph 角色控制"
+      "permission_help": "选择该账号可以管理的图空间；普通访问权限由 HugeGraph 角色控制",
+      "permission_preset": "权限预设",
+      "permission_preset_help": "选择清晰的预设语义，底层角色与资源目标由系统维护",
+      "graphspaces": "GraphSpace",
+      "graphspaces_help": "选择该预设覆盖的 GraphSpace"
     },
     "space_access": {
       "global_tab": "全局账号",
@@ -428,7 +438,8 @@
         "id": "账号 ID",
         "name": "账号名",
         "roles": "角色",
-        "remove_confirm": "确定从该 GraphSpace 移除此成员吗？"
+        "remove_confirm": "确定从该 GraphSpace 移除此成员吗？",
+        "preset_unavailable": "当前 GraphSpace 不支持所选权限预设。"
       },
       "role": {
         "add": "创建角色",

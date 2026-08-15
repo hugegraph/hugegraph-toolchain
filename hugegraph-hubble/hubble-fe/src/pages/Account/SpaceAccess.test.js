@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import SpaceAccess from './SpaceAccess';
 import * as api from '../../api';
 
@@ -109,12 +109,8 @@ test('uses only path-scoped APIs for a space administrator', async () => {
     expect(api.auth.getSpaceRoles).toHaveBeenCalledWith(
         'SPACE_A', expect.any(Object), expect.any(Object)
     );
-    expect(api.auth.getSpaceTargets).toHaveBeenCalledWith(
-        'SPACE_A', expect.any(Object), expect.any(Object)
-    );
-    expect(api.auth.getSpaceAccesses).toHaveBeenCalledWith(
-        'SPACE_A', expect.any(Object), expect.any(Object)
-    );
+    expect(api.auth.getSpaceTargets).not.toHaveBeenCalled();
+    expect(api.auth.getSpaceAccesses).not.toHaveBeenCalled();
     expect(api.auth.getAllUserList).not.toHaveBeenCalled();
     expect(api.manage.getGraphSpaceList).not.toHaveBeenCalled();
 });
@@ -171,4 +167,55 @@ test('does not infer mutations when the server grants read-only actions', async 
     expect(screen.queryByRole('button', {
         name: 'common.action.delete',
     })).not.toBeInTheDocument();
+});
+
+test('maps a selected preset to the authoritative role id when adding a member', async () => {
+    api.auth.getSpaceRoles.mockResolvedValueOnce(page([{
+        id: 'writer-id',
+        permission_preset: 'GS_READ_WRITE',
+    }]));
+    api.auth.addSpaceMember.mockResolvedValue({status: 200});
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[textboxes.length - 1], {
+        target: {value: 'bob'},
+    });
+    const comboboxes = screen.getAllByRole('combobox');
+    fireEvent.mouseDown(comboboxes[comboboxes.length - 1]);
+    fireEvent.click(screen.getByText('account.permission_preset.GS_READ_WRITE'));
+    fireEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(api.auth.addSpaceMember).toHaveBeenCalledWith(
+        'SPACE_A',
+        {
+            user_id: 'bob',
+            roles: [{role_id: 'writer-id', role_name: 'GS_READ_WRITE'}],
+        },
+        expect.any(Object)
+    ));
+});
+
+test('does not submit when the selected preset has no server role', async () => {
+    api.auth.addSpaceMember.mockResolvedValue({status: 200});
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[textboxes.length - 1], {
+        target: {value: 'bob'},
+    });
+    const comboboxes = screen.getAllByRole('combobox');
+    fireEvent.mouseDown(comboboxes[comboboxes.length - 1]);
+    fireEvent.click(screen.getByText('account.permission_preset.GS_READ_WRITE'));
+    fireEvent.click(screen.getByRole('button', {name: 'OK'}));
+
+    await waitFor(() => expect(api.auth.addSpaceMember).not.toHaveBeenCalled());
 });

@@ -20,6 +20,8 @@ package org.apache.hugegraph.handler;
 
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.exception.UnauthorizedException;
+import org.apache.hugegraph.service.auth.AuthModeService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
@@ -28,11 +30,17 @@ import javax.servlet.http.HttpServletResponse;
 
 public class LoginInterceptor extends HandlerInterceptorAdapter {
 
+    @Autowired
+    private AuthModeService authMode;
+
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+        if (this.authMode != null && this.authMode.anonymous()) {
             return true;
         }
 
