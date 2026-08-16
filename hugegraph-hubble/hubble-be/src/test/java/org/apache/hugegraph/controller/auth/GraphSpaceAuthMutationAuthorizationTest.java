@@ -275,11 +275,9 @@ public class GraphSpaceAuthMutationAuthorizationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role_id\":\"r\",\"user_id\":\"u\"}"));
         assertForbidden(mvc(access),
-                post("/api/v1.3/graphspaces/SPACE/auth/accesses")
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"));
+                post("/api/v1.3/graphspaces/SPACE/auth/accesses").contentType(MediaType.APPLICATION_JSON).content("{}"));
         assertForbidden(mvc(target),
-                post("/api/v1.3/graphspaces/SPACE/auth/targets")
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"));
+                post("/api/v1.3/graphspaces/SPACE/auth/targets").contentType(MediaType.APPLICATION_JSON).content("{}"));
     }
 
     private <T extends BaseController> T prepare(T controller,

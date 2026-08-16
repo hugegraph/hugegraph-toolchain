@@ -47,8 +47,7 @@ application and document the supported states:
 ![HugeGraph 1.8/master authenticated PD dashboard](docs/images/compat-1.8-auth-dashboard.png)
 
 The 1.5 and 1.7 captures show standalone non-auth core workflows. The 1.8/master
-captures cover both PD/non-auth connection discovery and authenticated account /
-GraphSpace permission surfaces.
+captures cover both PD/non-auth connection discovery and authenticated account / GraphSpace permission surfaces.
 
 ## Local development feedback loop
 

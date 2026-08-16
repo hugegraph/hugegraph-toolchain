@@ -37,8 +37,7 @@ const getAccountPreset = account => {
     if (explicit === 'LEGACY_CUSTOM') {
         return null;
     }
-    const scopedPermissions = Array.isArray(account?.graphspace_permissions)
-        ? account.graphspace_permissions : [];
+    const scopedPermissions = Array.isArray(account?.graphspace_permissions) ? account.graphspace_permissions : [];
     const scopedPresets = [...scopedPermissions,
         ...(Array.isArray(account?.adminSpaces)
             ? account.adminSpaces.map(graphspace => ({

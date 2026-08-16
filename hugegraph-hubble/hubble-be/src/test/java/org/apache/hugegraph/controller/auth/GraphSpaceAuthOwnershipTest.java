@@ -468,14 +468,12 @@ public class GraphSpaceAuthOwnershipTest {
         account.setId("user-id");
         account.name("graph-user");
         Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
-        Mockito.when(this.auth.listSpaceMember("SPACE_A"))
-               .thenReturn(Collections.singletonList("graph-user"));
+        Mockito.when(this.auth.listSpaceMember("SPACE_A")).thenReturn(Collections.singletonList("graph-user"));
         BelongEntity scoped = BelongEntity.builder()
                                           .id("belong-a")
                                           .userId("user-id")
                                           .build();
-        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id"))
-               .thenReturn(Collections.singletonList(scoped));
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.singletonList(scoped));
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
@@ -497,8 +495,7 @@ public class GraphSpaceAuthOwnershipTest {
         Mockito.when(this.graphs.listGraph())
                .thenReturn(Arrays.asList("graph-1", "graph-2"));
         BelongService belongs = Mockito.mock(BelongService.class);
-        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id"))
-               .thenReturn(Collections.emptyList());
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.emptyList());
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 

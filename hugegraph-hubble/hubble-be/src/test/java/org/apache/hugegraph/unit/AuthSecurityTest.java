@@ -356,8 +356,7 @@ public class AuthSecurityTest {
                .thenReturn(false);
         AuthModeService mode = new AuthModeService(config);
         ReflectionTestUtils.setField(interceptor, "authMode", mode);
-        MockHttpServletRequest request = new MockHttpServletRequest(
-                "GET", "/api/v1.3/graphspaces/SPACE/graphs/graph/schema");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1.3/graphspaces/SPACE/graphs/graph/schema");
 
         Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
         Assert.assertEquals(1, interceptor.unauthClients);

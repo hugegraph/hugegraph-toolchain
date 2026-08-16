@@ -51,8 +51,7 @@ test('wires the Hubble layout into the application router', async () => {
     );
     expect(await screen.findByTestId('app-route')).toBeInTheDocument();
     expect(screen.getByText('Hubble layout')).toBeInTheDocument();
-    expect(JSON.parse(sessionStorage.getItem('hubble_config_')))
-        .toEqual({pd_enabled: false, auth_enabled: false});
+    expect(JSON.parse(sessionStorage.getItem('hubble_config_'))).toEqual({pd_enabled: false, auth_enabled: false});
 });
 
 test('shows a retry surface when configuration bootstrap fails', async () => {

@@ -252,16 +252,12 @@ const EditLayer = ({
                             <Form.Item label={t('account.form.name')} className={style.item}>
                                 {detail.user_nickname}
                             </Form.Item>
-                            <Form.Item label={t('account.form.permission_preset')} className={style.item}>
-                                {t(`account.permission_preset.${
-                                    getAccountPreset(detail) ?? 'mixed'
-                                }`)}
+                            <Form.Item label={t('account.form.permission_preset')} className={style.item}> {t(`account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`)}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
                             </Form.Item>
-                            <Form.Item label={t('account.form.graphspaces')} className={style.item}>
-                                {getPresetSpaces(detail).join(', ')}
+                            <Form.Item label={t('account.form.graphspaces')} className={style.item}> {getPresetSpaces(detail).join(', ')}
                             </Form.Item>
                             <Form.Item label={t('account.col.create_time')} className={style.item}>
                                 {detail.user_create}
@@ -342,8 +338,7 @@ const EditLayer = ({
                                         noStyle
                                         shouldUpdate={permissionPresetChanged}
                                     >
-                                        {({getFieldValue}) => (getFieldValue('permission_preset')
-                                            === PERMISSION_PRESETS.SUPER_ADMIN ? null : (
+                                        {({getFieldValue}) => (getFieldValue('permission_preset') === PERMISSION_PRESETS.SUPER_ADMIN ? null : (
                                                 <Form.Item
                                                     label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
                                                     name="graphspaces"

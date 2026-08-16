@@ -104,8 +104,7 @@ public class GraphSpaceController extends BaseController {
         }
         if (this.authMode != null && this.authMode.anonymous()) {
             HugeClient client = this.authClient(null, null);
-            List<Map<String, Object>> graphSpaces =
-                    this.graphSpaceService.queryAnonymousGs(client, query, createTime);
+            List<Map<String, Object>> graphSpaces = this.graphSpaceService.queryAnonymousGs(client, query, createTime);
             return all ? graphSpaces : PageUtil.page(graphSpaces, pageNo, pageSize);
         }
         if (all) {
