@@ -48,7 +48,7 @@ public class BelongController extends AuthController {
             @PathVariable("graphspace") String graphSpace,
             @RequestParam(value = "role_id", required = false) String roleId,
             @RequestParam(value = "user_id", required = false) String userId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.belongService.list(client, graphSpace, roleId, userId);
     }
 
@@ -61,7 +61,7 @@ public class BelongController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.belongService.listPage(client, graphSpace, roleId, userId,
                                            pageNo, pageSize);
     }
@@ -69,14 +69,14 @@ public class BelongController extends AuthController {
     @GetMapping("{id}")
     public BelongEntity get(@PathVariable("graphspace") String graphSpace,
                             @PathVariable("id") String belongId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.belongService.get(client, graphSpace, belongId);
     }
 
     @PostMapping
     public void create(@PathVariable("graphspace") String graphSpace,
                        @RequestBody BelongEntity belongEntity) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         this.belongService.add(client, graphSpace, belongEntity.getRoleId(),
                                belongEntity.getUserId());
     }
@@ -84,7 +84,7 @@ public class BelongController extends AuthController {
     @PostMapping("ids")
     public void createMany(@PathVariable("graphspace") String graphSpace,
                            @RequestBody BelongService.BelongsReq belongsReq) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         for (String userId : belongsReq.getUserIds()) {
             this.belongService.add(client, graphSpace,
                                    belongsReq.getRoleId(), userId);
@@ -94,7 +94,7 @@ public class BelongController extends AuthController {
     @DeleteMapping("{id}")
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("id") String belongId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         this.belongService.deleteById(client, graphSpace, belongId);
     }
 
@@ -102,7 +102,7 @@ public class BelongController extends AuthController {
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @RequestParam("role_id") String roleId,
                        @RequestParam("user_id") String userId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         if (StringUtils.isNotEmpty(roleId) && StringUtils.isNotEmpty(userId)) {
             this.belongService.delete(client, graphSpace, roleId, userId);
         }
@@ -111,7 +111,7 @@ public class BelongController extends AuthController {
     @PostMapping("delids")
     public void deleteMany(@PathVariable("graphspace") String graphSpace,
                            @RequestBody DelIdsReq delIdsReq) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         this.belongService.deleteMany(client, graphSpace,
                                       delIdsReq.ids.toArray(new String[0]));
     }

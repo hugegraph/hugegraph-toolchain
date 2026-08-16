@@ -34,15 +34,15 @@ being scattered through controllers or pages. See
 The following captures are collected from Chrome against the running Hubble
 application and document the supported states:
 
-![Authenticated connection and GraphSpace switch](docs/images/hubble-auth-connection.png)
+![HugeGraph Server 1.5 standalone non-auth](docs/images/compat-1.5-standalone.png)
 
-![Anonymous mode with account controls hidden](docs/images/hubble-non-auth.png)
+![HugeGraph Server 1.7 standalone non-auth](docs/images/compat-1.7-standalone.png)
 
-![GraphSpace permission presets](docs/images/hubble-graphspace-permissions.png)
+![HugeGraph 1.8/master PD mode without a manual server URL](docs/images/compat-1.8-pd.png)
 
-![PD connection discovered server address](docs/images/hubble-pd-connection.png)
-
-![Legacy compatibility capability notice](docs/images/hubble-legacy-capability.png)
+The 1.5 and 1.7 captures show the supported core workflow with account controls
+hidden. The 1.8/master capture shows PD mode deriving its connection from PD;
+GraphSpace/account presets are available when authentication is enabled.
 
 ## Local development feedback loop
 

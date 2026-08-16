@@ -40,6 +40,31 @@ import {PERMISSION_PRESETS} from './permissionPresets';
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const PAGE_PARAMS = {query: '', page_no: 1, page_size: 200};
 const responseRecords = response => response?.data?.records ?? [];
+const adminRole = {
+    role_id: PERMISSION_PRESETS.GS_ADMIN,
+    permission_preset: PERMISSION_PRESETS.GS_ADMIN,
+};
+
+const mergeMembersAndAdmins = (members, admins) => {
+    const rows = new Map(members.map(member => [
+        member.user_id,
+        {...member, member_roles: member.roles ?? []},
+    ]));
+    admins.forEach(admin => {
+        const userId = admin.id ?? admin.user_id;
+        const existing = rows.get(userId) ?? {};
+        rows.set(userId, {
+            ...existing,
+            user_id: userId,
+            user_name: admin.name ?? admin.user_name ?? existing.user_name,
+            member_roles: existing.roles ?? existing.member_roles ?? [],
+            roles: [adminRole],
+            is_space_admin: true,
+        });
+    });
+    return Array.from(rows.values());
+};
+
 const rolePreset = role => {
     const explicit = role?.permission_preset ?? role?.permissionPreset;
     if (Object.values(PERMISSION_PRESETS).includes(explicit)) {
@@ -68,11 +93,17 @@ const rolePreset = role => {
     return null;
 };
 
+const rolesPreset = roles => {
+    const presets = (roles ?? []).map(rolePreset).filter(Boolean);
+    return presets.length > 0 && new Set(presets).size === 1
+        ? presets[0] : null;
+};
+
 const roleLabel = (role, t) => {
     const preset = rolePreset(role);
     return preset
         ? t(`account.permission_preset.${preset}`)
-        : role?.role_name ?? role?.role_nickname ?? t('common.label.unknown');
+        : t('account.permission_preset.legacy_custom');
 };
 
 const RowAction = ({row, onAction, children}) => {
@@ -212,20 +243,29 @@ const SpaceAccess = () => {
     const loadMembers = useCallback(space => api.auth.getSpaceMembers(
         space, PAGE_PARAMS, PAGE_ERROR_CONFIG
     ), []);
-    const loadRoles = useCallback(space => api.auth.getSpaceRoles(
+    const loadAdmins = useCallback(space => api.auth.getSpaceAdmins(
         space, PAGE_PARAMS, PAGE_ERROR_CONFIG
     ), []);
     const members = useScopedResource(
         graphSpace, contextVersion, loadMembers, responseRecords
     );
-    const roles = useScopedResource(
-        graphSpace, contextVersion, loadRoles, responseRecords
+    const admins = useScopedResource(
+        graphSpace, contextVersion, loadAdmins, responseRecords
     );
+    const visibleMembers = {
+        data: mergeMembersAndAdmins(members.data, admins.data),
+        loading: members.loading || admins.loading,
+        error: members.error || admins.error,
+        retry: () => {
+            members.retry();
+            admins.retry();
+        },
+    };
 
     const refreshAll = useCallback(() => {
         members.retry();
-        roles.retry();
-    }, [members, roles]);
+        admins.retry();
+    }, [admins, members]);
 
     const runMutation = useCallback(async (operation, close) => {
         if (submitting) {
@@ -253,7 +293,7 @@ const SpaceAccess = () => {
     const openMember = useCallback(row => {
         memberForm.setFieldsValue({
             user_id: row?.user_id,
-            permission_preset: rolePreset(row?.roles?.[0]),
+            permission_preset: rolesPreset(row?.roles),
         });
         setMemberDialog(row ?? {});
     }, [memberForm]);
@@ -262,27 +302,14 @@ const SpaceAccess = () => {
         memberForm.resetFields();
     }, [memberForm]);
     const submitMember = useCallback(values => {
-        const role = roles.data.find(item => rolePreset(item) === values.permission_preset);
-        if (!role) {
-            message.error(t('account.space_access.member.preset_unavailable'));
-            return;
-        }
-        const payload = {
-            user_id: values.user_id,
-            roles: role ? [{
-                role_id: role.id,
-                role_name: role.role_name ?? role.role_nickname ?? values.permission_preset,
-            }] : [],
-        };
-        const operation = memberDialog?.user_id
-            ? () => api.auth.updateSpaceMember(
-                graphSpace, memberDialog.user_id, payload, PAGE_ERROR_CONFIG
-            )
-            : () => api.auth.addSpaceMember(
-                graphSpace, payload, PAGE_ERROR_CONFIG
-            );
-        runMutation(operation, closeMember);
-    }, [closeMember, graphSpace, memberDialog, roles.data, runMutation, t]);
+        runMutation(
+            () => api.auth.setSpacePreset(
+                graphSpace, values.user_id, values.permission_preset,
+                PAGE_ERROR_CONFIG
+            ),
+            closeMember
+        );
+    }, [closeMember, graphSpace, runMutation]);
 
     const confirmDelete = useCallback((title, operation) => {
         Modal.confirm({
@@ -392,7 +419,7 @@ const SpaceAccess = () => {
                         key: 'members',
                         label: t('account.space_access.tabs.members'),
                         children: table(
-                            members, memberColumns, 'user_id',
+                            visibleMembers, memberColumns, 'user_id',
                             t('account.space_access.member.add'),
                             addMember, canAddMember
                         ),

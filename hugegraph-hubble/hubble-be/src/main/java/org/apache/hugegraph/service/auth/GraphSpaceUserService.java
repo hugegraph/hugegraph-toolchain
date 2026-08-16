@@ -20,9 +20,7 @@ package org.apache.hugegraph.service.auth;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,7 +33,6 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.BelongEntity;
 import org.apache.hugegraph.entity.auth.RoleEntity;
 import org.apache.hugegraph.entity.auth.UserView;
-import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.PageUtil;
@@ -48,11 +45,9 @@ public class GraphSpaceUserService extends AuthService {
 
     @Autowired
     private BelongService belongService;
-    @Autowired
-    private RoleService roleService;
 
     public List<UserView> listUsers(HugeClient client, String graphSpace) {
-        List<UserView> users = new ArrayList<>();
+        Map<String, UserView> users = new java.util.LinkedHashMap<>();
         List<BelongEntity> belongs = this.belongService.list(
                 client, graphSpace, null, null);
 
@@ -69,9 +64,25 @@ public class GraphSpaceUserService extends AuthService {
                 user.addRole(new RoleEntity(belong.getRoleId(),
                                             belong.getRoleName()));
             });
-            users.add(user);
+            users.put(userId, user);
         });
-        return users;
+        client.auth().listSpaceMember(graphSpace).forEach(username -> {
+            User account = client.findUserByName(username);
+            if (account == null) {
+                return;
+            }
+            String userId = account.id().toString();
+            UserView user = users.computeIfAbsent(
+                    userId,
+                    id -> new UserView(id, username, new ArrayList<>()));
+            if (client.supportsDefaultRole()) {
+                this.addDefaultRole(
+                        client, graphSpace, user, username, "observer");
+                this.addDefaultRole(
+                        client, graphSpace, user, username, "analyst");
+            }
+        });
+        return new ArrayList<>(users.values());
     }
 
     public UserView getUser(HugeClient client, String graphSpace,
@@ -86,6 +97,19 @@ public class GraphSpaceUserService extends AuthService {
             user.addRole(new RoleEntity(belong.getRoleId(),
                                         belong.getRoleName()));
         });
+        if (user.getId() == null) {
+            User account = client.auth().getUser(userId);
+            if (account != null) {
+                user.setId(account.id().toString());
+                user.setName(account.name());
+                if (client.supportsDefaultRole()) {
+                    this.addDefaultRole(client, graphSpace, user,
+                                        account.name(), "observer");
+                    this.addDefaultRole(client, graphSpace, user,
+                                        account.name(), "analyst");
+                }
+            }
+        }
         return user;
     }
 
@@ -147,82 +171,166 @@ public class GraphSpaceUserService extends AuthService {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
-        User account = client.auth().getUserByName(username);
+        E.checkArgument(client.supportsDefaultRole(),
+                        "Permission presets require HugeGraph Server 1.8+");
+        User account = client.findUserByName(username);
         if (account == null) {
             return;
         }
-        Map<String, String> desired = new HashMap<>();
+        Map<String, String> desired = new java.util.LinkedHashMap<>();
         List<Map<String, String>> requested = permissions == null ?
                                              new ArrayList<>() : permissions;
         for (Map<String, String> permission : requested) {
             String graphSpace = permission.get("graphspace");
             String permissionPreset = permission.get("permission_preset");
             if (graphSpace != null) {
-                desired.put(graphSpace,
-                           "GS_READ_ONLY".equals(permissionPreset) ?
-                           "observer" : "GS_READ_WRITE".equals(permissionPreset) ?
-                             "analyst" : null);
+                desired.put(graphSpace, permissionPreset);
             }
         }
         for (String graphSpace : client.graphSpace().listGraphSpace()) {
-            UserView current = this.getUser(client, graphSpace,
-                                             account.id().toString());
-            if (!desired.containsKey(graphSpace)) {
-                if (!current.getRoles().isEmpty() &&
-                    current.getRoles().stream().allMatch(
-                        GraphSpaceUserService::isPresetRole)) {
-                    this.unauthUser(client, graphSpace,
-                                    account.id().toString());
-                }
-                continue;
+            String desiredPreset = desired.get(graphSpace);
+            if (desiredPreset == null) {
+                this.unauthUser(client, graphSpace,
+                                account.id().toString());
+            } else {
+                this.applySpacePreset(client, graphSpace,
+                                      account.id().toString(),
+                                      desiredPreset);
             }
-            String presetRole = desired.get(graphSpace);
-            if (presetRole == null) {
-                List<RoleEntity> customRoles = current.getRoles().stream()
-                    .filter(existing -> !isPresetRole(existing))
-                    .collect(Collectors.toList());
-                if (customRoles.isEmpty() && !current.getRoles().isEmpty()) {
-                    this.unauthUser(client, graphSpace,
-                                    account.id().toString());
-                } else if (!customRoles.isEmpty()) {
-                    UserView view = new UserView(account.id().toString(),
-                                                 username, customRoles);
-                    this.createOrUpdate(client, graphSpace, view);
-                }
-                continue;
-            }
-            String role = this.resolvePresetRole(client, graphSpace,
-                                                 presetRole);
-            UserView view = new UserView(account.id().toString(), username,
-                                         new ArrayList<>());
-            view.addRole(new RoleEntity(role, role));
-            current.getRoles().stream()
-                   .filter(existing -> !isPresetRole(existing))
-                   .forEach(view::addRole);
-            this.createOrUpdate(client, graphSpace, view);
         }
     }
 
-    private String resolvePresetRole(HugeClient client, String graphSpace,
-                                     String roleName) {
-        return this.roleService.list(client, graphSpace, true).stream()
-                   .filter(role -> roleName.equalsIgnoreCase(role.name()) ||
-                                   roleName.equalsIgnoreCase(role.nickname()))
-                   .map(role -> role.id().toString())
-                   .findFirst()
-                   .orElseThrow(() -> new ExternalException(
-                           "auth.role.not-exist", roleName));
+    public void validatePermissionPresets(
+            HugeClient client, List<Map<String, String>> permissions,
+            String preset) {
+        if (preset == null || "SUPER_ADMIN".equals(preset)) {
+            return;
+        }
+        Set<String> graphSpaces =
+                new java.util.HashSet<>(client.graphSpace().listGraphSpace());
+        for (Map<String, String> permission :
+                permissions == null ? new ArrayList<Map<String, String>>() :
+                permissions) {
+            String graphSpace = permission.get("graphspace");
+            String permissionPreset = permission.get("permission_preset");
+            E.checkArgument(graphSpace != null &&
+                            graphSpaces.contains(graphSpace),
+                            "The graphspace does not exist: %s", graphSpace);
+            E.checkArgument("GS_READ_ONLY".equals(permissionPreset) ||
+                            "GS_READ_WRITE".equals(permissionPreset) ||
+                            "GS_ADMIN".equals(permissionPreset),
+                            "Unsupported permission preset: %s",
+                            permissionPreset);
+        }
     }
 
-    private static boolean isPresetRole(RoleEntity role) {
-        String name = role.getName() == null ? role.getId() :
-                      role.getName();
-        if (name == null) {
+    public void applySpacePreset(HugeClient client, String graphSpace,
+                                 String userId, String preset) {
+        E.checkArgument("GS_READ_ONLY".equals(preset) ||
+                        "GS_READ_WRITE".equals(preset) ||
+                        "GS_ADMIN".equals(preset),
+                        "Unsupported permission preset: %s", preset);
+        E.checkArgument(client.supportsDefaultRole(),
+                        "Permission presets require HugeGraph Server 1.8+");
+        User account = client.auth().getUser(userId);
+        E.checkNotNull(account, "User");
+        this.clearCustomRoles(client, graphSpace, userId);
+        this.clearDefaultRoles(client, graphSpace, account.name());
+        if (!client.auth().listSpaceMember(graphSpace)
+                   .contains(account.name())) {
+            client.auth().addSpaceMember(account.name(), graphSpace);
+        }
+        if ("GS_ADMIN".equals(preset)) {
+            if (!client.auth().listSpaceAdmin(graphSpace)
+                       .contains(account.name())) {
+                client.auth().addSpaceAdmin(account.name(), graphSpace);
+            }
+            this.setDefaultRole(client, graphSpace, account.name(), "analyst");
+            return;
+        }
+        if (client.auth().listSpaceAdmin(graphSpace).contains(account.name())) {
+            client.auth().delSpaceAdmin(account.name(), graphSpace);
+        }
+        String role = "GS_READ_ONLY".equals(preset) ? "observer" : "analyst";
+        this.setDefaultRole(client, graphSpace, account.name(), role);
+    }
+
+    public void removeSpacePreset(HugeClient client, String graphSpace,
+                                  String userId) {
+        this.unauthUser(client, graphSpace, userId);
+    }
+
+    public boolean hasCustomRoles(HugeClient client, String graphSpace,
+                                  String userId) {
+        return !this.belongService.list(
+                client, graphSpace, null, userId).isEmpty();
+    }
+
+    public boolean hasGraphSpaceAccess(HugeClient client, String graphSpace,
+                                       String username) {
+        if (!client.supportsDefaultRole()) {
             return false;
         }
-        String normalized = name.toLowerCase(Locale.ROOT);
-        return "observer".equals(normalized) ||
-               "analyst".equals(normalized);
+        if (client.graphSpace().checkDefaultRole(
+                graphSpace, username, "analyst")) {
+            return true;
+        }
+        return this.graphs(client, graphSpace).stream().anyMatch(
+                graph -> client.graphSpace().checkDefaultRole(
+                        graphSpace, username, "observer", graph));
+    }
+
+    private void clearDefaultRoles(HugeClient client, String graphSpace,
+                                   String username) {
+        if (client.graphSpace().checkDefaultRole(
+                graphSpace, username, "analyst")) {
+            client.graphSpace().deleteDefaultRole(
+                    graphSpace, username, "analyst");
+        }
+        for (String graph : this.graphs(client, graphSpace)) {
+            if (client.graphSpace().checkDefaultRole(
+                    graphSpace, username, "observer", graph)) {
+                client.graphSpace().deleteDefaultRole(
+                        graphSpace, username, "observer", graph);
+            }
+        }
+    }
+
+    private void clearCustomRoles(HugeClient client, String graphSpace,
+                                  String userId) {
+        this.belongService.list(client, graphSpace, null, userId)
+            .forEach(belong -> this.belongService.deleteById(
+                    client, graphSpace, belong.getId()));
+    }
+
+    private void setDefaultRole(HugeClient client, String graphSpace,
+                                String username, String role) {
+        if ("observer".equals(role)) {
+            for (String graph : this.graphs(client, graphSpace)) {
+                client.graphSpace().setDefaultRole(
+                        graphSpace, username, role, graph);
+            }
+            return;
+        }
+        client.graphSpace().setDefaultRole(graphSpace, username, role);
+    }
+
+    private void addDefaultRole(HugeClient client, String graphSpace,
+                                UserView user, String username, String role) {
+        boolean assigned = "observer".equals(role) ?
+                           this.graphs(client, graphSpace).stream().anyMatch(
+                               graph -> client.graphSpace().checkDefaultRole(
+                                   graphSpace, username, role, graph)) :
+                           client.graphSpace().checkDefaultRole(
+                                   graphSpace, username, role);
+        if (assigned) {
+            user.addRole(new RoleEntity(role, role));
+        }
+    }
+
+    private List<String> graphs(HugeClient client, String graphSpace) {
+        client.assignGraph(graphSpace, "");
+        return client.graphs().listGraph();
     }
 
     public void unauthUser(HugeClient client, String graphSpace,
@@ -231,11 +339,18 @@ public class GraphSpaceUserService extends AuthService {
         E.checkNotNull(account, "User");
         List<BelongEntity> belongs = this.belongService.list(
                 client, graphSpace, null, userId);
-        E.checkState(!belongs.isEmpty(), "The user: (%s) not exists", userId);
         belongs.forEach(belong -> {
             this.belongService.deleteById(client, graphSpace, belong.getId());
         });
-        client.auth().delSpaceMember(account.name(), graphSpace);
+        if (client.supportsDefaultRole()) {
+            this.clearDefaultRoles(client, graphSpace, account.name());
+        }
+        if (client.auth().listSpaceAdmin(graphSpace).contains(account.name())) {
+            client.auth().delSpaceAdmin(account.name(), graphSpace);
+        }
+        if (client.auth().listSpaceMember(graphSpace).contains(account.name())) {
+            client.auth().delSpaceMember(account.name(), graphSpace);
+        }
     }
 
     public IPage<User> querySpaceAdmins(HugeClient client, String graphSpace,
@@ -253,7 +368,10 @@ public class GraphSpaceUserService extends AuthService {
         List<String> spaceAdmins = client.auth().listSpaceAdmin(graphSpace);
         ArrayList<User> users = new ArrayList<>();
         for (String spaceAdmin : spaceAdmins) {
-            users.add(client.auth().getUser(spaceAdmin));
+            User user = client.findUserByName(spaceAdmin);
+            if (user != null) {
+                users.add(user);
+            }
         }
         return users;
     }

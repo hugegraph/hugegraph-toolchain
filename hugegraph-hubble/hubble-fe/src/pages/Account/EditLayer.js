@@ -195,7 +195,9 @@ const EditLayer = ({
                         form.setFieldsValue({
                             ...res.data,
                             permission_preset: getAccountPreset(res.data),
-                            graphspaces: getPresetSpaces(res.data),
+                            graphspaces: op === 'auth'
+                                ? (res.data?.adminSpaces ?? [])
+                                : getPresetSpaces(res.data),
                         });
                     }
                     setDetail(res.data);
@@ -254,7 +256,9 @@ const EditLayer = ({
                                 {detail.user_nickname}
                             </Form.Item>
                             <Form.Item label={t('account.form.permission_preset')} className={style.item}>
-                                {t(`account.permission_preset.${getAccountPreset(detail)}`)}
+                                {t(`account.permission_preset.${
+                                    getAccountPreset(detail) ?? 'mixed'
+                                }`)}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
@@ -342,7 +346,7 @@ const EditLayer = ({
                                         shouldUpdate={permissionPresetChanged}
                                     >
                                         {({getFieldValue}) => (getFieldValue('permission_preset')
-                                            !== PERMISSION_PRESETS.GS_ADMIN ? null : (
+                                            === PERMISSION_PRESETS.SUPER_ADMIN ? null : (
                                                 <Form.Item
                                                     label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
                                                     name="graphspaces"

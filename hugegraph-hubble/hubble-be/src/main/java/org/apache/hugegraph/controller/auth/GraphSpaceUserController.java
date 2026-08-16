@@ -18,6 +18,8 @@
 
 package org.apache.hugegraph.controller.auth;
 
+import java.util.Map;
+
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.driver.HugeClient;
@@ -52,7 +54,7 @@ public class GraphSpaceUserController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.userService.queryPage(client, graphSpace, query, pageNo,
                                           pageSize);
     }
@@ -66,7 +68,7 @@ public class GraphSpaceUserController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.userService.querySpaceAdmins(client, graphSpace, query,
                                                  pageNo, pageSize);
     }
@@ -86,6 +88,16 @@ public class GraphSpaceUserController extends AuthController {
         return client.auth().addSpaceAdmin(userId, graphSpace);
     }
 
+    @PutMapping("{id}/preset")
+    public void setPermissionPreset(
+            @PathVariable("graphspace") String graphSpace,
+            @PathVariable("id") String userId,
+            @RequestBody Map<String, String> body) {
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        this.userService.applySpacePreset(
+                client, graphSpace, userId, body.get("permission_preset"));
+    }
+
     @DeleteMapping("spaceadmin/{id}")
     public void removeGraphSpaceAdmin(
             @PathVariable("graphspace") String graphSpace,
@@ -97,7 +109,7 @@ public class GraphSpaceUserController extends AuthController {
     @PostMapping
     public UserView create(@PathVariable("graphspace") String graphSpace,
                            @RequestBody UserView userView) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.userService.createOrUpdate(client, graphSpace, userView);
     }
 
@@ -105,7 +117,7 @@ public class GraphSpaceUserController extends AuthController {
     public UserView createOrUpdate(@PathVariable("graphspace") String graphSpace,
                                    @PathVariable("id") String userId,
                                    @RequestBody UserView userView) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         userView.setId(userId);
         return this.userService.createOrUpdate(client, graphSpace, userView);
     }

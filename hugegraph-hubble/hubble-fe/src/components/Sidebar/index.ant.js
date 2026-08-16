@@ -30,7 +30,7 @@ import {
     ClusterOutlined,
 } from '@ant-design/icons';
 import {Link, useLocation} from 'react-router-dom';
-import {isPdEnabled} from '../../utils/config';
+import {isAuthEnabled, isPdEnabled} from '../../utils/config';
 import {getGraphspacePath} from '../../utils/productMode';
 import {getPreparationSchemaPath} from '../../utils/dataPreparationNavigation';
 import {getSidebarMenuKey} from '../../utils/sidebarNavigation';
@@ -46,11 +46,11 @@ const items = (t, pathname, capabilities = []) => {
     const ACCOUNT = {label: <Link to='/account'>{t('home.account')}</Link>, key: 'account'};
 
     // TODO temporary hided the resource and role modules
-    let systemList = [MY];
+    let systemList = isAuthEnabled() ? [MY] : [];
     if (capabilities.includes('accounts_manage')
         || capabilities.includes('graphspace_members_manage')) {
         // systemList = [MY, RESOURCE, ROLE];
-        systemList = [MY, ACCOUNT];
+        systemList = isAuthEnabled() ? [MY, ACCOUNT] : [];
     }
     const operationsList = [
         ...(pdMode && capabilities.includes('operations_health_read') ? [{

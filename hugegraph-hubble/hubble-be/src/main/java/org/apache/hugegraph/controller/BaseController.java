@@ -146,8 +146,10 @@ public abstract class BaseController {
             client.assignGraph(graphSpace, graph);
             return client;
         }
-        HugeClient client = this.authMode.anonymous() ?
-                            this.hugeClientPoolService.createUnauthClient() :
+        HugeClient client = this.authMode != null &&
+                            this.authMode.anonymous() ?
+                            this.hugeClientPoolService.createUnauthClient(
+                                    graphSpace, graph) :
                             this.hugeClientPoolService.createAuthClient(
                                 graphSpace, graph, this.getToken());
         if (graphSpace != null || graph != null) {
@@ -172,6 +174,17 @@ public abstract class BaseController {
             !this.userService.isAssignSpaceAdmin(client, graphSpace)) {
             throw new ForbiddenException(
                     "Permission denied: manage graphspace members");
+        }
+        client.assignGraph(graphSpace, null);
+        return client;
+    }
+
+    protected HugeClient requireGraphSpaceAuthorizationAdmin(
+            String graphSpace) {
+        HugeClient client = this.authClient(null, null);
+        if (!this.userService.isSuperAdmin(client)) {
+            throw new ForbiddenException(
+                    "Permission denied: manage authorization objects");
         }
         client.assignGraph(graphSpace, null);
         return client;

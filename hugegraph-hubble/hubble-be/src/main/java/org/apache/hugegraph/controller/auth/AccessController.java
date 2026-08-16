@@ -47,28 +47,28 @@ public class AccessController extends AuthController {
             @PathVariable("graphspace") String graphSpace,
             @RequestParam(value = "role_id", required = false) String roleId,
             @RequestParam(value = "target_id", required = false) String targetId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.accessService.list(client, graphSpace, roleId, targetId);
     }
 
     @GetMapping("{id}")
     public AccessEntity get(@PathVariable("graphspace") String graphSpace,
                             @PathVariable("id") String accessId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.accessService.get(client, graphSpace, accessId);
     }
 
     @PostMapping
     public AccessEntity add(@PathVariable("graphspace") String graphSpace,
                             @RequestBody AccessEntity accessEntity) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.accessService.addOrUpdate(client, graphSpace, accessEntity);
     }
 
     @PutMapping
     public AccessEntity update(@PathVariable("graphspace") String graphSpace,
                                @RequestBody AccessEntity accessEntity) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.accessService.addOrUpdate(client, graphSpace, accessEntity);
     }
 
@@ -76,7 +76,7 @@ public class AccessController extends AuthController {
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @RequestParam("role_id") String roleId,
                        @RequestParam("target_id") String targetId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         this.accessService.delete(client, graphSpace, roleId, targetId);
     }
 }

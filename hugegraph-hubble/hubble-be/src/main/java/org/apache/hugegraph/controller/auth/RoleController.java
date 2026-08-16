@@ -46,7 +46,7 @@ public class RoleController extends AuthController {
 
     @GetMapping("list")
     public List<Role> listName(@PathVariable("graphspace") String graphSpace) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.roleService.list(client, graphSpace,
                                      this.userService.isSuperAdmin(client));
     }
@@ -60,7 +60,7 @@ public class RoleController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.roleService.queryPage(
                 client, graphSpace, query, pageNo, pageSize,
                 this.userService.isSuperAdmin(client));
@@ -69,7 +69,7 @@ public class RoleController extends AuthController {
     @GetMapping("{id}")
     public Role get(@PathVariable("graphspace") String graphSpace,
                     @PathVariable("id") String roleId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.roleService.get(client, graphSpace, roleId,
                                     this.userService.isSuperAdmin(client));
     }
@@ -77,7 +77,7 @@ public class RoleController extends AuthController {
     @PostMapping
     public Role add(@PathVariable("graphspace") String graphSpace,
                     @RequestBody Role role) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         role.graphSpace(graphSpace);
         return this.roleService.insert(client, graphSpace, role);
     }
@@ -86,7 +86,7 @@ public class RoleController extends AuthController {
     public Role update(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("id") String id,
                        @RequestBody Map<String, Object> body) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         boolean includeLegacy = this.userService.isSuperAdmin(client);
         Role current = this.roleService.get(client, graphSpace, id,
                                             includeLegacy);
@@ -108,7 +108,7 @@ public class RoleController extends AuthController {
     @DeleteMapping("{id}")
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("id") String id) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         this.roleService.delete(client, graphSpace, id,
                                 this.userService.isSuperAdmin(client));
     }

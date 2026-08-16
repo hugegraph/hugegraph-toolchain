@@ -38,7 +38,8 @@ public final class AuthModeService {
     }
 
     public boolean enabled() {
-        return this.config.get(HubbleOptions.AUTH_ENABLED);
+        return !Boolean.FALSE.equals(
+                this.config.get(HubbleOptions.AUTH_ENABLED));
     }
 
     public boolean anonymous() {

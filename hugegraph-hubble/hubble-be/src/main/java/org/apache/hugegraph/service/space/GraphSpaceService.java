@@ -159,8 +159,51 @@ public class GraphSpaceService {
                                  space.getCreateTime().compareTo(after) > 0)
                 .filter(space -> !space.isAuth() ||
                                  client.auth().isSpaceAdmin(space.getName()) ||
-                                 client.auth().checkDefaultRole(
-                                         space.getName(), "analyst"))
+                                 hasCurrentUserAccess(client, space.getName()))
+                .map(space -> {
+                    GraphSpaceEntity entity =
+                            GraphSpaceEntity.fromGraphSpace(space);
+                    entity.setStatistic(evCount(client, space.getName()));
+                    Map<String, Object> info = toView(entity);
+                    info.put("authed", true);
+                    info.put("default", false);
+                    return info;
+                })
+                .collect(Collectors.toList());
+        Collections.sort(results, (a, b) ->
+                new BuiltInFirst().compare(a.get("name").toString(),
+                                           b.get("name").toString()));
+        return results;
+    }
+
+    private static boolean hasCurrentUserAccess(HugeClient client,
+                                                String graphSpace) {
+        if (!client.supportsDefaultRole()) {
+            return false;
+        }
+        if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
+            return true;
+        }
+        client.assignGraph(graphSpace, "");
+        return client.graphs().listGraph().stream().anyMatch(
+                graph -> client.auth().checkDefaultRole(
+                        graphSpace, "observer", graph));
+    }
+
+    public List<Map<String, Object>> queryAnonymousGs(HugeClient client,
+                                                      String query,
+                                                      String createTime) {
+        String prefix = query == null ? "" : query;
+        String after = createTime == null ? "" : createTime;
+        List<Map<String, Object>> results = client.graphSpace()
+                .listGraphSpace().stream()
+                .map(client.graphSpace()::getGraphSpace)
+                .filter(space -> space != null &&
+                                 (space.getName().contains(prefix) ||
+                                  space.getNickname() != null &&
+                                  space.getNickname().contains(prefix)))
+                .filter(space -> space.getCreateTime() == null ||
+                                 space.getCreateTime().compareTo(after) > 0)
                 .map(space -> {
                     GraphSpaceEntity entity =
                             GraphSpaceEntity.fromGraphSpace(space);

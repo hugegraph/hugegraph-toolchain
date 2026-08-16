@@ -73,6 +73,27 @@ test('hides PD-only operations links in standalone mode without topology access'
     expect(screen.queryByRole('link', {name: '节点详情'})).not.toBeInTheDocument();
 });
 
+test('hides account and profile links in anonymous mode', async () => {
+    sessionStorage.setItem('hubble_config_', JSON.stringify({
+        pd_enabled: false,
+        auth_enabled: false,
+    }));
+
+    render(
+        <MemoryRouter
+            initialEntries={['/navigation']}
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <Sidebar />
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('navigation', {name: '主导航'}))
+        .toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: '个人中心'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: '账号管理'})).not.toBeInTheDocument();
+});
+
 test('keeps monitoring and account links in one operations section', async () => {
     sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
     render(
