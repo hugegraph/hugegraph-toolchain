@@ -42,6 +42,14 @@ const HelpLabel = ({t, labelKey}) => (
     />
 );
 
+const showOperationError = (error, t) => {
+    const response = error?.response ?? error;
+    const detail = response?.data?.message ?? response?.message;
+    message.error(detail
+        ? `${t('common.msg.operation_failed')} (${detail})`
+        : t('common.msg.operation_failed'));
+};
+
 const EditLayer = ({
     visible,
     onCancel,
@@ -74,8 +82,8 @@ const EditLayer = ({
                 refresh();
                 return;
             }
-            message.error(t('common.msg.operation_failed'));
-        }).catch(() => message.error(t('common.msg.operation_failed')));
+            showOperationError(res, t);
+        }).catch(error => showOperationError(error, t));
     }, [onCancel, refresh, t]);
     const updateUser = useCallback(values => {
         return api.auth.updateUser(data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
@@ -88,8 +96,8 @@ const EditLayer = ({
                 return;
             }
 
-            message.error(t('common.msg.operation_failed'));
-        }).catch(() => message.error(t('common.msg.operation_failed')));
+            showOperationError(res, t);
+        }).catch(error => showOperationError(error, t));
     }, [onCancel, refresh, data.id, t]);
 
     const updateUserAuth = useCallback(values => {
@@ -107,8 +115,8 @@ const EditLayer = ({
                 return;
             }
 
-            message.error(t('common.msg.operation_failed'));
-        }).catch(() => message.error(t('common.msg.operation_failed')));
+            showOperationError(res, t);
+        }).catch(error => showOperationError(error, t));
     }, [data.id, onCancel, refresh, t]);
 
     const onFinish = useCallback(async () => {
@@ -252,12 +260,22 @@ const EditLayer = ({
                             <Form.Item label={t('account.form.name')} className={style.item}>
                                 {detail.user_nickname}
                             </Form.Item>
-                            <Form.Item label={t('account.form.permission_preset')} className={style.item}> {t(`account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`)}
+                            <Form.Item
+                                label={t('account.form.permission_preset')}
+                                className={style.item}
+                            >
+                                {t(
+                                    `account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`
+                                )}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
                             </Form.Item>
-                            <Form.Item label={t('account.form.graphspaces')} className={style.item}> {getPresetSpaces(detail).join(', ')}
+                            <Form.Item
+                                label={t('account.form.graphspaces')}
+                                className={style.item}
+                            >
+                                {getPresetSpaces(detail).join(', ')}
                             </Form.Item>
                             <Form.Item label={t('account.col.create_time')} className={style.item}>
                                 {detail.user_create}
@@ -299,10 +317,22 @@ const EditLayer = ({
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.name' />}
                                         name="user_nickname"
-                                        rules={[rules.required(), rules.isAccountName]}
+                                        rules={[rules.isAccountName]}
                                         validateFirst
                                     >
                                         <Input placeholder={t('account.form.name_placeholder')} />
+                                    </Form.Item>
+                                    <Form.Item
+                                        label={<HelpLabel t={t} labelKey='account.form.default_password' />}
+                                        name="user_password"
+                                        rules={op === 'create'
+                                            ? [rules.required(), {type: 'string', min: 5, max: 16}]
+                                            : [{type: 'string', min: 5, max: 16}]}
+                                    >
+                                        <Input.Password
+                                            placeholder={t('account.form.default_password_placeholder')}
+                                            autoComplete="new-password"
+                                        />
                                     </Form.Item>
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
@@ -323,29 +353,21 @@ const EditLayer = ({
                                         <Input placeholder={t('account.form.remark_placeholder')} />
                                     </Form.Item>
                                     <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.default_password' />}
-                                        name="user_password"
-                                        rules={op === 'create'
-                                            ? [rules.required(), {type: 'string', min: 5, max: 16}]
-                                            : [{type: 'string', min: 5, max: 16}]}
-                                    >
-                                        <Input.Password
-                                            placeholder={t('account.form.default_password_placeholder')}
-                                            autoComplete="new-password"
-                                        />
-                                    </Form.Item>
-                                    <Form.Item
                                         noStyle
                                         shouldUpdate={permissionPresetChanged}
                                     >
-                                        {({getFieldValue}) => (getFieldValue('permission_preset') === PERMISSION_PRESETS.SUPER_ADMIN ? null : (
-                                                <Form.Item
-                                                    label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
-                                                    name="graphspaces"
-                                                >
-                                                    <Select options={graphspaceList} mode="multiple" />
-                                                </Form.Item>
-                                            ))}
+                                        {({getFieldValue}) => (
+                                            getFieldValue('permission_preset') === PERMISSION_PRESETS.SUPER_ADMIN
+                                                ? null
+                                                : (
+                                                    <Form.Item
+                                                        label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
+                                                        name="graphspaces"
+                                                    >
+                                                        <Select options={graphspaceList} mode="multiple" />
+                                                    </Form.Item>
+                                                )
+                                        )}
                                     </Form.Item>
                                 </>
                             )}

@@ -83,7 +83,7 @@ const NodeIdentityCell = ({record, returnState, unavailable, t}) => {
                     aria-label={leader
                         ? t('operations.leader_role') : nodeRoleLabel(record, t)}
                 >
-                    {record.role ?? nodeRoleLabel(record, t)}
+                    {nodeRoleLabel(record, t)}
                 </Tag>
             )}
             <Tooltip title={record.id}>

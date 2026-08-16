@@ -1229,6 +1229,8 @@
     "node_id_copied": "Node ID copied",
     "node_id_copy_failed": "Could not copy the node ID",
     "leader_role": "Leader role",
+    "leader": "Leader",
+    "follower": "Follower",
     "leader_shard": "{{count}} leader shard",
     "leader_shards": "{{count}} leader shards",
     "node_profile": "Node profile",

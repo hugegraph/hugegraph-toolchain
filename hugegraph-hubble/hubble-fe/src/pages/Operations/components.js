@@ -194,6 +194,12 @@ const RefreshButton = ({loading = false, onClick}) => {
 
 const nodeRoleLabel = (node, t) => {
     if (node?.role) {
+        if (node.role === 'LEADER') {
+            return t('operations.leader');
+        }
+        if (node.role === 'FOLLOWER') {
+            return t('operations.follower');
+        }
         return node.role;
     }
     const leaders = storeLeaderCount(node);
@@ -215,7 +221,7 @@ const TierNode = ({node, returnState}) => {
             ].filter(Boolean).join(' ')}
             to={`/operations/nodes/${node.id}`}
             state={returnState}
-            aria-label={`${node.type} ${node.name} ${node.role ?? ''} ${
+            aria-label={`${node.type} ${node.name} ${nodeRoleLabel(node, t)} ${
                 displayHealthStatus(node.status, t)}`}
         >
             <TierIcon type={node.type} />

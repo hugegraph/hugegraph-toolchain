@@ -376,7 +376,7 @@ test('merges role into node identity and keeps the full ID explainable and copya
     expect(identity).toHaveAccessibleName(
         /service-reported node name.*store-c410c1adb107-full-id/i
     );
-    expect(identity).toHaveTextContent('LEADER');
+    expect(identity).toHaveTextContent('Leader');
     expect(within(identity).getByLabelText('Leader role')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', {name: 'Role'})).not.toBeInTheDocument();
 
