@@ -465,6 +465,7 @@ public class GraphSpaceAuthOwnershipTest {
     public void testGraphSpaceUserRemovalDeletesOnlyScopedBelongs() {
         BelongService belongs = Mockito.mock(BelongService.class);
         User account = new User();
+        account.setId("user-id");
         account.name("graph-user");
         Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
         Mockito.when(this.auth.listSpaceMember("SPACE_A"))
@@ -544,6 +545,7 @@ public class GraphSpaceAuthOwnershipTest {
         Mockito.when(this.auth.getGraphSpaceGroup("local-role"))
                .thenReturn(group);
         User account = new User();
+        account.setId("user-id");
         account.name("graph-user");
         Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
         Mockito.when(this.auth.listSpaceMember("SPACE_A"))

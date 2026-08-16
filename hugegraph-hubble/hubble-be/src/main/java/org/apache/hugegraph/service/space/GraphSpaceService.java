@@ -243,7 +243,7 @@ public class GraphSpaceService {
      * @param graphSpace
      * @return
      */
-    Map<String, Object> evCount(HugeClient client, String graphSpace) {
+    public Map<String, Object> evCount(HugeClient client, String graphSpace) {
         Long vertexTotal = 0L;
         Long edgeTotal = 0L;
         Map<String, Object> statisticTotal = new HashMap<>();

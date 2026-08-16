@@ -109,7 +109,7 @@ public class GraphSpaceUserController extends AuthController {
     @PostMapping
     public UserView create(@PathVariable("graphspace") String graphSpace,
                            @RequestBody UserView userView) {
-        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
         return this.userService.createOrUpdate(client, graphSpace, userView);
     }
 
@@ -117,7 +117,7 @@ public class GraphSpaceUserController extends AuthController {
     public UserView createOrUpdate(@PathVariable("graphspace") String graphSpace,
                                    @PathVariable("id") String userId,
                                    @RequestBody UserView userView) {
-        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
         userView.setId(userId);
         return this.userService.createOrUpdate(client, graphSpace, userView);
     }

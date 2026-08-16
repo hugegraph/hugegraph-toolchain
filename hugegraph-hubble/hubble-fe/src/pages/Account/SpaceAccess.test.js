@@ -17,7 +17,7 @@
  */
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
-import SpaceAccess from './SpaceAccess';
+import SpaceAccess, {rolesPreset} from './SpaceAccess';
 import * as api from '../../api';
 
 let mockAuthContext;
@@ -75,6 +75,17 @@ const setResponses = ({members = [], roles = [], targets = [], accesses = []} = 
     api.auth.getSpaceTargets.mockResolvedValue(page(targets));
     api.auth.getSpaceAccesses.mockResolvedValue({status: 200, data: accesses});
 };
+
+test('requires explicit preset for mixed or legacy member roles', () => {
+    expect(rolesPreset([
+        {role_name: 'observer'},
+        {role_name: 'custom-role'},
+    ])).toBeNull();
+    expect(rolesPreset([
+        {role_name: 'observer'},
+        {role_name: 'analyst'},
+    ])).toBeNull();
+});
 
 beforeEach(() => {
     jest.clearAllMocks();

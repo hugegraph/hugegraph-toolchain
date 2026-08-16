@@ -150,6 +150,8 @@ public class GraphSpaceController extends BaseController {
             GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(
                     this.graphSpaceService.getWithoutAdmins(client,
                                                             graphspace));
+            entity.setStatistic(
+                    this.graphSpaceService.evCount(client, graphspace));
             return this.graphSpaceService.toView(entity);
         }
         // Get GraphSpace Info

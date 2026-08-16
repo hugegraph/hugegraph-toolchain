@@ -102,7 +102,7 @@ const GraphSpaceListRoute = () => {
         return null;
     }
     return hasCapability('graphspaces_read')
-        ? <GraphSpace /> : <Navigate to='/profile' replace />;
+        ? <GraphSpace /> : <Navigate to='/navigation' replace />;
 };
 
 const LegacyProfileRedirect = () => {

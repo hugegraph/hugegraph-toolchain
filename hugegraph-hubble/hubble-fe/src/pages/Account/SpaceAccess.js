@@ -58,7 +58,7 @@ const mergeMembersAndAdmins = (members, admins) => {
             user_id: userId,
             user_name: admin.name ?? admin.user_name ?? existing.user_name,
             member_roles: existing.roles ?? existing.member_roles ?? [],
-            roles: [adminRole],
+            roles: [...(existing.roles ?? existing.member_roles ?? []), adminRole],
             is_space_admin: true,
         });
     });
@@ -94,9 +94,9 @@ const rolePreset = role => {
 };
 
 const rolesPreset = roles => {
-    const presets = (roles ?? []).map(rolePreset).filter(Boolean);
-    return presets.length > 0 && new Set(presets).size === 1
-        ? presets[0] : null;
+    const values = roles ?? [];
+    const presets = values.map(rolePreset);
+    return values.length > 0 && presets.every(Boolean) && new Set(presets).size === 1 ? presets[0] : null;
 };
 
 const roleLabel = (role, t) => {
@@ -464,4 +464,5 @@ const SpaceAccess = () => {
     );
 };
 
+export {rolesPreset};
 export default SpaceAccess;

@@ -409,10 +409,11 @@ public class UserService extends AuthService {
         if (!client.supportsDefaultRole()) {
             for (UserEntity user : users) {
                 user.setGraphspacePermissions(new ArrayList<>());
-                user.setPermissionPreset("LEGACY_CUSTOM");
+                user.setPermissionPreset(user.isSuperadmin() ? "SUPER_ADMIN" : "LEGACY_CUSTOM");
             }
             return;
         }
+        List<String> graphSpaces = client.graphSpace().listGraphSpace();
         for (UserEntity user : users) {
             List<Map<String, String>> values = new ArrayList<>();
             if (user.isSuperadmin()) {
@@ -426,7 +427,7 @@ public class UserService extends AuthService {
                     values.add(permission(graphSpace, "GS_ADMIN"));
                 }
             }
-            for (String graphSpace : client.graphSpace().listGraphSpace()) {
+            for (String graphSpace : graphSpaces) {
                 legacyCustom |= this.graphSpaceUserService.hasCustomRoles(
                         client, graphSpace, user.getId());
                 if (user.getAdminSpaces() != null &&
@@ -610,6 +611,19 @@ public class UserService extends AuthService {
         List<String> oldadminspaces = listAdminSpace(hugeClient, username);
         User account = hugeClient.findUserByName(username);
         E.checkNotNull(account, "User");
+        if (!hugeClient.supportsDefaultRole()) {
+            for (String adminspace : adminspaces) {
+                if (!oldadminspaces.contains(adminspace)) {
+                    hugeClient.auth().addSpaceAdmin(username, adminspace);
+                }
+            }
+            for (String oldadminspace : oldadminspaces) {
+                if (!adminspaces.contains(oldadminspace)) {
+                    hugeClient.auth().delSpaceAdmin(username, oldadminspace);
+                }
+            }
+            return;
+        }
         for (String adminspace : adminspaces) {
             if (!oldadminspaces.contains(adminspace)) {
                 this.graphSpaceUserService.applySpacePreset(

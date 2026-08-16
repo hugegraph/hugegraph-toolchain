@@ -127,6 +127,10 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
             if (this.isLogoutRequest(uri)) {
                 return;
             }
+            if (this.authMode != null && this.authMode.anonymous() &&
+                uri.endsWith("/auth/status")) {
+                return;
+            }
             String[] scope = this.requestScope(uri);
             String graphSpace = scope[0];
             String graph = scope[1];

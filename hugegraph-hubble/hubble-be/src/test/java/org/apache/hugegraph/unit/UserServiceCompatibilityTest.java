@@ -115,6 +115,7 @@ public class UserServiceCompatibilityTest {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
         Mockito.when(this.auth.getUserByName("user"))
                .thenReturn(user("user"));
+        Mockito.when(this.client.findUserByName("user")).thenReturn(user("user"));
 
         this.service.updatePersonal(this.client, "user", "display-name",
                                     "description");

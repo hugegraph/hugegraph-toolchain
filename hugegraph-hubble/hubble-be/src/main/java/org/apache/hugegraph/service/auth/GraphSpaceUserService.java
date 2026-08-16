@@ -171,8 +171,7 @@ public class GraphSpaceUserService extends AuthService {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
-        E.checkArgument(client.supportsDefaultRole(),
-                        "Permission presets require HugeGraph Server 1.8+");
+        E.checkArgument(client.supportsDefaultRole(), "Permission presets require HugeGraph Server 1.8+");
         User account = client.findUserByName(username);
         if (account == null) {
             return;
@@ -206,6 +205,7 @@ public class GraphSpaceUserService extends AuthService {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
+        E.checkArgument(client.supportsDefaultRole(), "Permission presets require HugeGraph Server 1.8+");
         Set<String> graphSpaces =
                 new java.util.HashSet<>(client.graphSpace().listGraphSpace());
         for (Map<String, String> permission :

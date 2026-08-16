@@ -23,6 +23,8 @@ spread across UI pages.
 
 ![Hubble 1.8/master PD connection without a manual server URL](hugegraph-hubble/docs/images/compat-1.8-pd.png)
 
+![Hubble 1.8/master account / GraphSpace permission](hugegraph-hubble/docs/images/compat-1.8-auth-account.png)
+
 **Quick Navigation**: [Architecture](#architecture-overview) | [Quick Start](#quick-start) | [Modules](#module-overview) | [Build](#build--development) | [Docker](#docker) | [Related Projects](#related-projects)
 
 ## Related Projects
