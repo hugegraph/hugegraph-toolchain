@@ -228,6 +228,10 @@ public class LiveOperationsCollectorTest {
                                                     .get(group).getAvailability());
         }
         Assert.assertEquals(Long.valueOf(2000L), store.getObservedAt());
+        Assert.assertEquals(100L,
+                            snapshot.getFacts().get("capacity_total_bytes"));
+        Assert.assertEquals(60L,
+                            snapshot.getFacts().get("capacity_used_bytes"));
         Assert.assertFalse(store.getMetrics().toString().contains("secret"));
         OperationsModels.Node pdNode = snapshot.getNodes().stream()
                 .filter(node -> "PD".equals(node.getType()))
@@ -796,14 +800,14 @@ public class LiveOperationsCollectorTest {
                "\"pdLeader\":{\"restUrl\":\"http://pd:8620\"," +
                "\"state\":\"Up\",\"role\":\"Leader\"}," +
                "\"stores\":[{\"storeId\":1,\"state\":\"Up\"," +
-               "\"capacity\":100,\"available\":40}]}}";
+               "\"partitionCount\":12}]}}";
     }
 
     private static String stores() {
         return "{\"status\":0,\"data\":{\"stores\":[{" +
                "\"storeId\":\"1\",\"address\":\"127.0.0.1:8500\"," +
                "\"restAddress\":\"127.0.0.1:PD_TEST_PORT\"," +
-               "\"state\":\"Up\"}]}}";
+               "\"state\":\"Up\",\"capacity\":100,\"available\":40}]}}";
     }
 
     private static String storesWithoutRestAddress() {

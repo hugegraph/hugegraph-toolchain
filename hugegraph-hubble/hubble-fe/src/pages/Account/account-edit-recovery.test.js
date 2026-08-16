@@ -20,6 +20,8 @@ import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 
+let mockAuthContext = null;
+
 jest.mock('../../api', () => ({
     auth: {
         addUser: jest.fn(),
@@ -30,6 +32,10 @@ jest.mock('../../api', () => ({
     manage: {
         getGraphSpaceList: jest.fn(),
     },
+}));
+
+jest.mock('../../auth/AuthContext', () => ({
+    useAuthContext: () => ({context: mockAuthContext}),
 }));
 
 jest.mock('../../utils/rules', () => ({
@@ -62,6 +68,7 @@ const props = {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthContext = null;
     window.matchMedia = jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
@@ -73,6 +80,77 @@ beforeEach(() => {
         status: 200,
         data: {user_name: 'alice', adminSpaces: []},
     });
+});
+
+test('limits account creation to global admin when preset API is unavailable',
+    async () => {
+        mockAuthContext = {capabilities: ['accounts_manage']};
+        render(<EditLayer {...props} data={{}} op='create' />);
+        await act(async () => undefined);
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'account.feedback.presets_unavailable'
+        );
+        fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+        expect(screen.getByText('account.permission_preset.SUPER_ADMIN'))
+            .toBeInTheDocument();
+        expect(screen.queryByText('account.permission_preset.GS_READ_ONLY'))
+            .not.toBeInTheDocument();
+        expect(screen.queryByText('account.permission_preset.GS_READ_WRITE'))
+            .not.toBeInTheDocument();
+        expect(screen.queryByText('account.permission_preset.GS_ADMIN'))
+            .not.toBeInTheDocument();
+    });
+
+test('preserves permissions when editing a legacy account profile', async () => {
+    mockAuthContext = {capabilities: ['accounts_manage']};
+    api.auth.getUserInfo.mockResolvedValue({
+        status: 200,
+        data: {
+            user_name: 'alice',
+            user_nickname: 'Alice',
+            permission_preset: 'LEGACY_CUSTOM',
+            graphspace_permissions: [{
+                graphspace: 'analytics',
+                permission_preset: 'GS_READ_ONLY',
+            }],
+        },
+    });
+    api.auth.updateUser.mockResolvedValue({status: 200});
+
+    render(<EditLayer {...props} data={{id: 'alice'}} op='edit' />);
+
+    expect(await screen.findByDisplayValue('Alice')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+        'account.feedback.preset_edit_unavailable'
+    );
+    expect(screen.queryByText('account.form.permission_preset'))
+        .not.toBeInTheDocument();
+    expect(api.manage.getGraphSpaceList).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByDisplayValue('Alice'), {
+        target: {value: 'Alice Updated'},
+    });
+    await act(async () => {
+        fireEvent.click(document.querySelector(
+            '.ant-modal-footer .ant-btn-primary'
+        ));
+    });
+
+    await waitFor(() => expect(api.auth.updateUser).toHaveBeenCalledWith(
+        'alice',
+        expect.objectContaining({
+            user_name: 'alice',
+            user_nickname: 'Alice Updated',
+        }),
+        expect.anything()
+    ));
+    await waitFor(() => expect(props.onCancel).toHaveBeenCalled());
+    const payload = api.auth.updateUser.mock.calls[0][1];
+    expect(payload).not.toHaveProperty('permission_preset');
+    expect(payload).not.toHaveProperty('graphspace_permissions');
+    expect(payload).not.toHaveProperty('adminSpaces');
+    expect(payload).not.toHaveProperty('is_superadmin');
 });
 
 test('ignores a second account mutation while the first submit is pending', async () => {
@@ -158,6 +236,36 @@ test('requires an explicit password when creating an account', async () => {
     expect(screen.getByPlaceholderText(
         'account.form.default_password_placeholder'
     )).toBeRequired();
+});
+
+test('keeps a specific account creation error visible in the form', async () => {
+    api.auth.addUser.mockResolvedValue({
+        status: 400,
+        message: 'Refresh the GraphSpace list and select an existing one.',
+    });
+    render(<EditLayer {...props} data={{}} op='create' />);
+    await act(async () => undefined);
+
+    fireEvent.change(screen.getByPlaceholderText(
+        'account.form.id_placeholder'
+    ), {target: {value: 'alice'}});
+    fireEvent.change(screen.getByPlaceholderText(
+        'account.form.default_password_placeholder'
+    ), {target: {value: 'secret'}});
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(screen.getByText(
+        'account.permission_preset.SUPER_ADMIN'
+    ));
+    fireEvent.click(document.querySelector(
+        '.ant-modal-footer .ant-btn-primary'
+    ));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('account.feedback.save_failed');
+    expect(alert).toHaveTextContent(
+        'Refresh the GraphSpace list and select an existing one.'
+    );
+    expect(props.onCancel).not.toHaveBeenCalled();
 });
 
 test('shows the derived space administrator level in account details', async () => {

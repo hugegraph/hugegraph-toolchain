@@ -35,6 +35,7 @@ import {
     formatObservedAge,
     formatObservedAt,
     hasStaleMetrics,
+    metricIssueReason,
     selectTierNodes,
     storeLeaderCount,
 } from './topology';
@@ -238,7 +239,11 @@ const TierNode = ({node, returnState}) => {
                         ? (node.version ?? '—') : nodeRoleLabel(node, t)}
                 </span>
             </span>
-            <HealthStatus status={node.status} stale={hasStaleMetrics(node)} />
+            <HealthStatus
+                status={node.status}
+                reason={metricIssueReason(node)}
+                stale={hasStaleMetrics(node)}
+            />
         </Link>
     );
 };

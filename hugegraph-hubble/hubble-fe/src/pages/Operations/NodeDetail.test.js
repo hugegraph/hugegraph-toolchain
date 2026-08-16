@@ -376,6 +376,8 @@ test('hides metric groups that do not apply to a PD node', async () => {
     const sources = screen.getByRole('region', {name: 'Source freshness'});
     expect(within(sources).getByText('PD')).toBeInTheDocument();
     expect(within(sources).getByText('Store')).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'System'}))
+        .toBeInTheDocument();
 
     expect(screen.queryByRole('heading', {name: 'Drive'})).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', {name: 'Raft'})).not.toBeInTheDocument();

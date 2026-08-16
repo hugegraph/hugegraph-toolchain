@@ -18,6 +18,7 @@
 package org.apache.hugegraph.unit;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.junit.Assert;
@@ -29,8 +30,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.AuthManager;
+import org.apache.hugegraph.driver.GraphSpaceManager;
+import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.GraphSpaceUserService;
 import org.apache.hugegraph.service.auth.UserService;
@@ -41,6 +45,9 @@ public class UserServiceCompatibilityTest {
     private HugeConfig config;
     private HugeClient client;
     private AuthManager auth;
+    private GraphSpaceManager graphSpace;
+    private GraphsManager graphs;
+    private GraphSpaceUserService graphSpaceUsers;
     private UserService service;
 
     @Before
@@ -48,13 +55,20 @@ public class UserServiceCompatibilityTest {
         this.config = Mockito.mock(HugeConfig.class);
         this.client = Mockito.mock(HugeClient.class);
         this.auth = Mockito.mock(AuthManager.class);
+        this.graphSpace = Mockito.mock(GraphSpaceManager.class);
+        this.graphs = Mockito.mock(GraphsManager.class);
+        this.graphSpaceUsers = Mockito.mock(GraphSpaceUserService.class);
         Mockito.when(this.client.auth()).thenReturn(this.auth);
+        Mockito.when(this.client.graphSpace()).thenReturn(this.graphSpace);
+        Mockito.when(this.client.graphs()).thenReturn(this.graphs);
         Mockito.when(this.auth.createUser(Mockito.any(User.class)))
                .thenReturn(new User());
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(java.util.Collections.emptyList());
         this.service = new UserService();
         ReflectionTestUtils.setField(this.service, "config", this.config);
         ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
-                Mockito.mock(GraphSpaceUserService.class));
+                                     this.graphSpaceUsers);
     }
 
     @Test
@@ -123,6 +137,90 @@ public class UserServiceCompatibilityTest {
         Mockito.verify(this.auth).updateUser(request.capture());
         Assert.assertNull(request.getValue().nickname());
         Assert.assertEquals("description", request.getValue().description());
+    }
+
+    @Test
+    public void testCurrentUserPresetUsesSelfPermissionApi() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.client.findUserByName("user"))
+               .thenReturn(user("user"));
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(java.util.Collections.singletonList("SPACE"));
+        Mockito.when(this.auth.checkDefaultRole("SPACE", "analyst"))
+               .thenReturn(true);
+
+        UserEntity result = this.service.getpersonal(this.client, "user");
+
+        Assert.assertEquals("GS_READ_WRITE",
+                            result.getGraphspacePermissions().get(0)
+                                  .get("permission_preset"));
+        Mockito.verify(this.graphSpace, Mockito.never())
+               .checkDefaultRole(Mockito.anyString(), Mockito.anyString(),
+                                 Mockito.anyString());
+    }
+
+    @Test
+    public void testCurrentUserIgnoresOnlyForbiddenGraphSpaces() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.client.findUserByName("user"))
+               .thenReturn(user("user"));
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Arrays.asList("OWNED", "DENIED"));
+        Mockito.when(this.auth.checkDefaultRole("OWNED", "analyst"))
+               .thenReturn(true);
+        ServerException forbidden = new ServerException("forbidden");
+        forbidden.status(403);
+        Mockito.when(this.graphs.listGraph()).thenThrow(forbidden);
+
+        UserEntity result = this.service.getpersonal(this.client, "user");
+
+        Assert.assertEquals(Collections.singletonList("OWNED"),
+                            result.getResSpaces());
+        Assert.assertEquals(1, result.getGraphspacePermissions().size());
+    }
+
+    @Test
+    public void testLegacyProfileUpdatePreservesPermissionAssignments() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        UserEntity user = UserEntity.builder()
+                                    .id("user-id")
+                                    .name("user")
+                                    .nickname("display-name")
+                                    .build();
+
+        this.service.update(this.client, user);
+
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .validatePermissionPresets(Mockito.any(), Mockito.any(),
+                                          Mockito.any());
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .applyPermissionPresets(Mockito.any(), Mockito.anyString(),
+                                       Mockito.any(), Mockito.any());
+        Mockito.verify(this.auth).updateUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testLegacyUserCreationSkipsPermissionPresetApis() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("GS_READ_ONLY");
+        user.setGraphspacePermissions(java.util.Collections.singletonList(
+                java.util.Collections.singletonMap(
+                        "permission_preset", "GS_READ_ONLY")));
+
+        this.service.add(this.client, user);
+
+        Mockito.verify(this.auth).createUser(Mockito.any(User.class));
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .validatePermissionPresets(Mockito.any(), Mockito.any(),
+                                          Mockito.any());
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .applyPermissionPresets(Mockito.any(), Mockito.anyString(),
+                                       Mockito.any(), Mockito.any());
     }
 
     private static UserEntity userEntity(String nickname) {

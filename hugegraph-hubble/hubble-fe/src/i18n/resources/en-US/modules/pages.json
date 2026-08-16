@@ -395,6 +395,15 @@
       "mixed": "Mixed GraphSpace access",
       "legacy_custom": "Legacy/custom access"
     },
+    "feedback": {
+      "save_failed": "Account was not saved",
+      "save_retry": "Check the account fields and server connection, then retry.",
+      "delete_retry": "The account could not be deleted. Refresh the list and retry.",
+      "presets_unavailable": "GraphSpace presets are unavailable",
+      "presets_unavailable_help": "This deployment does not provide the required permission API; only a global administrator account can be created here",
+      "preset_edit_unavailable": "Permission editing is unavailable",
+      "preset_edit_unavailable_help": "Profile and password changes remain available; existing permissions are preserved until the connected HugeGraph REST API is upgraded to 0.72 or later"
+    },
     "form": {
       "title_detail": "View Account",
       "title_edit": "Edit Account",
@@ -1320,8 +1329,8 @@
     "metric_scope_backend": "Backend metrics are provided by Server and Store nodes, not {{nodeType}} nodes.",
     "reason_upstream_timeout": "Upstream timed out",
     "reason_upstream_unavailable": "Upstream unavailable",
-    "reason_metrics_target_untrusted": "The metrics target failed the trust check. Review the PD/Prometheus target configuration.",
-    "reason_metrics_target_missing": "No Store metrics target was discovered. Review the target configuration.",
+    "reason_metrics_target_untrusted": "The Store metrics origin is not trusted. Add its exact scheme, host, and port to operations.store.allowed_targets, restart Hubble, then refresh.",
+    "reason_metrics_target_missing": "PD did not report a Store metrics target. Check PD target discovery and the Store REST metrics port, then refresh.",
     "reason_upstream_deadline": "Metrics collection timed out",
     "reason_metrics_not_collected": "This metric is not collected from the current node",
     "reason_topology_fields_unavailable": "The topology did not provide this field",

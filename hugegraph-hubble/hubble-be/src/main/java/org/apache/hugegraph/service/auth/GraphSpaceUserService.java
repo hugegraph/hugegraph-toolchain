@@ -33,6 +33,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.BelongEntity;
 import org.apache.hugegraph.entity.auth.RoleEntity;
 import org.apache.hugegraph.entity.auth.UserView;
+import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.PageUtil;
@@ -168,7 +169,7 @@ public class GraphSpaceUserService extends AuthService {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
-        E.checkArgument(client.supportsDefaultRole(), "Permission presets require HugeGraph Server 1.8+");
+        requirePermissionPresets(client);
         User account = client.findUserByName(username);
         if (account == null) {
             return;
@@ -201,28 +202,26 @@ public class GraphSpaceUserService extends AuthService {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
-        E.checkArgument(client.supportsDefaultRole(), "Permission presets require HugeGraph Server 1.8+");
+        requirePermissionPresets(client);
         Set<String> graphSpaces =
                 new java.util.HashSet<>(client.graphSpace().listGraphSpace());
         for (Map<String, String> permission :
                 permissions == null ? new ArrayList<Map<String, String>>() : permissions) {
             String graphSpace = permission.get("graphspace");
             String permissionPreset = permission.get("permission_preset");
-            E.checkArgument(graphSpace != null && graphSpaces.contains(graphSpace),
-                            "The graphspace does not exist: %s", graphSpace);
-            E.checkArgument("GS_READ_ONLY".equals(permissionPreset) ||
-                            "GS_READ_WRITE".equals(permissionPreset) || "GS_ADMIN".equals(permissionPreset),
-                            "Unsupported permission preset: %s",
-                            permissionPreset);
+            if (graphSpace == null || !graphSpaces.contains(graphSpace)) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.graphspace-not-found",
+                          graphSpace);
+            }
+            requirePermissionPreset(permissionPreset);
         }
     }
 
     public void applySpacePreset(HugeClient client, String graphSpace,
                                  String userId, String preset) {
-        E.checkArgument("GS_READ_ONLY".equals(preset) || "GS_READ_WRITE".equals(preset) || "GS_ADMIN".equals(preset),
-                        "Unsupported permission preset: %s", preset);
-        E.checkArgument(client.supportsDefaultRole(),
-                        "Permission presets require HugeGraph Server 1.8+");
+        requirePermissionPreset(preset);
+        requirePermissionPresets(client);
         User account = client.auth().getUser(userId);
         E.checkNotNull(account, "User");
         this.clearCustomRoles(client, graphSpace, userId);
@@ -249,6 +248,22 @@ public class GraphSpaceUserService extends AuthService {
     public void removeSpacePreset(HugeClient client, String graphSpace,
                                   String userId) {
         this.unauthUser(client, graphSpace, userId);
+    }
+
+    private static void requirePermissionPresets(HugeClient client) {
+        if (!client.supportsDefaultRole()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.unsupported");
+        }
+    }
+
+    private static void requirePermissionPreset(String preset) {
+        if (!"GS_READ_ONLY".equals(preset) &&
+            !"GS_READ_WRITE".equals(preset) &&
+            !"GS_ADMIN".equals(preset)) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.invalid", preset);
+        }
     }
 
     public boolean hasCustomRoles(HugeClient client, String graphSpace,

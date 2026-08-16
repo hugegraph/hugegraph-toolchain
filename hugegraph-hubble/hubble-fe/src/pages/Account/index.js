@@ -36,6 +36,7 @@ import * as api from '../../api';
 import {useAuthContext} from '../../auth/AuthContext';
 import {getAccountPreset, PERMISSION_PRESETS} from './permissionPresets';
 import SpaceAccess from './SpaceAccess';
+import {accountErrorMessage} from './accountError';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 
@@ -107,8 +108,10 @@ const GlobalAccounts = () => {
                         setRefresh(value => !value);
                         return;
                     }
-                    message.error(t('common.msg.operation_failed'));
-                }).catch(() => message.error(t('common.msg.operation_failed')));
+                    throw res;
+                }).catch(error => message.error(accountErrorMessage(
+                    error, t('account.feedback.delete_retry')
+                )));
             },
         });
     }, [t]);

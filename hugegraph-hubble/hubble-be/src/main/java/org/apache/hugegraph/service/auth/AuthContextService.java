@@ -51,6 +51,8 @@ public class AuthContextService {
 
     public static final String ACCOUNT_SELF_MANAGE = "account_self_manage";
     public static final String ACCOUNTS_MANAGE = "accounts_manage";
+    public static final String ACCOUNT_PERMISSION_PRESETS =
+                               "account_permission_presets";
     public static final String GRAPHSPACES_READ = "graphspaces_read";
     public static final String GRAPHSPACES_MANAGE = "graphspaces_manage";
     public static final String GRAPHSPACE_MEMBERS_MANAGE =
@@ -110,8 +112,12 @@ public class AuthContextService {
             role = "ADMIN".equals(serverRole) ? SUPERADMIN : USER;
         }
 
-        Set<String> capabilities = this.capabilities(pdEnabled, role);
-        Map<String, Set<String>> actions = this.actions(pdEnabled, role);
+        boolean permissionPresets = pdEnabled &&
+                                    client.supportsDefaultRole();
+        Set<String> capabilities = this.capabilities(pdEnabled, role,
+                                                     permissionPresets);
+        Map<String, Set<String>> actions = this.actions(pdEnabled, role,
+                                                       permissionPresets);
         Map<String, Object> scopes = this.scopes(pdEnabled, role,
                                                  adminGraphSpaces);
         String version = version(mode, username, role, capabilities,
@@ -149,12 +155,16 @@ public class AuthContextService {
         return Collections.unmodifiableMap(context);
     }
 
-    private Set<String> capabilities(boolean pdEnabled, String role) {
+    private Set<String> capabilities(boolean pdEnabled, String role,
+                                     boolean permissionPresets) {
         Set<String> capabilities = new LinkedHashSet<>();
         capabilities.add(ACCOUNT_SELF_MANAGE);
         capabilities.add(GRAPH_RESOURCES_ACCESS);
         if (pdEnabled) {
             capabilities.add(GRAPHSPACES_READ);
+        }
+        if (permissionPresets) {
+            capabilities.add(ACCOUNT_PERMISSION_PRESETS);
         }
         if (SUPERADMIN.equals(role)) {
             capabilities.add(ACCOUNTS_MANAGE);
@@ -176,18 +186,20 @@ public class AuthContextService {
         return Collections.unmodifiableSet(capabilities);
     }
 
-    private Map<String, Set<String>> actions(boolean pdEnabled, String role) {
+    private Map<String, Set<String>> actions(boolean pdEnabled, String role,
+                                             boolean permissionPresets) {
         Map<String, Set<String>> actions = new LinkedHashMap<>();
         boolean superAdmin = SUPERADMIN.equals(role);
-        boolean spaceManager = pdEnabled &&
+        boolean spaceManager = pdEnabled && permissionPresets &&
                                (superAdmin || SPACEADMIN.equals(role));
         actions.put("account", SELF_ACTIONS);
         actions.put("accounts", superAdmin ? CRUD_ACTIONS : emptySet());
         actions.put("graphspaces", pdEnabled ?
                    (superAdmin ? CRUD_ACTIONS : set("read")) : emptySet());
         actions.put("members", spaceManager ? MEMBER_ACTIONS : emptySet());
-        actions.put("roles", superAdmin ? CRUD_ACTIONS : emptySet());
-        actions.put("authorizations", superAdmin ?
+        actions.put("roles", permissionPresets && superAdmin ?
+                   CRUD_ACTIONS : emptySet());
+        actions.put("authorizations", permissionPresets && superAdmin ?
                    AUTHORIZATION_ACTIONS : emptySet());
         actions.put("operations", superAdmin ?
                    OPERATIONS_ACTIONS : emptySet());

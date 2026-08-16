@@ -35,9 +35,20 @@ public class ServerCompatibilityTest {
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace("1.7.0"));
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace(" 1.7.0 "));
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace("1.8.0"));
-        Assert.assertFalse(ServerCompatibility.supportsDefaultRole("1.7.0"));
-        Assert.assertTrue(ServerCompatibility.supportsDefaultRole("1.8.0"));
+        Assert.assertFalse(ServerCompatibility.supportsDefaultRole(
+                           "1.7.0", "0.71.0.0"));
+        Assert.assertTrue(ServerCompatibility.supportsDefaultRole(
+                          "1.7.0", "0.72.0.0"));
+        Assert.assertFalse(ServerCompatibility.supportsDefaultRole(
+                           "1.8.0", "0.71.0.0"));
         Assert.assertEquals(ServerCompatibility.Profile.GRAPHSPACE,
-                            ServerCompatibility.profile("1.7.1"));
+                            ServerCompatibility.profile("1.7.1",
+                                                        "0.71.0.0"));
+        Assert.assertEquals(ServerCompatibility.Profile.MODERN,
+                            ServerCompatibility.profile("1.7.0",
+                                                        "0.72.0.0"));
+        Assert.assertEquals(ServerCompatibility.Profile.GRAPHSPACE,
+                            ServerCompatibility.profile("1.7.0",
+                                                        "not-a-version"));
     }
 }

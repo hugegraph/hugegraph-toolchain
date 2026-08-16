@@ -19,9 +19,11 @@
 const {createProxyMiddleware} = require('http-proxy-middleware');
 
 module.exports = app => {
-    const target = process.env.HUBBLE_API_TARGET ||
-                   process.env.HUBBLE_API_PROXY ||
-                   'http://127.0.0.1:18181';
+    const target = [
+        process.env.HUBBLE_API_TARGET,
+        process.env.HUBBLE_API_PROXY,
+        'http://127.0.0.1:8088',
+    ].find(Boolean);
     app.use(
         '/api/v1.3',
         createProxyMiddleware({

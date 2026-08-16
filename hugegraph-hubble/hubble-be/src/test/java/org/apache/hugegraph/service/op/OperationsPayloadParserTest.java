@@ -44,7 +44,7 @@ public class OperationsPayloadParserTest {
                          "\"dataPath\":\"/secret/leader\",\"role\":\"Leader\"," +
                          "\"serviceVersion\":\"1.7.0\"}," +
                          "\"graphSize\":2,\"partitionSize\":12," +
-                         "\"shardCount\":3}}";
+                         "\"shardCount\":3,\"dataSize\":5}}";
         String stores = "{\"status\":0,\"data\":{\"stores\":[{" +
                         "\"storeId\":\"7\",\"address\":\"store-a:8500\"," +
                         "\"deployPath\":\"/secret/bin\"," +
@@ -60,6 +60,12 @@ public class OperationsPayloadParserTest {
         Assert.assertEquals(2L, topology.getFacts().get("graphs"));
         Assert.assertEquals(12L, topology.getFacts().get("partitions"));
         Assert.assertEquals(3L, topology.getFacts().get("replicas"));
+        Assert.assertEquals(5120L,
+                            topology.getFacts().get("data_size_bytes"));
+        Assert.assertEquals(1000L,
+                            topology.getFacts().get("capacity_total_bytes"));
+        Assert.assertEquals(600L,
+                            topology.getFacts().get("capacity_used_bytes"));
         List<Node> nodes = topology.getNodes();
         Assert.assertEquals(3, nodes.size());
         Assert.assertEquals("LEADER", nodes.get(1).getRole());
@@ -73,6 +79,25 @@ public class OperationsPayloadParserTest {
         Assert.assertFalse(serialized.contains("store-a:8500"));
         Assert.assertFalse(serialized.contains("pd-a:8620"));
         Assert.assertFalse(serialized.contains("/secret"));
+    }
+
+    @Test
+    public void testOmitsIncompleteOrOverflowingSizeFacts() {
+        String cluster = "{\"status\":0,\"data\":{" +
+                         "\"pdList\":[],\"dataSize\":9223372036854775807}}";
+        String stores = "{\"status\":0,\"data\":{\"stores\":[{" +
+                        "\"storeId\":\"1\",\"capacity\":1000},{" +
+                        "\"storeId\":\"2\",\"capacity\":1000," +
+                        "\"available\":2000}]}}";
+
+        Topology topology = new OperationsPayloadParser(MAPPER)
+                            .parseTopology(cluster, stores);
+
+        Assert.assertFalse(topology.getFacts().containsKey("data_size_bytes"));
+        Assert.assertFalse(topology.getFacts().containsKey(
+                           "capacity_total_bytes"));
+        Assert.assertFalse(topology.getFacts().containsKey(
+                           "capacity_used_bytes"));
     }
 
     @Test
