@@ -32,8 +32,7 @@ import {
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
-const permissionPresetChanged = (prev, next) => (
-    prev.permission_preset !== next.permission_preset
+const permissionPresetChanged = (prev, next) => (prev.permission_preset !== next.permission_preset
 );
 
 const HelpLabel = ({t, labelKey}) => (
@@ -79,8 +78,7 @@ const EditLayer = ({
         }).catch(() => message.error(t('common.msg.operation_failed')));
     }, [onCancel, refresh, t]);
     const updateUser = useCallback(values => {
-        return api.auth.updateUser(
-            data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
+        return api.auth.updateUser(data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
         ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.update_success'));
@@ -99,8 +97,7 @@ const EditLayer = ({
             ...values,
             permission_preset: PERMISSION_PRESETS.GS_ADMIN,
         });
-        return api.auth.updateAdminspace(
-            data.id, payload.adminSpaces, PAGE_ERROR_CONFIG
+        return api.auth.updateAdminspace(data.id, payload.adminSpaces, PAGE_ERROR_CONFIG
         ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.set_success'));
@@ -195,7 +192,9 @@ const EditLayer = ({
                         form.setFieldsValue({
                             ...res.data,
                             permission_preset: getAccountPreset(res.data),
-                            graphspaces: getPresetSpaces(res.data),
+                            graphspaces: op === 'auth'
+                                ? (res.data?.adminSpaces ?? [])
+                                : getPresetSpaces(res.data),
                         });
                     }
                     setDetail(res.data);
@@ -253,14 +252,12 @@ const EditLayer = ({
                             <Form.Item label={t('account.form.name')} className={style.item}>
                                 {detail.user_nickname}
                             </Form.Item>
-                            <Form.Item label={t('account.form.permission_preset')} className={style.item}>
-                                {t(`account.permission_preset.${getAccountPreset(detail)}`)}
+                            <Form.Item label={t('account.form.permission_preset')} className={style.item}> {t(`account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`)}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
                             </Form.Item>
-                            <Form.Item label={t('account.form.graphspaces')} className={style.item}>
-                                {getPresetSpaces(detail).join(', ')}
+                            <Form.Item label={t('account.form.graphspaces')} className={style.item}> {getPresetSpaces(detail).join(', ')}
                             </Form.Item>
                             <Form.Item label={t('account.col.create_time')} className={style.item}>
                                 {detail.user_create}
@@ -341,8 +338,7 @@ const EditLayer = ({
                                         noStyle
                                         shouldUpdate={permissionPresetChanged}
                                     >
-                                        {({getFieldValue}) => (getFieldValue('permission_preset')
-                                            !== PERMISSION_PRESETS.GS_ADMIN ? null : (
+                                        {({getFieldValue}) => (getFieldValue('permission_preset') === PERMISSION_PRESETS.SUPER_ADMIN ? null : (
                                                 <Form.Item
                                                     label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
                                                     name="graphspaces"

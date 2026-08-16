@@ -20,7 +20,9 @@ package org.apache.hugegraph.handler;
 
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.exception.UnauthorizedException;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.service.auth.AuthModeService;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
@@ -41,6 +43,10 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
             return true;
         }
         if (this.authMode != null && this.authMode.anonymous()) {
+            if (isAnonymousAuthManagement(request.getRequestURI())) {
+                throw new ExternalException(HttpStatus.FORBIDDEN.value(),
+                                            "Authentication is disabled");
+            }
             return true;
         }
 
@@ -56,5 +62,15 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
                                             String key) {
         Object value = request.getSession().getAttribute(key);
         return value instanceof String && StringUtils.hasText((String) value);
+    }
+
+    private static boolean isAnonymousAuthManagement(String uri) {
+        if (uri.contains("/graphspaces/") && uri.contains("/auth/")) {
+            return true;
+        }
+        if (!uri.contains("/auth/")) {
+            return false;
+        }
+        return !uri.endsWith("/auth/context") && !uri.endsWith("/auth/status") && !uri.endsWith("/auth/logout");
     }
 }

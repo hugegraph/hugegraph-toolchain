@@ -391,7 +391,9 @@
       "SUPER_ADMIN": "Super Administrator",
       "GS_READ_ONLY": "GraphSpace Read-only",
       "GS_READ_WRITE": "GraphSpace Read-write",
-      "GS_ADMIN": "GraphSpace Administrator"
+      "GS_ADMIN": "GraphSpace Administrator",
+      "mixed": "Mixed GraphSpace access",
+      "legacy_custom": "Legacy/custom access"
     },
     "form": {
       "title_detail": "View Account",

@@ -32,6 +32,7 @@ import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.auth.GraphSpaceUserService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.structure.auth.User;
 
@@ -52,6 +53,8 @@ public class UserServiceCompatibilityTest {
                .thenReturn(new User());
         this.service = new UserService();
         ReflectionTestUtils.setField(this.service, "config", this.config);
+        ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
+                Mockito.mock(GraphSpaceUserService.class));
     }
 
     @Test
@@ -111,6 +114,7 @@ public class UserServiceCompatibilityTest {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
         Mockito.when(this.auth.getUserByName("user"))
                .thenReturn(user("user"));
+        Mockito.when(this.client.findUserByName("user")).thenReturn(user("user"));
 
         this.service.updatePersonal(this.client, "user", "display-name",
                                     "description");

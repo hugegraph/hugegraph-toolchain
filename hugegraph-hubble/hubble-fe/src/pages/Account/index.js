@@ -137,6 +137,9 @@ const GlobalAccounts = () => {
             width: 140,
             render: row => {
                 const preset = getAccountPreset(row);
+                if (!preset) {
+                    return <Tag>{t('account.permission_preset.mixed')}</Tag>;
+                }
                 const color = preset === PERMISSION_PRESETS.SUPER_ADMIN ? 'red'
                     : preset === PERMISSION_PRESETS.GS_ADMIN ? 'blue' : 'default';
                 return <Tag color={color}>{t(`account.permission_preset.${preset}`)}</Tag>;

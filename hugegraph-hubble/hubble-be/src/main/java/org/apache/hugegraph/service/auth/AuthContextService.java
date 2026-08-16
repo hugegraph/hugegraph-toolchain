@@ -87,7 +87,8 @@ public class AuthContextService {
     }
 
     public Map<String, Object> context(HugeClient client, String username) {
-        if (!this.config.get(HubbleOptions.AUTH_ENABLED)) {
+        if (Boolean.FALSE.equals(
+                this.config.get(HubbleOptions.AUTH_ENABLED))) {
             return anonymousContext(this.config.get(HubbleOptions.PD_ENABLED));
         }
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
@@ -136,10 +137,8 @@ public class AuthContextService {
         context.put("username", null);
         context.put("role", "ANONYMOUS");
         Map<String, Set<String>> actions = new LinkedHashMap<>();
-        actions.put("graphspaces", pdEnabled ?
-                    Collections.singleton("read") : Collections.emptySet());
-        context.put("capabilities", pdEnabled ?
-                    set(GRAPH_RESOURCES_ACCESS, GRAPHSPACES_READ) :
+        actions.put("graphspaces", pdEnabled ? Collections.singleton("read") : Collections.emptySet());
+        context.put("capabilities", pdEnabled ? set(GRAPH_RESOURCES_ACCESS, GRAPHSPACES_READ) :
                     Collections.singleton(GRAPH_RESOURCES_ACCESS));
         context.put("actions", actions);
         Map<String, Object> scopes = new LinkedHashMap<>();
@@ -166,6 +165,8 @@ public class AuthContextService {
         if (pdEnabled && (SUPERADMIN.equals(role) ||
                           SPACEADMIN.equals(role))) {
             capabilities.add(GRAPHSPACE_MEMBERS_MANAGE);
+        }
+        if (pdEnabled && SUPERADMIN.equals(role)) {
             capabilities.add(GRAPHSPACE_ROLES_MANAGE);
             capabilities.add(GRAPHSPACE_AUTHORIZATIONS_MANAGE);
         }
@@ -185,8 +186,8 @@ public class AuthContextService {
         actions.put("graphspaces", pdEnabled ?
                    (superAdmin ? CRUD_ACTIONS : set("read")) : emptySet());
         actions.put("members", spaceManager ? MEMBER_ACTIONS : emptySet());
-        actions.put("roles", spaceManager ? CRUD_ACTIONS : emptySet());
-        actions.put("authorizations", spaceManager ?
+        actions.put("roles", superAdmin ? CRUD_ACTIONS : emptySet());
+        actions.put("authorizations", superAdmin ?
                    AUTHORIZATION_ACTIONS : emptySet());
         actions.put("operations", superAdmin ?
                    OPERATIONS_ACTIONS : emptySet());

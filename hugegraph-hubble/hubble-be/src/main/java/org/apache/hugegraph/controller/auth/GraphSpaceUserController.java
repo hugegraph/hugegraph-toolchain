@@ -18,6 +18,8 @@
 
 package org.apache.hugegraph.controller.auth;
 
+import java.util.Map;
+
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.driver.HugeClient;
@@ -84,6 +86,15 @@ public class GraphSpaceUserController extends AuthController {
             @PathVariable("id") String userId) {
         HugeClient client = this.requireGraphSpaceManager(graphSpace);
         return client.auth().addSpaceAdmin(userId, graphSpace);
+    }
+
+    @PutMapping("{id}/preset")
+    public void setPermissionPreset(
+            @PathVariable("graphspace") String graphSpace,
+            @PathVariable("id") String userId,
+            @RequestBody Map<String, String> body) {
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        this.userService.applySpacePreset(client, graphSpace, userId, body.get("permission_preset"));
     }
 
     @DeleteMapping("spaceadmin/{id}")

@@ -280,10 +280,8 @@ public class HubbleOptions extends OptionHolder {
             );
 
     public static final ConfigOption<Boolean> AUTH_ENABLED =
-            new ConfigOption<>(
-                    "auth.enabled",
-                    "Whether Hubble requires a user session. Set false when " +
-                    "the connected HugeGraph Server runs in anonymous mode.",
+            new ConfigOption<>("auth.enabled",
+                    "Whether Hubble requires a user session. Set false when " + "the connected HugeGraph Server runs in anonymous mode.",
                     null,
                     true
             );
