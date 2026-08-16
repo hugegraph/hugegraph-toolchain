@@ -54,7 +54,7 @@ public class GraphSpaceUserController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
         return this.userService.queryPage(client, graphSpace, query, pageNo,
                                           pageSize);
     }
@@ -68,7 +68,7 @@ public class GraphSpaceUserController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
         return this.userService.querySpaceAdmins(client, graphSpace, query,
                                                  pageNo, pageSize);
     }
