@@ -137,10 +137,8 @@ public class AuthContextService {
         context.put("username", null);
         context.put("role", "ANONYMOUS");
         Map<String, Set<String>> actions = new LinkedHashMap<>();
-        actions.put("graphspaces", pdEnabled ?
-                    Collections.singleton("read") : Collections.emptySet());
-        context.put("capabilities", pdEnabled ?
-                    set(GRAPH_RESOURCES_ACCESS, GRAPHSPACES_READ) :
+        actions.put("graphspaces", pdEnabled ? Collections.singleton("read") : Collections.emptySet());
+        context.put("capabilities", pdEnabled ? set(GRAPH_RESOURCES_ACCESS, GRAPHSPACES_READ) :
                     Collections.singleton(GRAPH_RESOURCES_ACCESS));
         context.put("actions", actions);
         Map<String, Object> scopes = new LinkedHashMap<>();

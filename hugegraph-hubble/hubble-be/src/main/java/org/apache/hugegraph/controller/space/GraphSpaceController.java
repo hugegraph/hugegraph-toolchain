@@ -105,10 +105,8 @@ public class GraphSpaceController extends BaseController {
         if (this.authMode != null && this.authMode.anonymous()) {
             HugeClient client = this.authClient(null, null);
             List<Map<String, Object>> graphSpaces =
-                    this.graphSpaceService.queryAnonymousGs(
-                            client, query, createTime);
-            return all ? graphSpaces :
-                   PageUtil.page(graphSpaces, pageNo, pageSize);
+                    this.graphSpaceService.queryAnonymousGs(client, query, createTime);
+            return all ? graphSpaces : PageUtil.page(graphSpaces, pageNo, pageSize);
         }
         if (all) {
             HugeClient client = this.authClient(null, null);
@@ -147,11 +145,9 @@ public class GraphSpaceController extends BaseController {
         }
         HugeClient client = this.authClient(null, null);
         if (this.authMode != null && this.authMode.anonymous()) {
-            GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(
-                    this.graphSpaceService.getWithoutAdmins(client,
+            GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(this.graphSpaceService.getWithoutAdmins(client,
                                                             graphspace));
-            entity.setStatistic(
-                    this.graphSpaceService.evCount(client, graphspace));
+            entity.setStatistic(this.graphSpaceService.evCount(client, graphspace));
             return this.graphSpaceService.toView(entity);
         }
         // Get GraphSpace Info

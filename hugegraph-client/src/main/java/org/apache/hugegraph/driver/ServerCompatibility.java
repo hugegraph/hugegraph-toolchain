@@ -43,8 +43,7 @@ public final class ServerCompatibility {
             if (VersionUtil.gte(normalized, DEFAULT_ROLE_MIN_VERSION)) {
                 return Profile.MODERN;
             }
-            return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ?
-                   Profile.GRAPHSPACE : Profile.LEGACY;
+            return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ? Profile.GRAPHSPACE : Profile.LEGACY;
         } catch (RuntimeException ignored) {
             return Profile.LEGACY;
         }

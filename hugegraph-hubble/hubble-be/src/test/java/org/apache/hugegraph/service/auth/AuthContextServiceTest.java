@@ -88,10 +88,8 @@ public class AuthContextServiceTest {
         Assert.assertTrue(actions(context, "members").contains("add"));
         Assert.assertTrue(actions(context, "roles").isEmpty());
         Assert.assertTrue(actions(context, "authorizations").isEmpty());
-        Assert.assertFalse(capabilities(context).contains(
-                           "graphspace_roles_manage"));
-        Assert.assertFalse(capabilities(context).contains(
-                           "graphspace_authorizations_manage"));
+        Assert.assertFalse(capabilities(context).contains("graphspace_roles_manage"));
+        Assert.assertFalse(capabilities(context).contains("graphspace_authorizations_manage"));
         Assert.assertEquals(Arrays.asList("space-a", "space-b"),
                             scopes(context).get("admin_graphspaces"));
         Assert.assertFalse((Boolean) scopes(context).get("all_graphspaces"));

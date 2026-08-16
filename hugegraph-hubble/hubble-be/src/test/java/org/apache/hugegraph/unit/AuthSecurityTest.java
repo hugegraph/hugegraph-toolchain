@@ -187,32 +187,26 @@ public class AuthSecurityTest {
         AuthModeService mode = new AuthModeService(config);
         ReflectionTestUtils.setField(interceptor, "authMode", mode);
 
-        MockHttpServletRequest users = new MockHttpServletRequest(
-                "GET", "/api/v1.3/auth/users");
+        MockHttpServletRequest users = new MockHttpServletRequest("GET", "/api/v1.3/auth/users");
         try {
-            interceptor.preHandle(
-                    users, new MockHttpServletResponse(), null);
+            interceptor.preHandle(users, new MockHttpServletResponse(), null);
             Assert.fail("Expected anonymous auth management to be blocked");
         } catch (ExternalException forbidden) {
             Assert.assertEquals(HttpStatus.FORBIDDEN.value(),
                                 forbidden.status());
         }
 
-        MockHttpServletRequest context = new MockHttpServletRequest(
-                "GET", "/api/v1.3/auth/context");
-        Assert.assertTrue(interceptor.preHandle(
-                context, new MockHttpServletResponse(), null));
+        MockHttpServletRequest context = new MockHttpServletRequest("GET", "/api/v1.3/auth/context");
+        Assert.assertTrue(interceptor.preHandle(context, new MockHttpServletResponse(), null));
     }
 
     @Test
     public void testConfigBootstrapDoesNotCreateServerClient()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
-        MockHttpServletRequest request = new MockHttpServletRequest(
-                "GET", "/api/v1.3/config");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1.3/config");
 
-        Assert.assertTrue(interceptor.preHandle(
-                request, new MockHttpServletResponse(), null));
+        Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
         Assert.assertEquals(0, interceptor.authClients);
         Assert.assertEquals(0, interceptor.unauthClients);
         Assert.assertNull(request.getAttribute("hugeClient"));
@@ -365,8 +359,7 @@ public class AuthSecurityTest {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "GET", "/api/v1.3/graphspaces/SPACE/graphs/graph/schema");
 
-        Assert.assertTrue(interceptor.preHandle(
-                request, new MockHttpServletResponse(), null));
+        Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
         Assert.assertEquals(1, interceptor.unauthClients);
         Assert.assertEquals("SPACE", interceptor.graphSpace);
         Assert.assertEquals("graph", interceptor.graph);

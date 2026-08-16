@@ -32,8 +32,7 @@ import {
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
-const permissionPresetChanged = (prev, next) => (
-    prev.permission_preset !== next.permission_preset
+const permissionPresetChanged = (prev, next) => (prev.permission_preset !== next.permission_preset
 );
 
 const HelpLabel = ({t, labelKey}) => (
@@ -79,8 +78,7 @@ const EditLayer = ({
         }).catch(() => message.error(t('common.msg.operation_failed')));
     }, [onCancel, refresh, t]);
     const updateUser = useCallback(values => {
-        return api.auth.updateUser(
-            data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
+        return api.auth.updateUser(data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
         ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.update_success'));
@@ -99,8 +97,7 @@ const EditLayer = ({
             ...values,
             permission_preset: PERMISSION_PRESETS.GS_ADMIN,
         });
-        return api.auth.updateAdminspace(
-            data.id, payload.adminSpaces, PAGE_ERROR_CONFIG
+        return api.auth.updateAdminspace(data.id, payload.adminSpaces, PAGE_ERROR_CONFIG
         ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.set_success'));

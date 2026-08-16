@@ -249,8 +249,7 @@ const SpaceAccess = () => {
     const members = useScopedResource(
         graphSpace, contextVersion, loadMembers, responseRecords
     );
-    const admins = useScopedResource(
-        graphSpace, contextVersion, loadAdmins, responseRecords
+    const admins = useScopedResource(graphSpace, contextVersion, loadAdmins, responseRecords
     );
     const visibleMembers = {
         data: mergeMembersAndAdmins(members.data, admins.data),
@@ -303,8 +302,7 @@ const SpaceAccess = () => {
     }, [memberForm]);
     const submitMember = useCallback(values => {
         runMutation(
-            () => api.auth.setSpacePreset(
-                graphSpace, values.user_id, values.permission_preset,
+            () => api.auth.setSpacePreset(graphSpace, values.user_id, values.permission_preset,
                 PAGE_ERROR_CONFIG
             ),
             closeMember

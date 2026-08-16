@@ -146,12 +146,9 @@ public abstract class BaseController {
             client.assignGraph(graphSpace, graph);
             return client;
         }
-        HugeClient client = this.authMode != null &&
-                            this.authMode.anonymous() ?
-                            this.hugeClientPoolService.createUnauthClient(
-                                    graphSpace, graph) :
-                            this.hugeClientPoolService.createAuthClient(
-                                graphSpace, graph, this.getToken());
+        HugeClient client = this.authMode != null && this.authMode.anonymous() ?
+                            this.hugeClientPoolService.createUnauthClient(graphSpace, graph) :
+                            this.hugeClientPoolService.createAuthClient(graphSpace, graph, this.getToken());
         if (graphSpace != null || graph != null) {
             client.assignGraph(graphSpace, graph);
         }
@@ -183,8 +180,7 @@ public abstract class BaseController {
             String graphSpace) {
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client)) {
-            throw new ForbiddenException(
-                    "Permission denied: manage authorization objects");
+            throw new ForbiddenException("Permission denied: manage authorization objects");
         }
         client.assignGraph(graphSpace, null);
         return client;

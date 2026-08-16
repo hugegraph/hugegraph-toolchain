@@ -53,8 +53,7 @@ public class UserServiceCompatibilityTest {
                .thenReturn(new User());
         this.service = new UserService();
         ReflectionTestUtils.setField(this.service, "config", this.config);
-        ReflectionTestUtils.setField(
-                this.service, "graphSpaceUserService",
+        ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
                 Mockito.mock(GraphSpaceUserService.class));
     }
 

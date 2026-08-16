@@ -94,8 +94,7 @@ public class GraphSpaceUserController extends AuthController {
             @PathVariable("id") String userId,
             @RequestBody Map<String, String> body) {
         HugeClient client = this.requireGraphSpaceManager(graphSpace);
-        this.userService.applySpacePreset(
-                client, graphSpace, userId, body.get("permission_preset"));
+        this.userService.applySpacePreset(client, graphSpace, userId, body.get("permission_preset"));
     }
 
     @DeleteMapping("spaceadmin/{id}")

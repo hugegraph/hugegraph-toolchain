@@ -186,8 +186,7 @@ public class GraphSpaceService {
         }
         client.assignGraph(graphSpace, "");
         return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.auth().checkDefaultRole(
-                        graphSpace, "observer", graph));
+                graph -> client.auth().checkDefaultRole(graphSpace, "observer", graph));
     }
 
     public List<Map<String, Object>> queryAnonymousGs(HugeClient client,
@@ -198,12 +197,9 @@ public class GraphSpaceService {
         List<Map<String, Object>> results = client.graphSpace()
                 .listGraphSpace().stream()
                 .map(client.graphSpace()::getGraphSpace)
-                .filter(space -> space != null &&
-                                 (space.getName().contains(prefix) ||
-                                  space.getNickname() != null &&
-                                  space.getNickname().contains(prefix)))
-                .filter(space -> space.getCreateTime() == null ||
-                                 space.getCreateTime().compareTo(after) > 0)
+                .filter(space -> space != null && (space.getName().contains(prefix) ||
+                                  space.getNickname() != null && space.getNickname().contains(prefix)))
+                .filter(space -> space.getCreateTime() == null || space.getCreateTime().compareTo(after) > 0)
                 .map(space -> {
                     GraphSpaceEntity entity =
                             GraphSpaceEntity.fromGraphSpace(space);

@@ -127,8 +127,7 @@ describe('route guard', () => {
         expect(sessionStorage.getItem('redirect')).toBeNull();
     });
 
-    it.each(['/login', '/profile'])(
-        'hides authentication route %s in anonymous mode',
+    it.each(['/login', '/profile'])('hides authentication route %s in anonymous mode',
         route => {
             isAuthEnabled.mockReturnValue(false);
             renderRoutes(route);

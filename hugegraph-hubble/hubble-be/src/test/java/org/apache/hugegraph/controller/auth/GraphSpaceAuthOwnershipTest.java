@@ -497,23 +497,17 @@ public class GraphSpaceAuthOwnershipTest {
         Mockito.when(this.graphs.listGraph())
                .thenReturn(Arrays.asList("graph-1", "graph-2"));
         BelongService belongs = Mockito.mock(BelongService.class);
-        Mockito.when(belongs.list(
-                this.client, "SPACE_A", null, "user-id"))
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id"))
                .thenReturn(Collections.emptyList());
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
-        service.applySpacePreset(
-                this.client, "SPACE_A", "user-id", "GS_READ_ONLY");
+        service.applySpacePreset(this.client, "SPACE_A", "user-id", "GS_READ_ONLY");
 
-        Mockito.verify(this.auth).addSpaceMember(
-                "graph-user", "SPACE_A");
-        Mockito.verify(this.graphSpace).setDefaultRole(
-                "SPACE_A", "graph-user", "observer", "graph-1");
-        Mockito.verify(this.graphSpace).setDefaultRole(
-                "SPACE_A", "graph-user", "observer", "graph-2");
-        Mockito.verify(this.graphSpace, Mockito.never()).setDefaultRole(
-                "SPACE_A", "graph-user", "observer");
+        Mockito.verify(this.auth).addSpaceMember("graph-user", "SPACE_A");
+        Mockito.verify(this.graphSpace).setDefaultRole("SPACE_A", "graph-user", "observer", "graph-1");
+        Mockito.verify(this.graphSpace).setDefaultRole("SPACE_A", "graph-user", "observer", "graph-2");
+        Mockito.verify(this.graphSpace, Mockito.never()).setDefaultRole("SPACE_A", "graph-user", "observer");
     }
 
     @Test

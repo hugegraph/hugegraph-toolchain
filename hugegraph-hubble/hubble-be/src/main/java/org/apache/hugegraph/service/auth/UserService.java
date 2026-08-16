@@ -217,8 +217,7 @@ public class UserService extends AuthService {
 
     public void add(HugeClient client, UserEntity ue) {
         if (isPdEnabled()) {
-            this.graphSpaceUserService.validatePermissionPresets(
-                    client, ue.getGraphspacePermissions(),
+            this.graphSpaceUserService.validatePermissionPresets(client, ue.getGraphspacePermissions(),
                     ue.getPermissionPreset());
         }
         User user = new User();
@@ -239,8 +238,7 @@ public class UserService extends AuthService {
             }
         }
         if (isPdEnabled()) {
-            this.graphSpaceUserService.applyPermissionPresets(
-                    client, ue.getName(), ue.getGraphspacePermissions(),
+            this.graphSpaceUserService.applyPermissionPresets(client, ue.getName(), ue.getGraphspacePermissions(),
                     ue.getPermissionPreset());
         }
 
@@ -383,8 +381,7 @@ public class UserService extends AuthService {
         List<String> graphSpaces = client.graphSpace().listGraphSpace();
         boolean legacyCustom = false;
         for (String graphSpace : graphSpaces) {
-            legacyCustom |= this.graphSpaceUserService.hasCustomRoles(
-                    client, graphSpace, userEntity.getId());
+            legacyCustom |= this.graphSpaceUserService.hasCustomRoles(client, graphSpace, userEntity.getId());
             if (userEntity.getAdminSpaces() != null &&
                 userEntity.getAdminSpaces().contains(graphSpace)) {
                 permissions.add(permission(graphSpace, "GS_ADMIN"));
@@ -393,8 +390,7 @@ public class UserService extends AuthService {
             if (client.graphSpace().checkDefaultRole(
                     graphSpace, userEntity.getName(), "analyst")) {
                 permissions.add(permission(graphSpace, "GS_READ_WRITE"));
-            } else if (hasObserverRole(
-                    client, graphSpace, userEntity.getName())) {
+            } else if (hasObserverRole(client, graphSpace, userEntity.getName())) {
                 permissions.add(permission(graphSpace, "GS_READ_ONLY"));
             }
         }
@@ -428,8 +424,7 @@ public class UserService extends AuthService {
                 }
             }
             for (String graphSpace : graphSpaces) {
-                legacyCustom |= this.graphSpaceUserService.hasCustomRoles(
-                        client, graphSpace, user.getId());
+                legacyCustom |= this.graphSpaceUserService.hasCustomRoles(client, graphSpace, user.getId());
                 if (user.getAdminSpaces() != null &&
                     user.getAdminSpaces().contains(graphSpace)) {
                     continue;
@@ -437,8 +432,7 @@ public class UserService extends AuthService {
                 if (client.graphSpace().checkDefaultRole(
                         graphSpace, user.getName(), "analyst")) {
                     values.add(permission(graphSpace, "GS_READ_WRITE"));
-                } else if (hasObserverRole(
-                        client, graphSpace, user.getName())) {
+                } else if (hasObserverRole(client, graphSpace, user.getName())) {
                     values.add(permission(graphSpace, "GS_READ_ONLY"));
                 }
             }
@@ -462,8 +456,7 @@ public class UserService extends AuthService {
                                            String username) {
         client.assignGraph(graphSpace, "");
         return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.graphSpace().checkDefaultRole(
-                        graphSpace, username, "observer", graph));
+                graph -> client.graphSpace().checkDefaultRole(graphSpace, username, "observer", graph));
     }
 
     private static boolean hasCurrentUserAccess(HugeClient client,
@@ -476,8 +469,7 @@ public class UserService extends AuthService {
         }
         client.assignGraph(graphSpace, "");
         return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.auth().checkDefaultRole(
-                        graphSpace, "observer", graph));
+                graph -> client.auth().checkDefaultRole(graphSpace, "observer", graph));
     }
 
     protected List<Object> getSpaceAndSpacenum(HugeClient hugeClient) {
@@ -514,8 +506,7 @@ public class UserService extends AuthService {
 
     public void update(HugeClient hugeClient, UserEntity userEntity) {
         if (isPdEnabled()) {
-            this.graphSpaceUserService.validatePermissionPresets(
-                    hugeClient, userEntity.getGraphspacePermissions(),
+            this.graphSpaceUserService.validatePermissionPresets(hugeClient, userEntity.getGraphspacePermissions(),
                     userEntity.getPermissionPreset());
         }
         User user = new User();
@@ -541,8 +532,7 @@ public class UserService extends AuthService {
 
         hugeClient.auth().updateUser(user);
         if (isPdEnabled()) {
-            this.graphSpaceUserService.applyPermissionPresets(
-                    hugeClient, userEntity.getName(),
+            this.graphSpaceUserService.applyPermissionPresets(hugeClient, userEntity.getName(),
                     userEntity.getGraphspacePermissions(),
                     userEntity.getPermissionPreset());
         }
@@ -626,15 +616,13 @@ public class UserService extends AuthService {
         }
         for (String adminspace : adminspaces) {
             if (!oldadminspaces.contains(adminspace)) {
-                this.graphSpaceUserService.applySpacePreset(
-                        hugeClient, adminspace, account.id().toString(),
+                this.graphSpaceUserService.applySpacePreset(hugeClient, adminspace, account.id().toString(),
                         "GS_ADMIN");
             }
         }
         for (String oldadminspace : oldadminspaces) {
             if (!adminspaces.contains(oldadminspace)) {
-                this.graphSpaceUserService.removeSpacePreset(
-                        hugeClient, oldadminspace,
+                this.graphSpaceUserService.removeSpacePreset(hugeClient, oldadminspace,
                         account.id().toString());
             }
         }

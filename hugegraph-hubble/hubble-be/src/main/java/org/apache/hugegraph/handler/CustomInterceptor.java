@@ -183,8 +183,7 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
     }
 
     protected HugeClient unauthClient(String graphSpace, String graph) {
-        return this.hugeClientPoolService.createUnauthClient(
-                graphSpace, graph);
+        return this.hugeClientPoolService.createUnauthClient(graphSpace, graph);
     }
 
     private String[] requestScope(String uri) {

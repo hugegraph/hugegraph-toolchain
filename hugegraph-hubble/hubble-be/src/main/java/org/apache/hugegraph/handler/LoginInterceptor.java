@@ -71,8 +71,6 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
         if (!uri.contains("/auth/")) {
             return false;
         }
-        return !uri.endsWith("/auth/context") &&
-               !uri.endsWith("/auth/status") &&
-               !uri.endsWith("/auth/logout");
+        return !uri.endsWith("/auth/context") && !uri.endsWith("/auth/status") && !uri.endsWith("/auth/logout");
     }
 }
