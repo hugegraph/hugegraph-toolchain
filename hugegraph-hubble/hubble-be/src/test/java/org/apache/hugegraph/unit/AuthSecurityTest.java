@@ -74,6 +74,7 @@ import org.apache.hugegraph.handler.LoginInterceptor;
 import org.apache.hugegraph.handler.MessageSourceHandler;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.AuthContextService;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.structure.auth.Login;
@@ -175,6 +176,40 @@ public class AuthSecurityTest {
         Assert.assertTrue(interceptor.preHandle(request,
                                                new MockHttpServletResponse(),
                                                null));
+    }
+
+    @Test
+    public void testAnonymousModeBlocksAuthManagementButAllowsContext() {
+        LoginInterceptor interceptor = new LoginInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        AuthModeService mode = new AuthModeService(config);
+        ReflectionTestUtils.setField(interceptor, "authMode", mode);
+
+        MockHttpServletRequest users = new MockHttpServletRequest("GET", "/api/v1.3/auth/users");
+        try {
+            interceptor.preHandle(users, new MockHttpServletResponse(), null);
+            Assert.fail("Expected anonymous auth management to be blocked");
+        } catch (ExternalException forbidden) {
+            Assert.assertEquals(HttpStatus.FORBIDDEN.value(),
+                                forbidden.status());
+        }
+
+        MockHttpServletRequest context = new MockHttpServletRequest("GET", "/api/v1.3/auth/context");
+        Assert.assertTrue(interceptor.preHandle(context, new MockHttpServletResponse(), null));
+    }
+
+    @Test
+    public void testConfigBootstrapDoesNotCreateServerClient()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1.3/config");
+
+        Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
     }
 
     @Test
@@ -311,6 +346,22 @@ public class AuthSecurityTest {
         Assert.assertEquals("space1", interceptor.graphSpace);
         Assert.assertEquals("graph1", interceptor.graph);
         Assert.assertEquals("token", interceptor.token);
+    }
+
+    @Test
+    public void testAnonymousClientUsesGraphSpaceScope() throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        AuthModeService mode = new AuthModeService(config);
+        ReflectionTestUtils.setField(interceptor, "authMode", mode);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1.3/graphspaces/SPACE/graphs/graph/schema");
+
+        Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
+        Assert.assertEquals(1, interceptor.unauthClients);
+        Assert.assertEquals("SPACE", interceptor.graphSpace);
+        Assert.assertEquals("graph", interceptor.graph);
     }
 
     @Test
@@ -869,6 +920,15 @@ public class AuthSecurityTest {
         @Override
         protected org.apache.hugegraph.driver.HugeClient unauthClient() {
             this.unauthClients++;
+            return null;
+        }
+
+        @Override
+        protected org.apache.hugegraph.driver.HugeClient unauthClient(
+                  String graphSpace, String graph) {
+            this.unauthClients++;
+            this.graphSpace = graphSpace;
+            this.graph = graph;
             return null;
         }
     }

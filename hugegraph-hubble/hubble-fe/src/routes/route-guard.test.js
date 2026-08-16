@@ -19,7 +19,7 @@
 import {render, screen} from '@testing-library/react';
 import {MemoryRouter, Outlet, useLocation} from 'react-router-dom';
 import RouteList from './index';
-import {isPdEnabled} from '../utils/config';
+import {isAuthEnabled, isPdEnabled} from '../utils/config';
 
 let mockCapabilities = new Set();
 
@@ -54,6 +54,7 @@ jest.mock('../pages/Test', () => () => <div>test page</div>);
 jest.mock('../pages/GraphAnalysis', () => () => <div>graph analysis page</div>);
 jest.mock('../pages/AsyncTaskResult', () => () => <div>async task result page</div>);
 jest.mock('../utils/config', () => ({
+    isAuthEnabled: jest.fn(() => true),
     isPdEnabled: jest.fn(() => false),
 }));
 jest.mock('../auth/AuthContext', () => ({
@@ -97,6 +98,7 @@ describe('route guard', () => {
         sessionStorage.clear();
         mockAccountRender.mockClear();
         mockCapabilities = new Set();
+        isAuthEnabled.mockReturnValue(true);
         isPdEnabled.mockReturnValue(false);
     });
 
@@ -124,6 +126,17 @@ describe('route guard', () => {
         expect(screen.getByText('login:/login?redirect=%2Ftask%2Fedit')).toBeTruthy();
         expect(sessionStorage.getItem('redirect')).toBeNull();
     });
+
+    it.each(['/login', '/profile'])('hides authentication route %s in anonymous mode',
+        route => {
+            isAuthEnabled.mockReturnValue(false);
+            renderRoutes(route);
+
+            expect(screen.getByText('navigation page')).toBeTruthy();
+            expect(screen.queryByText(/^login:/)).toBeNull();
+            expect(screen.queryByText('my page')).toBeNull();
+        }
+    );
 
     it('renders the standard 404 surface for an unknown operations route', () => {
         sessionStorage.setItem('user_', JSON.stringify({
@@ -188,7 +201,7 @@ describe('route guard', () => {
 
         renderRoutes('/account');
 
-        expect(screen.getByText('my page')).toBeTruthy();
+        expect(screen.getByText('navigation page')).toBeTruthy();
         expect(screen.queryByText('account page')).toBeNull();
         expect(mockAccountRender).not.toHaveBeenCalled();
     });
@@ -231,7 +244,7 @@ describe('route guard', () => {
 
     it.each([
         ['/graphspace', 'graph page'],
-        ['/account', 'my page'],
+        ['/account', 'navigation page'],
     ])('uses the non-PD fallback for %s', (route, page) => {
         sessionStorage.setItem('user_', JSON.stringify({
             id: 'admin',
@@ -280,7 +293,7 @@ describe('route guard', () => {
 
         renderRoutes('/account');
 
-        expect(screen.getByText('my page')).toBeTruthy();
+        expect(screen.getByText('navigation page')).toBeTruthy();
         expect(screen.queryByText('account page')).toBeNull();
     });
 

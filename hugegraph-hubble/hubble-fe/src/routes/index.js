@@ -89,7 +89,7 @@ const AccountRoute = () => {
     return hasCapability('accounts_manage')
         || hasCapability('graphspace_members_manage')
         ? <Account />
-        : <Navigate to='/profile' replace />;
+        : <Navigate to='/navigation' replace />;
 };
 
 const GraphSpaceListRoute = () => {
@@ -102,7 +102,7 @@ const GraphSpaceListRoute = () => {
         return null;
     }
     return hasCapability('graphspaces_read')
-        ? <GraphSpace /> : <Navigate to='/profile' replace />;
+        ? <GraphSpace /> : <Navigate to='/navigation' replace />;
 };
 
 const LegacyProfileRedirect = () => {
@@ -140,7 +140,12 @@ const GraphspaceParamRoute = ({children, fallback}) => {
 const RouteList = ({element}) => {
     return (
         <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route
+                path="/login"
+                element={isAuthEnabled()
+                    ? <Login />
+                    : <Navigate to='/navigation' replace />}
+            />
             <Route
                 path="/"
                 element={(
@@ -184,7 +189,12 @@ const RouteList = ({element}) => {
                 <Route path="/task/edit" element={<TaskEdit />} />
                 <Route path="/task/detail/:taskid" element={<TaskDetail />} />
 
-                <Route path='/profile' element={<My />} />
+                <Route
+                    path='/profile'
+                    element={isAuthEnabled()
+                        ? <My />
+                        : <Navigate to='/navigation' replace />}
+                />
                 <Route path='/my' element={<LegacyProfileRedirect />} />
                 <Route path='/resource' element={<Navigate to='/navigation' replace />} />
                 <Route path='/role' element={<Navigate to='/navigation' replace />} />

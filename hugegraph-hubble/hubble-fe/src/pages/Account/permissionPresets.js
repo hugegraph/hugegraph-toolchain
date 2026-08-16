@@ -34,9 +34,21 @@ const getAccountPreset = account => {
     if (account?.is_superadmin) {
         return PERMISSION_PRESETS.SUPER_ADMIN;
     }
-    const scopedPresets = (account?.graphspace_permissions ?? [])
+    if (explicit === 'LEGACY_CUSTOM') {
+        return null;
+    }
+    const scopedPermissions = Array.isArray(account?.graphspace_permissions) ? account.graphspace_permissions : [];
+    const scopedPresets = [...scopedPermissions,
+        ...(Array.isArray(account?.adminSpaces)
+            ? account.adminSpaces.map(graphspace => ({
+                graphspace,
+                permission_preset: PERMISSION_PRESETS.GS_ADMIN,
+            })) : [])]
         .map(permission => permission?.permission_preset)
         .filter(preset => presetKeys.includes(preset));
+    if (new Set(scopedPresets).size > 1) {
+        return null;
+    }
     if (scopedPresets.includes(PERMISSION_PRESETS.GS_ADMIN)) {
         return PERMISSION_PRESETS.GS_ADMIN;
     }
@@ -50,10 +62,22 @@ const getAccountPreset = account => {
 };
 
 const getPresetSpaces = account => {
-    const spaces = account?.graphspace_permissions ?? account?.adminSpaces;
+    const scoped = Array.isArray(account?.graphspace_permissions)
+        ? account.graphspace_permissions : [];
+    const admins = Array.isArray(account?.adminSpaces)
+        ? account.adminSpaces.map(graphspace => ({
+            graphspace,
+            permission_preset: PERMISSION_PRESETS.GS_ADMIN,
+        })) : [];
+    const spaces = [...scoped, ...admins];
     return Array.isArray(spaces)
-        ? spaces.map(space => (typeof space === 'string'
-            ? space : space.name ?? space.graphspace)).filter(Boolean)
+        ? Array.from(new Set(spaces.map(space => {
+            if (typeof space === 'string') {
+                return space;
+            }
+            const value = space?.name ?? space?.graphspace;
+            return typeof value === 'string' ? value : value?.name;
+        }).filter(Boolean)))
         : [];
 };
 

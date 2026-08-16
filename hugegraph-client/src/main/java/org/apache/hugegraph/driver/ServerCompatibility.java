@@ -29,6 +29,7 @@ import org.apache.hugegraph.util.VersionUtil;
 public final class ServerCompatibility {
 
     private static final String GRAPHSPACE_MIN_VERSION = "1.7.0";
+    private static final String DEFAULT_ROLE_MIN_VERSION = "1.8.0";
 
     private ServerCompatibility() {
     }
@@ -39,8 +40,10 @@ public final class ServerCompatibility {
         }
         try {
             String normalized = coreVersion.trim();
-            return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ?
-                   Profile.MODERN : Profile.LEGACY;
+            if (VersionUtil.gte(normalized, DEFAULT_ROLE_MIN_VERSION)) {
+                return Profile.MODERN;
+            }
+            return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ? Profile.GRAPHSPACE : Profile.LEGACY;
         } catch (RuntimeException ignored) {
             return Profile.LEGACY;
         }
@@ -50,18 +53,29 @@ public final class ServerCompatibility {
         return profile(coreVersion).supportsGraphSpace();
     }
 
+    public static boolean supportsDefaultRole(String coreVersion) {
+        return profile(coreVersion).supportsDefaultRole();
+    }
+
     public enum Profile {
-        LEGACY(false),
-        MODERN(true);
+        LEGACY(false, false),
+        GRAPHSPACE(true, false),
+        MODERN(true, true);
 
         private final boolean graphSpace;
+        private final boolean defaultRole;
 
-        Profile(boolean graphSpace) {
+        Profile(boolean graphSpace, boolean defaultRole) {
             this.graphSpace = graphSpace;
+            this.defaultRole = defaultRole;
         }
 
         public boolean supportsGraphSpace() {
             return this.graphSpace;
+        }
+
+        public boolean supportsDefaultRole() {
+            return this.defaultRole;
         }
     }
 }

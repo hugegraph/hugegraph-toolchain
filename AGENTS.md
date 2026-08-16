@@ -79,7 +79,7 @@ mvn test -Dtest=FuncTestSuite -pl hugegraph-tools -ntp
 ## Code Style
 
 Checkstyle enforced via `tools/checkstyle.xml`:
-- Max line length: 100 characters
+- Max line length: 120 characters
 - 4-space indentation (no tabs)
 - No star imports
 - No `System.out.println`

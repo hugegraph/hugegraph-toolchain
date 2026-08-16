@@ -19,6 +19,8 @@
 package org.apache.hugegraph.handler;
 
 import java.util.regex.Pattern;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -61,6 +63,9 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
         validatePage(request, "page_no", false);
         validatePage(request, "page_size", true);
         String url = request.getRequestURI();
+        if (url.endsWith("/config")) {
+            return true;
+        }
         if (!CHECK_API_PATTERN.matcher(url).matches()) {
             setHugeClientToRequest(request);
             return true;
@@ -122,24 +127,20 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
             if (this.isLogoutRequest(uri)) {
                 return;
             }
-            if (this.authMode.anonymous()) {
-                client = unauthClient();
+            if (this.authMode != null && this.authMode.anonymous() &&
+                uri.endsWith("/auth/status")) {
+                return;
+            }
+            String[] scope = this.requestScope(uri);
+            String graphSpace = scope[0];
+            String graph = scope[1];
+            if (this.authMode != null && this.authMode.anonymous()) {
+                client = unauthClient(graphSpace, graph);
             } else if (!this.hasAuthSession(request)) {
                 return;
             } else {
                 String token =
                         (String) request.getSession().getAttribute(Constant.TOKEN_KEY);
-                String [] res = uri.split("/");
-                String graphSpace = null;
-                String graph = null;
-                for (int i = 0; i < res.length; i++) {
-                    if ("graphspaces".equals(res[i]) && i < res.length - 1) {
-                        graphSpace = res[i + 1];
-                    }
-                    if ("graphs".equals(res[i]) && i < res.length - 1) {
-                        graph = res[i + 1];
-                    }
-                }
                 client = this.authClient(graphSpace, graph, token);
             }
         }
@@ -179,5 +180,34 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
 
     protected HugeClient unauthClient() {
         return this.hugeClientPoolService.createUnauthClient();
+    }
+
+    protected HugeClient unauthClient(String graphSpace, String graph) {
+        return this.hugeClientPoolService.createUnauthClient(graphSpace, graph);
+    }
+
+    private String[] requestScope(String uri) {
+        String graphSpace = null;
+        String graph = null;
+        String[] parts = uri.split("/");
+        for (int i = 0; i < parts.length; i++) {
+            if ("graphspaces".equals(parts[i]) && i < parts.length - 1) {
+                graphSpace = parts[i + 1];
+                graphSpace = decodeSegment(graphSpace);
+            }
+            if ("graphs".equals(parts[i]) && i < parts.length - 1) {
+                graph = parts[i + 1];
+                graph = decodeSegment(graph);
+            }
+        }
+        return new String[]{graphSpace, graph};
+    }
+
+    private static String decodeSegment(String segment) {
+        try {
+            return URLDecoder.decode(segment, StandardCharsets.UTF_8.name());
+        } catch (java.io.UnsupportedEncodingException ignored) {
+            return segment;
+        }
     }
 }

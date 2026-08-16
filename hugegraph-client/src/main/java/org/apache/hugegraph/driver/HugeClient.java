@@ -24,6 +24,7 @@ import lombok.Getter;
 import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.rest.RestClientConfig;
+import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.util.VersionUtil;
 import org.apache.hugegraph.version.ClientVersion;
 import org.slf4j.Logger;
@@ -57,6 +58,8 @@ public class HugeClient implements Closeable {
      */
     private volatile boolean apiVersionChecked;
     private final Object apiVersionLock = new Object();
+    private ServerCompatibility.Profile compatibility =
+            ServerCompatibility.Profile.LEGACY;
     private VersionManager version;
     private GraphsManager graphs;
     private SchemaManager schema;
@@ -209,9 +212,8 @@ public class HugeClient implements Closeable {
         //       0.81 equals to the {latest_api_version} +10
         VersionUtil.check(apiVersion, "0.38", "0.81", "hugegraph-api in server");
         this.client.apiVersion(apiVersion);
-        boolean supportGs = ServerCompatibility.supportsGraphSpace(
-                this.version.getCoreVersion());
-        this.client.setSupportGs(supportGs);
+        this.compatibility = ServerCompatibility.profile(this.version.getCoreVersion());
+        this.client.setSupportGs(this.compatibility.supportsGraphSpace());
     }
 
     public GraphsManager graphs() {
@@ -256,6 +258,20 @@ public class HugeClient implements Closeable {
 
     public AuthManager auth() {
         return this.auth;
+    }
+
+    public boolean supportsDefaultRole() {
+        return this.compatibility.supportsDefaultRole();
+    }
+
+    public User findUserByName(String name) {
+        if (this.supportsDefaultRole()) {
+            return this.auth.getUserByName(name);
+        }
+        return this.auth.listUsers().stream()
+                        .filter(user -> name.equals(user.name()))
+                        .findFirst()
+                        .orElse(null);
     }
 
     public MetricsManager metrics() {

@@ -49,6 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(Constant.API_VERSION + "graphspaces")
@@ -101,6 +102,11 @@ public class GraphSpaceController extends BaseController {
             return ImmutableMap.of("records", Collections.emptyList(),
                                   "total", 0);
         }
+        if (this.authMode != null && this.authMode.anonymous()) {
+            HugeClient client = this.authClient(null, null);
+            List<Map<String, Object>> graphSpaces = this.graphSpaceService.queryAnonymousGs(client, query, createTime);
+            return all ? graphSpaces : PageUtil.page(graphSpaces, pageNo, pageSize);
+        }
         if (all) {
             HugeClient client = this.authClient(null, null);
             return this.userService.isSuperAdmin(client) ?
@@ -137,6 +143,12 @@ public class GraphSpaceController extends BaseController {
             return this.graphSpaceService.toView(stub);
         }
         HugeClient client = this.authClient(null, null);
+        if (this.authMode != null && this.authMode.anonymous()) {
+            GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(this.graphSpaceService.getWithoutAdmins(client,
+                                                            graphspace));
+            entity.setStatistic(this.graphSpaceService.evCount(client, graphspace));
+            return this.graphSpaceService.toView(entity);
+        }
         // Get GraphSpace Info
         return graphSpaceService.toView(
                 graphSpaceService.getWithAdmins(client, graphspace));

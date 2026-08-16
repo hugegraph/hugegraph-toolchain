@@ -68,3 +68,22 @@ test('clears admin spaces for the super administrator preset', () => {
         is_superadmin: true,
     });
 });
+
+test('requires an explicit choice before replacing mixed GraphSpace presets', () => {
+    expect(getAccountPreset({
+        graphspace_permissions: [
+            {graphspace: 'read', permission_preset: 'GS_READ_ONLY'},
+            {graphspace: 'write', permission_preset: 'GS_READ_WRITE'},
+        ],
+    })).toBeNull();
+});
+
+test('requires an explicit choice before migrating legacy custom access', () => {
+    expect(getAccountPreset({
+        permission_preset: 'LEGACY_CUSTOM',
+        graphspace_permissions: [{
+            graphspace: 'legacy',
+            permission_preset: 'GS_READ_WRITE',
+        }],
+    })).toBeNull();
+});

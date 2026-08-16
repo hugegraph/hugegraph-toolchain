@@ -45,7 +45,7 @@ public class TargetController extends AuthController {
 
     @GetMapping("list")
     public List<Target> list(@PathVariable("graphspace") String graphSpace) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.targetService.list(client, graphSpace);
     }
 
@@ -58,7 +58,7 @@ public class TargetController extends AuthController {
                           defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false,
                           defaultValue = "10") int pageSize) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.targetService.queryPage(client, graphSpace, query, pageNo,
                                             pageSize);
     }
@@ -66,14 +66,14 @@ public class TargetController extends AuthController {
     @GetMapping("{id}")
     public Target get(@PathVariable("graphspace") String graphSpace,
                       @PathVariable("id") String targetId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.targetService.get(client, graphSpace, targetId);
     }
 
     @PostMapping
     public Target add(@PathVariable("graphspace") String graphSpace,
                       @RequestBody Target target) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         return this.targetService.add(client, graphSpace, target);
     }
 
@@ -81,7 +81,7 @@ public class TargetController extends AuthController {
     public Target update(@PathVariable("graphspace") String graphSpace,
                          @PathVariable("id") String targetId,
                          @RequestBody Target target) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         Target current = this.targetService.get(client, graphSpace, targetId);
         current.resources(target.resources());
         current.description(target.description());
@@ -91,7 +91,7 @@ public class TargetController extends AuthController {
     @DeleteMapping("{id}")
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("id") String targetId) {
-        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        HugeClient client = this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         this.targetService.delete(client, graphSpace, targetId);
     }
 }

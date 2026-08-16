@@ -17,7 +17,7 @@
  */
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
-import SpaceAccess from './SpaceAccess';
+import SpaceAccess, {rolesPreset} from './SpaceAccess';
 import * as api from '../../api';
 
 let mockAuthContext;
@@ -33,6 +33,10 @@ jest.mock('../../auth/AuthContext', () => ({
 jest.mock('../../api', () => ({
     auth: {
         getSpaceMembers: jest.fn(),
+        getSpaceAdmins: jest.fn(),
+        setSpaceAdmin: jest.fn(),
+        removeSpaceAdmin: jest.fn(),
+        setSpacePreset: jest.fn(),
         getSpaceRoles: jest.fn(),
         getSpaceTargets: jest.fn(),
         getSpaceAccesses: jest.fn(),
@@ -66,10 +70,22 @@ const page = records => ({status: 200, data: {records, total: records.length}});
 
 const setResponses = ({members = [], roles = [], targets = [], accesses = []} = {}) => {
     api.auth.getSpaceMembers.mockResolvedValue(page(members));
+    api.auth.getSpaceAdmins.mockResolvedValue(page([]));
     api.auth.getSpaceRoles.mockResolvedValue(page(roles));
     api.auth.getSpaceTargets.mockResolvedValue(page(targets));
     api.auth.getSpaceAccesses.mockResolvedValue({status: 200, data: accesses});
 };
+
+test('requires explicit preset for mixed or legacy member roles', () => {
+    expect(rolesPreset([
+        {role_name: 'observer'},
+        {role_name: 'custom-role'},
+    ])).toBeNull();
+    expect(rolesPreset([
+        {role_name: 'observer'},
+        {role_name: 'analyst'},
+    ])).toBeNull();
+});
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -106,7 +122,8 @@ test('uses only path-scoped APIs for a space administrator', async () => {
     expect(api.auth.getSpaceMembers).toHaveBeenCalledWith(
         'SPACE_A', expect.any(Object), expect.any(Object)
     );
-    expect(api.auth.getSpaceRoles).toHaveBeenCalledWith(
+    expect(api.auth.getSpaceRoles).not.toHaveBeenCalled();
+    expect(api.auth.getSpaceAdmins).toHaveBeenCalledWith(
         'SPACE_A', expect.any(Object), expect.any(Object)
     );
     expect(api.auth.getSpaceTargets).not.toHaveBeenCalled();
@@ -169,12 +186,8 @@ test('does not infer mutations when the server grants read-only actions', async 
     })).not.toBeInTheDocument();
 });
 
-test('maps a selected preset to the authoritative role id when adding a member', async () => {
-    api.auth.getSpaceRoles.mockResolvedValueOnce(page([{
-        id: 'writer-id',
-        permission_preset: 'GS_READ_WRITE',
-    }]));
-    api.auth.addSpaceMember.mockResolvedValue({status: 200});
+test('submits only the selected preset when adding a member', async () => {
+    api.auth.setSpacePreset.mockResolvedValue({status: 200});
     render(<SpaceAccess />);
 
     await screen.findAllByText('alice');
@@ -190,18 +203,13 @@ test('maps a selected preset to the authoritative role id when adding a member',
     fireEvent.click(screen.getByText('account.permission_preset.GS_READ_WRITE'));
     fireEvent.click(screen.getByRole('button', {name: 'OK'}));
 
-    await waitFor(() => expect(api.auth.addSpaceMember).toHaveBeenCalledWith(
-        'SPACE_A',
-        {
-            user_id: 'bob',
-            roles: [{role_id: 'writer-id', role_name: 'GS_READ_WRITE'}],
-        },
-        expect.any(Object)
+    await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
+        'SPACE_A', 'bob', 'GS_READ_WRITE', expect.any(Object)
     ));
 });
 
-test('does not submit when the selected preset has no server role', async () => {
-    api.auth.addSpaceMember.mockResolvedValue({status: 200});
+test('uses the preset API for GS admin', async () => {
+    api.auth.setSpacePreset.mockResolvedValue({status: 200});
     render(<SpaceAccess />);
 
     await screen.findAllByText('alice');
@@ -214,8 +222,24 @@ test('does not submit when the selected preset has no server role', async () => 
     });
     const comboboxes = screen.getAllByRole('combobox');
     fireEvent.mouseDown(comboboxes[comboboxes.length - 1]);
-    fireEvent.click(screen.getByText('account.permission_preset.GS_READ_WRITE'));
+    fireEvent.click(screen.getByText('account.permission_preset.GS_ADMIN'));
     fireEvent.click(screen.getByRole('button', {name: 'OK'}));
 
-    await waitFor(() => expect(api.auth.addSpaceMember).not.toHaveBeenCalled());
+    await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
+        'SPACE_A', 'bob', 'GS_ADMIN', expect.any(Object)
+    ));
+    expect(api.auth.addSpaceMember).not.toHaveBeenCalled();
+});
+
+test('shows GraphSpace administrators through the preset model', async () => {
+    api.auth.getSpaceAdmins.mockResolvedValueOnce(page([{
+        id: 'admin-id',
+        name: 'space-admin',
+    }]));
+
+    render(<SpaceAccess />);
+
+    expect(await screen.findByText('space-admin')).toBeInTheDocument();
+    expect(screen.getByText('account.permission_preset.GS_ADMIN'))
+        .toBeInTheDocument();
 });

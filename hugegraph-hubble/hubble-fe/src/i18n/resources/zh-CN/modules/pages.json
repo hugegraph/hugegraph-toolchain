@@ -391,7 +391,9 @@
       "SUPER_ADMIN": "超级管理员",
       "GS_READ_ONLY": "GraphSpace 只读",
       "GS_READ_WRITE": "GraphSpace 读写",
-      "GS_ADMIN": "GraphSpace 管理员"
+      "GS_ADMIN": "GraphSpace 管理员",
+      "mixed": "混合 GraphSpace 权限",
+      "legacy_custom": "旧版/自定义权限"
     },
     "form": {
       "title_detail": "查看账号",

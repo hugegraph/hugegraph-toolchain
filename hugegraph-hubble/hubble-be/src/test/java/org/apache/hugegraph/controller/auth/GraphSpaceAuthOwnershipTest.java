@@ -35,6 +35,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.AuthManager;
+import org.apache.hugegraph.driver.GraphSpaceManager;
+import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.AccessEntity;
 import org.apache.hugegraph.entity.auth.BelongEntity;
@@ -65,12 +67,24 @@ public class GraphSpaceAuthOwnershipTest {
 
     private HugeClient client;
     private AuthManager auth;
+    private GraphSpaceManager graphSpace;
+    private GraphsManager graphs;
 
     @Before
     public void setup() {
         this.client = Mockito.mock(HugeClient.class);
         this.auth = Mockito.mock(AuthManager.class);
+        this.graphSpace = Mockito.mock(GraphSpaceManager.class);
+        this.graphs = Mockito.mock(GraphsManager.class);
         Mockito.when(this.client.auth()).thenReturn(this.auth);
+        Mockito.when(this.client.graphSpace()).thenReturn(this.graphSpace);
+        Mockito.when(this.client.graphs()).thenReturn(this.graphs);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.graphs.listGraph()).thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin(Mockito.anyString()))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceMember(Mockito.anyString()))
+               .thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -451,14 +465,15 @@ public class GraphSpaceAuthOwnershipTest {
     public void testGraphSpaceUserRemovalDeletesOnlyScopedBelongs() {
         BelongService belongs = Mockito.mock(BelongService.class);
         User account = new User();
+        account.setId("user-id");
         account.name("graph-user");
         Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
+        Mockito.when(this.auth.listSpaceMember("SPACE_A")).thenReturn(Collections.singletonList("graph-user"));
         BelongEntity scoped = BelongEntity.builder()
                                           .id("belong-a")
                                           .userId("user-id")
                                           .build();
-        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id"))
-               .thenReturn(Collections.singletonList(scoped));
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.singletonList(scoped));
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
@@ -469,6 +484,27 @@ public class GraphSpaceAuthOwnershipTest {
         Mockito.verify(belongs, Mockito.never()).delete(
                 Mockito.eq(this.client), Mockito.anyString());
         Mockito.verify(this.auth).delSpaceMember("graph-user", "SPACE_A");
+    }
+
+    @Test
+    public void testReadOnlyPresetAppliesObserverToEveryGraph() {
+        User account = new User();
+        account.setId("user-id");
+        account.name("graph-user");
+        Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
+        Mockito.when(this.graphs.listGraph())
+               .thenReturn(Arrays.asList("graph-1", "graph-2"));
+        BelongService belongs = Mockito.mock(BelongService.class);
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.emptyList());
+        GraphSpaceUserService service = new GraphSpaceUserService();
+        ReflectionTestUtils.setField(service, "belongService", belongs);
+
+        service.applySpacePreset(this.client, "SPACE_A", "user-id", "GS_READ_ONLY");
+
+        Mockito.verify(this.auth).addSpaceMember("graph-user", "SPACE_A");
+        Mockito.verify(this.graphSpace).setDefaultRole("SPACE_A", "graph-user", "observer", "graph-1");
+        Mockito.verify(this.graphSpace).setDefaultRole("SPACE_A", "graph-user", "observer", "graph-2");
+        Mockito.verify(this.graphSpace, Mockito.never()).setDefaultRole("SPACE_A", "graph-user", "observer");
     }
 
     @Test
@@ -500,6 +536,7 @@ public class GraphSpaceAuthOwnershipTest {
         Mockito.when(this.auth.getGraphSpaceGroup("local-role"))
                .thenReturn(group);
         User account = new User();
+        account.setId("user-id");
         account.name("graph-user");
         Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
         Mockito.when(this.auth.listSpaceMember("SPACE_A"))

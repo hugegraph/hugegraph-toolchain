@@ -75,7 +75,7 @@ public class LoginController extends BaseController {
 
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
-        if (this.authMode.anonymous()) {
+        if (this.authMode != null && this.authMode.anonymous()) {
             throw new ExternalException(HttpStatus.FORBIDDEN.value(),
                                         "Authentication is disabled");
         }
@@ -229,6 +229,9 @@ public class LoginController extends BaseController {
 
     @GetMapping("/status")
     public Object status() {
+        if (this.authMode != null && this.authMode.anonymous()) {
+            return ImmutableMap.of("level", "ANONYMOUS");
+        }
 
         HugeClient client = authClient(null, null);
 
