@@ -17,6 +17,11 @@ always goes through the backend resolver. In PD mode, a valid server address
 returned by discovery is sufficient; a manually configured server URL is not
 required.
 
+Container and orchestrated deployments can set `HUBBLE_AUTH_ENABLED=true` or
+`false`. This explicit runtime value overrides `auth.enabled` from the
+properties file, and invalid values fail startup instead of silently selecting
+an authentication mode.
+
 The UI presents four stable permission meanings: super administrator, GraphSpace
 read-only, GraphSpace read-write, and GraphSpace administrator. The last one
 means member management plus read/write within that GraphSpace; low-level
