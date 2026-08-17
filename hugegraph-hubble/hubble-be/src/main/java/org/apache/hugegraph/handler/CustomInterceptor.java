@@ -196,8 +196,13 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
                 graphSpace = decodeSegment(graphSpace);
             }
             if ("graphs".equals(parts[i]) && i < parts.length - 1) {
-                graph = parts[i + 1];
-                graph = decodeSegment(graph);
+                String candidate = parts[i + 1];
+                boolean collectionAction = i + 1 == parts.length - 1 &&
+                                           ("list".equals(candidate) ||
+                                            "default".equals(candidate));
+                if (!collectionAction) {
+                    graph = decodeSegment(candidate);
+                }
             }
         }
         return new String[]{graphSpace, graph};

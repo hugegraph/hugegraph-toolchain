@@ -488,13 +488,11 @@ public class UserService extends AuthService {
 
     private static boolean hasCurrentUserAccess(HugeClient client,
                                                 String graphSpace) {
-        if (!client.supportsDefaultRole()) {
-            return false;
-        }
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        return hasCurrentUserObserverRole(client, graphSpace);
+        return client.supportsDefaultRole() &&
+               hasCurrentUserObserverRole(client, graphSpace);
     }
 
     private static boolean hasCurrentUserObserverRole(HugeClient client,

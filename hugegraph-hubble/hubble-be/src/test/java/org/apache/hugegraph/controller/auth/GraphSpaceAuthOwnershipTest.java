@@ -44,6 +44,7 @@ import org.apache.hugegraph.entity.auth.RoleEntity;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.entity.auth.UserView;
 import org.apache.hugegraph.exception.ForbiddenException;
+import org.apache.hugegraph.handler.ExceptionAdvisor;
 import org.apache.hugegraph.service.auth.AccessService;
 import org.apache.hugegraph.service.auth.BelongService;
 import org.apache.hugegraph.service.auth.GraphSpaceUserService;
@@ -58,7 +59,7 @@ import org.apache.hugegraph.structure.auth.Role;
 import org.apache.hugegraph.structure.auth.Target;
 import org.apache.hugegraph.structure.auth.User;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -509,6 +510,7 @@ public class GraphSpaceAuthOwnershipTest {
 
     @Test
     public void testGraphSpaceUserRoleUpdatePreflightsAllRoles() {
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
         List<Group> groups = this.createScopedGroups("SPACE_A", "SPACE_B");
         Mockito.when(this.auth.getGraphSpaceGroup("local-role"))
                .thenReturn(groups.get(0));
@@ -532,6 +534,7 @@ public class GraphSpaceAuthOwnershipTest {
 
     @Test
     public void testGraphSpaceUserCreationAddsPdMemberBeforeBelong() {
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
         Group group = this.createScopedGroups("SPACE_A").get(0);
         Mockito.when(this.auth.getGraphSpaceGroup("local-role"))
                .thenReturn(group);
@@ -560,7 +563,7 @@ public class GraphSpaceAuthOwnershipTest {
     }
 
     @Test
-    public void testSpaceAdminAssignmentUsesPostOnly() throws Exception {
+    public void testOnlySuperAdminCanMutateSpaceAdmins() throws Exception {
         UserService authorization = Mockito.mock(UserService.class);
         Mockito.when(authorization.isAssignSpaceAdmin(this.client, "SPACE"))
                .thenReturn(true);
@@ -568,19 +571,21 @@ public class GraphSpaceAuthOwnershipTest {
                 new TestGraphSpaceUserController(this.client);
         setBaseUserService(controller, authorization);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(controller)
+                                     .setControllerAdvice(
+                                             new ExceptionAdvisor())
                                      .build();
 
-        mvc.perform(get("/api/v1.3/graphspaces/SPACE/auth/users/" +
-                        "spaceadmin/user-id"))
-           .andExpect(status().isMethodNotAllowed());
-        mvc.perform(put("/api/v1.3/graphspaces/SPACE/auth/users/" +
-                        "spaceadmin/user-id")
-                    .contentType(MediaType.APPLICATION_JSON))
-           .andExpect(status().isMethodNotAllowed());
         mvc.perform(post("/api/v1.3/graphspaces/SPACE/auth/users/" +
                          "spaceadmin/user-id")
                     .contentType(MediaType.APPLICATION_JSON))
-           .andExpect(status().isOk());
+           .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1.3/graphspaces/SPACE/auth/users/" +
+                           "spaceadmin/user-id"))
+           .andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1.3/graphspaces/SPACE/auth/users/user-id/preset")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"permission_preset\":\"GS_ADMIN\"}"))
+           .andExpect(status().isForbidden());
     }
 
     private static Target target(String id, String graphSpace) {

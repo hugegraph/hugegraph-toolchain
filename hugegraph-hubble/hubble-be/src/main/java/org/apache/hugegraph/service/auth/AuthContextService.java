@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
+import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.op.OperationsCapabilityService;
@@ -96,9 +97,10 @@ public class AuthContextService {
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
         String mode = pdEnabled ? "PD" : "NON_PD";
         String role;
+        UserEntity user = null;
         List<String> adminGraphSpaces = Collections.emptyList();
         if (pdEnabled) {
-            UserEntity user = this.users.getpersonal(client, username);
+            user = this.users.getpersonal(client, username);
             adminGraphSpaces = sorted(user.getAdminSpaces());
             if (user.isSuperadmin()) {
                 role = SUPERADMIN;
@@ -114,12 +116,17 @@ public class AuthContextService {
 
         boolean permissionPresets = pdEnabled &&
                                     client.supportsDefaultRole();
+        List<String> writeGraphSpaces = pdEnabled ?
+                                        writeGraphSpaces(user,
+                                                         permissionPresets) :
+                                        Collections.emptyList();
         Set<String> capabilities = this.capabilities(pdEnabled, role,
                                                      permissionPresets);
         Map<String, Set<String>> actions = this.actions(pdEnabled, role,
                                                        permissionPresets);
         Map<String, Object> scopes = this.scopes(pdEnabled, role,
-                                                 adminGraphSpaces);
+                                                 adminGraphSpaces,
+                                                 writeGraphSpaces);
         String version = version(mode, username, role, capabilities,
                                  actions, scopes);
 
@@ -133,6 +140,25 @@ public class AuthContextService {
         context.put("actions", actions);
         context.put("scopes", scopes);
         return Collections.unmodifiableMap(context);
+    }
+
+    public void requireGraphSpaceWrite(HugeClient client, String username,
+                                       String graphSpace) {
+        if (Boolean.FALSE.equals(
+                this.config.get(HubbleOptions.AUTH_ENABLED)) ||
+            !this.config.get(HubbleOptions.PD_ENABLED) ||
+            !client.supportsDefaultRole()) {
+            return;
+        }
+
+        UserEntity user = this.users.getpersonal(client, username);
+        if (user.isSuperadmin() ||
+            contains(user.getAdminSpaces(), graphSpace) ||
+            writeGraphSpaces(user, true).contains(graphSpace)) {
+            return;
+        }
+        throw new ForbiddenException(
+                "Permission denied: write graphspace resources");
     }
 
     private static Map<String, Object> anonymousContext(boolean pdEnabled) {
@@ -160,6 +186,7 @@ public class AuthContextService {
         Map<String, Object> scopes = new LinkedHashMap<>();
         scopes.put("all_graphspaces", pdEnabled);
         scopes.put("admin_graphspaces", Collections.emptyList());
+        scopes.put("write_graphspaces", Collections.emptyList());
         scopes.put("graph_resources", "SERVER_ANONYMOUS");
         context.put("scopes", scopes);
         return Collections.unmodifiableMap(context);
@@ -218,13 +245,48 @@ public class AuthContextService {
     }
 
     private Map<String, Object> scopes(boolean pdEnabled, String role,
-                                       List<String> adminGraphSpaces) {
+                                       List<String> adminGraphSpaces,
+                                       List<String> writeGraphSpaces) {
         Map<String, Object> scopes = new LinkedHashMap<>();
         scopes.put("all_graphspaces",
                    pdEnabled && SUPERADMIN.equals(role));
         scopes.put("admin_graphspaces", adminGraphSpaces);
+        scopes.put("write_graphspaces", writeGraphSpaces);
         scopes.put("graph_resources", "SERVER_AUTHORIZED");
         return Collections.unmodifiableMap(scopes);
+    }
+
+    private static List<String> writeGraphSpaces(UserEntity user,
+                                                 boolean permissionPresets) {
+        if (user.isSuperadmin()) {
+            return Collections.emptyList();
+        }
+        if (!permissionPresets) {
+            return sorted(user.getResSpaces());
+        }
+
+        Set<String> values = new TreeSet<>();
+        if (user.getGraphspacePermissions() != null) {
+            for (Map<String, String> permission :
+                 user.getGraphspacePermissions()) {
+                String preset = permission.get("permission_preset");
+                if ("GS_READ_WRITE".equals(preset) ||
+                    "GS_ADMIN".equals(preset)) {
+                    String graphSpace = permission.get("graphspace");
+                    if (graphSpace != null) {
+                        values.add(graphSpace);
+                    }
+                }
+            }
+        }
+        if (user.getAdminSpaces() != null) {
+            for (String graphSpace : user.getAdminSpaces()) {
+                if (graphSpace != null) {
+                    values.add(graphSpace);
+                }
+            }
+        }
+        return Collections.unmodifiableList(new ArrayList<>(values));
     }
 
     private static List<String> sorted(Collection<String> values) {
@@ -233,6 +295,10 @@ public class AuthContextService {
         }
         return Collections.unmodifiableList(new ArrayList<>(
                new TreeSet<>(values)));
+    }
+
+    private static boolean contains(Collection<String> values, String value) {
+        return values != null && values.contains(value);
     }
 
     private static Set<String> set(String... values) {

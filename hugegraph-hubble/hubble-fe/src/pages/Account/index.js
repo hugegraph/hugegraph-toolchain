@@ -34,7 +34,12 @@ import TableHeader from '../../components/TableHeader';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import {useAuthContext} from '../../auth/AuthContext';
-import {getAccountPreset, PERMISSION_PRESETS} from './permissionPresets';
+import {
+    getAccountPreset,
+    getAccountPresetLabelKey,
+    getPresetSpaces,
+    PERMISSION_PRESETS,
+} from './permissionPresets';
 import SpaceAccess from './SpaceAccess';
 import {accountErrorMessage} from './accountError';
 
@@ -55,6 +60,8 @@ const GlobalAccounts = () => {
     const canUpdateAccount = accountActions.includes('update');
     const canDeleteAccount = accountActions.includes('delete');
     const canGrantAuthorization = authorizationActions.includes('grant');
+    const permissionPresetsSupported = !context
+        || context.capabilities?.includes('account_permission_presets');
     const hasRowMutations = canUpdateAccount || canDeleteAccount || canGrantAuthorization;
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [op, setOp] = useState('detail');
@@ -124,34 +131,45 @@ const GlobalAccounts = () => {
         {
             title: t('account.col.id'),
             dataIndex: 'user_name',
+            width: 150,
         },
         {
             title: t('account.col.name'),
             dataIndex: 'user_nickname',
+            width: 150,
         },
         {
             title: t('account.col.remark'),
             dataIndex: 'user_description',
+            width: 180,
             ellipsis: {showTitle: false},
             render: val => <Tooltip title={val} placement='bottomLeft'>{val}</Tooltip>,
         },
         {
             title: t('account.col.level'),
-            width: 140,
+            width: 190,
             render: row => {
                 const preset = getAccountPreset(row);
-                if (!preset) {
-                    return <Tag>{t('account.permission_preset.mixed')}</Tag>;
-                }
                 const color = preset === PERMISSION_PRESETS.SUPER_ADMIN ? 'red'
                     : preset === PERMISSION_PRESETS.GS_ADMIN ? 'blue' : 'default';
-                return <Tag color={color}>{t(`account.permission_preset.${preset}`)}</Tag>;
+                const labelKey = getAccountPresetLabelKey(
+                    row, permissionPresetsSupported
+                );
+                return (
+                    <Tag color={color}>
+                        {t(`account.permission_preset.${labelKey}`)}
+                    </Tag>
+                );
             },
         },
         {
             title: t('account.col.resource'),
-            dataIndex: 'spacenum',
             width: 120,
+            render: row => (
+                getAccountPreset(row) === PERMISSION_PRESETS.SUPER_ADMIN
+                    ? t('account.col.resource_all')
+                    : getPresetSpaces(row).length
+            ),
         },
         {
             title: t('account.col.create_time'),
@@ -161,7 +179,8 @@ const GlobalAccounts = () => {
         },
         {
             title: t('common.operation'),
-            width: hasRowMutations ? 300 : 100,
+            width: hasRowMutations ? 280 : 100,
+            fixed: 'right',
             align: 'center',
             render: row => (
                 <Space>
@@ -265,6 +284,7 @@ const GlobalAccounts = () => {
                 pagination={pagination}
                 onChange={handleTable}
                 loading={listLoading}
+                scroll={{x: 1270}}
             />
 
             <EditLayer

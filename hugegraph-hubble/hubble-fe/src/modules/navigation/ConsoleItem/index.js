@@ -105,14 +105,17 @@ const ConsoleItem = ({embedded = false}) => {
             ? () => openDashboard(dashboard.url + path)
             : undefined,
     });
-    const nativeItem = (titleKey, path, required, modeAvailable = true) => {
+    const nativeItem = (titleKey, path, required, modeAvailable = true,
+        modeReason = '') => {
         const available = modeAvailable && capabilities.includes(required);
         const disabled = capabilitiesLoading || Boolean(capabilitiesError) || !available;
         return {
             title: t(titleKey),
             url: available ? path : '',
             disabled,
-            reason: disabled ? t('navigation_page.operations_unavailable') : '',
+            reason: disabled
+                ? (!modeAvailable && modeReason
+                    ? modeReason : t('navigation_page.operations_unavailable')) : '',
             badge: disabled ? t('navigation_page.unavailable') : '',
         };
     };
@@ -133,7 +136,8 @@ const ConsoleItem = ({embedded = false}) => {
                     'navigation_page.cluster_overview',
                     '/operations/overview',
                     'operations_health_read',
-                    pdMode
+                    pdMode,
+                    t('navigation_page.cluster_overview_requires_pd')
                 ),
                 nativeItem(
                     'navigation_page.nodes',

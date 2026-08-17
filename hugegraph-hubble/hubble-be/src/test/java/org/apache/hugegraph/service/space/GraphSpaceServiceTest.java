@@ -151,6 +151,32 @@ public class GraphSpaceServiceTest {
     }
 
     @Test
+    public void testLegacyAnalystGraphSpaceRemainsVisible() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        AuthManager auth = Mockito.mock(AuthManager.class);
+        GraphSpace space = graphSpace("legacy", true, "20260712");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(this.client.auth()).thenReturn(auth);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Collections.singletonList("legacy"));
+        Mockito.when(manager.getGraphSpace("legacy")).thenReturn(space);
+        Mockito.when(auth.checkDefaultRole("legacy", "analyst"))
+               .thenReturn(true);
+        Mockito.when(this.graphsService.listGraphNames(this.client, "legacy",
+                                                       ""))
+               .thenReturn(java.util.Collections.emptySet());
+
+        List<Map<String, Object>> response =
+                this.service.queryAccessibleGs(this.client, "", "");
+
+        Assert.assertEquals(1, response.size());
+        Assert.assertEquals("legacy", response.get(0).get("name"));
+        Mockito.verify(auth, Mockito.never())
+               .checkDefaultRole("legacy", "observer");
+    }
+
+    @Test
     public void testAnonymousGraphSpacesApplyQueryAndTimeFilters() {
         GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
         GraphSpace visible = graphSpace("public", false, "20260712");

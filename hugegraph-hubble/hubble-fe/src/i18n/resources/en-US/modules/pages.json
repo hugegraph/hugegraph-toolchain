@@ -354,6 +354,7 @@
     },
     "empty": {
       "description": "This GraphSpace is ready but has no graphs yet. Create the first graph to model, import, and query data",
+      "read_only_description": "This GraphSpace has no graphs available to this read-only account",
       "create": "Create first graph",
       "demo_prerequisite": "After creating a graph, select it and use Data Import to build a quick Demo dataset.",
       "view_demo": "View Demo data entry",
@@ -377,7 +378,8 @@
       "name": "Account Name",
       "remark": "Remark",
       "level": "Account Level",
-      "resource": "Resource Permission",
+      "resource": "GraphSpaces",
+      "resource_all": "All",
       "create_time": "Created At",
       "is_superadmin": "Super Admin",
       "permission": "Admin Permission"
@@ -394,6 +396,7 @@
       "GS_ADMIN": "GraphSpace Administrator",
       "preserve_mixed": "Keep existing mixed access",
       "mixed": "Mixed GraphSpace access",
+      "unassigned": "No GraphSpace preset assigned",
       "legacy_custom": "Legacy/custom access"
     },
     "feedback": {
@@ -414,7 +417,7 @@
       "id_help": "The unique login identifier. It cannot be changed after creation",
       "id_placeholder": "Login username",
       "name": "Display Name",
-      "name_help": "The name shown to administrators. It can be changed later",
+      "name_help": "Use 1–16 characters without spaces; Chinese/CJK forms, letters, numbers, and underscores are supported",
       "name_placeholder": "Can be changed after creation",
       "is_superadmin": "Super Admin",
       "level": "Account Level",
@@ -509,7 +512,7 @@
       "new_password_placeholder": "Enter new password",
       "confirm_password_placeholder": "Enter new password again",
       "password_mismatch": "Passwords do not match",
-      "account_name_rule": "Account name must be 1-16 characters and cannot start or end with an underscore"
+      "account_name_rule": "Use 1–16 characters without spaces; letters, numbers, Chinese/CJK forms, and underscores are supported; underscores cannot be first or last"
     }
   },
   "role": {
@@ -1101,6 +1104,7 @@
       "empty_title": "Build your first graph schema",
       "empty_description": "Define reusable properties first, then create vertex and edge types",
       "create_from_template": "Create Schema from a Template",
+      "read_only_empty": "This graph has no Schema yet. A read-write or administrator account is required to create one.",
       "template_description": "Choose a built-in example or a saved template from this GraphSpace and apply it to the current graph",
       "manual_title": "Or create the Schema manually",
       "builtin_templates": "Built-in Examples",
@@ -1151,7 +1155,7 @@
     "read_only": {
       "page_title": "{{name}} - Schema Template Library",
       "title": "Read-only template library",
-      "description": "You can browse built-in and saved templates here. Creating, saving, editing, and deleting templates requires PD mode",
+      "description": "You can browse built-in and saved templates here. Creating, saving, editing, and deleting templates are unavailable for this connection or account",
       "apply_to_graph": "Apply templates to {{graph}}",
       "choose_graph": "Choose a graph to apply a template",
       "builtin": "Built in"
@@ -1400,6 +1404,7 @@
     "datasource_manage": "Data Source Management",
     "operation_manage": "Operations",
     "cluster_overview": "Cluster Overview",
+    "cluster_overview_requires_pd": "Cluster Overview requires PD and is unavailable in standalone mode. Use Nodes to inspect server status.",
     "nodes": "Nodes",
     "advanced_monitoring": "External Advanced Dashboard",
     "operations_unavailable": "Native operations capabilities are unavailable for this account.",

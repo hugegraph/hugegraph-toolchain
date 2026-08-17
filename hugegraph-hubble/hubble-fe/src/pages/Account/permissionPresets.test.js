@@ -17,6 +17,7 @@
 
 import {
     getAccountPreset,
+    getAccountPresetLabelKey,
     getPresetSpaces,
     PERMISSION_PRESETS,
     toPermissionPayload,
@@ -33,6 +34,15 @@ test.each([
     [{adminSpaces: []}, PERMISSION_PRESETS.GS_READ_ONLY],
 ])('normalizes account %j to %s', (account, expected) => {
     expect(getAccountPreset(account)).toBe(expected);
+});
+
+test('does not claim GraphSpace access without a supported preset or assignment', () => {
+    expect(getAccountPresetLabelKey({adminSpaces: []}, false))
+        .toBe('unassigned');
+    expect(getAccountPresetLabelKey({is_superadmin: true}, false))
+        .toBe(PERMISSION_PRESETS.SUPER_ADMIN);
+    expect(getAccountPresetLabelKey({adminSpaces: ['SPACE']}, false))
+        .toBe(PERMISSION_PRESETS.GS_ADMIN);
 });
 
 test('normalizes GraphSpace objects and keeps legacy payload in one adapter', () => {

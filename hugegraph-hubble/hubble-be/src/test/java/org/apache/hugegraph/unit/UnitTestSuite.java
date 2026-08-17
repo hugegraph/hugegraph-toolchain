@@ -25,6 +25,7 @@ import org.apache.hugegraph.controller.ingest.IngestControllerTest;
 import org.apache.hugegraph.controller.langchain.LangChainControllerSecurityTest;
 import org.apache.hugegraph.controller.schema.SchemaControllerSecurityTest;
 import org.apache.hugegraph.controller.space.GraphSpaceControllerTest;
+import org.apache.hugegraph.controller.space.SchemaTemplateControllerSecurityTest;
 import org.apache.hugegraph.config.HubbleConfigEnvironmentTest;
 import org.apache.hugegraph.handler.ResponseAdvisorStatusTest;
 import org.apache.hugegraph.service.load.IngestTransactionIntegrationTest;
@@ -71,6 +72,7 @@ import org.junit.runners.Suite;
     LegacyFacadeRemovalTest.class,
     MessageSourceHandlerTest.class,
     SchemaControllerSecurityTest.class,
+    SchemaTemplateControllerSecurityTest.class,
     GroovySchemaCompatibilityTest.class,
     JobManagerServiceTest.class,
     K8sTokenEndpointSecurityTest.class,
