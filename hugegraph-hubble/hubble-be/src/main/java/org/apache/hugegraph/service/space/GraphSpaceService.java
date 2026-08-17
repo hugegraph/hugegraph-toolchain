@@ -184,9 +184,7 @@ public class GraphSpaceService {
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        client.assignGraph(graphSpace, "");
-        return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.auth().checkDefaultRole(graphSpace, "observer", graph));
+        return client.auth().checkDefaultRole(graphSpace, "observer");
     }
 
     public List<Map<String, Object>> queryAnonymousGs(HugeClient client,

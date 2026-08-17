@@ -22,11 +22,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.GraphSpaceManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.GraphSpaceEntity;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
+import org.apache.hugegraph.structure.space.GraphSpace;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -101,6 +103,76 @@ public class GraphSpaceServiceTest {
         Assert.assertFalse(response.get(0).containsKey("dpUserName"));
         Assert.assertFalse(response.get(0).containsKey("dpPassWord"));
         Assert.assertFalse(response.get(0).containsKey("configs"));
+    }
+
+    @Test
+    public void testAccessibleGraphSpacesHonorAuthorization() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        AuthManager auth = Mockito.mock(AuthManager.class);
+        Map<String, GraphSpace> spaces = new HashMap<>();
+        spaces.put("public", graphSpace("public", false, "20260712"));
+        spaces.put("admin", graphSpace("admin", true, "20260712"));
+        spaces.put("analyst", graphSpace("analyst", true, "20260712"));
+        spaces.put("observer", graphSpace("observer", true, "20260712"));
+        spaces.put("denied", graphSpace("denied", true, "20260712"));
+
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(this.client.auth()).thenReturn(auth);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Arrays.asList("public", "admin",
+                                                   "analyst", "observer",
+                                                   "denied"));
+        Mockito.when(manager.getGraphSpace(Mockito.anyString()))
+               .thenAnswer(invocation -> spaces.get(invocation.getArgument(0)));
+        Mockito.when(auth.isSpaceAdmin("admin")).thenReturn(true);
+        Mockito.when(auth.checkDefaultRole("analyst", "analyst"))
+               .thenReturn(true);
+        Mockito.when(auth.checkDefaultRole("observer", "observer"))
+               .thenReturn(true);
+        Mockito.when(this.graphsService.listGraphNames(
+                             Mockito.eq(this.client), Mockito.anyString(),
+                             Mockito.eq("")))
+               .thenReturn(java.util.Collections.emptySet());
+
+        List<Map<String, Object>> response =
+                this.service.queryAccessibleGs(this.client, "", "");
+
+        Assert.assertEquals(java.util.Arrays.asList("admin", "analyst",
+                                                    "observer", "public"),
+                            response.stream().map(item -> item.get("name"))
+                                    .collect(java.util.stream.Collectors
+                                                      .toList()));
+        Assert.assertTrue((Boolean) response.get(0).get("authed"));
+        Assert.assertFalse((Boolean) response.get(0).get("default"));
+        Mockito.verify(auth, Mockito.never())
+               .checkDefaultRole(Mockito.anyString(), Mockito.eq("observer"),
+                                 Mockito.anyString());
+    }
+
+    @Test
+    public void testAnonymousGraphSpacesApplyQueryAndTimeFilters() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        GraphSpace visible = graphSpace("public", false, "20260712");
+        visible.setNickname("visible space");
+        GraphSpace old = graphSpace("visible-old", true, "20260701");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Arrays.asList("public", "visible-old"));
+        Mockito.when(manager.getGraphSpace("public")).thenReturn(visible);
+        Mockito.when(manager.getGraphSpace("visible-old")).thenReturn(old);
+        Mockito.when(this.graphsService.listGraphNames(
+                             Mockito.eq(this.client), Mockito.anyString(),
+                             Mockito.eq("")))
+               .thenReturn(java.util.Collections.emptySet());
+
+        List<Map<String, Object>> response =
+                this.service.queryAnonymousGs(this.client, "visible",
+                                              "20260702");
+
+        Assert.assertEquals(1, response.size());
+        Assert.assertEquals("public", response.get(0).get("name"));
+        Assert.assertTrue((Boolean) response.get(0).get("authed"));
     }
 
     @Test
@@ -264,5 +336,13 @@ public class GraphSpaceServiceTest {
         statistic.put("vertex", vertex);
         statistic.put("edge", edge);
         return statistic;
+    }
+
+    private static GraphSpace graphSpace(String name, boolean auth,
+                                         String createTime) {
+        GraphSpace graphSpace = new GraphSpace(name);
+        graphSpace.setAuth(auth);
+        graphSpace.setCreateTime(createTime);
+        return graphSpace;
     }
 }
