@@ -196,6 +196,32 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
+    public void testUsesConfiguredPdLeaderForAuthoritativeClusterState() {
+        LeaderAwareHttpClient http = new LeaderAwareHttpClient("pd-1");
+        LiveOperationsCollector collector = leaderAwareCollector(
+                                            http, Set.of("pd-service", "pd-1"));
+
+        Snapshot snapshot = collector.collect(serverClient(), false);
+
+        Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("UP", snapshot.getStatus());
+        Assert.assertEquals(1, http.leaderRequests());
+    }
+
+    @Test
+    public void testDoesNotFollowUnconfiguredPdLeader() {
+        LeaderAwareHttpClient http = new LeaderAwareHttpClient("untrusted");
+        LiveOperationsCollector collector = leaderAwareCollector(
+                                            http, Set.of("pd-service", "pd-1"));
+
+        Snapshot snapshot = collector.collect(serverClient(), false);
+
+        Assert.assertEquals("UNKNOWN",
+                            snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals(0, http.leaderRequests());
+    }
+
+    @Test
     public void testStoreMetricsUseOnlyPdDiscoveredTarget() throws IOException {
         HttpServer pd = pdServer(200, cluster(), 200, stores());
         String base = "127.0.0.1:" + pd.getAddress().getPort();
@@ -717,6 +743,16 @@ public class LiveOperationsCollectorTest {
                                               "http://[::1]:8520")));
     }
 
+    private static LiveOperationsCollector leaderAwareCollector(
+            LeaderAwareHttpClient http, Set<String> pdAllowedHosts) {
+        return new LiveOperationsCollector(
+                true, "http://pd-service:8620", "hubble", "secret",
+                "store-hubble", "store-secret", "server-under-test", http,
+                new OperationsPayloadParser(new ObjectMapper()), CLOCK,
+                4, 1000, Collections.singleton("http://127.0.0.1:8520"),
+                pdAllowedHosts);
+    }
+
     private static HugeClient serverClient() {
         HugeClient client = Mockito.mock(HugeClient.class);
         VersionManager version = Mockito.mock(VersionManager.class);
@@ -961,5 +997,57 @@ public class LiveOperationsCollectorTest {
         private Set<String> metricAuthorities() {
             return this.metricAuthorities;
         }
+    }
+
+    private static final class LeaderAwareHttpClient
+                         extends OperationsHttpClient {
+
+        private final String leaderHost;
+        private final AtomicInteger leaderRequests;
+
+        private LeaderAwareHttpClient(String leaderHost) {
+            super(1000, 1000, 8192);
+            this.leaderHost = leaderHost;
+            this.leaderRequests = new AtomicInteger();
+        }
+
+        @Override
+        public String get(java.net.URI target, String username, String password,
+                          Set<String> allowedTargets) {
+            return this.response(target);
+        }
+
+        @Override
+        public String get(java.net.URI target, String username,
+                          String password) {
+            return this.response(target);
+        }
+
+        private String response(java.net.URI target) {
+            if ("/v1/cluster".equals(target.getPath())) {
+                if (!"pd-service".equals(target.getHost())) {
+                    this.leaderRequests.incrementAndGet();
+                    return leaderCluster("Cluster_OK", this.leaderHost);
+                }
+                return leaderCluster("Cluster_Not_Ready", this.leaderHost);
+            }
+            if ("/v1/stores".equals(target.getPath())) {
+                return stores();
+            }
+            throw new AssertionError("Unexpected operations target " + target);
+        }
+
+        private int leaderRequests() {
+            return this.leaderRequests.get();
+        }
+    }
+
+    private static String leaderCluster(String state, String leaderHost) {
+        return "{\"status\":0,\"data\":{\"state\":\"" + state + "\"," +
+               "\"graphSize\":2,\"pdList\":[{\"restUrl\":\"" +
+               leaderHost + ":8620\",\"state\":\"Up\"," +
+               "\"role\":\"Leader\"}],\"pdLeader\":{\"restUrl\":\"" +
+               leaderHost + ":8620\",\"state\":\"Up\"," +
+               "\"role\":\"Leader\"},\"stores\":[]}}";
     }
 }

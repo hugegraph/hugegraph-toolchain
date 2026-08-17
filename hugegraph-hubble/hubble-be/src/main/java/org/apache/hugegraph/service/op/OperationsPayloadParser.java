@@ -97,6 +97,34 @@ public class OperationsPayloadParser {
                             nodes, facts);
     }
 
+    public URI parsePdLeaderRestTarget(String clusterPayload, String scheme) {
+        try {
+            JsonNode cluster = this.data(clusterPayload, "pd_cluster");
+            JsonNode leader = cluster.get("pdLeader");
+            if (leader == null || leader.isNull()) {
+                return null;
+            }
+            this.requireObject(leader, "pd_cluster");
+            String restUrl = this.text(leader, "restUrl");
+            if (restUrl == null) {
+                return null;
+            }
+            URI target = URI.create(restUrl.contains("://") ?
+                                    restUrl : scheme + "://" + restUrl);
+            String path = target.getPath();
+            if (target.getHost() == null || target.getUserInfo() != null ||
+                target.getQuery() != null || target.getFragment() != null ||
+                path != null && !path.isEmpty() && !"/".equals(path)) {
+                throw new MalformedUpstreamException("pd_leader_rest_address");
+            }
+            return target;
+        } catch (MalformedUpstreamException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new MalformedUpstreamException("pd_leader_rest_address", e);
+        }
+    }
+
     public Map<String, String> parseStoreHosts(String storesPayload) {
         JsonNode stores = this.data(storesPayload, "pd_stores");
         Map<String, String> result = new LinkedHashMap<>();

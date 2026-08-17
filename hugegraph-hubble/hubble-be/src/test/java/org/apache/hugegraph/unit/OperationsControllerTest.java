@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.exception.ForbiddenException;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.op.OperationsDataService;
 import org.apache.hugegraph.testutil.Assert;
@@ -35,7 +36,9 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.controller.op.OperationsController;
+import org.apache.hugegraph.options.HubbleOptions;
 
 public class OperationsControllerTest {
 
@@ -82,7 +85,29 @@ public class OperationsControllerTest {
         Assert.assertEquals(0, response.get("total"));
     }
 
+    @Test
+    public void testAnonymousModeCanReadOperations() {
+        Fixture fixture = fixture("USER", true);
+        Mockito.when(fixture.dataService.overview(Mockito.any(),
+                                                  Mockito.anySet(),
+                                                  Mockito.eq(false)))
+               .thenReturn(Collections.singletonMap("status", "UP"));
+
+        Map<String, Object> capabilities =
+                fixture.controller.capabilities();
+        Map<String, Object> overview = fixture.controller.overview(false);
+
+        Assert.assertEquals(3,
+                            ((java.util.Set<?>) capabilities.get(
+                             "capabilities")).size());
+        Assert.assertEquals("UP", overview.get("status"));
+    }
+
     private static Fixture fixture(String level) {
+        return fixture(level, false);
+    }
+
+    private static Fixture fixture(String level, boolean anonymous) {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(Constant.USERNAME_KEY, "operator");
         request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
@@ -96,6 +121,11 @@ public class OperationsControllerTest {
         OperationsDataService dataService = Mockito.mock(
                                              OperationsDataService.class);
         OperationsController controller = new OperationsController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(!anonymous);
+        AuthModeService authMode = new AuthModeService(config);
+        ReflectionTestUtils.setField(controller, "authMode", authMode);
         ReflectionTestUtils.setField(controller, "userService", userService);
         ReflectionTestUtils.setField(controller, "dataService", dataService);
         return new Fixture(controller, dataService);

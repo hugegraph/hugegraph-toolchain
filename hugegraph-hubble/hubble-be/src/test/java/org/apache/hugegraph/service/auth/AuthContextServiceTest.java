@@ -159,6 +159,31 @@ public class AuthContextServiceTest {
     }
 
     @Test
+    public void testAnonymousModeGetsReadOnlyOperationsCapabilities() {
+        Fixture fixture = new Fixture(true);
+        Mockito.when(fixture.config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+
+        Map<String, Object> context = fixture.service.context(fixture.client,
+                                                              null);
+
+        Assert.assertEquals("NON_AUTH", context.get("mode"));
+        Assert.assertEquals("ANONYMOUS", context.get("role"));
+        Assert.assertEquals("anonymous-v2-pd",
+                            context.get("context_version"));
+        Assert.assertTrue(capabilities(context).contains(
+                          "operations_health_read"));
+        Assert.assertTrue(capabilities(context).contains(
+                          "operations_topology_read"));
+        Assert.assertTrue(capabilities(context).contains(
+                          "operations_metrics_read"));
+        Assert.assertEquals(Set.of("read_health", "read_topology",
+                                   "read_metrics"),
+                            actions(context, "operations"));
+        Mockito.verifyZeroInteractions(fixture.users);
+    }
+
+    @Test
     public void testContextVersionIsStableButChangesWithScope() {
         Fixture fixture = new Fixture(true);
         Mockito.when(fixture.users.getpersonal(fixture.client, "alice"))

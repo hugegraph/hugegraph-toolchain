@@ -136,16 +136,26 @@ public class AuthContextService {
     }
 
     private static Map<String, Object> anonymousContext(boolean pdEnabled) {
+        Set<String> capabilities = new LinkedHashSet<>();
+        capabilities.add(GRAPH_RESOURCES_ACCESS);
+        if (pdEnabled) {
+            capabilities.add(GRAPHSPACES_READ);
+        }
+        capabilities.addAll(OperationsCapabilityService.forLevel("ADMIN"));
+
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("schema_version", SCHEMA_VERSION);
-        context.put("context_version", "anonymous-v1");
+        context.put("context_version",
+                    pdEnabled ? "anonymous-v2-pd" : "anonymous-v2-non-pd");
         context.put("mode", "NON_AUTH");
         context.put("username", null);
         context.put("role", "ANONYMOUS");
         Map<String, Set<String>> actions = new LinkedHashMap<>();
-        actions.put("graphspaces", pdEnabled ? Collections.singleton("read") : Collections.emptySet());
-        context.put("capabilities", pdEnabled ? set(GRAPH_RESOURCES_ACCESS, GRAPHSPACES_READ) :
-                    Collections.singleton(GRAPH_RESOURCES_ACCESS));
+        actions.put("graphspaces", pdEnabled ?
+                   Collections.singleton("read") : Collections.emptySet());
+        actions.put("operations", OPERATIONS_ACTIONS);
+        context.put("capabilities",
+                    Collections.unmodifiableSet(capabilities));
         context.put("actions", actions);
         Map<String, Object> scopes = new LinkedHashMap<>();
         scopes.put("all_graphspaces", pdEnabled);
