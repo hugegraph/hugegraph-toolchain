@@ -113,3 +113,29 @@ test('shows stale metrics beside an up topology status', () => {
     expect(within(card).getByText('UP')).toBeInTheDocument();
     expect(within(card).getByText('Stale')).toBeInTheDocument();
 });
+
+test('explains unavailable Store metrics on the topology card', () => {
+    render(
+        <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
+            <ClusterTopology nodes={[{
+                id: 'store-unavailable',
+                name: 'store-unavailable',
+                type: 'STORE',
+                status: 'UP',
+                metric_statuses: {
+                    system: {
+                        availability: 'UNAVAILABLE',
+                        stale: false,
+                        reason: 'metrics_target_untrusted',
+                    },
+                },
+            }]}
+            />
+        </MemoryRouter>
+    );
+
+    const card = screen.getByText('store-unavailable').closest('a');
+    expect(within(card).getByRole('img', {name: /Store metrics origin is not trusted/}))
+        .toBeInTheDocument();
+    expect(within(card).queryByText('Stale')).not.toBeInTheDocument();
+});

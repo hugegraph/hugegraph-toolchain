@@ -42,6 +42,7 @@ import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.HubbleUtil;
@@ -156,7 +157,7 @@ public class UserService extends AuthService {
             List<Object> listMap = getSpaceAndSpacenum(hugeClient);
             Map<String, List<String>> spaceMap =
                     HubbleUtil.uncheckedCast(listMap.get(0));
-            List<String> adminSpaces = spaceMap.get(userId);
+            List<String> adminSpaces = spaceMap.get(user.name());
             if (adminSpaces == null) {
                 adminSpaces = new ArrayList<>();
             }
@@ -205,7 +206,7 @@ public class UserService extends AuthService {
             userEntity.setAdminSpaces(adminSpaces);
             userEntity.setSpacenum(adminSpaces.size());
             userEntity.setResSpaces(resSpaces);
-            this.populatePermissionPresets(hugeClient, userEntity);
+            this.populateCurrentUserPermissionPresets(hugeClient, userEntity);
         } else {
             userEntity.setSuperadmin(isStandaloneAdmin(username));
             userEntity.setAdminSpaces(new ArrayList<>());
@@ -216,7 +217,7 @@ public class UserService extends AuthService {
     }
 
     public void add(HugeClient client, UserEntity ue) {
-        if (isPdEnabled()) {
+        if (isPdEnabled() && client.supportsDefaultRole()) {
             this.graphSpaceUserService.validatePermissionPresets(client, ue.getGraphspacePermissions(),
                     ue.getPermissionPreset());
         }
@@ -237,7 +238,7 @@ public class UserService extends AuthService {
                 client.auth().addSpaceAdmin(ue.getName(), graphspace);
             }
         }
-        if (isPdEnabled()) {
+        if (isPdEnabled() && client.supportsDefaultRole()) {
             this.graphSpaceUserService.applyPermissionPresets(client, ue.getName(), ue.getGraphspacePermissions(),
                     ue.getPermissionPreset());
         }
@@ -400,6 +401,33 @@ public class UserService extends AuthService {
         }
     }
 
+    private void populateCurrentUserPermissionPresets(
+            HugeClient client, UserEntity userEntity) {
+        List<Map<String, String>> permissions = new ArrayList<>();
+        if (userEntity.isSuperadmin()) {
+            userEntity.setGraphspacePermissions(permissions);
+            userEntity.setPermissionPreset("SUPER_ADMIN");
+            return;
+        }
+        if (!client.supportsDefaultRole()) {
+            userEntity.setGraphspacePermissions(permissions);
+            userEntity.setPermissionPreset("LEGACY_CUSTOM");
+            return;
+        }
+        for (String graphSpace : client.graphSpace().listGraphSpace()) {
+            if (userEntity.getAdminSpaces() != null &&
+                userEntity.getAdminSpaces().contains(graphSpace)) {
+                permissions.add(permission(graphSpace, "GS_ADMIN"));
+            } else if (client.auth().checkDefaultRole(
+                    graphSpace, "analyst")) {
+                permissions.add(permission(graphSpace, "GS_READ_WRITE"));
+            } else if (hasCurrentUserObserverRole(client, graphSpace)) {
+                permissions.add(permission(graphSpace, "GS_READ_ONLY"));
+            }
+        }
+        userEntity.setGraphspacePermissions(permissions);
+    }
+
     private void populatePermissionPresets(HugeClient client,
                                             Collection<UserEntity> users) {
         if (!client.supportsDefaultRole()) {
@@ -454,9 +482,8 @@ public class UserService extends AuthService {
     private static boolean hasObserverRole(HugeClient client,
                                            String graphSpace,
                                            String username) {
-        client.assignGraph(graphSpace, "");
-        return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.graphSpace().checkDefaultRole(graphSpace, username, "observer", graph));
+        return client.graphSpace().checkDefaultRole(
+                graphSpace, username, "observer");
     }
 
     private static boolean hasCurrentUserAccess(HugeClient client,
@@ -467,9 +494,19 @@ public class UserService extends AuthService {
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        client.assignGraph(graphSpace, "");
-        return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.auth().checkDefaultRole(graphSpace, "observer", graph));
+        return hasCurrentUserObserverRole(client, graphSpace);
+    }
+
+    private static boolean hasCurrentUserObserverRole(HugeClient client,
+                                                      String graphSpace) {
+        try {
+            return client.auth().checkDefaultRole(graphSpace, "observer");
+        } catch (ServerException e) {
+            if (e.status() == 403) {
+                return false;
+            }
+            throw e;
+        }
     }
 
     protected List<Object> getSpaceAndSpacenum(HugeClient hugeClient) {
@@ -505,7 +542,7 @@ public class UserService extends AuthService {
     }
 
     public void update(HugeClient hugeClient, UserEntity userEntity) {
-        if (isPdEnabled()) {
+        if (isPdEnabled() && hugeClient.supportsDefaultRole()) {
             this.graphSpaceUserService.validatePermissionPresets(hugeClient, userEntity.getGraphspacePermissions(),
                     userEntity.getPermissionPreset());
         }
@@ -531,7 +568,7 @@ public class UserService extends AuthService {
         }
 
         hugeClient.auth().updateUser(user);
-        if (isPdEnabled()) {
+        if (isPdEnabled() && hugeClient.supportsDefaultRole()) {
             this.graphSpaceUserService.applyPermissionPresets(hugeClient, userEntity.getName(),
                     userEntity.getGraphspacePermissions(),
                     userEntity.getPermissionPreset());

@@ -16,13 +16,15 @@
  * under the License.
  */
 
-import {Modal, Input, Form, Select, message, Spin} from 'antd';
+import {Alert, Modal, Input, Form, Select, message, Spin} from 'antd';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
 import style from './index.module.scss';
 import FormHelpLabel from '../../components/FormHelpLabel';
+import {accountErrorMessage} from './accountError';
+import {useAuthContext} from '../../auth/AuthContext';
 import {
     getAccountPreset,
     getPresetSpaces,
@@ -32,8 +34,15 @@ import {
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
+const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
 const permissionPresetChanged = (prev, next) => (prev.permission_preset !== next.permission_preset
 );
+const toProfilePayload = values => ({
+    user_name: values.user_name,
+    user_nickname: values.user_nickname,
+    user_password: values.user_password,
+    user_description: values.user_description,
+});
 
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel
@@ -51,13 +60,25 @@ const EditLayer = ({
     allowedOperations = DEFAULT_ALLOWED_OPERATIONS,
 }) => {
     const {t} = useTranslation();
+    const {context} = useAuthContext();
     const [form] = Form.useForm();
     const [graphspaceList, setGraphspaceList] = useState([]);
     const [detail, setDetail] = useState({});
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [mutationError, setMutationError] = useState(null);
     const submitPending = useRef(false);
     const detailRequest = useRef(0);
+    const permissionPresetsSupported = !context
+        || context.capabilities?.includes('account_permission_presets');
+    const permissionFieldsVisible = permissionPresetsSupported
+        && ['create', 'edit'].includes(op);
+    const preservesMixedPermissions = op === 'edit'
+        && getAccountPreset(detail) === null;
+    const presetOptions = [
+        ...(preservesMixedPermissions ? [PRESERVE_PERMISSIONS] : []),
+        ...Object.values(PERMISSION_PRESETS),
+    ];
 
     const title = {
         'detail': t('account.form.title_detail'),
@@ -67,18 +88,25 @@ const EditLayer = ({
     };
 
     const createUser = useCallback(values => {
-        return api.auth.addUser(toPermissionPayload(values), PAGE_ERROR_CONFIG).then(res => {
+        const payload = permissionPresetsSupported
+            ? toPermissionPayload(values)
+            : toProfilePayload(values);
+        return api.auth.addUser(payload, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.create_success'));
                 onCancel();
                 refresh();
                 return;
             }
-            message.error(t('common.msg.operation_failed'));
-        }).catch(() => message.error(t('common.msg.operation_failed')));
-    }, [onCancel, refresh, t]);
+            throw res;
+        });
+    }, [onCancel, permissionPresetsSupported, refresh, t]);
     const updateUser = useCallback(values => {
-        return api.auth.updateUser(data.id, toPermissionPayload(values), PAGE_ERROR_CONFIG
+        const payload = permissionPresetsSupported
+                        && values.permission_preset !== PRESERVE_PERMISSIONS
+            ? toPermissionPayload(values)
+            : toProfilePayload(values);
+        return api.auth.updateUser(data.id, payload, PAGE_ERROR_CONFIG
         ).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.update_success'));
@@ -88,9 +116,9 @@ const EditLayer = ({
                 return;
             }
 
-            message.error(t('common.msg.operation_failed'));
-        }).catch(() => message.error(t('common.msg.operation_failed')));
-    }, [onCancel, refresh, data.id, t]);
+            throw res;
+        });
+    }, [onCancel, refresh, data.id, permissionPresetsSupported, t]);
 
     const updateUserAuth = useCallback(values => {
         const payload = toPermissionPayload({
@@ -107,8 +135,8 @@ const EditLayer = ({
                 return;
             }
 
-            message.error(t('common.msg.operation_failed'));
-        }).catch(() => message.error(t('common.msg.operation_failed')));
+            throw res;
+        });
     }, [data.id, onCancel, refresh, t]);
 
     const onFinish = useCallback(async () => {
@@ -118,6 +146,7 @@ const EditLayer = ({
 
         submitPending.current = true;
         setSubmitting(true);
+        setMutationError(null);
         try {
             const values = await form.validateFields();
             if (op === 'create') {
@@ -134,7 +163,11 @@ const EditLayer = ({
         }
         catch (error) {
             if (!error || !error.errorFields) {
-                message.error(t('common.msg.operation_failed'));
+                const detail = accountErrorMessage(
+                    error, t('account.feedback.save_retry')
+                );
+                setMutationError(detail);
+                message.error(detail);
             }
         }
         finally {
@@ -148,6 +181,7 @@ const EditLayer = ({
             detailRequest.current += 1;
             setDetail({});
             setGraphspaceList([]);
+            setMutationError(null);
             form.resetFields();
             setLoading(false);
             return;
@@ -156,7 +190,7 @@ const EditLayer = ({
         const request = detailRequest.current + 1;
         detailRequest.current = request;
         setGraphspaceList([]);
-        if (op !== 'detail') {
+        if (op !== 'detail' && (permissionPresetsSupported || op === 'auth')) {
             api.manage.getGraphSpaceList(undefined, PAGE_ERROR_CONFIG).then(res => {
                 if (detailRequest.current !== request) {
                     return;
@@ -191,7 +225,8 @@ const EditLayer = ({
                     if (op !== 'detail') {
                         form.setFieldsValue({
                             ...res.data,
-                            permission_preset: getAccountPreset(res.data),
+                            permission_preset: getAccountPreset(res.data)
+                                               ?? PRESERVE_PERMISSIONS,
                             graphspaces: op === 'auth'
                                 ? (res.data?.adminSpaces ?? [])
                                 : getPresetSpaces(res.data),
@@ -223,7 +258,7 @@ const EditLayer = ({
             form.resetFields();
             setLoading(false);
         }
-    }, [visible, data.id, form, op, t]);
+    }, [visible, data.id, form, op, permissionPresetsSupported, t]);
 
     if (op !== 'detail' && !allowedOperations[op]) {
         return null;
@@ -252,12 +287,22 @@ const EditLayer = ({
                             <Form.Item label={t('account.form.name')} className={style.item}>
                                 {detail.user_nickname}
                             </Form.Item>
-                            <Form.Item label={t('account.form.permission_preset')} className={style.item}> {t(`account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`)}
+                            <Form.Item
+                                label={t('account.form.permission_preset')}
+                                className={style.item}
+                            >
+                                {t(
+                                    `account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`
+                                )}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
                             </Form.Item>
-                            <Form.Item label={t('account.form.graphspaces')} className={style.item}> {getPresetSpaces(detail).join(', ')}
+                            <Form.Item
+                                label={t('account.form.graphspaces')}
+                                className={style.item}
+                            >
+                                {getPresetSpaces(detail).join(', ')}
                             </Form.Item>
                             <Form.Item label={t('account.col.create_time')} className={style.item}>
                                 {detail.user_create}
@@ -277,6 +322,30 @@ const EditLayer = ({
                     width={600}
                 >
                     <Spin spinning={loading}>
+                        {!permissionPresetsSupported && ['create', 'edit'].includes(op) && (
+                            <Alert
+                                type='info'
+                                showIcon
+                                message={t(
+                                    op === 'create'
+                                        ? 'account.feedback.presets_unavailable'
+                                        : 'account.feedback.preset_edit_unavailable'
+                                )}
+                                description={t(
+                                    op === 'create'
+                                        ? 'account.feedback.presets_unavailable_help'
+                                        : 'account.feedback.preset_edit_unavailable_help'
+                                )}
+                            />
+                        )}
+                        {mutationError && (
+                            <Alert
+                                type='error'
+                                showIcon
+                                message={t('account.feedback.save_failed')}
+                                description={mutationError}
+                            />
+                        )}
                         <Form
                             labelCol={{span: 6}}
                             // initialValues={data}
@@ -299,28 +368,10 @@ const EditLayer = ({
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.name' />}
                                         name="user_nickname"
-                                        rules={[rules.required(), rules.isAccountName]}
+                                        rules={[rules.isAccountName]}
                                         validateFirst
                                     >
                                         <Input placeholder={t('account.form.name_placeholder')} />
-                                    </Form.Item>
-                                    <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
-                                        name="permission_preset"
-                                        rules={[rules.required()]}
-                                    >
-                                        <Select
-                                            options={Object.values(PERMISSION_PRESETS).map(value => ({
-                                                value,
-                                                label: t(`account.permission_preset.${value}`),
-                                            }))}
-                                        />
-                                    </Form.Item>
-                                    <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.remark' />}
-                                        name="user_description"
-                                    >
-                                        <Input placeholder={t('account.form.remark_placeholder')} />
                                     </Form.Item>
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.default_password' />}
@@ -334,19 +385,57 @@ const EditLayer = ({
                                             autoComplete="new-password"
                                         />
                                     </Form.Item>
+                                    {permissionFieldsVisible && (
+                                        <Form.Item
+                                            label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
+                                            name="permission_preset"
+                                            rules={[rules.required()]}
+                                        >
+                                            <Select
+                                                options={presetOptions.map(value => ({
+                                                    value,
+                                                    label: t(value === PRESERVE_PERMISSIONS
+                                                        ? 'account.permission_preset.preserve_mixed'
+                                                        : `account.permission_preset.${value}`),
+                                                }))}
+                                            />
+                                        </Form.Item>
+                                    )}
                                     <Form.Item
-                                        noStyle
-                                        shouldUpdate={permissionPresetChanged}
+                                        label={<HelpLabel t={t} labelKey='account.form.remark' />}
+                                        name="user_description"
                                     >
-                                        {({getFieldValue}) => (getFieldValue('permission_preset') === PERMISSION_PRESETS.SUPER_ADMIN ? null : (
-                                                <Form.Item
-                                                    label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
-                                                    name="graphspaces"
-                                                >
-                                                    <Select options={graphspaceList} mode="multiple" />
-                                                </Form.Item>
-                                            ))}
+                                        <Input placeholder={t('account.form.remark_placeholder')} />
                                     </Form.Item>
+                                    {permissionFieldsVisible && (
+                                        <Form.Item
+                                            noStyle
+                                            shouldUpdate={permissionPresetChanged}
+                                        >
+                                            {({getFieldValue}) => (
+                                                [
+                                                    PERMISSION_PRESETS.SUPER_ADMIN,
+                                                    PRESERVE_PERMISSIONS,
+                                                ].includes(
+                                                    getFieldValue('permission_preset')
+                                                )
+                                                    ? null
+                                                    : (
+                                                        <Form.Item
+                                                            label={(
+                                                                <HelpLabel
+                                                                    t={t}
+                                                                    labelKey='account.form.graphspaces'
+                                                                />
+                                                            )}
+                                                            name="graphspaces"
+                                                        >
+                                                            <Select options={graphspaceList} mode="multiple" />
+                                                        </Form.Item>
+                                                    )
+                                            )}
+                                        </Form.Item>
+                                    )}
                                 </>
                             )}
                             {op === 'auth' && (

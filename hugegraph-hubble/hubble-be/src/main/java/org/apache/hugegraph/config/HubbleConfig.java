@@ -28,9 +28,13 @@ import org.springframework.context.annotation.Configuration;
 
 import java.io.File;
 import java.net.URL;
+import java.util.Locale;
+import java.util.Map;
 
 @Configuration
 public class HubbleConfig {
+
+    static final String AUTH_ENABLED_ENV = "HUBBLE_AUTH_ENABLED";
 
     @Autowired
     private ApplicationArguments arguments;
@@ -56,6 +60,24 @@ public class HubbleConfig {
                 conf = path;
             }
         }
-        return new HugeConfig(conf);
+        HugeConfig config = new HugeConfig(conf);
+        applyEnvironmentOverrides(config, System.getenv());
+        return config;
+    }
+
+    static void applyEnvironmentOverrides(HugeConfig config,
+                                          Map<String, String> environment) {
+        String authEnabled = environment.get(AUTH_ENABLED_ENV);
+        if (authEnabled == null) {
+            return;
+        }
+
+        String normalized = authEnabled.trim().toLowerCase(Locale.ROOT);
+        if (!normalized.equals("true") && !normalized.equals("false")) {
+            throw new ExternalException(
+                      AUTH_ENABLED_ENV + " must be true or false");
+        }
+        config.setProperty(HubbleOptions.AUTH_ENABLED.name(),
+                           Boolean.valueOf(normalized));
     }
 }

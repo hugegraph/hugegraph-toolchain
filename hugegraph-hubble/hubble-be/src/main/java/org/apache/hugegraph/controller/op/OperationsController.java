@@ -100,6 +100,9 @@ public class OperationsController extends BaseController {
     }
 
     private Set<String> currentCapabilities(HugeClient client) {
+        if (this.authMode != null && this.authMode.anonymous()) {
+            return OperationsCapabilityService.forLevel("ADMIN");
+        }
         String level = this.userService.userLevel(client, this.getUser());
         return OperationsCapabilityService.forLevel(level);
     }

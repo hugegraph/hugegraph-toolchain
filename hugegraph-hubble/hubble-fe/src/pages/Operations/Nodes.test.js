@@ -240,6 +240,37 @@ test('shows stale observation metadata and exposes real detail links', async () 
         .not.toHaveClass('ant-btn-loading'));
 });
 
+test('explains unavailable Store metrics in the node list', async () => {
+    getNodes.mockResolvedValue({
+        items: [{
+            id: 'store-unavailable',
+            name: 'Store unavailable',
+            type: 'STORE',
+            status: 'UP',
+            metric_statuses: {
+                system: {
+                    availability: 'UNAVAILABLE',
+                    stale: false,
+                    reason: 'metrics_target_untrusted',
+                },
+            },
+        }],
+        total: 1,
+        observed_at: 1000,
+        stale: false,
+    });
+
+    render(
+        <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
+            <Nodes />
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('img', {name: /Store metrics origin is not trusted/}))
+        .toBeInTheDocument();
+    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
+});
+
 test('keeps the search input synchronized with URL history and clear actions', async () => {
     getNodes.mockResolvedValue({items: [], total: 0, observed_at: 1000, stale: false});
 
@@ -376,7 +407,7 @@ test('merges role into node identity and keeps the full ID explainable and copya
     expect(identity).toHaveAccessibleName(
         /service-reported node name.*store-c410c1adb107-full-id/i
     );
-    expect(identity).toHaveTextContent('LEADER');
+    expect(identity).toHaveTextContent('Leader');
     expect(within(identity).getByLabelText('Leader role')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', {name: 'Role'})).not.toBeInTheDocument();
 
