@@ -1400,6 +1400,7 @@
     "datasource_manage": "Data Source Management",
     "operation_manage": "Operations",
     "cluster_overview": "Cluster Overview",
+    "cluster_overview_requires_pd": "Cluster Overview requires PD and is unavailable in standalone mode. Use Nodes to inspect server status.",
     "nodes": "Nodes",
     "advanced_monitoring": "External Advanced Dashboard",
     "operations_unavailable": "Native operations capabilities are unavailable for this account.",

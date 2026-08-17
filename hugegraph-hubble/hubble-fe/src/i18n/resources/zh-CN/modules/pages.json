@@ -1400,6 +1400,7 @@
     "datasource_manage": "数据源管理",
     "operation_manage": "运维管理",
     "cluster_overview": "集群概览",
+    "cluster_overview_requires_pd": "集群概览依赖 PD，单机模式不可用；可前往节点页面查看 Server 状态。",
     "nodes": "节点",
     "advanced_monitoring": "外部高级 Dashboard",
     "operations_unavailable": "当前账号无可用的原生运维权限。",

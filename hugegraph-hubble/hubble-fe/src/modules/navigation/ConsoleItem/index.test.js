@@ -132,9 +132,27 @@ test('disables Cluster Overview outside PD mode while keeping Nodes available', 
     expect(await screen.findByRole('button', {
         name: 'navigation_page.cluster_overview',
     })).toBeDisabled();
+    expect(screen.getByRole('group', {
+        name: /navigation_page\.cluster_overview_requires_pd/,
+    })).toBeInTheDocument();
     expect(screen.getByRole('button', {
         name: 'navigation_page.nodes',
     })).toHaveAttribute('data-url', '/operations/nodes');
+});
+
+test('keeps the capability reason when PD mode is available', async () => {
+    useOperationsCapabilities.mockReturnValue({
+        loading: false,
+        capabilities: ['operations_topology_read'],
+        error: null,
+    });
+    renderConsole();
+
+    expect(await screen.findByRole('group', {
+        name: /navigation_page\.operations_unavailable/,
+    })).toHaveAccessibleName(
+        expect.not.stringContaining('navigation_page.cluster_overview_requires_pd')
+    );
 });
 
 test('labels an unconfigured Dashboard instead of Coming Soon', async () => {
