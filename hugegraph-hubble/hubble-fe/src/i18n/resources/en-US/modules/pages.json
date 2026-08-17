@@ -1155,7 +1155,7 @@
     "read_only": {
       "page_title": "{{name}} - Schema Template Library",
       "title": "Read-only template library",
-      "description": "You can browse built-in and saved templates here. Creating, saving, editing, and deleting templates requires PD mode",
+      "description": "You can browse built-in and saved templates here. Creating, saving, editing, and deleting templates are unavailable for this connection or account",
       "apply_to_graph": "Apply templates to {{graph}}",
       "choose_graph": "Choose a graph to apply a template",
       "builtin": "Built in"

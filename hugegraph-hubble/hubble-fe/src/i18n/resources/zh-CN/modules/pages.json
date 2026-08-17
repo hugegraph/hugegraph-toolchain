@@ -1155,7 +1155,7 @@
     "read_only": {
       "page_title": "{{name}} - Schema 模板库",
       "title": "只读模板库",
-      "description": "可在此浏览内置模板与已保存模板；创建、保存、编辑和删除模板需要 PD 模式",
+      "description": "可在此浏览内置模板与已保存模板；当前连接或账号无法创建、保存、编辑和删除模板",
       "apply_to_graph": "前往 {{graph}} 应用模板",
       "choose_graph": "选择图并应用模板",
       "builtin": "内置"
