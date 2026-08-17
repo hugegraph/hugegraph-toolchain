@@ -202,6 +202,26 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testLegacyAnalystKeepsGraphSpaceAccess() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        Mockito.when(this.client.findUserByName("user"))
+               .thenReturn(user("user"));
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Collections.singletonList("SPACE"));
+        Mockito.when(this.auth.checkDefaultRole("SPACE", "analyst"))
+               .thenReturn(true);
+
+        UserEntity result = this.service.getpersonal(this.client, "user");
+
+        Assert.assertEquals(Collections.singletonList("SPACE"),
+                            result.getResSpaces());
+        Assert.assertEquals("LEGACY_CUSTOM", result.getPermissionPreset());
+        Mockito.verify(this.auth, Mockito.never())
+               .checkDefaultRole("SPACE", "observer");
+    }
+
+    @Test
     public void testLegacyProfileUpdatePreservesPermissionAssignments() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);

@@ -178,13 +178,11 @@ public class GraphSpaceService {
 
     private static boolean hasCurrentUserAccess(HugeClient client,
                                                 String graphSpace) {
-        if (!client.supportsDefaultRole()) {
-            return false;
-        }
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        return client.auth().checkDefaultRole(graphSpace, "observer");
+        return client.supportsDefaultRole() &&
+               client.auth().checkDefaultRole(graphSpace, "observer");
     }
 
     public List<Map<String, Object>> queryAnonymousGs(HugeClient client,
