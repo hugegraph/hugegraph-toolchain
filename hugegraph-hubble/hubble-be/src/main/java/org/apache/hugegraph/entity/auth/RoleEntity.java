@@ -19,7 +19,6 @@
 package org.apache.hugegraph.entity.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,7 +27,6 @@ import org.apache.hugegraph.common.Identifiable;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class RoleEntity implements Identifiable {
 
@@ -37,4 +35,17 @@ public class RoleEntity implements Identifiable {
 
     @JsonProperty("role_name")
     private String name;
+
+    @JsonProperty("permission_preset")
+    private String permissionPreset;
+
+    public RoleEntity(String id, String name) {
+        this(id, name, null);
+    }
+
+    public RoleEntity(String id, String name, String permissionPreset) {
+        this.id = id;
+        this.name = name;
+        this.permissionPreset = permissionPreset;
+    }
 }
