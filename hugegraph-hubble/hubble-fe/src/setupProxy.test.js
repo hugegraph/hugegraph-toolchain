@@ -61,5 +61,30 @@ test('keeps the legacy proxy environment variable compatible', () => {
 
     expect(createProxyMiddleware).toHaveBeenCalledWith(expect.objectContaining({
         target: 'http://127.0.0.1:19000',
+        headers: {origin: 'http://127.0.0.1:19000'},
+    }));
+});
+
+test('uses HUBBLE_API_TARGET as the preferred backend origin', () => {
+    process.env.HUBBLE_API_TARGET = 'http://127.0.0.1:18080';
+    delete process.env.HUBBLE_API_PROXY;
+
+    setupProxy({use: jest.fn()});
+
+    expect(createProxyMiddleware).toHaveBeenCalledWith(expect.objectContaining({
+        target: 'http://127.0.0.1:18080',
+        headers: {origin: 'http://127.0.0.1:18080'},
+    }));
+});
+
+test('prefers HUBBLE_API_TARGET over the legacy proxy setting', () => {
+    process.env.HUBBLE_API_TARGET = 'http://127.0.0.1:18080';
+    process.env.HUBBLE_API_PROXY = 'http://127.0.0.1:19000';
+
+    setupProxy({use: jest.fn()});
+
+    expect(createProxyMiddleware).toHaveBeenCalledWith(expect.objectContaining({
+        target: 'http://127.0.0.1:18080',
+        headers: {origin: 'http://127.0.0.1:18080'},
     }));
 });

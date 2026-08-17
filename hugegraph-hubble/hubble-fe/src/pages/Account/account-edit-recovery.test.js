@@ -82,24 +82,38 @@ beforeEach(() => {
     });
 });
 
-test('limits account creation to global admin when preset API is unavailable',
+test('creates a non-elevated account when preset API is unavailable',
     async () => {
         mockAuthContext = {capabilities: ['accounts_manage']};
+        api.auth.addUser.mockResolvedValue({status: 200});
         render(<EditLayer {...props} data={{}} op='create' />);
         await act(async () => undefined);
 
         expect(screen.getByRole('alert')).toHaveTextContent(
             'account.feedback.presets_unavailable'
         );
-        fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-        expect(screen.getByText('account.permission_preset.SUPER_ADMIN'))
-            .toBeInTheDocument();
-        expect(screen.queryByText('account.permission_preset.GS_READ_ONLY'))
+        expect(screen.queryByText('account.form.permission_preset'))
             .not.toBeInTheDocument();
-        expect(screen.queryByText('account.permission_preset.GS_READ_WRITE'))
-            .not.toBeInTheDocument();
-        expect(screen.queryByText('account.permission_preset.GS_ADMIN'))
-            .not.toBeInTheDocument();
+        expect(api.manage.getGraphSpaceList).not.toHaveBeenCalled();
+
+        fireEvent.change(screen.getByPlaceholderText(
+            'account.form.id_placeholder'
+        ), {target: {value: 'alice'}});
+        fireEvent.change(screen.getByPlaceholderText(
+            'account.form.default_password_placeholder'
+        ), {target: {value: 'alice-password'}});
+        await act(async () => {
+            fireEvent.click(document.querySelector(
+                '.ant-modal-footer .ant-btn-primary'
+            ));
+        });
+
+        await waitFor(() => expect(api.auth.addUser).toHaveBeenCalled());
+        const payload = api.auth.addUser.mock.calls[0][0];
+        expect(payload).not.toHaveProperty('permission_preset');
+        expect(payload).not.toHaveProperty('graphspace_permissions');
+        expect(payload).not.toHaveProperty('adminSpaces');
+        expect(payload).not.toHaveProperty('is_superadmin');
     });
 
 test('preserves permissions when editing a legacy account profile', async () => {
@@ -147,6 +161,49 @@ test('preserves permissions when editing a legacy account profile', async () => 
     ));
     await waitFor(() => expect(props.onCancel).toHaveBeenCalled());
     const payload = api.auth.updateUser.mock.calls[0][1];
+    expect(payload).not.toHaveProperty('permission_preset');
+    expect(payload).not.toHaveProperty('graphspace_permissions');
+    expect(payload).not.toHaveProperty('adminSpaces');
+    expect(payload).not.toHaveProperty('is_superadmin');
+});
+
+test('preserves mixed GraphSpace permissions on profile edit', async () => {
+    mockAuthContext = {
+        capabilities: ['accounts_manage', 'account_permission_presets'],
+    };
+    api.auth.getUserInfo.mockResolvedValue({
+        status: 200,
+        data: {
+            user_name: 'alice',
+            user_nickname: 'Alice',
+            graphspace_permissions: [{
+                graphspace: 'read',
+                permission_preset: 'GS_READ_ONLY',
+            }, {
+                graphspace: 'write',
+                permission_preset: 'GS_READ_WRITE',
+            }],
+        },
+    });
+    api.auth.updateUser.mockResolvedValue({status: 200});
+
+    render(<EditLayer {...props} data={{id: 'alice'}} op='edit' />);
+
+    expect(await screen.findByDisplayValue('Alice')).toBeInTheDocument();
+    expect(screen.getByText('account.permission_preset.preserve_mixed'))
+        .toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue('Alice'), {
+        target: {value: 'Alice Updated'},
+    });
+    await act(async () => {
+        fireEvent.click(document.querySelector(
+            '.ant-modal-footer .ant-btn-primary'
+        ));
+    });
+
+    await waitFor(() => expect(api.auth.updateUser).toHaveBeenCalled());
+    const payload = api.auth.updateUser.mock.calls[0][1];
+    expect(payload.user_nickname).toBe('Alice Updated');
     expect(payload).not.toHaveProperty('permission_preset');
     expect(payload).not.toHaveProperty('graphspace_permissions');
     expect(payload).not.toHaveProperty('adminSpaces');

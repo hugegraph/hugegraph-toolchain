@@ -280,8 +280,8 @@ public class GraphSpaceUserService extends AuthService {
                 graphSpace, username, "analyst")) {
             return true;
         }
-        return this.graphs(client, graphSpace).stream().anyMatch(
-                graph -> client.graphSpace().checkDefaultRole(graphSpace, username, "observer", graph));
+        return client.graphSpace().checkDefaultRole(
+                graphSpace, username, "observer");
     }
 
     private void clearDefaultRoles(HugeClient client, String graphSpace,
@@ -290,11 +290,10 @@ public class GraphSpaceUserService extends AuthService {
                 graphSpace, username, "analyst")) {
             client.graphSpace().deleteDefaultRole(graphSpace, username, "analyst");
         }
-        for (String graph : this.graphs(client, graphSpace)) {
-            if (client.graphSpace().checkDefaultRole(
-                    graphSpace, username, "observer", graph)) {
-                client.graphSpace().deleteDefaultRole(graphSpace, username, "observer", graph);
-            }
+        if (client.graphSpace().checkDefaultRole(
+                graphSpace, username, "observer")) {
+            client.graphSpace().deleteDefaultRole(
+                    graphSpace, username, "observer");
         }
     }
 
@@ -306,28 +305,16 @@ public class GraphSpaceUserService extends AuthService {
 
     private void setDefaultRole(HugeClient client, String graphSpace,
                                 String username, String role) {
-        if ("observer".equals(role)) {
-            for (String graph : this.graphs(client, graphSpace)) {
-                client.graphSpace().setDefaultRole(graphSpace, username, role, graph);
-            }
-            return;
-        }
         client.graphSpace().setDefaultRole(graphSpace, username, role);
     }
 
     private void addDefaultRole(HugeClient client, String graphSpace,
                                 UserView user, String username, String role) {
-        boolean assigned = "observer".equals(role) ? this.graphs(client, graphSpace).stream().anyMatch(
-                               graph -> client.graphSpace().checkDefaultRole(graphSpace, username, role, graph)) :
-                           client.graphSpace().checkDefaultRole(graphSpace, username, role);
+        boolean assigned = client.graphSpace().checkDefaultRole(
+                graphSpace, username, role);
         if (assigned) {
             user.addRole(new RoleEntity(role, role));
         }
-    }
-
-    private List<String> graphs(HugeClient client, String graphSpace) {
-        client.assignGraph(graphSpace, "");
-        return client.graphs().listGraph();
     }
 
     public void unauthUser(HugeClient client, String graphSpace,

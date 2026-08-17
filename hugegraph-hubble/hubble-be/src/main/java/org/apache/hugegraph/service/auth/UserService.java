@@ -157,7 +157,7 @@ public class UserService extends AuthService {
             List<Object> listMap = getSpaceAndSpacenum(hugeClient);
             Map<String, List<String>> spaceMap =
                     HubbleUtil.uncheckedCast(listMap.get(0));
-            List<String> adminSpaces = spaceMap.get(userId);
+            List<String> adminSpaces = spaceMap.get(user.name());
             if (adminSpaces == null) {
                 adminSpaces = new ArrayList<>();
             }
@@ -482,9 +482,8 @@ public class UserService extends AuthService {
     private static boolean hasObserverRole(HugeClient client,
                                            String graphSpace,
                                            String username) {
-        client.assignGraph(graphSpace, "");
-        return client.graphs().listGraph().stream().anyMatch(
-                graph -> client.graphSpace().checkDefaultRole(graphSpace, username, "observer", graph));
+        return client.graphSpace().checkDefaultRole(
+                graphSpace, username, "observer");
     }
 
     private static boolean hasCurrentUserAccess(HugeClient client,
@@ -501,10 +500,7 @@ public class UserService extends AuthService {
     private static boolean hasCurrentUserObserverRole(HugeClient client,
                                                       String graphSpace) {
         try {
-            client.assignGraph(graphSpace, "");
-            return client.graphs().listGraph().stream().anyMatch(
-                    graph -> client.auth().checkDefaultRole(
-                            graphSpace, "observer", graph));
+            return client.auth().checkDefaultRole(graphSpace, "observer");
         } catch (ServerException e) {
             if (e.status() == 403) {
                 return false;

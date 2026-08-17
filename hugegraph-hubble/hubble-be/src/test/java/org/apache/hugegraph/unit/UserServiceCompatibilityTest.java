@@ -161,6 +161,26 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testUserDetailFindsAdminSpacesByUsername() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        User account = user("alice");
+        account.setId("user-id");
+        Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
+        Mockito.when(this.auth.listUsers())
+               .thenReturn(Collections.singletonList(account));
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Collections.singletonList("SPACE"));
+        Mockito.when(this.auth.listSpaceAdmin("SPACE"))
+               .thenReturn(Collections.singletonList("alice"));
+
+        UserEntity result = this.service.get(this.client, "user-id");
+
+        Assert.assertEquals(Collections.singletonList("SPACE"),
+                            result.getAdminSpaces());
+        Assert.assertEquals(Integer.valueOf(1), result.getSpacenum());
+    }
+
+    @Test
     public void testCurrentUserIgnoresOnlyForbiddenGraphSpaces() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
@@ -200,6 +220,33 @@ public class UserServiceCompatibilityTest {
                .applyPermissionPresets(Mockito.any(), Mockito.anyString(),
                                        Mockito.any(), Mockito.any());
         Mockito.verify(this.auth).updateUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testModernProfileUpdatePreservesPermissionAssignments() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        GraphSpaceUserService actualGraphSpaceUsers =
+                new GraphSpaceUserService();
+        ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
+                                     actualGraphSpaceUsers);
+        UserEntity user = UserEntity.builder()
+                                    .id("user-id")
+                                    .name("user")
+                                    .nickname("display-name")
+                                    .build();
+
+        this.service.update(this.client, user);
+
+        Mockito.verify(this.auth).updateUser(Mockito.any(User.class));
+        Mockito.verify(this.graphSpace, Mockito.never()).setDefaultRole(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.graphSpace, Mockito.never()).deleteDefaultRole(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never()).addSpaceAdmin(
+                Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never()).delSpaceAdmin(
+                Mockito.anyString(), Mockito.anyString());
     }
 
     @Test

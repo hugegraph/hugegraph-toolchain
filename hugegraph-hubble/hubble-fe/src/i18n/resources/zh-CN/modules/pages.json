@@ -392,6 +392,7 @@
       "GS_READ_ONLY": "GraphSpace 只读",
       "GS_READ_WRITE": "GraphSpace 读写",
       "GS_ADMIN": "GraphSpace 管理员",
+      "preserve_mixed": "保留现有混合权限",
       "mixed": "混合 GraphSpace 权限",
       "legacy_custom": "旧版/自定义权限"
     },
@@ -400,7 +401,7 @@
       "save_retry": "请检查账号字段和 Server 连接后重试。",
       "delete_retry": "账号删除失败，请刷新列表后重试。",
       "presets_unavailable": "GraphSpace 权限预设不可用",
-      "presets_unavailable_help": "当前部署未提供所需权限 API，此处只能创建全局管理员账号",
+      "presets_unavailable_help": "当前部署未提供所需权限 API，账号将以无提升权限的普通账号创建",
       "preset_edit_unavailable": "当前无法编辑权限",
       "preset_edit_unavailable_help": "仍可修改用户资料和密码，现有权限将保持不变；升级当前连接的 HugeGraph REST API 至 0.72 或更高版本后可编辑权限"
     },

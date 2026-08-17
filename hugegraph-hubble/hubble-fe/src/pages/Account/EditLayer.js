@@ -34,8 +34,15 @@ import {
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
+const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
 const permissionPresetChanged = (prev, next) => (prev.permission_preset !== next.permission_preset
 );
+const toProfilePayload = values => ({
+    user_name: values.user_name,
+    user_nickname: values.user_nickname,
+    user_password: values.user_password,
+    user_description: values.user_description,
+});
 
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel
@@ -64,11 +71,14 @@ const EditLayer = ({
     const detailRequest = useRef(0);
     const permissionPresetsSupported = !context
         || context.capabilities?.includes('account_permission_presets');
-    const permissionFieldsVisible = op === 'create'
-        || (op === 'edit' && permissionPresetsSupported);
-    const presetOptions = op === 'create' && !permissionPresetsSupported
-        ? [PERMISSION_PRESETS.SUPER_ADMIN]
-        : Object.values(PERMISSION_PRESETS);
+    const permissionFieldsVisible = permissionPresetsSupported
+        && ['create', 'edit'].includes(op);
+    const preservesMixedPermissions = op === 'edit'
+        && getAccountPreset(detail) === null;
+    const presetOptions = [
+        ...(preservesMixedPermissions ? [PRESERVE_PERMISSIONS] : []),
+        ...Object.values(PERMISSION_PRESETS),
+    ];
 
     const title = {
         'detail': t('account.form.title_detail'),
@@ -78,7 +88,10 @@ const EditLayer = ({
     };
 
     const createUser = useCallback(values => {
-        return api.auth.addUser(toPermissionPayload(values), PAGE_ERROR_CONFIG).then(res => {
+        const payload = permissionPresetsSupported
+            ? toPermissionPayload(values)
+            : toProfilePayload(values);
+        return api.auth.addUser(payload, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.create_success'));
                 onCancel();
@@ -87,16 +100,12 @@ const EditLayer = ({
             }
             throw res;
         });
-    }, [onCancel, refresh, t]);
+    }, [onCancel, permissionPresetsSupported, refresh, t]);
     const updateUser = useCallback(values => {
         const payload = permissionPresetsSupported
+                        && values.permission_preset !== PRESERVE_PERMISSIONS
             ? toPermissionPayload(values)
-            : {
-                user_name: values.user_name,
-                user_nickname: values.user_nickname,
-                user_password: values.user_password,
-                user_description: values.user_description,
-            };
+            : toProfilePayload(values);
         return api.auth.updateUser(data.id, payload, PAGE_ERROR_CONFIG
         ).then(res => {
             if (res.status === 200) {
@@ -216,7 +225,8 @@ const EditLayer = ({
                     if (op !== 'detail') {
                         form.setFieldsValue({
                             ...res.data,
-                            permission_preset: getAccountPreset(res.data),
+                            permission_preset: getAccountPreset(res.data)
+                                               ?? PRESERVE_PERMISSIONS,
                             graphspaces: op === 'auth'
                                 ? (res.data?.adminSpaces ?? [])
                                 : getPresetSpaces(res.data),
@@ -384,7 +394,9 @@ const EditLayer = ({
                                             <Select
                                                 options={presetOptions.map(value => ({
                                                     value,
-                                                    label: t(`account.permission_preset.${value}`),
+                                                    label: t(value === PRESERVE_PERMISSIONS
+                                                        ? 'account.permission_preset.preserve_mixed'
+                                                        : `account.permission_preset.${value}`),
                                                 }))}
                                             />
                                         </Form.Item>
@@ -401,7 +413,12 @@ const EditLayer = ({
                                             shouldUpdate={permissionPresetChanged}
                                         >
                                             {({getFieldValue}) => (
-                                                getFieldValue('permission_preset') === PERMISSION_PRESETS.SUPER_ADMIN
+                                                [
+                                                    PERMISSION_PRESETS.SUPER_ADMIN,
+                                                    PRESERVE_PERMISSIONS,
+                                                ].includes(
+                                                    getFieldValue('permission_preset')
+                                                )
                                                     ? null
                                                     : (
                                                         <Form.Item
