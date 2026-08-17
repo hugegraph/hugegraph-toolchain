@@ -103,6 +103,10 @@ const rolePreset = role => {
 const rolesPreset = roles => {
     const values = roles ?? [];
     const presets = values.map(rolePreset);
+    if (values.some(role => (role?.permission_preset ?? role?.permissionPreset)
+                            === PERMISSION_PRESETS.GS_ADMIN)) {
+        return PERMISSION_PRESETS.GS_ADMIN;
+    }
     return values.length > 0 && presets.every(Boolean) && new Set(presets).size === 1 ? presets[0] : null;
 };
 

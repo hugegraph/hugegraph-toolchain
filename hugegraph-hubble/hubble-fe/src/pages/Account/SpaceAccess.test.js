@@ -87,6 +87,17 @@ test('requires explicit preset for mixed or legacy member roles', () => {
     ])).toBeNull();
 });
 
+test('keeps graphspace administrator selected with member roles', () => {
+    expect(rolesPreset([
+        {role_name: 'analyst'},
+        {permission_preset: 'GS_ADMIN'},
+    ])).toBe('GS_ADMIN');
+    expect(rolesPreset([
+        {role_name: 'analyst'},
+        {role_name: 'custom-role', permissions: ['delete']},
+    ])).toBeNull();
+});
+
 beforeEach(() => {
     jest.clearAllMocks();
     mockAuthContext = {
