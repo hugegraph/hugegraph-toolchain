@@ -37,7 +37,8 @@ jest.mock('../i18n', () => ({
                 'common.validation.jdbc_rule':
                     'Enter a valid JDBC URL, for example: jdbc:mysql://127.0.0.1:3306/db_name',
                 'common.validation.account_name_rule':
-                    'Account name must be within 16 characters and cannot start or end with an underscore',
+                    'Use 1–16 characters without spaces; letters, numbers, Chinese/CJK '
+                    + 'forms, and underscores are supported; underscores cannot be first or last',
                 'common.validation.favorite_name_rule':
                     'Use Chinese characters, letters, numbers, or underscores only, up to 48 characters',
                 'common.validation.invalid_data_format': 'Invalid data format',
@@ -54,7 +55,9 @@ jest.mock('../i18n', () => ({
                 'common.validation.normal_name_rule': '只能包含中文、字母、数字、_，最多 48 个字符',
                 'common.validation.jdbc_rule':
                     '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name',
-                'common.validation.account_name_rule': '账号名不超过16个字符，且不能以下划线开始和结尾',
+                'common.validation.account_name_rule':
+                    '使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；'
+                    + '下划线不能位于首尾',
                 'common.validation.favorite_name_rule': '只能包含中文、字母、数字、_, 不能超过48个字符',
                 'common.validation.invalid_data_format': '非法的数据格式',
             },
@@ -124,7 +127,8 @@ describe('rules i18n defaults', () => {
             ],
             [
                 rules.isAccountName(),
-                'Account name must be within 16 characters and cannot start or end with an underscore',
+                'Use 1–16 characters without spaces; letters, numbers, Chinese/CJK '
+                + 'forms, and underscores are supported; underscores cannot be first or last',
             ],
             [rules.isUUID(), 'Invalid data format'],
             [rules.isInt(), 'Invalid data format'],
@@ -144,8 +148,19 @@ describe('rules i18n defaults', () => {
     });
 
     it('rejects invalid account names with an Error object', async () => {
-        await expect(rules.isAccountName().validator(null, 'name_too_long_123'))
-            .rejects.toBeInstanceOf(Error);
+        const validator = rules.isAccountName().validator;
+
+        await expect(validator(null, '中文_Name123')).resolves.toBeUndefined();
+        await expect(validator(null, 'ＡＢＣ１２３')).resolves.toBeUndefined();
+        for (const value of [
+            'name with space',
+            '_leading',
+            'trailing_',
+            '',
+            '12345678901234567',
+        ]) {
+            await expect(validator(null, value)).rejects.toBeInstanceOf(Error);
+        }
     });
 
     it('accepts only backend-compatible favorite names', async () => {
@@ -177,7 +192,11 @@ describe('rules i18n defaults', () => {
             [rules.isPropertyName(), '只能包含中文、字母、数字、_'],
             [rules.isNoramlName(), '只能包含中文、字母、数字、_，最多 48 个字符'],
             [rules.isJDBC(), '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name'],
-            [rules.isAccountName(), '账号名不超过16个字符，且不能以下划线开始和结尾'],
+            [
+                rules.isAccountName(),
+                '使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；'
+                + '下划线不能位于首尾',
+            ],
             [rules.isFavoriteName(), '只能包含中文、字母、数字、_, 不能超过48个字符'],
             [rules.isUUID(), '非法的数据格式'],
             [rules.isInt(), '非法的数据格式'],

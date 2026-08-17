@@ -27,6 +27,7 @@ import {accountErrorMessage} from './accountError';
 import {useAuthContext} from '../../auth/AuthContext';
 import {
     getAccountPreset,
+    getAccountPresetLabelKey,
     getPresetSpaces,
     PERMISSION_PRESETS,
     toPermissionPayload,
@@ -291,9 +292,9 @@ const EditLayer = ({
                                 label={t('account.form.permission_preset')}
                                 className={style.item}
                             >
-                                {t(
-                                    `account.permission_preset.${getAccountPreset(detail) ?? 'mixed'}`
-                                )}
+                                {t(`account.permission_preset.${getAccountPresetLabelKey(
+                                    detail, permissionPresetsSupported
+                                )}`)}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}

@@ -81,6 +81,15 @@ const getPresetSpaces = account => {
         : [];
 };
 
+const getAccountPresetLabelKey = (account, permissionPresetsSupported) => {
+    if (!permissionPresetsSupported
+        && !account?.is_superadmin
+        && getPresetSpaces(account).length === 0) {
+        return 'unassigned';
+    }
+    return getAccountPreset(account) ?? 'mixed';
+};
+
 // This is the only compatibility mapping used by account forms.
 const toPermissionPayload = values => {
     const preset = values.permission_preset ?? PERMISSION_PRESETS.GS_READ_ONLY;
@@ -100,4 +109,10 @@ const toPermissionPayload = values => {
     };
 };
 
-export {PERMISSION_PRESETS, getAccountPreset, getPresetSpaces, toPermissionPayload};
+export {
+    PERMISSION_PRESETS,
+    getAccountPreset,
+    getAccountPresetLabelKey,
+    getPresetSpaces,
+    toPermissionPayload,
+};

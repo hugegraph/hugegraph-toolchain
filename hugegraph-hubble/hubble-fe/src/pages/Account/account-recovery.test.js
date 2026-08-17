@@ -48,6 +48,7 @@ beforeEach(() => {
     mockAuthContext = {
         refresh: jest.fn(),
         context: {
+            capabilities: ['account_permission_presets'],
             actions: {
                 accounts: ['create', 'read', 'update', 'delete'],
                 authorizations: ['read', 'grant', 'revoke'],
@@ -117,6 +118,24 @@ test('labels administrators, space administrators, and regular users in the list
         .toBeInTheDocument();
     expect(screen.getByText('account.permission_preset.GS_READ_ONLY'))
         .toBeInTheDocument();
+});
+
+test('does not label an unassigned legacy account as GraphSpace read-only', async () => {
+    mockAuthContext.context.capabilities = ['accounts_manage'];
+    api.auth.getAllUserList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{user_name: 'analyst', adminSpaces: []}],
+            total: 1,
+        },
+    });
+
+    render(<Account />);
+
+    expect(await screen.findByText('account.permission_preset.unassigned'))
+        .toBeInTheDocument();
+    expect(screen.queryByText('account.permission_preset.GS_READ_ONLY'))
+        .not.toBeInTheDocument();
 });
 
 test('space administrators use scoped management without loading global accounts', async () => {

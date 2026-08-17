@@ -394,6 +394,7 @@
       "GS_ADMIN": "GraphSpace 管理员",
       "preserve_mixed": "保留现有混合权限",
       "mixed": "混合 GraphSpace 权限",
+      "unassigned": "未分配 GraphSpace 权限预设",
       "legacy_custom": "旧版/自定义权限"
     },
     "feedback": {
@@ -414,7 +415,7 @@
       "id_help": "用于登录的唯一账号标识，创建后不可修改",
       "id_placeholder": "用户登录",
       "name": "账号名",
-      "name_help": "显示给其他管理员识别的账号名称，创建后仍可修改",
+      "name_help": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线",
       "name_placeholder": "账号名设置后可更改",
       "is_superadmin": "是否为超级管理员",
       "level": "账号级别",
@@ -509,7 +510,7 @@
       "new_password_placeholder": "请输入新密码",
       "confirm_password_placeholder": "请再次输入密码",
       "password_mismatch": "两次密码不一致",
-      "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾"
+      "account_name_rule": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；下划线不能位于首尾"
     }
   },
   "role": {
