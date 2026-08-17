@@ -94,4 +94,4 @@ jobs:
         uses: ./.github/actions/upload-coverage
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: target/jacoco.xml
+          file: hugegraph-loader/target/jacoco.xml

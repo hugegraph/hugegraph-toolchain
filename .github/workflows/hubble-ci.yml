@@ -208,4 +208,4 @@ jobs:
         uses: ./.github/actions/upload-coverage
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: target/site/jacoco/*.xml
+          file: hugegraph-hubble/hubble-be/target/jacoco.xml
