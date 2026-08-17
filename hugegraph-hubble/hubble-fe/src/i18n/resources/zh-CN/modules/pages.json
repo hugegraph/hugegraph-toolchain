@@ -354,6 +354,7 @@
     },
     "empty": {
       "description": "这个 GraphSpace 已可用，但还没有图。创建第一张图后即可配置 Schema、导入和查询数据",
+      "read_only_description": "当前只读账号在此 GraphSpace 中暂无可访问的图",
       "create": "创建第一张图",
       "demo_prerequisite": "创建图后，选择该图并前往数据导入，即可快速构建 Demo 数据集。",
       "view_demo": "查看 Demo 数据入口",
@@ -1103,6 +1104,7 @@
       "empty_title": "创建第一个图 Schema",
       "empty_description": "建议先定义可复用属性，再创建顶点类型和边类型",
       "create_from_template": "根据模板创建 Schema",
+      "read_only_empty": "当前图尚无 Schema，需要读写或管理员账号才能创建。",
       "template_description": "选择内置示例或当前图空间已保存的模板，直接应用到当前图",
       "manual_title": "或手动创建 Schema",
       "builtin_templates": "内置示例",

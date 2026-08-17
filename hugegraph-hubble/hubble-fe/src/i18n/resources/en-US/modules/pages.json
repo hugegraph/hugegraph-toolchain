@@ -354,6 +354,7 @@
     },
     "empty": {
       "description": "This GraphSpace is ready but has no graphs yet. Create the first graph to model, import, and query data",
+      "read_only_description": "This GraphSpace has no graphs available to this read-only account",
       "create": "Create first graph",
       "demo_prerequisite": "After creating a graph, select it and use Data Import to build a quick Demo dataset.",
       "view_demo": "View Demo data entry",
@@ -1103,6 +1104,7 @@
       "empty_title": "Build your first graph schema",
       "empty_description": "Define reusable properties first, then create vertex and edge types",
       "create_from_template": "Create Schema from a Template",
+      "read_only_empty": "This graph has no Schema yet. A read-write or administrator account is required to create one.",
       "template_description": "Choose a built-in example or a saved template from this GraphSpace and apply it to the current graph",
       "manual_title": "Or create the Schema manually",
       "builtin_templates": "Built-in Examples",

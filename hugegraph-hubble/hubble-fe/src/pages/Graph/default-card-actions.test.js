@@ -223,7 +223,11 @@ test('disables example dataset writes for the protected built-in graphspace', as
 
 test('disables example dataset writes without graphspace update permission', async () => {
     mockAuthContext = {
-        context: {role: 'USER', scopes: {admin_graphspaces: []}},
+        context: {
+            mode: 'PD',
+            role: 'USER',
+            scopes: {admin_graphspaces: [], write_graphspaces: []},
+        },
     };
 
     render(<Graph />);
@@ -237,6 +241,50 @@ test('disables example dataset writes without graphspace update permission', asy
         expect(within(menu).getByText(label).closest('[role="menuitem"]'))
             .toHaveAttribute('aria-disabled', 'true');
     });
+    [
+        'graph.menu.clear_graph',
+        'graph.menu.set_default',
+        'common.action.edit',
+        'common.action.delete',
+    ].forEach(label => {
+        expect(within(menu).getByText(label).closest('[role="menuitem"]'))
+            .toHaveAttribute('aria-disabled', 'true');
+    });
+    expect(screen.queryByRole('button', {name: 'graph.create'}))
+        .not.toBeInTheDocument();
+});
+
+test('separates read-write graph data from GraphSpace management', async () => {
+    mockAuthContext = {
+        context: {
+            mode: 'PD',
+            role: 'USER',
+            scopes: {admin_graphspaces: [], write_graphspaces: ['space']},
+        },
+    };
+    api.manage.getGraphList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{
+                name: 'graph-a',
+                graphspace: 'space',
+                default: false,
+            }],
+            total: 1,
+        },
+    });
+
+    render(<Graph />);
+
+    const menu = await screen.findByTestId('graph-card-menu');
+    expect(within(menu).getByText('common.action.edit').closest('[role="menuitem"]'))
+        .toHaveAttribute('aria-disabled', 'true');
+    expect(within(menu).getByText('graph.menu.clear_graph').closest('[role="menuitem"]'))
+        .toHaveAttribute('aria-disabled', 'true');
+    expect(within(menu).getByText('graph.menu.load_hlm_sample')
+        .closest('[role="menuitem"]')).not.toHaveAttribute('aria-disabled');
+    expect(screen.queryByRole('button', {name: 'graph.create'}))
+        .not.toBeInTheDocument();
 });
 
 test('places the new-graph card after existing graphs', async () => {
@@ -298,6 +346,29 @@ test('explains an empty GraphSpace and distinguishes filtered results', async ()
     expect(await screen.findByText('graph.empty.filtered_description')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', {name: 'graph.empty.clear_filters'}));
     expect(search).toHaveValue('');
+});
+
+test('shows a read-only empty state without mutation links', async () => {
+    mockAuthContext = {
+        context: {
+            mode: 'PD',
+            role: 'USER',
+            scopes: {admin_graphspaces: [], write_graphspaces: []},
+        },
+    };
+    api.manage.getGraphList.mockResolvedValue({
+        status: 200,
+        data: {records: [], total: 0},
+    });
+
+    render(<Graph />);
+
+    expect(await screen.findByText('graph.empty.read_only_description'))
+        .toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'graph.empty.create'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'graph.empty.view_demo'}))
+        .not.toBeInTheDocument();
 });
 
 test('falls back to the real GraphSpace name in list mode when alias is empty', async () => {

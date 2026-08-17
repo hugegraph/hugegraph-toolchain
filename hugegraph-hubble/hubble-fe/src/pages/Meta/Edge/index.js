@@ -28,7 +28,7 @@ import * as api from '../../../api';
 
 const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
-const EdgeTable = () => {
+const EdgeTable = ({canWrite = true}) => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [refresh, setRefresh] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
@@ -152,7 +152,7 @@ const EdgeTable = () => {
             ellipsis: true,
             render: val => val.map(item => item.name).join(';'),
         },
-        {
+        canWrite && {
             title: t('common.operation'),
             align: 'center',
             render: row => (
@@ -166,7 +166,7 @@ const EdgeTable = () => {
                 </Space>
             ),
         },
-    ];
+    ].filter(Boolean);
 
     useEffect(() => {
         api.manage.getMetaPropertyList(graphspace, graph, {page_size: -1}).then(res => {
@@ -192,9 +192,17 @@ const EdgeTable = () => {
             <Row>
                 <Col>
                     <Space>
-                        <Button type='primary' onClick={handleCreate}>{t('common.create')}</Button>
+                        {canWrite && (
+                            <Button type='primary' onClick={handleCreate}>
+                                {t('common.create')}
+                            </Button>
+                        )}
                         <Button onClick={handleRefresh}>{t('common.refresh')}</Button>
-                        <Button onClick={handleDeleteBatch}>{t('common.batch_delete')}</Button>
+                        {canWrite && (
+                            <Button onClick={handleDeleteBatch}>
+                                {t('common.batch_delete')}
+                            </Button>
+                        )}
                     </Space>
                 </Col>
             </Row>
@@ -204,12 +212,12 @@ const EdgeTable = () => {
             <Table
                 columns={columns}
                 dataSource={data}
-                rowSelection={{
+                rowSelection={canWrite ? {
                     type: 'checkbox',
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },
-                }}
+                } : null}
                 pagination={pagination}
                 onChange={handleTable}
                 rowKey={rowKey}
@@ -218,7 +226,7 @@ const EdgeTable = () => {
                 scroll={{x: 'max-content'}}
             />
 
-            <EditEdgeLayer
+            {canWrite && <EditEdgeLayer
                 visible={editLayerVisible}
                 graphspace={graphspace}
                 graph={graph}
@@ -227,7 +235,7 @@ const EdgeTable = () => {
                 name={edgeName}
                 propertyList={propertyList}
                 vertexList={vertexList}
-            />
+            />}
         </>
     );
 };

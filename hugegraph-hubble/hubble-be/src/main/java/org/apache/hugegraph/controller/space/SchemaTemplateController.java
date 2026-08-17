@@ -94,7 +94,7 @@ public class SchemaTemplateController extends BaseController {
                          @RequestBody SchemaTemplate schemaTemplate) {
         E.checkArgument(isPdEnabled(),
                 "Schema template is not supported in standalone mode");
-        HugeClient client = this.authClient(graphSpace, null);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
 
         return schemaTemplateService.create(client, schemaTemplate);
     }
@@ -102,7 +102,7 @@ public class SchemaTemplateController extends BaseController {
     @DeleteMapping("{name}")
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("name") String name) {
-        HugeClient client = this.authClient(graphSpace, null);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
         schemaTemplateService.delete(client, name);
     }
 
@@ -110,7 +110,7 @@ public class SchemaTemplateController extends BaseController {
     public Object update(@PathVariable("graphspace") String graphSpace,
                          @PathVariable("name") String name,
                          @RequestBody SchemaTemplate schemaTemplate) {
-        HugeClient client = this.authClient(graphSpace, null);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
         schemaTemplate.name(name);
         return schemaTemplateService.update(client, schemaTemplate);
     }

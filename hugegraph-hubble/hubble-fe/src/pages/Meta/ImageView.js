@@ -32,6 +32,7 @@ import {useTranslation} from 'react-i18next';
 import styles from './ImageView.module.scss';
 import {BUILTIN_SCHEMA_TEMPLATES} from '../Schema/builtinSchemaTemplates';
 import {toGraphSchemaGroovy} from '../Schema/schemaGroovy';
+import {useGraphspaceAccess} from '../../auth/graphspaceAccess';
 
 const SCHEMA_LABEL_DOCS_URL
     = 'https://hugegraph.apache.org/docs/clients/hugegraph-client/';
@@ -77,7 +78,7 @@ const formatKeys = keys => {
     return Array.isArray(keys) ? keys.join(', ') : '';
 };
 
-const SchemaTooltip = ({model, type, t}) => {
+const SchemaTooltip = ({model, type, t, canWrite}) => {
     const schema = model?.data || {};
     const properties = formatProperties(schema.properties);
     const isVertex = type === 'vertex';
@@ -104,9 +105,11 @@ const SchemaTooltip = ({model, type, t}) => {
                     </div>
                 ))}
             </dl>
-            <span className={styles.tooltipHint}>
-                {t('schema.image_view.hover.edit_hint')}
-            </span>
+            {canWrite && (
+                <span className={styles.tooltipHint}>
+                    {t('schema.image_view.hover.edit_hint')}
+                </span>
+            )}
         </section>
     );
 };
@@ -115,6 +118,7 @@ const ImageView = () => {
     const {t} = useTranslation();
     // const graphRef = useRef(null);
     const {graphspace, graph} = useParams();
+    const {canWrite} = useGraphspaceAccess(graphspace);
     const [data, setData] = useState({vertices: [], edges: []});
     const [propertyVisible, setPropertyVisible] = useState(false);
     const [vertexVisible, setVertexVisible] = useState(false);
@@ -287,6 +291,9 @@ const ImageView = () => {
     }, [graph, graphspace, handleRefresh, selectedTemplate, t]);
 
     const handleDoubleClick = useCallback((id, type, data) => {
+        if (!canWrite) {
+            return;
+        }
         if (type === 'node') {
             setVertexVisible(true);
             setEdgeVisible(false);
@@ -298,15 +305,15 @@ const ImageView = () => {
             setEdgeVisible(true);
             setEdgeName(data.label);
         }
-    }, []);
+    }, [canWrite]);
 
     const renderVertexTooltip = useCallback(({model}) => (
-        <SchemaTooltip model={model} type='vertex' t={t} />
-    ), [t]);
+        <SchemaTooltip model={model} type='vertex' t={t} canWrite={canWrite} />
+    ), [canWrite, t]);
 
     const renderEdgeTooltip = useCallback(({model}) => (
-        <SchemaTooltip model={model} type='edge' t={t} />
-    ), [t]);
+        <SchemaTooltip model={model} type='edge' t={t} canWrite={canWrite} />
+    ), [canWrite, t]);
 
     const loadSchemaView = useCallback(() => {
         const token = Symbol('schema-image');
@@ -398,21 +405,25 @@ const ImageView = () => {
 
     const schemaActions = (
         <Space wrap>
-            <Button
-                disabled={loading || loadError}
-                onClick={createProperty}
-            >
-                {t('schema.property.create')}
-            </Button>
-            <Button disabled={loading || loadError} onClick={createVertex}>
-                {t('schema.vertex.create')}
-            </Button>
-            <Button
-                disabled={loading || loadError || vertexList.length === 0}
-                onClick={createEdge}
-            >
-                {t('schema.edge.form.title_create')}
-            </Button>
+            {canWrite && (
+                <>
+                    <Button
+                        disabled={loading || loadError}
+                        onClick={createProperty}
+                    >
+                        {t('schema.property.create')}
+                    </Button>
+                    <Button disabled={loading || loadError} onClick={createVertex}>
+                        {t('schema.vertex.create')}
+                    </Button>
+                    <Button
+                        disabled={loading || loadError || vertexList.length === 0}
+                        onClick={createEdge}
+                    >
+                        {t('schema.edge.form.title_create')}
+                    </Button>
+                </>
+            )}
             <Button disabled={loading || loadError} onClick={showPropertyList}>
                 {t('schema.image_view.view_properties')}
             </Button>
@@ -450,33 +461,41 @@ const ImageView = () => {
             </Row>
             <Spin spinning={loading}>
                 {schemaIsEmpty ? (
-                    <section className={styles.empty} aria-labelledby='schema-empty-title'>
-                        <h2 id='schema-empty-title'>
-                            {t('schema.image_view.create_from_template')}
-                        </h2>
-                        <p>{t('schema.image_view.template_description')}</p>
-                        <Button type='primary' onClick={openTemplatePicker}>
-                            {t('schema.image_view.create_from_template')}
-                        </Button>
-                        <Typography.Title level={5} className={styles.manualTitle}>
-                            {t('schema.image_view.manual_title')}
-                        </Typography.Title>
-                        <ol className={styles.steps}>
-                            <li>{t('schema.image_view.step_property')}</li>
-                            <li>{t('schema.image_view.step_vertex')}</li>
-                            <li>{t('schema.image_view.step_edge')}</li>
-                        </ol>
-                        {schemaActions}
-                        <p className={styles.edgeHint}>
-                            {t('schema.image_view.edge_prerequisite')}
-                        </p>
-                        <div className={styles.startGuide}>
-                            <p>{t('schema.image_view.start_description')}</p>
-                            <Button type='link' onClick={createProperty}>
-                                {t('schema.image_view.start_with_property')}
+                    canWrite ? (
+                        <section className={styles.empty} aria-labelledby='schema-empty-title'>
+                            <h2 id='schema-empty-title'>
+                                {t('schema.image_view.create_from_template')}
+                            </h2>
+                            <p>{t('schema.image_view.template_description')}</p>
+                            <Button type='primary' onClick={openTemplatePicker}>
+                                {t('schema.image_view.create_from_template')}
                             </Button>
-                        </div>
-                    </section>
+                            <Typography.Title level={5} className={styles.manualTitle}>
+                                {t('schema.image_view.manual_title')}
+                            </Typography.Title>
+                            <ol className={styles.steps}>
+                                <li>{t('schema.image_view.step_property')}</li>
+                                <li>{t('schema.image_view.step_vertex')}</li>
+                                <li>{t('schema.image_view.step_edge')}</li>
+                            </ol>
+                            {schemaActions}
+                            <p className={styles.edgeHint}>
+                                {t('schema.image_view.edge_prerequisite')}
+                            </p>
+                            <div className={styles.startGuide}>
+                                <p>{t('schema.image_view.start_description')}</p>
+                                <Button type='link' onClick={createProperty}>
+                                    {t('schema.image_view.start_with_property')}
+                                </Button>
+                            </div>
+                        </section>
+                    ) : (
+                        <section className={styles.empty}>
+                            <Typography.Text>
+                                {t('schema.image_view.read_only_empty')}
+                            </Typography.Text>
+                        </section>
+                    )
                 ) : (
                     <GraphView
                         data={data}
@@ -490,7 +509,7 @@ const ImageView = () => {
                             gravity: 10,
                             linkDistance: smallSchema ? 240 : 150,
                         }}
-                        onDoubleClick={handleDoubleClick}
+                        onDoubleClick={canWrite ? handleDoubleClick : undefined}
                         nodeTooltip={renderVertexTooltip}
                         edgeTooltip={renderEdgeTooltip}
                         height={600}
@@ -498,55 +517,57 @@ const ImageView = () => {
                 )}
             </Spin>
 
-            <Modal
-                open={templateVisible}
-                title={t('schema.image_view.create_from_template')}
-                okText={t('schema.image_view.apply_template')}
-                cancelText={t('common.action.cancel')}
-                confirmLoading={templateApplying}
-                okButtonProps={{
-                    disabled: templateLoading || templateLoadError || !selectedTemplate,
-                }}
-                onOk={applySchemaTemplate}
-                onCancel={closeTemplatePicker}
-                destroyOnClose
-            >
-                <Spin spinning={templateLoading}>
-                    {templateLoadError ? (
-                        <Alert
-                            type='error'
-                            showIcon
-                            message={t('schema.image_view.template_load_failed')}
-                            action={(
-                                <Button size='small' onClick={loadSchemaTemplates}>
-                                    {t('schema.image_view.retry_templates')}
-                                </Button>
-                            )}
-                        />
-                    ) : (
-                        <Space direction='vertical' size='middle' style={{width: '100%'}}>
-                            <Typography.Text>
-                                {t('schema.image_view.template_picker_help')}
-                            </Typography.Text>
-                            <Select
-                                aria-label={t('schema.image_view.template_select')}
-                                placeholder={t('schema.image_view.template_placeholder')}
-                                value={selectedTemplate}
-                                options={templateOptions}
-                                onChange={setSelectedTemplate}
-                                style={{width: '100%'}}
+            {canWrite && (
+                <Modal
+                    open={templateVisible}
+                    title={t('schema.image_view.create_from_template')}
+                    okText={t('schema.image_view.apply_template')}
+                    cancelText={t('common.action.cancel')}
+                    confirmLoading={templateApplying}
+                    okButtonProps={{
+                        disabled: templateLoading || templateLoadError || !selectedTemplate,
+                    }}
+                    onOk={applySchemaTemplate}
+                    onCancel={closeTemplatePicker}
+                    destroyOnClose
+                >
+                    <Spin spinning={templateLoading}>
+                        {templateLoadError ? (
+                            <Alert
+                                type='error'
+                                showIcon
+                                message={t('schema.image_view.template_load_failed')}
+                                action={(
+                                    <Button size='small' onClick={loadSchemaTemplates}>
+                                        {t('schema.image_view.retry_templates')}
+                                    </Button>
+                                )}
                             />
-                            {!savedOptions.length && (
-                                <Typography.Text type='secondary'>
-                                    {t('schema.image_view.no_saved_templates')}
+                        ) : (
+                            <Space direction='vertical' size='middle' style={{width: '100%'}}>
+                                <Typography.Text>
+                                    {t('schema.image_view.template_picker_help')}
                                 </Typography.Text>
-                            )}
-                        </Space>
-                    )}
-                </Spin>
-            </Modal>
+                                <Select
+                                    aria-label={t('schema.image_view.template_select')}
+                                    placeholder={t('schema.image_view.template_placeholder')}
+                                    value={selectedTemplate}
+                                    options={templateOptions}
+                                    onChange={setSelectedTemplate}
+                                    style={{width: '100%'}}
+                                />
+                                {!savedOptions.length && (
+                                    <Typography.Text type='secondary'>
+                                        {t('schema.image_view.no_saved_templates')}
+                                    </Typography.Text>
+                                )}
+                            </Space>
+                        )}
+                    </Spin>
+                </Modal>
+            )}
 
-            <EditVertexLayer
+            {canWrite && <EditVertexLayer
                 visible={vertexVisible}
                 onCancle={hideVertexLayer}
                 graph={graph}
@@ -554,9 +575,9 @@ const ImageView = () => {
                 refresh={handleRefresh}
                 name={vertexName}
                 propertyList={propertyList}
-            />
+            />}
 
-            <EditEdgeLayer
+            {canWrite && <EditEdgeLayer
                 visible={edgeVisible}
                 graphspace={graphspace}
                 graph={graph}
@@ -565,15 +586,15 @@ const ImageView = () => {
                 name={edgeName}
                 propertyList={propertyList}
                 vertexList={vertexList}
-            />
+            />}
 
-            <EditPropertyLayer
+            {canWrite && <EditPropertyLayer
                 visible={propertyVisible}
                 onCancle={hidePropertyLayer}
                 graphspace={graphspace}
                 graph={graph}
                 refresh={handleRefresh}
-            />
+            />}
 
             <Drawer
                 open={propertyListVisible}
@@ -582,7 +603,11 @@ const ImageView = () => {
                 mask={false}
                 title={t('schema.image_view.view_properties')}
             >
-                <PropertyTable noHeader forceRefresh={refresh} />
+                <PropertyTable
+                    noHeader
+                    forceRefresh={refresh}
+                    canWrite={canWrite}
+                />
             </Drawer>
         </div>
     );
