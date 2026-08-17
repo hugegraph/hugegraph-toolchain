@@ -30,6 +30,8 @@ import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.GraphSpaceManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.BelongEntity;
+import org.apache.hugegraph.entity.auth.RoleEntity;
+import org.apache.hugegraph.entity.auth.UserView;
 import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.testutil.Assert;
@@ -71,6 +73,84 @@ public class GraphSpaceUserServiceTest {
         Assert.assertNotNull(error);
         Assert.assertEquals("auth.permission-preset.unsupported",
                             error.getMessage());
+    }
+
+    @Test
+    public void testListUsersMarksOnlyServerDefaultRolesAsPresets() {
+        User user = user("u-1", "alice");
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, null))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "observer"))
+               .thenReturn(true);
+
+        UserView view = this.service.listUsers(this.client, "team").get(0);
+
+        Assert.assertEquals(1, view.getRoles().size());
+        Assert.assertEquals("observer", view.getRoles().get(0).getName());
+        Assert.assertEquals("GS_READ_ONLY",
+                            view.getRoles().get(0).getPermissionPreset());
+    }
+
+    @Test
+    public void testLegacyAccessDoesNotCallNewDefaultRoleApi() {
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+
+        Assert.assertFalse(this.service.hasGraphSpaceAccess(
+                           this.client, "team", "alice"));
+        Mockito.verifyZeroInteractions(this.graphSpace);
+        Mockito.verifyZeroInteractions(this.auth);
+    }
+
+    @Test
+    public void testModernRolePayloadRequiresPresetApi() {
+        UserView user = new UserView(
+                "u-1", "alice",
+                Collections.singletonList(new RoleEntity("custom", "custom")));
+
+        ParameterizedException error = null;
+        try {
+            this.service.createOrUpdate(this.client, "team", user);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.required",
+                            error.getMessage());
+        Mockito.verifyZeroInteractions(this.belongService);
+        Mockito.verifyZeroInteractions(this.auth);
+    }
+
+    @Test
+    public void testGetUserMergesCustomAndExplicitDefaultRoles() {
+        User user = user("u-1", "alice");
+        BelongEntity custom = BelongEntity.builder()
+                                          .userId("u-1")
+                                          .userName("alice")
+                                          .roleId("custom-id")
+                                          .roleName("analyst")
+                                          .build();
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "u-1"))
+               .thenReturn(Collections.singletonList(custom));
+        Mockito.when(this.auth.getUser("u-1")).thenReturn(user);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "observer"))
+               .thenReturn(true);
+
+        UserView view = this.service.getUser(this.client, "team", "u-1");
+
+        Assert.assertEquals(2, view.getRoles().size());
+        RoleEntity customRole = view.getRoles().get(0);
+        RoleEntity defaultRole = view.getRoles().get(1);
+        Assert.assertNull(customRole.getPermissionPreset());
+        Assert.assertEquals("GS_READ_ONLY",
+                            defaultRole.getPermissionPreset());
     }
 
     @Test

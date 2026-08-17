@@ -196,23 +196,9 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
-    public void testUsesConfiguredPdLeaderForAuthoritativeClusterState() {
+    public void testUsesOnlyConfiguredPdServiceForClusterState() {
         LeaderAwareHttpClient http = new LeaderAwareHttpClient("pd-1");
-        LiveOperationsCollector collector = leaderAwareCollector(
-                                            http, Set.of("pd-service", "pd-1"));
-
-        Snapshot snapshot = collector.collect(serverClient(), false);
-
-        Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
-        Assert.assertEquals("UP", snapshot.getStatus());
-        Assert.assertEquals(1, http.leaderRequests());
-    }
-
-    @Test
-    public void testDoesNotFollowUnconfiguredPdLeader() {
-        LeaderAwareHttpClient http = new LeaderAwareHttpClient("untrusted");
-        LiveOperationsCollector collector = leaderAwareCollector(
-                                            http, Set.of("pd-service", "pd-1"));
+        LiveOperationsCollector collector = leaderAwareCollector(http);
 
         Snapshot snapshot = collector.collect(serverClient(), false);
 
@@ -744,13 +730,12 @@ public class LiveOperationsCollectorTest {
     }
 
     private static LiveOperationsCollector leaderAwareCollector(
-            LeaderAwareHttpClient http, Set<String> pdAllowedHosts) {
+            LeaderAwareHttpClient http) {
         return new LiveOperationsCollector(
                 true, "http://pd-service:8620", "hubble", "secret",
                 "store-hubble", "store-secret", "server-under-test", http,
                 new OperationsPayloadParser(new ObjectMapper()), CLOCK,
-                4, 1000, Collections.singleton("http://127.0.0.1:8520"),
-                pdAllowedHosts);
+                4, 1000, Collections.singleton("http://127.0.0.1:8520"));
     }
 
     private static HugeClient serverClient() {

@@ -126,28 +126,6 @@ public class OperationsPayloadParserTest {
     }
 
     @Test
-    public void testParsesPdLeaderRestTargetWithConfiguredScheme() {
-        String cluster = "{\"status\":0,\"data\":{" +
-                         "\"pdList\":[],\"pdLeader\":{" +
-                         "\"restUrl\":\"pd-1:8620\"}}}";
-
-        URI target = new OperationsPayloadParser(MAPPER)
-                     .parsePdLeaderRestTarget(cluster, "http");
-
-        Assert.assertEquals(URI.create("http://pd-1:8620"), target);
-    }
-
-    @Test(expected = MalformedUpstreamException.class)
-    public void testRejectsPdLeaderRestTargetWithPath() {
-        String cluster = "{\"status\":0,\"data\":{" +
-                         "\"pdList\":[],\"pdLeader\":{" +
-                         "\"restUrl\":\"http://pd-1:8620/private\"}}}";
-
-        new OperationsPayloadParser(MAPPER)
-                .parsePdLeaderRestTarget(cluster, "http");
-    }
-
-    @Test
     public void testKeepsSameHostStoreTargetsDistinctByAuthority() {
         OperationsPayloadParser parser = new OperationsPayloadParser(MAPPER);
         String targets = "[{\"targets\":[\"store-a:8520\"," +

@@ -26,7 +26,7 @@
       "property_name_rule": "只能包含中文、字母、数字、_",
       "normal_name_rule": "只能包含中文、字母、数字、_，最多 48 个字符",
       "jdbc_rule": "请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name",
-      "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾",
+      "account_name_rule": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；下划线不能位于首尾",
       "favorite_name_rule": "只能包含中文、字母、数字、_, 不能超过48个字符",
       "invalid_data_format": "非法的数据格式"
     }

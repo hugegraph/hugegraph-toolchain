@@ -16,7 +16,14 @@
  * limitations under the License.
  */
 
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+    within,
+} from '@testing-library/react';
 import SpaceAccess, {rolesPreset} from './SpaceAccess';
 import * as api from '../../api';
 
@@ -85,6 +92,43 @@ test('requires explicit preset for mixed or legacy member roles', () => {
         {role_name: 'observer'},
         {role_name: 'analyst'},
     ])).toBeNull();
+    expect(rolesPreset([
+        {role_name: 'observer', permission_preset: 'GS_READ_ONLY'},
+    ])).toBe('GS_READ_ONLY');
+});
+
+test('keeps graphspace administrator selected with member roles', () => {
+    expect(rolesPreset([
+        {role_name: 'analyst', permission_preset: 'GS_READ_WRITE'},
+        {permission_preset: 'GS_ADMIN'},
+    ])).toBe('GS_ADMIN');
+    expect(rolesPreset([
+        {role_name: 'analyst'},
+        {role_name: 'custom-role', permissions: ['delete']},
+    ])).toBeNull();
+    expect(rolesPreset([
+        {role_name: 'analyst', permissions: ['write', 'delete']},
+    ])).toBeNull();
+    expect(rolesPreset([
+        {role_name: 'custom-role'},
+        {permission_preset: 'GS_ADMIN'},
+    ])).toBeNull();
+});
+
+test('shows legacy role names without treating them as presets', async () => {
+    setResponses({
+        members: [{
+            user_id: 'alice',
+            user_name: 'alice',
+            roles: [{role_id: 'custom', role_name: 'analyst'}],
+        }],
+    });
+
+    render(<SpaceAccess />);
+
+    expect(await screen.findByText(
+        'analyst · account.permission_preset.legacy_custom'
+    )).toBeInTheDocument();
 });
 
 beforeEach(() => {
@@ -209,6 +253,13 @@ test('submits only the selected preset when adding a member', async () => {
 });
 
 test('uses the preset API for GS admin', async () => {
+    mockAuthContext.context.scopes = {
+        all_graphspaces: true,
+        admin_graphspaces: [],
+    };
+    api.manage.getGraphSpaceList.mockResolvedValue(page([
+        {name: 'SPACE_A'},
+    ]));
     api.auth.setSpacePreset.mockResolvedValue({status: 200});
     render(<SpaceAccess />);
 
@@ -230,6 +281,24 @@ test('uses the preset API for GS admin', async () => {
     ));
     expect(api.auth.addSpaceMember).not.toHaveBeenCalled();
 });
+
+test('does not let a space administrator manage other space administrators',
+    async () => {
+        api.auth.getSpaceAdmins.mockResolvedValueOnce(page([{
+            id: 'admin-id',
+            name: 'space-admin',
+        }]));
+
+        render(<SpaceAccess />);
+
+        const row = (await screen.findByText('space-admin')).closest('tr');
+        expect(within(row).queryByRole('button', {
+            name: 'common.action.edit',
+        })).not.toBeInTheDocument();
+        expect(within(row).queryByRole('button', {
+            name: 'common.action.delete',
+        })).not.toBeInTheDocument();
+    });
 
 test('shows GraphSpace administrators through the preset model', async () => {
     api.auth.getSpaceAdmins.mockResolvedValueOnce(page([{

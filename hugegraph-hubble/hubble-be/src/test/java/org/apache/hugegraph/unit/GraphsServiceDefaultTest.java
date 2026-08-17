@@ -402,6 +402,35 @@ public class GraphsServiceDefaultTest {
     }
 
     @Test
+    public void testGraphProfilesFallBackWhenProfileListIsEmpty() {
+        Mockito.when(this.graphs.listProfile(""))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphs.listGraph())
+               .thenReturn(Collections.singletonList("hugegraph"));
+        Mockito.when(this.graphs.getGraph("hugegraph"))
+               .thenReturn(Collections.singletonMap("backend", "hstore"));
+        Mockito.when(this.client.assignGraph("DEFAULT", "hugegraph"))
+               .thenReturn(this.client);
+        GraphManager graph = Mockito.mock(GraphManager.class);
+        Mockito.when(this.client.graph()).thenReturn(graph);
+        GraphMetricsAPI.ElementCount snapshot = new GraphMetricsAPI.ElementCount();
+        snapshot.setVertices(0L);
+        snapshot.setEdges(0L);
+        Mockito.when(graph.getEVCount(Mockito.anyString())).thenReturn(snapshot);
+
+        List<Map<String, Object>> result =
+                this.service.sortedGraphsProfile(this.client, "DEFAULT", "", "",
+                                                 false,
+                                                 Collections.emptyMap());
+
+        Assert.assertEquals(1, result.size());
+        Assert.assertEquals("hugegraph", result.get(0).get("name"));
+        Assert.assertEquals("hstore", result.get(0).get("backend"));
+        Mockito.verify(this.graphs).listGraph();
+        Mockito.verify(this.graphs).getGraph("hugegraph");
+    }
+
+    @Test
     public void testGraphProfilesDoNotMaskForbiddenResponse() {
         ServerException forbidden = new ServerException("forbidden");
         forbidden.status(403);

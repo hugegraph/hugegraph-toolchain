@@ -95,17 +95,17 @@ public class GraphSpaceUserService extends AuthService {
             user.addRole(new RoleEntity(belong.getRoleId(),
                                         belong.getRoleName()));
         });
-        if (user.getId() == null) {
-            User account = client.auth().getUser(userId);
-            if (account != null) {
+        User account = client.auth().getUser(userId);
+        if (account != null) {
+            if (user.getId() == null) {
                 user.setId(account.id().toString());
                 user.setName(account.name());
-                if (client.supportsDefaultRole()) {
-                    this.addDefaultRole(client, graphSpace, user,
-                                        account.name(), "observer");
-                    this.addDefaultRole(client, graphSpace, user,
-                                        account.name(), "analyst");
-                }
+            }
+            if (client.supportsDefaultRole()) {
+                this.addDefaultRole(client, graphSpace, user,
+                                    account.name(), "observer");
+                this.addDefaultRole(client, graphSpace, user,
+                                    account.name(), "analyst");
             }
         }
         return user;
@@ -123,6 +123,7 @@ public class GraphSpaceUserService extends AuthService {
 
     public UserView createOrUpdate(HugeClient client, String graphSpace,
                                    UserView userView) {
+        requireLegacyRoleAssignments(client);
         E.checkNotNull(userView.getId(), "User Id Not Null");
         E.checkArgument(userView.getRoles() != null &&
                         !userView.getRoles().isEmpty(),
@@ -257,6 +258,13 @@ public class GraphSpaceUserService extends AuthService {
         }
     }
 
+    private static void requireLegacyRoleAssignments(HugeClient client) {
+        if (client.supportsDefaultRole()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.required");
+        }
+    }
+
     private static void requirePermissionPreset(String preset) {
         if (!"GS_READ_ONLY".equals(preset) &&
             !"GS_READ_WRITE".equals(preset) &&
@@ -276,12 +284,10 @@ public class GraphSpaceUserService extends AuthService {
         if (!client.supportsDefaultRole()) {
             return false;
         }
-        if (client.graphSpace().checkDefaultRole(
-                graphSpace, username, "analyst")) {
-            return true;
-        }
         return client.graphSpace().checkDefaultRole(
-                graphSpace, username, "observer");
+                       graphSpace, username, "analyst") ||
+               client.graphSpace().checkDefaultRole(
+                       graphSpace, username, "observer");
     }
 
     private void clearDefaultRoles(HugeClient client, String graphSpace,
@@ -313,7 +319,9 @@ public class GraphSpaceUserService extends AuthService {
         boolean assigned = client.graphSpace().checkDefaultRole(
                 graphSpace, username, role);
         if (assigned) {
-            user.addRole(new RoleEntity(role, role));
+            String preset = "observer".equals(role) ?
+                            "GS_READ_ONLY" : "GS_READ_WRITE";
+            user.addRole(new RoleEntity(role, role, preset));
         }
     }
 

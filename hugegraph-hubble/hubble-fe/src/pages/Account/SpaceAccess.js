@@ -74,43 +74,32 @@ const mergeMembersAndAdmins = (members, admins) => {
 
 const rolePreset = role => {
     const explicit = role?.permission_preset ?? role?.permissionPreset;
-    if (Object.values(PERMISSION_PRESETS).includes(explicit)) {
-        return explicit;
-    }
-    const names = [role?.role_name, role?.role_nickname, role?.name,
-        role?.nickname].filter(Boolean).map(name => name.toLowerCase());
-    if (names.includes('observer')) {
-        return PERMISSION_PRESETS.GS_READ_ONLY;
-    }
-    if (names.includes('analyst')) {
-        return PERMISSION_PRESETS.GS_READ_WRITE;
-    }
-    const permissions = role?.permissions ?? role?.actions;
-    if (Array.isArray(permissions)) {
-        if (permissions.includes('delete') || permissions.includes('admin')) {
-            return PERMISSION_PRESETS.GS_ADMIN;
-        }
-        if (permissions.includes('write') || permissions.includes('update')) {
-            return PERMISSION_PRESETS.GS_READ_WRITE;
-        }
-        if (permissions.includes('read')) {
-            return PERMISSION_PRESETS.GS_READ_ONLY;
-        }
-    }
-    return null;
+    return Object.values(PERMISSION_PRESETS).includes(explicit)
+        ? explicit
+        : null;
 };
 
 const rolesPreset = roles => {
     const values = roles ?? [];
     const presets = values.map(rolePreset);
+    if (presets.some(preset => preset === null)) {
+        return null;
+    }
+    if (values.some(role => (role?.permission_preset ?? role?.permissionPreset)
+                            === PERMISSION_PRESETS.GS_ADMIN)) {
+        return PERMISSION_PRESETS.GS_ADMIN;
+    }
     return values.length > 0 && presets.every(Boolean) && new Set(presets).size === 1 ? presets[0] : null;
 };
 
 const roleLabel = (role, t) => {
     const preset = rolePreset(role);
-    return preset
-        ? t(`account.permission_preset.${preset}`)
-        : t('account.permission_preset.legacy_custom');
+    if (preset) {
+        return t(`account.permission_preset.${preset}`);
+    }
+    const name = role?.role_name ?? role?.name;
+    const legacy = t('account.permission_preset.legacy_custom');
+    return name ? `${name} · ${legacy}` : legacy;
 };
 
 const RowAction = ({row, onAction, children}) => {
@@ -331,6 +320,8 @@ const SpaceAccess = () => {
         )
     ), [confirmDelete, graphSpace, t]);
     const addMember = useCallback(() => openMember(), [openMember]);
+    const canManageMember = row => scopes.all_graphspaces
+        || !row.is_space_admin;
     const retrySpaces = useCallback(
         () => setSpacesRevision(value => value + 1), []
     );
@@ -350,12 +341,12 @@ const SpaceAccess = () => {
             title: t('common.operation'),
             render: row => (
                 <Space>
-                    {canAddMember && (
+                    {canAddMember && canManageMember(row) && (
                         <RowAction row={row} onAction={editMember}>
                             {t('common.action.edit')}
                         </RowAction>
                     )}
-                    {canRemoveMember && (
+                    {canRemoveMember && canManageMember(row) && (
                         <RowAction row={row} onAction={deleteMember}>
                             {t('common.action.delete')}
                         </RowAction>
@@ -456,6 +447,8 @@ const SpaceAccess = () => {
                         <Select
                             options={Object.values(PERMISSION_PRESETS)
                                 .filter(value => value !== PERMISSION_PRESETS.SUPER_ADMIN)
+                                .filter(value => scopes.all_graphspaces
+                                                 || value !== PERMISSION_PRESETS.GS_ADMIN)
                                 .map(value => ({
                                     value,
                                     label: t(`account.permission_preset.${value}`),

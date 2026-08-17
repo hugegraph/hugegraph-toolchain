@@ -124,6 +124,28 @@ test('uses a compact actionable state when the graph has no schema', () => {
         .not.toBeInTheDocument();
 });
 
+test('labels an empty schema as view-only for a read-only account', () => {
+    render(
+        <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
+            <GraphCard
+                item={{
+                    name: 'hugegraph',
+                    graphspace: 'space',
+                    storage: 0,
+                    schemaview: {vertices: [], edges: []},
+                }}
+                menus={[]}
+                canMutate={false}
+            />
+        </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', {name: 'graph.menu.view_schema'}))
+        .toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'graph.card.open_schema'}))
+        .not.toBeInTheDocument();
+});
+
 test('ships the requested graph creation and schema labels', () => {
     const zh = require('../../i18n/resources/zh-CN/modules/pages.json');
     const en = require('../../i18n/resources/en-US/modules/pages.json');

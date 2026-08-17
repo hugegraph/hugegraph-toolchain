@@ -354,6 +354,7 @@
     },
     "empty": {
       "description": "这个 GraphSpace 已可用，但还没有图。创建第一张图后即可配置 Schema、导入和查询数据",
+      "read_only_description": "当前只读账号在此 GraphSpace 中暂无可访问的图",
       "create": "创建第一张图",
       "demo_prerequisite": "创建图后，选择该图并前往数据导入，即可快速构建 Demo 数据集。",
       "view_demo": "查看 Demo 数据入口",
@@ -377,7 +378,8 @@
       "name": "账号名",
       "remark": "备注",
       "level": "账号级别",
-      "resource": "资源权限",
+      "resource": "图空间",
+      "resource_all": "全部",
       "create_time": "创建时间",
       "is_superadmin": "是否为超级管理员",
       "permission": "管理权限"
@@ -394,6 +396,7 @@
       "GS_ADMIN": "GraphSpace 管理员",
       "preserve_mixed": "保留现有混合权限",
       "mixed": "混合 GraphSpace 权限",
+      "unassigned": "未分配 GraphSpace 权限预设",
       "legacy_custom": "旧版/自定义权限"
     },
     "feedback": {
@@ -414,7 +417,7 @@
       "id_help": "用于登录的唯一账号标识，创建后不可修改",
       "id_placeholder": "用户登录",
       "name": "账号名",
-      "name_help": "显示给其他管理员识别的账号名称，创建后仍可修改",
+      "name_help": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线",
       "name_placeholder": "账号名设置后可更改",
       "is_superadmin": "是否为超级管理员",
       "level": "账号级别",
@@ -509,7 +512,7 @@
       "new_password_placeholder": "请输入新密码",
       "confirm_password_placeholder": "请再次输入密码",
       "password_mismatch": "两次密码不一致",
-      "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾"
+      "account_name_rule": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；下划线不能位于首尾"
     }
   },
   "role": {
@@ -1101,6 +1104,7 @@
       "empty_title": "创建第一个图 Schema",
       "empty_description": "建议先定义可复用属性，再创建顶点类型和边类型",
       "create_from_template": "根据模板创建 Schema",
+      "read_only_empty": "当前图尚无 Schema，需要读写或管理员账号才能创建。",
       "template_description": "选择内置示例或当前图空间已保存的模板，直接应用到当前图",
       "manual_title": "或手动创建 Schema",
       "builtin_templates": "内置示例",
@@ -1151,7 +1155,7 @@
     "read_only": {
       "page_title": "{{name}} - Schema 模板库",
       "title": "只读模板库",
-      "description": "可在此浏览内置模板与已保存模板；创建、保存、编辑和删除模板需要 PD 模式",
+      "description": "可在此浏览内置模板与已保存模板；当前连接或账号无法创建、保存、编辑和删除模板",
       "apply_to_graph": "前往 {{graph}} 应用模板",
       "choose_graph": "选择图并应用模板",
       "builtin": "内置"
@@ -1400,6 +1404,7 @@
     "datasource_manage": "数据源管理",
     "operation_manage": "运维管理",
     "cluster_overview": "集群概览",
+    "cluster_overview_requires_pd": "集群概览依赖 PD，单机模式不可用；可前往节点页面查看 Server 状态。",
     "nodes": "节点",
     "advanced_monitoring": "外部高级 Dashboard",
     "operations_unavailable": "当前账号无可用的原生运维权限。",

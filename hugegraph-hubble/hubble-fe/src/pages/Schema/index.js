@@ -31,6 +31,8 @@ import CodeEditor from '../../components/CodeEditor';
 import {BUILTIN_SCHEMA_TEMPLATES} from './builtinSchemaTemplates';
 import {isPdEnabled} from '../../utils/config';
 import {readWorkbenchGraphContext} from '../../utils/workbenchGraphContext';
+import {useGraphspaceAccess} from '../../auth/graphspaceAccess';
+import {useAuthContext} from '../../auth/AuthContext';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const HIDDEN_BUILTINS_KEY = 'hubble.schema.hiddenBuiltinStartingPoints.v1';
@@ -106,6 +108,10 @@ const Schema = () => {
     const {graphspace} = useParams();
     const navigate = useNavigate();
     const pdMode = isPdEnabled();
+    const {canManage, canWrite} = useGraphspaceAccess(graphspace);
+    const {context: authContext} = useAuthContext();
+    const username = authContext?.username;
+    const templateWriteEnabled = pdMode && canWrite;
     const workbenchContext = readWorkbenchGraphContext();
     const currentGraph = workbenchContext.graphspace === graphspace
         ? workbenchContext.graph
@@ -117,17 +123,27 @@ const Schema = () => {
     const {current} = pagination;
     const listKey = JSON.stringify([graphspace, query, current]);
 
+    const canEditTemplate = useCallback(row => (
+        canManage || (canWrite && row.creator === username)
+    ), [canManage, canWrite, username]);
+
     const editSchema = useCallback(data => {
+        if (!canEditTemplate(data)) {
+            return;
+        }
         setMode('edit');
         setDetail(data);
         setEditLayer(true);
-    }, []);
+    }, [canEditTemplate]);
 
     const createSchema = useCallback((startingPoint = {}) => {
+        if (!templateWriteEnabled) {
+            return;
+        }
         setMode('create');
         setDetail(startingPoint);
         setEditLayer(true);
-    }, []);
+    }, [templateWriteEnabled]);
 
     const applyBuiltin = useCallback(name => {
         createSchema({name, schema: BUILTIN_SCHEMA_TEMPLATES[name]});
@@ -155,10 +171,10 @@ const Schema = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        if (pdMode && params.get('create') === 'true') {
+        if (templateWriteEnabled && params.get('create') === 'true') {
             createSchema();
         }
-    }, [createSchema, pdMode]);
+    }, [createSchema, templateWriteEnabled]);
 
     const handleTable = useCallback(newPagination => {
         setPagination(newPagination);
@@ -179,6 +195,9 @@ const Schema = () => {
     }, []);
 
     const deleteSchema = useCallback(row => {
+        if (!canEditTemplate(row)) {
+            return;
+        }
         Modal.confirm({
             title: t('schema_template.delete_confirm', {name: row.name}),
             onOk: () => {
@@ -193,7 +212,7 @@ const Schema = () => {
                 }).catch(() => message.error(t('common.msg.operation_failed')));
             },
         });
-    }, [graphspace, t]);
+    }, [canEditTemplate, graphspace, t]);
 
     const handleBack = useCallback(() => navigate('/graphspace'), [navigate]);
     const hideEditLayer = useCallback(() => setEditLayer(false), []);
@@ -219,10 +238,10 @@ const Schema = () => {
             dataIndex: 'creator',
         },
     ];
-    if (pdMode) {
+    if (templateWriteEnabled) {
         columns.push({
             title: t('schema_template.column.operation'),
-            render: row => (
+            render: row => canEditTemplate(row) && (
                 <SchemaActions
                     row={row}
                     onEdit={editSchema}
@@ -314,7 +333,7 @@ const Schema = () => {
         : {};
     const visibleData = listDataKey === listKey ? data : [];
     const visibleBuiltins = Object.entries(BUILTIN_SCHEMA_TEMPLATES).filter(
-        ([name]) => !pdMode || !hiddenBuiltins.includes(name)
+        ([name]) => !templateWriteEnabled || !hiddenBuiltins.includes(name)
     );
     const visibleGraphspaceName = graphspace === 'DEFAULT'
         ? t('graphspace.default_name')
@@ -338,7 +357,7 @@ const Schema = () => {
                 >
                     <Row justify='space-between'>
                         <Col>
-                            {pdMode && (
+                            {templateWriteEnabled && (
                                 <Space>
                                     <Button type='primary' onClick={openCreate}>
                                         {t('schema_template.create')}
@@ -361,13 +380,13 @@ const Schema = () => {
                 <DataPreparationNav active='schema' graphspace={graphspace} />
 
                 <div className='container'>
-                    {!pdMode && (
+                    {!templateWriteEnabled && (
                         <Alert
                             showIcon
                             type='info'
                             message={t('schema_template.read_only.title')}
                             description={t('schema_template.read_only.description')}
-                            action={(
+                            action={!pdMode ? (
                                 <Button type='primary' href={templateApplyPath}>
                                     {currentGraph
                                         ? t('schema_template.read_only.apply_to_graph', {
@@ -375,7 +394,7 @@ const Schema = () => {
                                         })
                                         : t('schema_template.read_only.choose_graph')}
                                 </Button>
-                            )}
+                            ) : undefined}
                         />
                     )}
                     {graphspaceError && graphspaceDataKey === graphspace && (
@@ -443,7 +462,7 @@ const Schema = () => {
                                 </Empty>
                             ) : (
                                 <Empty description={t('schema_template.empty')}>
-                                    {pdMode && (
+                                    {templateWriteEnabled && (
                                         <Button type='primary' onClick={openCreate}>
                                             {t('schema_template.create')}
                                         </Button>
@@ -464,7 +483,7 @@ const Schema = () => {
                                     {t('schema_template.builtin_section.description')}
                                 </Typography.Paragraph>
                             </Col>
-                            {pdMode && hiddenBuiltins.length > 0 && (
+                            {templateWriteEnabled && hiddenBuiltins.length > 0 && (
                                 <Col>
                                     <Button onClick={restoreBuiltins}>
                                         {t('schema_template.builtin_section.restore')}
@@ -478,7 +497,7 @@ const Schema = () => {
                                     <Card
                                         size='small'
                                         title={t(`schema_template.builtin.${name}`)}
-                                        extra={pdMode ? (
+                                        extra={templateWriteEnabled ? (
                                             <Space size={4}>
                                                 <Button
                                                     type='link'
@@ -514,7 +533,7 @@ const Schema = () => {
                                         <Typography.Paragraph type='secondary'>
                                             {t(`schema_template.builtin_description.${name}`)}
                                         </Typography.Paragraph>
-                                        {!pdMode && (
+                                        {!templateWriteEnabled && (
                                             <CodeEditor
                                                 value={schema}
                                                 lang='groovy'
@@ -536,7 +555,7 @@ const Schema = () => {
                             {t('schema_template.docs.link')}
                         </a>
                     </Typography.Paragraph>
-                    {pdMode && (
+                    {templateWriteEnabled && (
                         <EditLayer
                             visible={editLayer}
                             detail={detail}

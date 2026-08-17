@@ -23,9 +23,13 @@ import EdgeTable from './Edge';
 import VertexIndexTable from './VertexIndex';
 import EdgeIndexTable from './EdgeIndex';
 import {useTranslation} from 'react-i18next';
+import {useParams} from 'react-router-dom';
+import {useGraphspaceAccess} from '../../auth/graphspaceAccess';
 
 const ListView = () => {
     const {t} = useTranslation();
+    const {graphspace} = useParams();
+    const {canWrite} = useGraphspaceAccess(graphspace);
     return (
         <Tabs
             defaultActiveKey='1'
@@ -34,17 +38,17 @@ const ListView = () => {
                 {
                     label: t('schema.tab.property'),
                     key: '1',
-                    children: <PropertyTable />,
+                    children: <PropertyTable canWrite={canWrite} />,
                 },
                 {
                     label: t('schema.tab.vertex'),
                     key: '2',
-                    children: <VertexTable />,
+                    children: <VertexTable canWrite={canWrite} />,
                 },
                 {
                     label: t('schema.tab.edge'),
                     key: '3',
-                    children: <EdgeTable />,
+                    children: <EdgeTable canWrite={canWrite} />,
                 },
                 {
                     label: t('schema.tab.vertex_index'),

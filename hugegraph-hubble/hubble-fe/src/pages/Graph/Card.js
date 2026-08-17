@@ -72,7 +72,7 @@ const TitleField = ({item, onClick, onKeyDown, schemaTypeCounts}) => {
     );
 };
 
-const GraphCard = ({item, menus}) => {
+const GraphCard = ({item, menus, canMutate = true}) => {
     const {t} = useTranslation();
     const navigate = useNavigate();
     const graphName = getResourceDisplayName(item.name, item.nickname);
@@ -156,8 +156,14 @@ const GraphCard = ({item, menus}) => {
                     <strong>{t('graph.card.empty_schema')}</strong>
                     <span>{t('graph.card.empty_schema_help')}</span>
                     <Space>
-                        <Button type='primary' size='small' onClick={handleGotoSchema}>
-                            {t('graph.card.open_schema')}
+                        <Button
+                            type={canMutate ? 'primary' : 'default'}
+                            size='small'
+                            onClick={handleGotoSchema}
+                        >
+                            {canMutate
+                                ? t('graph.card.open_schema')
+                                : t('graph.menu.view_schema')}
                         </Button>
                         <Button size='small' onClick={handleGotoAnalysis}>
                             {t('graph.card.query_graph')}

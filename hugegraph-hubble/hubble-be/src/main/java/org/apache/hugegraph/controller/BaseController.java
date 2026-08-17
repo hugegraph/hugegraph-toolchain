@@ -27,6 +27,7 @@ import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.auth.AuthModeService;
+import org.apache.hugegraph.service.auth.AuthContextService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hugegraph.config.HugeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +63,8 @@ public abstract class BaseController {
     protected UserService userService;
     @Autowired
     protected AuthModeService authMode;
+    @Autowired
+    protected AuthContextService authContextService;
 
     public static final String ORDER_ASC = "asc";
     public static final String ORDER_DESC = "desc";
@@ -172,6 +175,14 @@ public abstract class BaseController {
             throw new ForbiddenException(
                     "Permission denied: manage graphspace members");
         }
+        client.assignGraph(graphSpace, null);
+        return client;
+    }
+
+    protected HugeClient requireGraphSpaceWrite(String graphSpace) {
+        HugeClient client = this.authClient(null, null);
+        this.authContextService.requireGraphSpaceWrite(
+                client, this.getUser(), graphSpace);
         client.assignGraph(graphSpace, null);
         return client;
     }
