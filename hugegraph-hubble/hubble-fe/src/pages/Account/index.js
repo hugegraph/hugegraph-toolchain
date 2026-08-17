@@ -37,6 +37,7 @@ import {useAuthContext} from '../../auth/AuthContext';
 import {
     getAccountPreset,
     getAccountPresetLabelKey,
+    getPresetSpaces,
     PERMISSION_PRESETS,
 } from './permissionPresets';
 import SpaceAccess from './SpaceAccess';
@@ -130,20 +131,23 @@ const GlobalAccounts = () => {
         {
             title: t('account.col.id'),
             dataIndex: 'user_name',
+            width: 150,
         },
         {
             title: t('account.col.name'),
             dataIndex: 'user_nickname',
+            width: 150,
         },
         {
             title: t('account.col.remark'),
             dataIndex: 'user_description',
+            width: 180,
             ellipsis: {showTitle: false},
             render: val => <Tooltip title={val} placement='bottomLeft'>{val}</Tooltip>,
         },
         {
             title: t('account.col.level'),
-            width: 140,
+            width: 190,
             render: row => {
                 const preset = getAccountPreset(row);
                 const color = preset === PERMISSION_PRESETS.SUPER_ADMIN ? 'red'
@@ -160,8 +164,12 @@ const GlobalAccounts = () => {
         },
         {
             title: t('account.col.resource'),
-            dataIndex: 'spacenum',
             width: 120,
+            render: row => (
+                getAccountPreset(row) === PERMISSION_PRESETS.SUPER_ADMIN
+                    ? t('account.col.resource_all')
+                    : getPresetSpaces(row).length
+            ),
         },
         {
             title: t('account.col.create_time'),
@@ -171,7 +179,8 @@ const GlobalAccounts = () => {
         },
         {
             title: t('common.operation'),
-            width: hasRowMutations ? 300 : 100,
+            width: hasRowMutations ? 280 : 100,
+            fixed: 'right',
             align: 'center',
             render: row => (
                 <Space>
@@ -275,6 +284,7 @@ const GlobalAccounts = () => {
                 pagination={pagination}
                 onChange={handleTable}
                 loading={listLoading}
+                scroll={{x: 1270}}
             />
 
             <EditLayer

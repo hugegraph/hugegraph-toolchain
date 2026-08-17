@@ -377,7 +377,8 @@
       "name": "Account Name",
       "remark": "Remark",
       "level": "Account Level",
-      "resource": "Resource Permission",
+      "resource": "GraphSpaces",
+      "resource_all": "All",
       "create_time": "Created At",
       "is_superadmin": "Super Admin",
       "permission": "Admin Permission"

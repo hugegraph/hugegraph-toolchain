@@ -377,7 +377,8 @@
       "name": "账号名",
       "remark": "备注",
       "level": "账号级别",
-      "resource": "资源权限",
+      "resource": "图空间",
+      "resource_all": "全部",
       "create_time": "创建时间",
       "is_superadmin": "是否为超级管理员",
       "permission": "管理权限"

@@ -234,7 +234,10 @@ public class GraphsService {
     private List<Map<String, Object>> listGraphProfiles(GraphsManager graphs,
                                                         String query) {
         try {
-            return graphs.listProfile(query);
+            List<Map<String, Object>> profiles = graphs.listProfile(query);
+            if (!profiles.isEmpty()) {
+                return profiles;
+            }
         } catch (RuntimeException e) {
             if (e instanceof ServerException) {
                 int status = ((ServerException) e).status();
