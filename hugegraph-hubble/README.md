@@ -34,26 +34,6 @@ unsupported. Version checks stay in the client adapter/resolver rather than
 being scattered through controllers or pages. See
 [`AGENTS.md`](AGENTS.md) for the support matrix and verification rules.
 
-### UI reference captures
-
-The following captures are collected from Chrome against the running Hubble
-application and document the supported states:
-
-![HugeGraph Server 1.5 standalone non-auth](docs/images/compat-1.5-standalone.png)
-
-![HugeGraph Server 1.7 standalone non-auth](docs/images/compat-1.7-standalone.png)
-
-![HugeGraph 1.8/master PD mode without a manual server URL](docs/images/compat-1.8-pd.png)
-
-![HugeGraph 1.8/master authenticated account presets](docs/images/compat-1.8-auth-account.png)
-
-![HugeGraph 1.8/master GraphSpace member permissions](docs/images/compat-1.8-graphspace-access.png)
-
-![HugeGraph 1.8/master authenticated PD dashboard](docs/images/compat-1.8-auth-dashboard.png)
-
-The 1.5 and 1.7 captures show standalone non-auth core workflows. The 1.8/master
-captures cover both PD/non-auth connection discovery and authenticated account / GraphSpace permission surfaces.
-
 ## Local development feedback loop
 
 Run the frontend with third-party source-map noise disabled:
