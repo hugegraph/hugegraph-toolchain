@@ -17,6 +17,11 @@ always goes through the backend resolver. In PD mode, a valid server address
 returned by discovery is sufficient; a manually configured server URL is not
 required.
 
+Container and orchestrated deployments can set `HUBBLE_AUTH_ENABLED=true` or
+`false`. This explicit runtime value overrides `auth.enabled` from the
+properties file, and invalid values fail startup instead of silently selecting
+an authentication mode.
+
 The UI presents four stable permission meanings: super administrator, GraphSpace
 read-only, GraphSpace read-write, and GraphSpace administrator. The last one
 means member management plus read/write within that GraphSpace; low-level
@@ -28,26 +33,6 @@ schema, data, and Gremlin operations; GraphSpace management is reported as
 unsupported. Version checks stay in the client adapter/resolver rather than
 being scattered through controllers or pages. See
 [`AGENTS.md`](AGENTS.md) for the support matrix and verification rules.
-
-### UI reference captures
-
-The following captures are collected from Chrome against the running Hubble
-application and document the supported states:
-
-![HugeGraph Server 1.5 standalone non-auth](docs/images/compat-1.5-standalone.png)
-
-![HugeGraph Server 1.7 standalone non-auth](docs/images/compat-1.7-standalone.png)
-
-![HugeGraph 1.8/master PD mode without a manual server URL](docs/images/compat-1.8-pd.png)
-
-![HugeGraph 1.8/master authenticated account presets](docs/images/compat-1.8-auth-account.png)
-
-![HugeGraph 1.8/master GraphSpace member permissions](docs/images/compat-1.8-graphspace-access.png)
-
-![HugeGraph 1.8/master authenticated PD dashboard](docs/images/compat-1.8-auth-dashboard.png)
-
-The 1.5 and 1.7 captures show standalone non-auth core workflows. The 1.8/master
-captures cover both PD/non-auth connection discovery and authenticated account / GraphSpace permission surfaces.
 
 ## Local development feedback loop
 

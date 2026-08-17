@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -78,6 +79,7 @@ public class LiveOperationsCollector implements OperationsCollector {
     private final ExecutorService storeExecutor;
     private final int storeDeadlineMillis;
     private final Set<String> storeAllowedTargets;
+    private final Set<String> pdAllowedHosts;
 
     @Autowired
     public LiveOperationsCollector(HugeConfig config, ObjectMapper mapper) {
@@ -98,7 +100,10 @@ public class LiveOperationsCollector implements OperationsCollector {
              config.get(HubbleOptions.OPERATIONS_STORE_THREADS),
              config.get(HubbleOptions.OPERATIONS_STORE_DEADLINE),
              new java.util.LinkedHashSet<>(config.get(
-                     HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS)));
+                     HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS)),
+             pdAllowedHosts(config.get(HubbleOptions.PD_PEERS),
+                            pdBase(config.get(HubbleOptions.SERVER_PROTOCOL),
+                                   config.get(HubbleOptions.PD_SERVER))));
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -108,7 +113,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                             OperationsPayloadParser parser, Clock clock) {
         this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
              storePassword, serverIdentity, http, parser, clock, 16, 5000,
-             defaultStoreAllowedTargets());
+             defaultStoreAllowedTargets(), pdAllowedHosts(null, pdBase));
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -119,7 +124,8 @@ public class LiveOperationsCollector implements OperationsCollector {
                             int storeThreads, int storeDeadlineMillis) {
         this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
              storePassword, serverIdentity, http, parser, clock, storeThreads,
-             storeDeadlineMillis, defaultStoreAllowedTargets());
+             storeDeadlineMillis, defaultStoreAllowedTargets(),
+             pdAllowedHosts(null, pdBase));
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -129,6 +135,20 @@ public class LiveOperationsCollector implements OperationsCollector {
                             OperationsPayloadParser parser, Clock clock,
                             int storeThreads, int storeDeadlineMillis,
                             Set<String> storeAllowedTargets) {
+        this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
+             storePassword, serverIdentity, http, parser, clock, storeThreads,
+             storeDeadlineMillis, storeAllowedTargets,
+             pdAllowedHosts(null, pdBase));
+    }
+
+    LiveOperationsCollector(boolean pdEnabled, String pdBase,
+                            String pdUsername, String pdPassword,
+                            String storeUsername, String storePassword,
+                            String serverIdentity, OperationsHttpClient http,
+                            OperationsPayloadParser parser, Clock clock,
+                            int storeThreads, int storeDeadlineMillis,
+                            Set<String> storeAllowedTargets,
+                            Set<String> pdAllowedHosts) {
         if (storeThreads <= 0 || storeDeadlineMillis <= 0) {
             throw new IllegalArgumentException(
                       "Store metric collection limits must be positive");
@@ -152,6 +172,15 @@ public class LiveOperationsCollector implements OperationsCollector {
                 .map(URI::create)
                 .map(OperationsHttpClient::origin)
                 .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        if (pdEnabled && (pdAllowedHosts == null || pdAllowedHosts.isEmpty())) {
+            throw new IllegalArgumentException(
+                      "PD allowed hosts must not be empty");
+        }
+        this.pdAllowedHosts = pdAllowedHosts == null ?
+                              Collections.emptySet() :
+                              Collections.unmodifiableSet(
+                                      new java.util.LinkedHashSet<>(
+                                              pdAllowedHosts));
         this.storeExecutor = Executors.newFixedThreadPool(
                 storeThreads, runnable -> {
                     Thread thread = new Thread(
@@ -240,6 +269,7 @@ public class LiveOperationsCollector implements OperationsCollector {
         SourceStatus storesStatus;
         try {
             cluster = this.get("/v1/cluster");
+            cluster = this.authoritativePdCluster(cluster);
             pdStatus = available("UP", now);
         } catch (RuntimeException e) {
             pdStatus = unavailable(reason(e), now);
@@ -270,6 +300,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                 Topology topology = this.parser.parseTopology(EMPTY_CLUSTER,
                                                               stores, now);
                 this.mergeNodes(nodes, topology.getNodes());
+                facts.putAll(topology.getFacts());
                 storesParsed = true;
             } catch (MalformedUpstreamException e) {
                 storesStatus = malformed(now);
@@ -636,6 +667,30 @@ public class LiveOperationsCollector implements OperationsCollector {
         return this.http.get(target, this.pdUsername, this.pdPassword);
     }
 
+    private String authoritativePdCluster(String candidate) {
+        try {
+            URI base = URI.create(this.pdBase);
+            URI leader = this.parser.parsePdLeaderRestTarget(
+                         candidate, base.getScheme());
+            if (leader == null ||
+                !base.getScheme().equalsIgnoreCase(leader.getScheme()) ||
+                effectivePort(base) != effectivePort(leader) ||
+                !this.pdAllowedHosts.contains(
+                        leader.getHost().toLowerCase(Locale.ROOT))) {
+                return candidate;
+            }
+            String leaderOrigin = OperationsHttpClient.origin(leader);
+            if (leaderOrigin.equals(OperationsHttpClient.origin(base))) {
+                return candidate;
+            }
+            URI target = URI.create(leaderOrigin + "/v1/cluster");
+            return this.http.get(target, this.pdUsername, this.pdPassword,
+                                 Collections.singleton(leaderOrigin));
+        } catch (RuntimeException e) {
+            return candidate;
+        }
+    }
+
     private Map<String, Object> safeSystemMetrics(
             Map<String, Map<String, Object>> upstream) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -859,6 +914,41 @@ public class LiveOperationsCollector implements OperationsCollector {
         String normalized = target.toString();
         return normalized.endsWith("/") ?
                normalized.substring(0, normalized.length() - 1) : normalized;
+    }
+
+    private static Set<String> pdAllowedHosts(String peers, String pdBase) {
+        Set<String> hosts = new java.util.LinkedHashSet<>();
+        if (pdBase != null) {
+            URI base = URI.create(pdBase);
+            if (base.getHost() != null) {
+                hosts.add(base.getHost().toLowerCase(Locale.ROOT));
+            }
+        }
+        if (peers != null) {
+            for (String peer : peers.split(",")) {
+                String value = peer.trim();
+                if (value.isEmpty()) {
+                    continue;
+                }
+                try {
+                    URI target = URI.create(value.contains("://") ?
+                                            value : "dummy://" + value);
+                    if (target.getHost() != null) {
+                        hosts.add(target.getHost().toLowerCase(Locale.ROOT));
+                    }
+                } catch (IllegalArgumentException ignored) {
+                    // Invalid peers are rejected by the owning PD client.
+                }
+            }
+        }
+        return Collections.unmodifiableSet(hosts);
+    }
+
+    private static int effectivePort(URI target) {
+        if (target.getPort() >= 0) {
+            return target.getPort();
+        }
+        return "https".equalsIgnoreCase(target.getScheme()) ? 443 : 80;
     }
 
     private static String stableId(String type, String identity) {

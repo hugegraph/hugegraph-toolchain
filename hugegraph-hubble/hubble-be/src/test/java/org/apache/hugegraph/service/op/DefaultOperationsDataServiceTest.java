@@ -248,6 +248,56 @@ public class DefaultOperationsDataServiceTest {
         Assert.assertTrue(backend.isStale());
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testPdFailureKeepsFreshStoreCapacityFacts() {
+        AtomicInteger calls = new AtomicInteger();
+        OperationsCollector collector = (client, metrics) ->
+                calls.getAndIncrement() == 0 ?
+                factSnapshot("AVAILABLE", "AVAILABLE", 100L, 1000L) :
+                factSnapshot("UNAVAILABLE", "AVAILABLE", null, 2000L);
+        DefaultOperationsDataService service = new DefaultOperationsDataService(
+                collector, 5, CLOCK);
+        Set<String> capabilities = Set.of(
+                OperationsCapabilityService.HEALTH_READ,
+                OperationsCapabilityService.TOPOLOGY_READ);
+
+        service.overview(client("token-a"), capabilities, false);
+        Map<String, Object> result = service.overview(client("token-a"),
+                                                      capabilities, true);
+
+        Map<String, Long> facts = (Map<String, Long>) result.get("facts");
+        Assert.assertEquals(Long.valueOf(100L),
+                            facts.get("data_size_bytes"));
+        Assert.assertEquals(Long.valueOf(2000L),
+                            facts.get("capacity_total_bytes"));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testStoreFailureKeepsFreshPdFacts() {
+        AtomicInteger calls = new AtomicInteger();
+        OperationsCollector collector = (client, metrics) ->
+                calls.getAndIncrement() == 0 ?
+                factSnapshot("AVAILABLE", "AVAILABLE", 100L, 1000L) :
+                factSnapshot("AVAILABLE", "UNAVAILABLE", 200L, null);
+        DefaultOperationsDataService service = new DefaultOperationsDataService(
+                collector, 5, CLOCK);
+        Set<String> capabilities = Set.of(
+                OperationsCapabilityService.HEALTH_READ,
+                OperationsCapabilityService.TOPOLOGY_READ);
+
+        service.overview(client("token-a"), capabilities, false);
+        Map<String, Object> result = service.overview(client("token-a"),
+                                                      capabilities, true);
+
+        Map<String, Long> facts = (Map<String, Long>) result.get("facts");
+        Assert.assertEquals(Long.valueOf(200L),
+                            facts.get("data_size_bytes"));
+        Assert.assertEquals(Long.valueOf(1000L),
+                            facts.get("capacity_total_bytes"));
+    }
+
     @Test
     public void testPartialRefreshReusesOnlyFailedMetricGroup() {
         AtomicInteger calls = new AtomicInteger();
@@ -497,6 +547,35 @@ public class DefaultOperationsDataServiceTest {
         return new Snapshot(partial ? "DOWN" : "UP", observedAt, false,
                             null, sources, Collections.singletonList(node),
                             Collections.emptyMap());
+    }
+
+    private static Snapshot factSnapshot(String pdAvailability,
+                                         String storesAvailability,
+                                         Long dataSize, Long capacity) {
+        Map<String, SourceStatus> sources = new LinkedHashMap<>();
+        sources.put("pd", factSource(pdAvailability));
+        sources.put("stores", factSource(storesAvailability));
+        Map<String, Long> facts = new LinkedHashMap<>();
+        if (dataSize != null) {
+            facts.put("data_size_bytes", dataSize);
+        }
+        if (capacity != null) {
+            facts.put("capacity_total_bytes", capacity);
+            facts.put("capacity_used_bytes", capacity / 2L);
+        }
+        String status = "AVAILABLE".equals(pdAvailability) &&
+                        "AVAILABLE".equals(storesAvailability) ?
+                        "UP" : "DEGRADED";
+        return new Snapshot(status, 2000L, false, null, sources,
+                            Collections.emptyList(), facts);
+    }
+
+    private static SourceStatus factSource(String availability) {
+        boolean available = "AVAILABLE".equals(availability);
+        return new SourceStatus(availability, available ? "UP" : "UNKNOWN",
+                                2000L, available ? 2000L : null, available,
+                                false, available ? null :
+                                "upstream_unavailable");
     }
 
     private static SourceStatus available() {

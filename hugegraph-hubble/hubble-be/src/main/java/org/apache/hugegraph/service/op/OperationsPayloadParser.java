@@ -90,8 +90,39 @@ public class OperationsPayloadParser {
         this.putLong(facts, "replicas", cluster.get("shardCount"));
         this.putLong(facts, "stores", cluster.get("storeSize"));
         this.putLong(facts, "stores_up", cluster.get("onlineStoreSize"));
+        this.putKilobytesAsBytes(facts, "data_size_bytes",
+                                 cluster.get("dataSize"));
+        this.putCapacityFacts(facts, storeNodes.values());
         return new Topology(this.clusterStatus(this.text(cluster, "state")),
                             nodes, facts);
+    }
+
+    public URI parsePdLeaderRestTarget(String clusterPayload, String scheme) {
+        try {
+            JsonNode cluster = this.data(clusterPayload, "pd_cluster");
+            JsonNode leader = cluster.get("pdLeader");
+            if (leader == null || leader.isNull()) {
+                return null;
+            }
+            this.requireObject(leader, "pd_cluster");
+            String restUrl = this.text(leader, "restUrl");
+            if (restUrl == null) {
+                return null;
+            }
+            URI target = URI.create(restUrl.contains("://") ?
+                                    restUrl : scheme + "://" + restUrl);
+            String path = target.getPath();
+            if (target.getHost() == null || target.getUserInfo() != null ||
+                target.getQuery() != null || target.getFragment() != null ||
+                path != null && !path.isEmpty() && !"/".equals(path)) {
+                throw new MalformedUpstreamException("pd_leader_rest_address");
+            }
+            return target;
+        } catch (MalformedUpstreamException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new MalformedUpstreamException("pd_leader_rest_address", e);
+        }
     }
 
     public Map<String, String> parseStoreHosts(String storesPayload) {
@@ -449,6 +480,47 @@ public class OperationsPayloadParser {
         Long number = this.longValue(value);
         if (number != null) {
             target.put(key, number);
+        }
+    }
+
+    private void putKilobytesAsBytes(Map<String, Long> target, String key,
+                                     JsonNode value) {
+        Long kilobytes = this.longValue(value);
+        if (kilobytes == null || kilobytes < 0L) {
+            return;
+        }
+        try {
+            target.put(key, Math.multiplyExact(kilobytes, 1024L));
+        } catch (ArithmeticException ignored) {
+            // An overflowing upstream value is unavailable, never a fake size.
+        }
+    }
+
+    private void putCapacityFacts(Map<String, Long> target,
+                                  Iterable<JsonNode> stores) {
+        long total = 0L;
+        long available = 0L;
+        boolean found = false;
+        try {
+            for (JsonNode store : stores) {
+                Long storeTotal = this.longValue(store.get("capacity"));
+                Long storeAvailable = this.longValue(store.get("available"));
+                if (storeTotal == null || storeAvailable == null ||
+                    storeTotal < 0L || storeAvailable < 0L ||
+                    storeAvailable > storeTotal) {
+                    return;
+                }
+                total = Math.addExact(total, storeTotal);
+                available = Math.addExact(available, storeAvailable);
+                found = true;
+            }
+            if (found) {
+                target.put("capacity_total_bytes", total);
+                target.put("capacity_used_bytes",
+                           Math.subtractExact(total, available));
+            }
+        } catch (ArithmeticException ignored) {
+            // Partial or overflowing capacity is less useful than unavailable.
         }
     }
 

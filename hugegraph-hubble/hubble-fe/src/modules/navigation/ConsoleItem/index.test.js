@@ -22,6 +22,7 @@ import * as api from '../../../api';
 import ConsoleItem from './index';
 import itemStyle from '../Item/index.module.scss';
 import {useOperationsCapabilities} from '../../../pages/Operations/capabilities';
+import {isPdEnabled} from '../../../utils/config';
 
 const mockMessageError = jest.fn();
 
@@ -32,6 +33,9 @@ jest.mock('../../../api', () => ({
 }));
 jest.mock('../../../pages/Operations/capabilities', () => ({
     useOperationsCapabilities: jest.fn(),
+}));
+jest.mock('../../../utils/config', () => ({
+    isPdEnabled: jest.fn(),
 }));
 jest.mock('antd', () => ({
     ...jest.requireActual('antd'),
@@ -66,6 +70,7 @@ beforeEach(() => {
         ],
         error: null,
     });
+    isPdEnabled.mockReturnValue(true);
 });
 
 const renderConsole = () => render(
@@ -114,6 +119,22 @@ test('links native operations independently of the optional Dashboard', async ()
     expect(screen.getByRole('group', {
         name: 'navigation_page.alert_manage, navigation_page.coming_soon',
     })).toHaveAttribute('tabindex', '0');
+});
+
+test('disables Cluster Overview outside PD mode while keeping Nodes available', async () => {
+    isPdEnabled.mockReturnValue(false);
+    api.auth.getDashboard.mockResolvedValue({
+        status: 200,
+        data: {configured: false},
+    });
+    renderConsole();
+
+    expect(await screen.findByRole('button', {
+        name: 'navigation_page.cluster_overview',
+    })).toBeDisabled();
+    expect(screen.getByRole('button', {
+        name: 'navigation_page.nodes',
+    })).toHaveAttribute('data-url', '/operations/nodes');
 });
 
 test('labels an unconfigured Dashboard instead of Coming Soon', async () => {

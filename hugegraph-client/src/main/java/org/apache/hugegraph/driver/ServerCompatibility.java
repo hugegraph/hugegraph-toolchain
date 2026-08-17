@@ -29,23 +29,39 @@ import org.apache.hugegraph.util.VersionUtil;
 public final class ServerCompatibility {
 
     private static final String GRAPHSPACE_MIN_VERSION = "1.7.0";
-    private static final String DEFAULT_ROLE_MIN_VERSION = "1.8.0";
+    private static final String DEFAULT_ROLE_MIN_API_VERSION = "0.72";
 
     private ServerCompatibility() {
     }
 
     public static Profile profile(String coreVersion) {
+        return profile(coreVersion, null);
+    }
+
+    public static Profile profile(String coreVersion, String apiVersion) {
+        if (supportsDefaultRoleApi(apiVersion)) {
+            return Profile.MODERN;
+        }
         if (coreVersion == null || coreVersion.trim().isEmpty()) {
             return Profile.LEGACY;
         }
         try {
             String normalized = coreVersion.trim();
-            if (VersionUtil.gte(normalized, DEFAULT_ROLE_MIN_VERSION)) {
-                return Profile.MODERN;
-            }
             return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ? Profile.GRAPHSPACE : Profile.LEGACY;
         } catch (RuntimeException ignored) {
             return Profile.LEGACY;
+        }
+    }
+
+    private static boolean supportsDefaultRoleApi(String apiVersion) {
+        if (apiVersion == null || apiVersion.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            return VersionUtil.gte(apiVersion.trim(),
+                                   DEFAULT_ROLE_MIN_API_VERSION);
+        } catch (RuntimeException ignored) {
+            return false;
         }
     }
 
@@ -53,8 +69,9 @@ public final class ServerCompatibility {
         return profile(coreVersion).supportsGraphSpace();
     }
 
-    public static boolean supportsDefaultRole(String coreVersion) {
-        return profile(coreVersion).supportsDefaultRole();
+    public static boolean supportsDefaultRole(String coreVersion,
+                                              String apiVersion) {
+        return profile(coreVersion, apiVersion).supportsDefaultRole();
     }
 
     public enum Profile {

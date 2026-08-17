@@ -28,6 +28,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,6 +47,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.servlet.handler.MappedInterceptor;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -55,6 +59,7 @@ import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.IngestionProxyServlet;
+import org.apache.hugegraph.config.WebMvcConfig;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.controller.auth.LoginController;
 import org.apache.hugegraph.driver.AuthManager;
@@ -210,6 +215,26 @@ public class AuthSecurityTest {
         Assert.assertEquals(0, interceptor.authClients);
         Assert.assertEquals(0, interceptor.unauthClients);
         Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testOnlyBootstrapConfigBypassesLoginInterceptor() {
+        InterceptorRegistry registry = new InterceptorRegistry();
+        new WebMvcConfig().addInterceptors(registry);
+        List<Object> interceptors = ReflectionTestUtils.invokeMethod(
+                registry, "getInterceptors");
+        MappedInterceptor login = interceptors.stream()
+                .map(MappedInterceptor.class::cast)
+                .filter(interceptor -> interceptor.getInterceptor()
+                                                  instanceof LoginInterceptor)
+                .findFirst()
+                .orElseThrow(AssertionError::new);
+        AntPathMatcher matcher = new AntPathMatcher();
+
+        Assert.assertFalse(login.matches(
+                Constant.API_VERSION + "config", matcher));
+        Assert.assertTrue(login.matches(
+                Constant.API_VERSION + "setting/config", matcher));
     }
 
     @Test

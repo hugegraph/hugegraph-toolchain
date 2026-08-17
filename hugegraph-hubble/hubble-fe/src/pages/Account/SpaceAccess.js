@@ -40,6 +40,13 @@ import {PERMISSION_PRESETS} from './permissionPresets';
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const PAGE_PARAMS = {query: '', page_no: 1, page_size: 200};
 const responseRecords = response => response?.data?.records ?? [];
+const showMutationError = (error, t) => {
+    const response = error?.response ?? error;
+    const detail = response?.data?.message ?? response?.message;
+    message.error(detail
+        ? `${t('common.msg.operation_failed')} (${detail})`
+        : t('common.msg.operation_failed'));
+};
 const adminRole = {
     role_id: PERMISSION_PRESETS.GS_ADMIN,
     permission_preset: PERMISSION_PRESETS.GS_ADMIN,
@@ -274,7 +281,7 @@ const SpaceAccess = () => {
         try {
             const response = await operation();
             if (response?.status !== 200) {
-                message.error(t('common.msg.operation_failed'));
+                showMutationError(response, t);
                 return;
             }
             message.success(t('common.msg.success'));
@@ -282,7 +289,7 @@ const SpaceAccess = () => {
             refreshAll();
         }
         catch (error) {
-            message.error(t('common.msg.operation_failed'));
+            showMutationError(error, t);
         }
         finally {
             setSubmitting(false);
