@@ -374,6 +374,40 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testCustomInterceptorKeepsGraphCollectionActionsUnscoped()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+
+        for (String action : new String[]{"list", "default"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    "GET", "/api/v1.3/graphspaces/space1/graphs/" + action);
+            request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+            request.getSession().setAttribute(Constant.USERNAME_KEY, "user");
+
+            Assert.assertTrue(interceptor.preHandle(
+                    request, new MockHttpServletResponse(), null));
+            Assert.assertEquals("space1", interceptor.graphSpace);
+            Assert.assertNull(interceptor.graph);
+        }
+        Assert.assertEquals(2, interceptor.authClients);
+    }
+
+    @Test
+    public void testCustomInterceptorAllowsGraphNamedLikeCollectionAction()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/space1/graphs/list/schema");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "user");
+
+        Assert.assertTrue(interceptor.preHandle(
+                request, new MockHttpServletResponse(), null));
+        Assert.assertEquals("space1", interceptor.graphSpace);
+        Assert.assertEquals("list", interceptor.graph);
+    }
+
+    @Test
     public void testAnonymousClientUsesGraphSpaceScope() throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
         HugeConfig config = Mockito.mock(HugeConfig.class);
