@@ -213,6 +213,10 @@ test('preserves mixed GraphSpace permissions on profile edit', async () => {
 test('ignores a second account mutation while the first submit is pending', async () => {
     const detailRequest = deferred();
     const mutation = deferred();
+    api.manage.getGraphSpaceList.mockResolvedValue({
+        status: 200,
+        data: {records: [{name: 'SPACE'}]},
+    });
     api.auth.getUserInfo.mockReturnValue(detailRequest.promise);
     api.auth.updateAdminspace.mockReturnValue(mutation.promise);
     render(<EditLayer {...props} data={{id: 'A'}} op='auth' />);
@@ -223,7 +227,7 @@ test('ignores a second account mutation while the first submit is pending', asyn
 
     await act(async () => detailRequest.resolve({
         status: 200,
-        data: {user_name: 'alice', adminSpaces: []},
+        data: {user_name: 'alice', adminSpaces: ['SPACE']},
     }));
     fireEvent.click(submit);
     fireEvent.click(submit);
@@ -382,6 +386,49 @@ test('requires an explicit password when creating an account', async () => {
     expect(screen.getByPlaceholderText(
         'account.form.default_password_placeholder'
     )).toBeRequired();
+});
+
+test('requires a GraphSpace when creating a scoped account', async () => {
+    api.auth.addUser.mockResolvedValue({status: 200});
+    render(<EditLayer {...props} data={{}} op='create' />);
+    await act(async () => undefined);
+
+    fireEvent.change(screen.getByPlaceholderText(
+        'account.form.id_placeholder'
+    ), {target: {value: 'alice'}});
+    fireEvent.change(screen.getByPlaceholderText(
+        'account.form.default_password_placeholder'
+    ), {target: {value: 'secret'}});
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(screen.getByText(
+        'account.permission_preset.GS_READ_WRITE'
+    ));
+    fireEvent.click(document.querySelector(
+        '.ant-modal-footer .ant-btn-primary'
+    ));
+
+    await waitFor(() =>
+        expect(document.querySelector('.ant-form-item-has-error'))
+            .not.toBeNull()
+    );
+    expect(api.auth.addUser).not.toHaveBeenCalled();
+});
+
+test('requires a GraphSpace when granting space administration', async () => {
+    api.auth.updateAdminspace.mockResolvedValue({status: 200});
+    render(<EditLayer {...props} data={{id: 'A'}} op='auth' />);
+    const submit = document.querySelector(
+        '.ant-modal-footer .ant-btn-primary'
+    );
+    await waitFor(() => expect(submit).not.toBeDisabled());
+
+    fireEvent.click(submit);
+
+    await waitFor(() =>
+        expect(document.querySelector('.ant-form-item-has-error'))
+            .not.toBeNull()
+    );
+    expect(api.auth.updateAdminspace).not.toHaveBeenCalled();
 });
 
 test('keeps a specific account creation error visible in the form', async () => {

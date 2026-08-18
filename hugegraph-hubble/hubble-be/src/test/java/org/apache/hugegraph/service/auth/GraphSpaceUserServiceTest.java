@@ -17,6 +17,7 @@
 
 package org.apache.hugegraph.service.auth;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -75,6 +76,80 @@ public class GraphSpaceUserServiceTest {
 
         Assert.assertNotNull(error);
         Assert.assertEquals("auth.permission-preset.unsupported",
+                            error.getMessage());
+    }
+
+    @Test
+    public void testGraphSpacePresetRequiresAtLeastOneGraphSpace() {
+        for (String preset : Arrays.asList(
+                "GS_READ_ONLY", "GS_READ_WRITE", "GS_ADMIN")) {
+            ParameterizedException error = null;
+            try {
+                this.service.validatePermissionPresets(
+                        this.client, Collections.emptyList(), preset);
+            } catch (ParameterizedException e) {
+                error = e;
+            }
+
+            Assert.assertNotNull(error);
+            Assert.assertEquals(
+                    "auth.permission-preset.graphspace-required",
+                    error.getMessage());
+        }
+        Mockito.verifyZeroInteractions(this.graphSpace);
+    }
+
+    @Test
+    public void testUnknownAccountPresetIsRejectedBeforeAccountCreation() {
+        ParameterizedException error = null;
+        try {
+            this.service.validatePermissionPresets(
+                    this.client, Collections.emptyList(), "UNKNOWN");
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.invalid",
+                            error.getMessage());
+        Mockito.verifyZeroInteractions(this.graphSpace);
+    }
+
+    @Test
+    public void testMixedGraphSpacePresetsAreRejected() {
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Collections.singletonList("team"));
+        Map<String, String> permission = new HashMap<>();
+        permission.put("graphspace", "team");
+        permission.put("permission_preset", "GS_READ_ONLY");
+
+        ParameterizedException error = null;
+        try {
+            this.service.validatePermissionPresets(
+                    this.client, Collections.singletonList(permission),
+                    "GS_READ_WRITE");
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.mismatch",
+                            error.getMessage());
+    }
+
+    @Test
+    public void testNullGraphSpacePermissionEntryIsRejected() {
+        ParameterizedException error = null;
+        try {
+            this.service.validatePermissionPresets(
+                    this.client, Collections.singletonList(null),
+                    "GS_READ_ONLY");
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.entry-invalid",
                             error.getMessage());
     }
 

@@ -428,6 +428,7 @@ const EditLayer = ({
                                                                 />
                                                             )}
                                                             name="graphspaces"
+                                                            rules={[rules.required()]}
                                                         >
                                                             <Select options={graphspaceList} mode="multiple" />
                                                         </Form.Item>
@@ -454,6 +455,7 @@ const EditLayer = ({
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
                                         name="graphspaces"
+                                        rules={[rules.required()]}
                                     >
                                         <Select options={graphspaceList} mode="multiple" />
                                     </Form.Item>

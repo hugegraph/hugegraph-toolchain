@@ -204,10 +204,19 @@ public class GraphSpaceUserService extends AuthService {
             return;
         }
         requirePermissionPresets(client);
+        requirePermissionPreset(preset);
+        if (permissions == null || permissions.isEmpty()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.graphspace-required");
+        }
         Set<String> graphSpaces =
                 new java.util.HashSet<>(client.graphSpace().listGraphSpace());
         for (Map<String, String> permission :
                 permissions == null ? new ArrayList<Map<String, String>>() : permissions) {
+            if (permission == null) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.entry-invalid");
+            }
             String graphSpace = permission.get("graphspace");
             String permissionPreset = permission.get("permission_preset");
             if (graphSpace == null || !graphSpaces.contains(graphSpace)) {
@@ -216,6 +225,11 @@ public class GraphSpaceUserService extends AuthService {
                           graphSpace);
             }
             requirePermissionPreset(permissionPreset);
+            if (!preset.equals(permissionPreset)) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.mismatch",
+                          permissionPreset, preset);
+            }
         }
     }
 
@@ -386,12 +400,16 @@ public class GraphSpaceUserService extends AuthService {
     }
 
     private static void requirePermissionPreset(String preset) {
-        if (!"GS_READ_ONLY".equals(preset) &&
-            !"GS_READ_WRITE".equals(preset) &&
-            !"GS_ADMIN".equals(preset)) {
+        if (!isGraphSpacePreset(preset)) {
             throw new ParameterizedException(
                       "auth.permission-preset.invalid", preset);
         }
+    }
+
+    private static boolean isGraphSpacePreset(String preset) {
+        return "GS_READ_ONLY".equals(preset) ||
+               "GS_READ_WRITE".equals(preset) ||
+               "GS_ADMIN".equals(preset);
     }
 
     public boolean hasCustomRoles(HugeClient client, String graphSpace,
