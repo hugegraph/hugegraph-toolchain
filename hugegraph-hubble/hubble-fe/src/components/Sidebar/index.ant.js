@@ -63,6 +63,7 @@ const items = (t, pathname, capabilities = []) => {
             key: 'nodes',
         }] : []),
     ];
+    const supportList = [...operationsList, ...systemList];
 
     const menu = [
         {
@@ -125,12 +126,12 @@ const items = (t, pathname, capabilities = []) => {
                 },
             ],
         },
-        {
+        ...(supportList.length > 0 ? [{
             label: t('operations.section'),
             key: 'support',
             icon: <DashboardOutlined />,
-            children: [...operationsList, ...systemList],
-        },
+            children: supportList,
+        }] : []),
     ];
 
     return menu;
