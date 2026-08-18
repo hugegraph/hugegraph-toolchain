@@ -50,7 +50,8 @@ const loadAllGraphspaces = async () => {
     const records = [];
     let pageNo = 1;
     let total;
-    while (true) {
+    let done = false;
+    while (!done) {
         const response = await api.manage.getGraphSpaceList({
             page_no: pageNo,
             page_size: GRAPHSPACE_PAGE_SIZE,
@@ -64,11 +65,13 @@ const loadAllGraphspaces = async () => {
         }
         records.push(...pageRecords);
         if (pageRecords.length === 0) {
-            break;
+            done = true;
+            continue;
         }
         const rawTotal = response.data?.total;
-        const hasTotal = rawTotal !== null && rawTotal !== undefined &&
-                         !(typeof rawTotal === 'string' && rawTotal.trim() === '');
+        const hasTotal = rawTotal !== null
+                         && rawTotal !== undefined
+                         && !(typeof rawTotal === 'string' && rawTotal.trim() === '');
         const declaredTotal = Number(rawTotal);
         if (hasTotal && Number.isFinite(declaredTotal) && declaredTotal >= 0) {
             if (declaredTotal > GRAPHSPACE_MAX_RECORDS) {
@@ -76,14 +79,16 @@ const loadAllGraphspaces = async () => {
             }
             total = declaredTotal;
             if (records.length >= total) {
-                break;
+                done = true;
             }
         }
         else if (pageRecords.length < GRAPHSPACE_PAGE_SIZE) {
             total = records.length;
-            break;
+            done = true;
         }
-        pageNo += 1;
+        if (!done) {
+            pageNo += 1;
+        }
     }
     return {status: 200, data: {records, total: total ?? records.length}};
 };

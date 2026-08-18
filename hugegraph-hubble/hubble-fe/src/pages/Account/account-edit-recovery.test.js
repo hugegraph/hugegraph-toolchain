@@ -360,11 +360,11 @@ test.each([null, ''])(
 
 test('accepts exactly 10000 GraphSpaces without a declared total', async () => {
     api.manage.getGraphSpaceList.mockImplementation(({page_no: pageNo}) => {
-        const records = pageNo <= 20 ?
-                        Array.from({length: 500}, (_, index) => ({
-                            name: `space-${pageNo}-${index}`,
-                        })) :
-                        [];
+        const records = pageNo <= 20
+            ? Array.from({length: 500}, (_, index) => ({
+                name: `space-${pageNo}-${index}`,
+            }))
+            : [];
         return Promise.resolve({status: 200, data: {records}});
     });
 
