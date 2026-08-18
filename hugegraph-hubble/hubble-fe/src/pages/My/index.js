@@ -24,9 +24,11 @@ import style from './index.module.scss';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
+import {useAuthContext} from '../../auth/AuthContext';
 
 const My = () => {
     const {t} = useTranslation();
+    const {context} = useAuthContext();
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [changePass, setChangePass] = useState(false);
     const [refresh, setRefresh] = useState(false);
@@ -63,6 +65,9 @@ const My = () => {
         : (Array.isArray(data.adminSpaces) && data.adminSpaces.length > 0
             ? data.adminSpaces.join(', ')
             : '');
+    const accountActions = context?.actions?.account ?? [];
+    const canUpdateProfile = accountActions.includes('update');
+    const canChangePassword = accountActions.includes('change_password');
 
     const handleForm = useCallback(async () => {
         try {
@@ -197,20 +202,24 @@ const My = () => {
                         </div>
                         {!changePass && (
                             <Space className={style.profileActions} wrap>
-                                <Button
-                                    icon={<EditOutlined aria-hidden='true' />}
-                                    onClick={handleShowLayer}
-                                    disabled={spinning || profileError}
-                                >
-                                    {t('common.action.edit')}
-                                </Button>
-                                <Button
-                                    icon={<LockOutlined aria-hidden='true' />}
-                                    onClick={handleChange}
-                                    disabled={spinning || profileError}
-                                >
-                                    {t('my.edit.title')}
-                                </Button>
+                                {canUpdateProfile && (
+                                    <Button
+                                        icon={<EditOutlined aria-hidden='true' />}
+                                        onClick={handleShowLayer}
+                                        disabled={spinning || profileError}
+                                    >
+                                        {t('common.action.edit')}
+                                    </Button>
+                                )}
+                                {canChangePassword && (
+                                    <Button
+                                        icon={<LockOutlined aria-hidden='true' />}
+                                        onClick={handleChange}
+                                        disabled={spinning || profileError}
+                                    >
+                                        {t('my.edit.title')}
+                                    </Button>
+                                )}
                             </Space>
                         )}
                     </header>

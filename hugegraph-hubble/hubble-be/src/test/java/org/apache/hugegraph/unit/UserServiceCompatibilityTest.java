@@ -19,6 +19,8 @@ package org.apache.hugegraph.unit;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.junit.Assert;
@@ -28,13 +30,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.GraphSpaceManager;
 import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
+import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.exception.ServerException;
+import org.apache.hugegraph.exception.UnauthorizedException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.GraphSpaceUserService;
 import org.apache.hugegraph.service.auth.UserService;
@@ -126,9 +131,9 @@ public class UserServiceCompatibilityTest {
     @Test
     public void testStandalonePersonalUpdateOmitsPdOnlyNickname() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
-        Mockito.when(this.auth.getUserByName("user"))
-               .thenReturn(user("user"));
-        Mockito.when(this.client.findUserByName("user")).thenReturn(user("user"));
+        Mockito.when(this.client.supportsPersonalProfileUpdate())
+               .thenReturn(true);
+        Mockito.when(this.client.findCurrentUser("user")).thenReturn(user("user"));
 
         this.service.updatePersonal(this.client, "user", "display-name",
                                     "description");
@@ -140,10 +145,76 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testLegacyPersonalUpdateFailsBeforeServerWrite() {
+        Mockito.when(this.client.supportsPersonalProfileUpdate())
+               .thenReturn(false);
+
+        ParameterizedException error = null;
+        try {
+            this.service.updatePersonal(this.client, "user", "display-name",
+                                        "description");
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.profile.update-unsupported",
+                            error.getMessage());
+        Mockito.verify(this.client, Mockito.never())
+               .findCurrentUser(Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never())
+               .updateUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testLegacyPasswordUpdateUsesVerifiedIdentity() {
+        User current = user("user");
+        current.setId("user-id");
+        Mockito.when(this.client.findCurrentUser("user"))
+               .thenReturn(current);
+
+        Response response = this.service.updatepwd(
+                this.client, "user", "old-password", "new-password");
+
+        Assert.assertEquals(200, response.getStatus());
+        ArgumentCaptor<User> request = ArgumentCaptor.forClass(User.class);
+        Mockito.verify(this.auth).updateUser(request.capture());
+        Assert.assertEquals("user-id", request.getValue().id());
+        Assert.assertEquals("new-password", request.getValue().password());
+    }
+
+    @Test
+    public void testCurrentUserIdentityMismatchIsUnauthorized() {
+        Mockito.when(this.client.findCurrentUser("user"))
+               .thenThrow(new IllegalStateException("mismatch"));
+
+        try {
+            this.service.getpersonal(this.client, "user");
+            Assert.fail("Expected an unauthorized current-user identity");
+        } catch (UnauthorizedException ignored) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testMissingCurrentUserRecordIsUnauthorized() {
+        ServerException missing = new ServerException("missing");
+        missing.status(404);
+        Mockito.when(this.client.findCurrentUser("user")).thenThrow(missing);
+
+        try {
+            this.service.getpersonal(this.client, "user");
+            Assert.fail("Expected an unauthorized missing current user");
+        } catch (UnauthorizedException ignored) {
+            // Expected
+        }
+    }
+
+    @Test
     public void testCurrentUserPresetUsesSelfPermissionApi() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        Mockito.when(this.client.findUserByName("user"))
+        Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(java.util.Collections.singletonList("SPACE"));
@@ -184,7 +255,7 @@ public class UserServiceCompatibilityTest {
     public void testCurrentUserIgnoresOnlyForbiddenGraphSpaces() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        Mockito.when(this.client.findUserByName("user"))
+        Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(Arrays.asList("OWNED", "DENIED"));
@@ -202,15 +273,14 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
-    public void testLegacyAnalystKeepsGraphSpaceAccess() {
+    public void testLegacySpaceMemberKeepsGraphSpaceAccess() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
-        Mockito.when(this.client.findUserByName("user"))
+        Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(Collections.singletonList("SPACE"));
-        Mockito.when(this.auth.checkDefaultRole("SPACE", "analyst"))
-               .thenReturn(true);
+        Mockito.when(this.auth.isSpaceMember("SPACE")).thenReturn(true);
 
         UserEntity result = this.service.getpersonal(this.client, "user");
 
@@ -218,7 +288,7 @@ public class UserServiceCompatibilityTest {
                             result.getResSpaces());
         Assert.assertEquals("LEGACY_CUSTOM", result.getPermissionPreset());
         Mockito.verify(this.auth, Mockito.never())
-               .checkDefaultRole("SPACE", "observer");
+               .checkDefaultRole(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test
@@ -246,10 +316,6 @@ public class UserServiceCompatibilityTest {
     public void testModernProfileUpdatePreservesPermissionAssignments() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        GraphSpaceUserService actualGraphSpaceUsers =
-                new GraphSpaceUserService();
-        ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
-                                     actualGraphSpaceUsers);
         UserEntity user = UserEntity.builder()
                                     .id("user-id")
                                     .name("user")
@@ -259,43 +325,89 @@ public class UserServiceCompatibilityTest {
         this.service.update(this.client, user);
 
         Mockito.verify(this.auth).updateUser(Mockito.any(User.class));
-        Mockito.verify(this.graphSpace, Mockito.never()).setDefaultRole(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
-        Mockito.verify(this.graphSpace, Mockito.never()).deleteDefaultRole(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
-        Mockito.verify(this.auth, Mockito.never()).addSpaceAdmin(
-                Mockito.anyString(), Mockito.anyString());
-        Mockito.verify(this.auth, Mockito.never()).delSpaceAdmin(
-                Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .validatePermissionPresets(Mockito.any(), Mockito.any(),
+                                          Mockito.any());
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .applyPermissionPresets(Mockito.any(), Mockito.anyString(),
+                                       Mockito.any(), Mockito.any());
+        Mockito.verify(this.auth, Mockito.never()).listSuperAdmin();
+        Mockito.verify(this.auth, Mockito.never())
+               .addSuperAdmin(Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never())
+               .delSuperAdmin(Mockito.anyString());
     }
 
     @Test
-    public void testModernUserUpdateReconcilesAdminSpaces() {
+    public void testModernUserUpdateUsesPresetAsPermissionSource() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        Mockito.when(this.graphSpace.listGraphSpace())
-               .thenReturn(Arrays.asList("OLD", "NEW"));
-        Mockito.when(this.auth.listSpaceAdmin("OLD"))
-               .thenReturn(Collections.singletonList("user"));
-        Mockito.when(this.auth.listSpaceAdmin("NEW"))
-               .thenReturn(Collections.emptyList());
-        Mockito.when(this.client.findUserByName("user"))
-               .thenReturn(user("user"));
+        Mockito.when(this.auth.getUser("user")).thenReturn(user("user"));
+        Map<String, String> permission = new HashMap<>();
+        permission.put("graphspace", "NEW");
+        permission.put("permission_preset", "GS_ADMIN");
         UserEntity account = UserEntity.builder()
                                        .id("user")
                                        .name("user")
                                        .adminSpaces(
                                                Collections.singletonList("NEW"))
                                        .build();
-        account.setSuperadmin(true);
+        account.setPermissionPreset("GS_ADMIN");
+        account.setGraphspacePermissions(
+                Collections.singletonList(permission));
 
         this.service.update(this.client, account);
 
-        Mockito.verify(this.graphSpaceUsers).applySpacePreset(
-                this.client, "NEW", "user", "GS_ADMIN");
-        Mockito.verify(this.graphSpaceUsers).removeSpacePreset(
-                this.client, "OLD", "user");
-        Mockito.verify(this.auth).addSuperAdmin("user");
+        Mockito.verify(this.graphSpaceUsers).validatePermissionPresets(
+                this.client, account.getGraphspacePermissions(), "GS_ADMIN");
+        Mockito.verify(this.graphSpaceUsers).applyPermissionPresets(
+                this.client, "user", account.getGraphspacePermissions(),
+                "GS_ADMIN");
+        Mockito.verify(this.auth, Mockito.never())
+               .addSpaceAdmin(Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never())
+               .addSuperAdmin(Mockito.anyString());
+    }
+
+    @Test
+    public void testModernUserUpdateRollsBackProfileAndSuperAdmin() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        User previous = user("alice");
+        previous.setId("u-1");
+        previous.description("old");
+        Mockito.when(this.auth.getUser("u-1")).thenReturn(previous);
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(Collections.singletonList("alice"))
+               .thenReturn(Collections.emptyList());
+        UserEntity account = UserEntity.builder()
+                                       .id("u-1")
+                                       .name("alice")
+                                       .description("new")
+                                       .build();
+        account.setPermissionPreset("GS_READ_ONLY");
+        account.setGraphspacePermissions(Collections.singletonList(
+                permission("team", "GS_READ_ONLY")));
+        RuntimeException failure = new RuntimeException("preset failed");
+        Mockito.doThrow(failure).when(this.graphSpaceUsers)
+               .applyPermissionPresets(
+                       this.client, "alice",
+                       account.getGraphspacePermissions(), "GS_READ_ONLY");
+
+        RuntimeException error = null;
+        try {
+            this.service.update(this.client, account);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).delSuperAdmin("alice");
+        Mockito.verify(this.auth).addSuperAdmin("alice");
+        ArgumentCaptor<User> updates = ArgumentCaptor.forClass(User.class);
+        Mockito.verify(this.auth, Mockito.times(2))
+               .updateUser(updates.capture());
+        Assert.assertSame(previous, updates.getAllValues().get(1));
     }
 
     @Test
@@ -312,6 +424,7 @@ public class UserServiceCompatibilityTest {
                .thenReturn(user("user"));
         Mockito.when(this.auth.listSuperAdmin())
                .thenReturn(Collections.singletonList("user"));
+        Mockito.when(this.auth.getUser("user")).thenReturn(user("user"));
         UserEntity account = UserEntity.builder()
                                        .id("user")
                                        .name("user")
@@ -326,7 +439,8 @@ public class UserServiceCompatibilityTest {
         Mockito.verify(this.auth).delSuperAdmin("user");
         Mockito.verify(this.graphSpaceUsers, Mockito.never())
                .applySpacePreset(Mockito.any(), Mockito.anyString(),
-                                 Mockito.anyString(), Mockito.anyString());
+                                 Mockito.anyString(), Mockito.anyString(),
+                                 Mockito.anyString());
     }
 
     @Test
@@ -391,6 +505,191 @@ public class UserServiceCompatibilityTest {
                                        Mockito.any(), Mockito.any());
     }
 
+    @Test
+    public void testModernScopedUserCreationRejectsEmptyGraphSpaces() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
+                                     new GraphSpaceUserService());
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("GS_READ_WRITE");
+        user.setGraphspacePermissions(Collections.emptyList());
+
+        ParameterizedException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.graphspace-required",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .createUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testModernScopedUserCreationRollsBackFailedPreset() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(user("created-user"));
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("GS_READ_ONLY");
+        user.setGraphspacePermissions(Collections.singletonList(
+                permission("team", "GS_READ_ONLY")));
+        RuntimeException failure = new RuntimeException("preset failed");
+        Mockito.doThrow(failure).when(this.graphSpaceUsers)
+               .applyPermissionPresetsForNewAccount(
+                       this.client, "user",
+                       user.getGraphspacePermissions(),
+                       "GS_READ_ONLY");
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).deleteUser("created-user");
+    }
+
+    @Test
+    public void testSuperAdminGrantFailureDeletesNewAccount() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        User created = user("alice");
+        created.setId("u-1");
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(created);
+        RuntimeException failure = new RuntimeException("grant failed");
+        Mockito.when(this.auth.addSuperAdmin("user")).thenThrow(failure);
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("SUPER_ADMIN");
+        user.setSuperadmin(true);
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).addSuperAdmin("user");
+        Mockito.verify(this.auth).delSuperAdmin("user");
+        Mockito.verify(this.auth).deleteUser("u-1");
+    }
+
+    @Test
+    public void testLegacyAdminGrantFailureRollsBackEarlierSpaces() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        User created = user("user");
+        created.setId("u-1");
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(created);
+        RuntimeException failure = new RuntimeException("grant failed");
+        Mockito.when(this.auth.addSpaceAdmin("user", "SECOND"))
+               .thenThrow(failure);
+        UserEntity user = userEntity("display-name");
+        user.setAdminSpaces(Arrays.asList("FIRST", "SECOND"));
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).delSpaceAdmin("user", "SECOND");
+        Mockito.verify(this.auth).delSpaceAdmin("user", "FIRST");
+        Mockito.verify(this.auth).deleteUser("u-1");
+    }
+
+    @Test
+    public void testModernUserCreationRejectsUnknownPreset() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
+                                     new GraphSpaceUserService());
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("UNKNOWN");
+        user.setGraphspacePermissions(Collections.emptyList());
+
+        ParameterizedException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.invalid",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .createUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testModernUserCreationRequiresPreset() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        UserEntity user = userEntity("display-name");
+
+        ParameterizedException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.account-required",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .createUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testModernUserCreationRejectsSuperAdminMismatch() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        UserEntity superPreset = userEntity("display-name");
+        superPreset.setPermissionPreset("SUPER_ADMIN");
+
+        ParameterizedException missingFlag = null;
+        try {
+            this.service.add(this.client, superPreset);
+        } catch (ParameterizedException e) {
+            missingFlag = e;
+        }
+        Assert.assertNotNull(missingFlag);
+        Assert.assertEquals("auth.permission-preset.superadmin-mismatch",
+                            missingFlag.getMessage());
+
+        UserEntity scopedPreset = userEntity("display-name");
+        scopedPreset.setPermissionPreset("GS_READ_ONLY");
+        scopedPreset.setSuperadmin(true);
+        ParameterizedException extraFlag = null;
+        try {
+            this.service.add(this.client, scopedPreset);
+        } catch (ParameterizedException e) {
+            extraFlag = e;
+        }
+        Assert.assertNotNull(extraFlag);
+        Assert.assertEquals("auth.permission-preset.superadmin-mismatch",
+                            extraFlag.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .createUser(Mockito.any(User.class));
+    }
+
     private static UserEntity userEntity(String nickname) {
         return UserEntity.builder()
                          .name("user")
@@ -404,5 +703,13 @@ public class UserServiceCompatibilityTest {
         user.setId(name);
         user.name(name);
         return user;
+    }
+
+    private static Map<String, String> permission(String graphSpace,
+                                                   String preset) {
+        Map<String, String> permission = new HashMap<>();
+        permission.put("graphspace", graphSpace);
+        permission.put("permission_preset", preset);
+        return permission;
     }
 }

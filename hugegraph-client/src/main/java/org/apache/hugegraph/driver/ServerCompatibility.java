@@ -74,17 +74,26 @@ public final class ServerCompatibility {
         return profile(coreVersion, apiVersion).supportsDefaultRole();
     }
 
+    public static boolean supportsPersonalProfileUpdate(
+            String coreVersion, String apiVersion) {
+        return profile(coreVersion, apiVersion)
+               .supportsPersonalProfileUpdate();
+    }
+
     public enum Profile {
-        LEGACY(false, false),
-        GRAPHSPACE(true, false),
-        MODERN(true, true);
+        LEGACY(false, false, false),
+        GRAPHSPACE(true, false, false),
+        MODERN(true, true, true);
 
         private final boolean graphSpace;
         private final boolean defaultRole;
+        private final boolean personalProfileUpdate;
 
-        Profile(boolean graphSpace, boolean defaultRole) {
+        Profile(boolean graphSpace, boolean defaultRole,
+                boolean personalProfileUpdate) {
             this.graphSpace = graphSpace;
             this.defaultRole = defaultRole;
+            this.personalProfileUpdate = personalProfileUpdate;
         }
 
         public boolean supportsGraphSpace() {
@@ -93,6 +102,10 @@ public final class ServerCompatibility {
 
         public boolean supportsDefaultRole() {
             return this.defaultRole;
+        }
+
+        public boolean supportsPersonalProfileUpdate() {
+            return this.personalProfileUpdate;
         }
     }
 }

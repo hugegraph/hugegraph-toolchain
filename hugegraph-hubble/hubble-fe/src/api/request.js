@@ -40,7 +40,13 @@ const parseResponse = (data, headers) => {
 };
 
 const redirectToLogin = () => {
+    const logoutTransition = user.isLogoutTransition();
     user.clearLogin();
+    if (logoutTransition) {
+        sessionStorage.removeItem('redirect');
+        window.location.replace('/login');
+        return;
+    }
     if (window.location.pathname !== '/login') {
         const redirect = `${window.location.pathname}${window.location.search}`
                          + window.location.hash;

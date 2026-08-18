@@ -21,14 +21,21 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.GraphSpaceManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.GraphSpaceEntity;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.structure.space.GraphSpace;
+import org.apache.hugegraph.util.PageUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -151,7 +158,7 @@ public class GraphSpaceServiceTest {
     }
 
     @Test
-    public void testLegacyAnalystGraphSpaceRemainsVisible() {
+    public void testLegacyMemberGraphSpaceRemainsVisible() {
         GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
         AuthManager auth = Mockito.mock(AuthManager.class);
         GraphSpace space = graphSpace("legacy", true, "20260712");
@@ -161,8 +168,7 @@ public class GraphSpaceServiceTest {
         Mockito.when(manager.listGraphSpace())
                .thenReturn(java.util.Collections.singletonList("legacy"));
         Mockito.when(manager.getGraphSpace("legacy")).thenReturn(space);
-        Mockito.when(auth.checkDefaultRole("legacy", "analyst"))
-               .thenReturn(true);
+        Mockito.when(auth.isSpaceMember("legacy")).thenReturn(true);
         Mockito.when(this.graphsService.listGraphNames(this.client, "legacy",
                                                        ""))
                .thenReturn(java.util.Collections.emptySet());
@@ -173,7 +179,7 @@ public class GraphSpaceServiceTest {
         Assert.assertEquals(1, response.size());
         Assert.assertEquals("legacy", response.get(0).get("name"));
         Mockito.verify(auth, Mockito.never())
-               .checkDefaultRole("legacy", "observer");
+               .checkDefaultRole(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test
@@ -199,6 +205,154 @@ public class GraphSpaceServiceTest {
         Assert.assertEquals(1, response.size());
         Assert.assertEquals("public", response.get(0).get("name"));
         Assert.assertTrue((Boolean) response.get(0).get("authed"));
+    }
+
+    @Test
+    public void testAnonymousGraphSpacesExcludeProtectedSpaces() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        GraphSpace visible = graphSpace("public", false, "20260712");
+        GraphSpace protectedSpace = graphSpace("protected", true, "20260712");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Arrays.asList("public", "protected"));
+        Mockito.when(manager.getGraphSpace("public")).thenReturn(visible);
+        Mockito.when(manager.getGraphSpace("protected"))
+               .thenReturn(protectedSpace);
+        Mockito.when(this.graphsService.listGraphNames(this.client, "public", ""))
+               .thenReturn(java.util.Collections.emptySet());
+
+        List<Map<String, Object>> response =
+                this.service.queryAnonymousGs(this.client, "", "");
+
+        Assert.assertEquals(1, response.size());
+        Assert.assertEquals("public", response.get(0).get("name"));
+        Assert.assertEquals(java.util.Collections.singletonList("public"),
+                            this.service.listAnonymous(this.client));
+        Mockito.verify(this.graphsService, Mockito.never())
+               .listGraphNames(this.client, "protected", "");
+    }
+
+    @Test
+    public void testAnonymousDetailRejectsProtectedSpaceBeforeStatistics() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        GraphSpace protectedSpace = graphSpace("protected", true, "20260712");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.getGraphSpace("protected"))
+               .thenReturn(protectedSpace);
+
+        try {
+            this.service.getAnonymous(this.client, "protected");
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        try {
+            this.service.isAuthForAnonymous(this.client, "protected");
+            Assert.fail("Expected protected GraphSpace auth to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        Mockito.verifyZeroInteractions(this.graphsService);
+    }
+
+    @Test
+    public void testAnonymousAuthHidesMissingGraphSpaceLikeProtectedSpace() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        ServerException missing = new ServerException("missing");
+        missing.status(400);
+        Mockito.when(manager.getGraphSpace("missing")).thenThrow(missing);
+
+        try {
+            this.service.isAuthForAnonymous(this.client, "missing");
+            Assert.fail("Expected missing GraphSpace auth to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        try {
+            this.service.getAnonymous(this.client, "missing");
+            Assert.fail("Expected missing GraphSpace detail to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+    }
+
+    @Test
+    public void testAnonymousGraphSpacesCollectStatisticsAfterPaging() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Arrays.asList("a", "b", "c"));
+        Mockito.when(manager.getGraphSpace(Mockito.anyString()))
+               .thenAnswer(invocation -> graphSpace(
+                       invocation.getArgument(0), false, "20260712"));
+        Mockito.when(this.graphsService.listGraphNames(
+                             Mockito.eq(this.client), Mockito.anyString(),
+                             Mockito.eq("")))
+               .thenReturn(java.util.Collections.emptySet());
+
+        IPage<Map<String, Object>> response =
+                this.service.queryAnonymousGsPage(this.client, "", "",
+                                                  2, 1);
+
+        Assert.assertEquals(3L, response.getTotal());
+        Assert.assertEquals(1, response.getRecords().size());
+        Assert.assertEquals("b", response.getRecords().get(0).get("name"));
+        Mockito.verify(this.graphsService)
+               .listGraphNames(this.client, "b", "");
+        Mockito.verify(this.graphsService, Mockito.never())
+               .listGraphNames(this.client, "a", "");
+        Mockito.verify(this.graphsService, Mockito.never())
+               .listGraphNames(this.client, "c", "");
+    }
+
+    @Test
+    public void testAccessibleGraphSpacesCollectStatisticsAfterPaging() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        AuthManager auth = Mockito.mock(AuthManager.class);
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(this.client.auth()).thenReturn(auth);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Arrays.asList("a", "b", "c"));
+        Mockito.when(manager.getGraphSpace(Mockito.anyString()))
+               .thenAnswer(invocation -> graphSpace(
+                       invocation.getArgument(0), false, "20260712"));
+        Mockito.when(this.graphsService.listGraphNames(
+                             Mockito.eq(this.client), Mockito.anyString(),
+                             Mockito.eq("")))
+               .thenReturn(java.util.Collections.emptySet());
+
+        IPage<Map<String, Object>> response =
+                this.service.queryAccessibleGsPage(this.client, "", "",
+                                                   2, 1);
+
+        Assert.assertEquals(3L, response.getTotal());
+        Assert.assertEquals("b", response.getRecords().get(0).get("name"));
+        Mockito.verify(this.graphsService)
+               .listGraphNames(this.client, "b", "");
+        Mockito.verify(this.graphsService, Mockito.never())
+               .listGraphNames(this.client, "a", "");
+        Mockito.verify(this.graphsService, Mockito.never())
+               .listGraphNames(this.client, "c", "");
+    }
+
+    @Test
+    public void testGraphSpaceAllSentinelUsesHardCap() {
+        List<Integer> values = IntStream.rangeClosed(0, PageUtil.HARD_CAP)
+                                        .boxed()
+                                        .collect(Collectors.toList());
+        AtomicInteger mapped = new AtomicInteger();
+
+        try {
+            GraphSpaceService.pageAndMap(values, 1, -1, value -> {
+                mapped.incrementAndGet();
+                return value;
+            });
+            Assert.fail("Expected the all-record hard cap to reject the request");
+        } catch (IllegalArgumentException e) {
+            Assert.assertTrue(e.getMessage().contains("10000"));
+        }
+        Assert.assertEquals(0, mapped.get());
     }
 
     @Test

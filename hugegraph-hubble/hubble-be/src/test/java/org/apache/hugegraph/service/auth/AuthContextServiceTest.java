@@ -108,6 +108,8 @@ public class AuthContextServiceTest {
     public void testPdServerWithoutPresetApiHidesScopedMutations() {
         Fixture fixture = new Fixture(true);
         Mockito.when(fixture.client.supportsDefaultRole()).thenReturn(false);
+        Mockito.when(fixture.client.supportsPersonalProfileUpdate())
+               .thenReturn(false);
         Mockito.when(fixture.users.getpersonal(fixture.client, "alice"))
                .thenReturn(user(true, Collections.singletonList("space-a")));
 
@@ -121,6 +123,8 @@ public class AuthContextServiceTest {
         Assert.assertTrue(actions(context, "members").isEmpty());
         Assert.assertTrue(actions(context, "roles").isEmpty());
         Assert.assertTrue(actions(context, "authorizations").isEmpty());
+        Assert.assertEquals(Set.of("read", "change_password"),
+                            actions(context, "account"));
     }
 
     @Test
@@ -342,6 +346,8 @@ public class AuthContextServiceTest {
         private Fixture(boolean pdEnabled) {
             Mockito.when(this.config.get(HubbleOptions.PD_ENABLED))
                    .thenReturn(pdEnabled);
+            Mockito.when(this.client.supportsPersonalProfileUpdate())
+                   .thenReturn(true);
             this.service = new AuthContextService(this.config, this.users);
         }
     }

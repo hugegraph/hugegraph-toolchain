@@ -18,6 +18,7 @@
 
 const key = 'user_'; // 防止缓存问题
 const USER_CHANGE_EVENT = 'hubble:user-change';
+let logoutTransition = false;
 
 const notifyUserChange = () => {
     window.dispatchEvent(new CustomEvent(USER_CHANGE_EVENT));
@@ -56,6 +57,16 @@ const clearLogin = () => {
     clearUser();
 };
 
+const beginLogoutTransition = () => {
+    logoutTransition = true;
+};
+
+const endLogoutTransition = () => {
+    logoutTransition = false;
+};
+
+const isLogoutTransition = () => logoutTransition;
+
 const getDefaultGraphspace = () => {
     const user = getUser();
 
@@ -80,6 +91,9 @@ export {
     scopedStorageKey,
     clearUser,
     clearLogin,
+    beginLogoutTransition,
+    endLogoutTransition,
+    isLogoutTransition,
     getDefaultGraphspace,
     USER_CHANGE_EVENT,
 };

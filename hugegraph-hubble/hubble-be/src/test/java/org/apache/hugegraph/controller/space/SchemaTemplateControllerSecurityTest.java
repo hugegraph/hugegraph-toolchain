@@ -18,6 +18,8 @@
 
 package org.apache.hugegraph.controller.space;
 
+import java.util.Collections;
+
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -25,6 +27,9 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.auth.AuthModeService;
+import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.space.SchemaTemplateService;
 import org.apache.hugegraph.structure.space.SchemaTemplate;
 import org.apache.hugegraph.testutil.Assert;
 
@@ -32,7 +37,8 @@ public class SchemaTemplateControllerSecurityTest {
 
     @Test
     public void testCreateRequiresGraphSpaceWrite() {
-        TestController controller = controller();
+        TestController controller = controller(true);
+        controller.denyWrite();
 
         Assert.assertThrows(ForbiddenException.class, () ->
                 controller.create("space", Mockito.mock(SchemaTemplate.class)));
@@ -40,7 +46,8 @@ public class SchemaTemplateControllerSecurityTest {
 
     @Test
     public void testUpdateRequiresGraphSpaceWrite() {
-        TestController controller = controller();
+        TestController controller = controller(true);
+        controller.denyWrite();
 
         Assert.assertThrows(ForbiddenException.class, () ->
                 controller.update("space", "template",
@@ -49,26 +56,131 @@ public class SchemaTemplateControllerSecurityTest {
 
     @Test
     public void testDeleteRequiresGraphSpaceWrite() {
-        TestController controller = controller();
+        TestController controller = controller(true);
+        controller.denyWrite();
 
         Assert.assertThrows(ForbiddenException.class, () ->
                 controller.delete("space", "template"));
     }
 
-    private static TestController controller() {
+    @Test
+    public void testOwnerCanUpdateAndDeleteTemplate() {
+        TestController controller = controller(true);
+        SchemaTemplate template = new SchemaTemplate("template", "schema");
+        Mockito.when(controller.schemaTemplateService.get(
+                     controller.client, "template"))
+               .thenReturn(Collections.singletonMap("creator", "alice"));
+
+        controller.update("space", "template", template);
+        controller.delete("space", "template");
+
+        Mockito.verify(controller.schemaTemplateService)
+               .update(controller.client, template);
+        Mockito.verify(controller.schemaTemplateService)
+               .delete(controller.client, "template");
+    }
+
+    @Test
+    public void testWriterCannotMutateAnotherUsersTemplate() {
+        TestController controller = controller(true);
+        Mockito.when(controller.schemaTemplateService.get(
+                     controller.client, "template"))
+               .thenReturn(Collections.singletonMap("creator", "bob"));
+
+        Assert.assertThrows(ForbiddenException.class, () ->
+                controller.update("space", "template",
+                                  Mockito.mock(SchemaTemplate.class)));
+        Assert.assertThrows(ForbiddenException.class, () ->
+                controller.delete("space", "template"));
+        Mockito.verify(controller.schemaTemplateService, Mockito.never())
+               .update(Mockito.any(), Mockito.any());
+        Mockito.verify(controller.schemaTemplateService, Mockito.never())
+               .delete(Mockito.any(), Mockito.anyString());
+    }
+
+    @Test
+    public void testGraphSpaceManagerCanMutateAnyTemplate() {
+        TestController controller = controller(true);
+        Mockito.when(controller.users.isAssignSpaceAdmin(
+                     controller.client, "space"))
+               .thenReturn(true);
+
+        controller.delete("space", "template");
+
+        Mockito.verify(controller.schemaTemplateService)
+               .delete(controller.client, "template");
+        Mockito.verify(controller.schemaTemplateService, Mockito.never())
+               .get(Mockito.any(), Mockito.anyString());
+    }
+
+    @Test
+    public void testGlobalAdministratorCanMutateAnyTemplate() {
+        TestController controller = controller(true);
+        Mockito.when(controller.users.isSuperAdmin(controller.client))
+               .thenReturn(true);
+
+        controller.delete("space", "template");
+
+        Mockito.verify(controller.schemaTemplateService)
+               .delete(controller.client, "template");
+        Mockito.verify(controller.schemaTemplateService, Mockito.never())
+               .get(Mockito.any(), Mockito.anyString());
+    }
+
+    @Test
+    public void testAnonymousModeKeepsTemplateMutationAvailable() {
+        TestController controller = controller(false);
+
+        controller.delete("space", "template");
+
+        Mockito.verify(controller.schemaTemplateService)
+               .delete(controller.client, "template");
+        Mockito.verifyZeroInteractions(controller.users);
+    }
+
+    private static TestController controller(boolean authEnabled) {
         TestController controller = new TestController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(authEnabled);
         controller.config = config;
+        controller.setAuthMode(new AuthModeService(config));
+        controller.schemaTemplateService =
+                Mockito.mock(SchemaTemplateService.class);
         return controller;
     }
 
     private static class TestController extends SchemaTemplateController {
 
+        private final HugeClient client = Mockito.mock(HugeClient.class);
+        private final UserService users = Mockito.mock(UserService.class);
+        private boolean writeAllowed = true;
+
+        private TestController() {
+            this.userService = this.users;
+        }
+
+        public void setAuthMode(AuthModeService authMode) {
+            this.authMode = authMode;
+        }
+
+        public void denyWrite() {
+            this.writeAllowed = false;
+        }
+
         @Override
         protected HugeClient requireGraphSpaceWrite(String graphSpace) {
-            throw new ForbiddenException(
-                    "Permission denied: write graphspace resources");
+            if (!this.writeAllowed) {
+                throw new ForbiddenException(
+                        "Permission denied: write graphspace resources");
+            }
+            return this.client;
+        }
+
+        @Override
+        protected String getUser() {
+            return "alice";
         }
     }
 }

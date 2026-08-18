@@ -167,6 +167,21 @@ public class GraphSpaceUserService extends AuthService {
     public void applyPermissionPresets(HugeClient client, String username,
                                        List<Map<String, String>> permissions,
                                        String preset) {
+        this.applyPermissionPresets(client, username, permissions, preset,
+                                    true);
+    }
+
+    public void applyPermissionPresetsForNewAccount(
+            HugeClient client, String username,
+            List<Map<String, String>> permissions, String preset) {
+        this.applyPermissionPresets(client, username, permissions, preset,
+                                    false);
+    }
+
+    private void applyPermissionPresets(HugeClient client, String username,
+                                        List<Map<String, String>> permissions,
+                                        String preset,
+                                        boolean reconcileUnrequestedSpaces) {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
@@ -184,16 +199,44 @@ public class GraphSpaceUserService extends AuthService {
                 desired.put(graphSpace, permissionPreset);
             }
         }
-        for (String graphSpace : client.graphSpace().listGraphSpace()) {
-            String desiredPreset = desired.get(graphSpace);
-            if (desiredPreset == null) {
-                this.unauthUser(client, graphSpace,
-                                account.id().toString());
-            } else {
-                this.applySpacePreset(client, graphSpace,
-                                      account.id().toString(),
-                                      desiredPreset);
+        if (!reconcileUnrequestedSpaces) {
+            desired.forEach((graphSpace, desiredPreset) ->
+                    this.applySpacePreset(client, graphSpace,
+                                          account.id().toString(),
+                                          account.name(),
+                                          desiredPreset));
+            return;
+        }
+        List<String> graphSpaces = client.graphSpace().listGraphSpace();
+        Map<String, SpacePresetState> previous =
+                new java.util.LinkedHashMap<>();
+        String userId = account.id().toString();
+        String accountName = account.name();
+        for (String graphSpace : graphSpaces) {
+            boolean member = client.auth().listSpaceMember(graphSpace)
+                                   .contains(accountName);
+            previous.put(graphSpace, this.capturePresetState(
+                    client, graphSpace, userId, accountName, member));
+        }
+        try {
+            for (String graphSpace : graphSpaces) {
+                String desiredPreset = desired.get(graphSpace);
+                if (desiredPreset == null) {
+                    this.unauthUser(client, graphSpace, userId);
+                } else {
+                    this.applySpacePreset(client, graphSpace, userId,
+                                          accountName,
+                                          desiredPreset);
+                }
             }
+        } catch (RuntimeException error) {
+            for (int i = graphSpaces.size() - 1; i >= 0; i--) {
+                String graphSpace = graphSpaces.get(i);
+                this.restorePresetState(client, graphSpace, userId,
+                                        accountName, previous.get(graphSpace),
+                                        error);
+            }
+            throw error;
         }
     }
 
@@ -204,10 +247,19 @@ public class GraphSpaceUserService extends AuthService {
             return;
         }
         requirePermissionPresets(client);
+        requirePermissionPreset(preset);
+        if (permissions == null || permissions.isEmpty()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.graphspace-required");
+        }
         Set<String> graphSpaces =
                 new java.util.HashSet<>(client.graphSpace().listGraphSpace());
         for (Map<String, String> permission :
                 permissions == null ? new ArrayList<Map<String, String>>() : permissions) {
+            if (permission == null) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.entry-invalid");
+            }
             String graphSpace = permission.get("graphspace");
             String permissionPreset = permission.get("permission_preset");
             if (graphSpace == null || !graphSpaces.contains(graphSpace)) {
@@ -216,29 +268,38 @@ public class GraphSpaceUserService extends AuthService {
                           graphSpace);
             }
             requirePermissionPreset(permissionPreset);
+            if (!preset.equals(permissionPreset)) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.mismatch",
+                          permissionPreset, preset);
+            }
         }
     }
 
-    public void applySpacePreset(HugeClient client, String graphSpace,
-                                 String userId, String preset) {
+    public void applySpacePreset(HugeClient client, String graphSpace, String userId, String username, String preset) {
         requirePermissionPreset(preset);
         requirePermissionPresets(client);
-        E.checkArgument(!client.auth().listSuperAdmin().contains(userId),
+        E.checkArgument(username != null && !username.isEmpty(), "The account name can't be empty");
+        E.checkArgument(!client.auth().listSuperAdmin().contains(username),
                         "Can't assign GraphSpace preset to super " +
-                        "administrator '%s'", userId);
+                        "administrator '%s'", username);
         boolean wasMember =
-                client.auth().listSpaceMember(graphSpace).contains(userId);
-        String username = userId;
+                client.auth().listSpaceMember(graphSpace).contains(username);
+        String resolvedUserId = userId;
         SpacePresetState previous = null;
         try {
             if (!wasMember) {
-                client.auth().addSpaceMember(userId, graphSpace);
+                client.auth().addSpaceMember(username, graphSpace);
             }
-            User account = client.auth().getUser(userId);
+            User account = userId == null ?
+                           client.findUserByName(username) :
+                           client.auth().getUser(userId);
             E.checkNotNull(account, "User");
-            username = account.name();
-            previous = this.capturePresetState(client, graphSpace, userId,
-                                               username, wasMember);
+            E.checkArgument(username.equals(account.name()),
+                            "Account id '%s' belongs to '%s', not '%s'",
+                            userId, account.name(), username);
+            resolvedUserId = account.id().toString();
+            previous = this.capturePresetState(client, graphSpace, resolvedUserId, username, wasMember);
             previous.customRoles.forEach(
                     belong -> this.belongService.deleteById(
                             client, graphSpace, belong.getId()));
@@ -265,11 +326,10 @@ public class GraphSpaceUserService extends AuthService {
             this.setDefaultRole(client, graphSpace, username, role);
         } catch (RuntimeException e) {
             if (previous == null) {
-                this.rollbackNewMember(client, graphSpace, userId,
+                this.rollbackNewMember(client, graphSpace, username,
                                        wasMember, e);
             } else {
-                this.restorePresetState(client, graphSpace, userId, username,
-                                        previous, e);
+                this.restorePresetState(client, graphSpace, resolvedUserId, username, previous, e);
             }
             throw e;
         }
@@ -308,6 +368,9 @@ public class GraphSpaceUserService extends AuthService {
                                     String userId, String username,
                                     SpacePresetState previous,
                                     RuntimeException failure) {
+        if (previous.member) {
+            this.rollbackNewMember(client, graphSpace, username, true, failure);
+        }
         previous.customRoles.forEach(belong -> {
             this.tryRestore(() -> {
                 Set<String> currentRoles = this.belongService.list(
@@ -336,8 +399,9 @@ public class GraphSpaceUserService extends AuthService {
                 client.auth().delSpaceAdmin(username, graphSpace);
             }
         }, graphSpace, userId, "administrator", failure);
-        this.rollbackNewMember(client, graphSpace, userId,
-                               previous.member, failure);
+        if (!previous.member) {
+            this.rollbackNewMember(client, graphSpace, username, false, failure);
+        }
     }
 
     private void restoreDefaultRole(HugeClient client, String graphSpace,
@@ -353,17 +417,17 @@ public class GraphSpaceUserService extends AuthService {
     }
 
     private void rollbackNewMember(HugeClient client, String graphSpace,
-                                   String userId, boolean expected,
+                                   String username, boolean expected,
                                    RuntimeException failure) {
         this.tryRestore(() -> {
             boolean current = client.auth().listSpaceMember(graphSpace)
-                                    .contains(userId);
+                                    .contains(username);
             if (expected && !current) {
-                client.auth().addSpaceMember(userId, graphSpace);
+                client.auth().addSpaceMember(username, graphSpace);
             } else if (!expected && current) {
-                client.auth().delSpaceMember(userId, graphSpace);
+                client.auth().delSpaceMember(username, graphSpace);
             }
-        }, graphSpace, userId, "membership", failure);
+        }, graphSpace, username, "membership", failure);
     }
 
     private void tryRestore(Runnable action, String graphSpace,
@@ -386,12 +450,16 @@ public class GraphSpaceUserService extends AuthService {
     }
 
     private static void requirePermissionPreset(String preset) {
-        if (!"GS_READ_ONLY".equals(preset) &&
-            !"GS_READ_WRITE".equals(preset) &&
-            !"GS_ADMIN".equals(preset)) {
+        if (!isGraphSpacePreset(preset)) {
             throw new ParameterizedException(
                       "auth.permission-preset.invalid", preset);
         }
+    }
+
+    private static boolean isGraphSpacePreset(String preset) {
+        return "GS_READ_ONLY".equals(preset) ||
+               "GS_READ_WRITE".equals(preset) ||
+               "GS_ADMIN".equals(preset);
     }
 
     public boolean hasCustomRoles(HugeClient client, String graphSpace,

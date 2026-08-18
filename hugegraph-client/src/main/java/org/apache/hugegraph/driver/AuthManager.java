@@ -385,6 +385,11 @@ public class AuthManager {
                    .checkPermission(HugePermission.SPACE, graphSpace);
     }
 
+    public boolean isSpaceMember(String graphSpace) {
+        return this.managerAPI(graphSpace)
+                   .checkPermission(HugePermission.SPACE_MEMBER, graphSpace);
+    }
+
     public boolean checkDefaultRole(String graphSpace, String role) {
         return this.managerAPI(graphSpace)
                    .checkDefaultRole(graphSpace, role, "");
