@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -56,6 +57,8 @@ public class GraphSpaceUserServiceTest {
         Mockito.when(this.client.auth()).thenReturn(this.auth);
         Mockito.when(this.client.graphSpace()).thenReturn(this.graphSpace);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -155,14 +158,14 @@ public class GraphSpaceUserServiceTest {
 
     @Test
     public void testApplyReadOnlyPresetAndRemoveUnrequestedSpace() {
-        User user = user("u-1", "alice");
+        User user = user("alice", "alice");
         Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
-        Mockito.when(this.auth.getUser("u-1")).thenReturn(user);
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(java.util.Arrays.asList("team", "old"));
         Mockito.when(this.belongService.list(
                              Mockito.eq(this.client), Mockito.anyString(),
-                             Mockito.isNull(), Mockito.eq("u-1")))
+                             Mockito.isNull(), Mockito.eq("alice")))
                .thenReturn(Collections.emptyList());
         Mockito.when(this.auth.listSpaceMember("team"))
                .thenReturn(Collections.emptyList());
@@ -184,17 +187,17 @@ public class GraphSpaceUserServiceTest {
 
     @Test
     public void testApplyAdminPresetAddsManagementAndWriteAccess() {
-        User user = user("u-1", "alice");
-        Mockito.when(this.auth.getUser("u-1")).thenReturn(user);
+        User user = user("alice", "alice");
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
         Mockito.when(this.belongService.list(
-                             this.client, "team", null, "u-1"))
+                             this.client, "team", null, "alice"))
                .thenReturn(Collections.emptyList());
         Mockito.when(this.auth.listSpaceMember("team"))
                .thenReturn(Collections.emptyList());
         Mockito.when(this.auth.listSpaceAdmin("team"))
                .thenReturn(Collections.emptyList());
 
-        this.service.applySpacePreset(this.client, "team", "u-1",
+        this.service.applySpacePreset(this.client, "team", "alice",
                                       "GS_ADMIN");
 
         Mockito.verify(this.auth).addSpaceMember("alice", "team");
@@ -205,17 +208,17 @@ public class GraphSpaceUserServiceTest {
 
     @Test
     public void testApplyReadWritePresetRemovesAdminAccess() {
-        User user = user("u-1", "alice");
-        Mockito.when(this.auth.getUser("u-1")).thenReturn(user);
+        User user = user("alice", "alice");
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
         Mockito.when(this.belongService.list(
-                             this.client, "team", null, "u-1"))
+                             this.client, "team", null, "alice"))
                .thenReturn(Collections.emptyList());
         Mockito.when(this.auth.listSpaceMember("team"))
                .thenReturn(Collections.singletonList("alice"));
         Mockito.when(this.auth.listSpaceAdmin("team"))
                .thenReturn(Collections.singletonList("alice"));
 
-        this.service.applySpacePreset(this.client, "team", "u-1",
+        this.service.applySpacePreset(this.client, "team", "alice",
                                       "GS_READ_WRITE");
 
         Mockito.verify(this.auth).delSpaceAdmin("alice", "team");
@@ -223,6 +226,247 @@ public class GraphSpaceUserServiceTest {
                .setDefaultRole("team", "alice", "analyst");
         Mockito.verify(this.auth, Mockito.never())
                .addSpaceMember(Mockito.anyString(), Mockito.anyString());
+    }
+
+    @Test
+    public void testApplyPresetAddsMemberBeforeScopedUserRead() {
+        User user = user("alice", "alice");
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "alice"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.emptyList());
+
+        this.service.applySpacePreset(this.client, "team", "alice",
+                                      "GS_READ_ONLY");
+
+        InOrder order = Mockito.inOrder(this.auth);
+        order.verify(this.auth).addSpaceMember("alice", "team");
+        order.verify(this.auth).getUser("alice");
+        Mockito.verify(this.graphSpace)
+               .setDefaultRole("team", "alice", "observer");
+    }
+
+    @Test
+    public void testApplyPresetRollsBackBootstrapMemberOnUserReadFailure() {
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.getUser("alice"))
+               .thenThrow(new RuntimeException("read failed"));
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_READ_ONLY"));
+
+        InOrder order = Mockito.inOrder(this.auth);
+        order.verify(this.auth).addSpaceMember("alice", "team");
+        order.verify(this.auth).getUser("alice");
+        order.verify(this.auth).delSpaceMember("alice", "team");
+    }
+
+    @Test
+    public void testApplyPresetReconcilesMemberAfterLostAddResponse() {
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.addSpaceMember("alice", "team"))
+               .thenThrow(new RuntimeException("response lost"));
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_READ_ONLY"));
+
+        Mockito.verify(this.auth).delSpaceMember("alice", "team");
+        Mockito.verify(this.auth, Mockito.never()).getUser("alice");
+    }
+
+    @Test
+    public void testApplyPresetRollsBackMemberOnDefaultRoleFailure() {
+        User user = user("alice", "alice");
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "alice"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.setDefaultRole(
+                             "team", "alice", "observer"))
+               .thenThrow(new RuntimeException("role failed"));
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_READ_ONLY"));
+
+        InOrder order = Mockito.inOrder(this.auth, this.graphSpace);
+        order.verify(this.auth).addSpaceMember("alice", "team");
+        order.verify(this.auth).getUser("alice");
+        order.verify(this.graphSpace)
+             .setDefaultRole("team", "alice", "observer");
+        order.verify(this.auth).delSpaceMember("alice", "team");
+    }
+
+    @Test
+    public void testApplyAdminPresetRollsBackAdminAndMemberOnRoleFailure() {
+        User user = user("alice", "alice");
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "alice"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.graphSpace.setDefaultRole(
+                             "team", "alice", "analyst"))
+               .thenThrow(new RuntimeException("role failed"));
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_ADMIN"));
+
+        InOrder order = Mockito.inOrder(this.auth, this.graphSpace);
+        order.verify(this.auth).addSpaceMember("alice", "team");
+        order.verify(this.auth).getUser("alice");
+        order.verify(this.auth).addSpaceAdmin("alice", "team");
+        order.verify(this.graphSpace)
+             .setDefaultRole("team", "alice", "analyst");
+        order.verify(this.auth).delSpaceAdmin("alice", "team");
+        order.verify(this.auth).delSpaceMember("alice", "team");
+    }
+
+    @Test
+    public void testApplyPresetRestoresExistingAdminStateOnFailure() {
+        User user = user("alice", "alice");
+        BelongEntity custom = BelongEntity.builder()
+                                          .id("belong-1")
+                                          .userId("alice")
+                                          .roleId("role-1")
+                                          .build();
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "alice"))
+               .thenReturn(Collections.singletonList(custom))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "analyst"))
+               .thenReturn(true, false);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "observer"))
+               .thenReturn(false);
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.singletonList("alice"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.setDefaultRole(
+                             "team", "alice", "analyst"))
+               .thenThrow(new RuntimeException("role failed"))
+               .thenReturn(Collections.emptyMap());
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_READ_WRITE"));
+
+        Mockito.verify(this.belongService)
+               .add(this.client, "team", "role-1", "alice");
+        Mockito.verify(this.graphSpace, Mockito.times(2))
+               .setDefaultRole("team", "alice", "analyst");
+        Mockito.verify(this.auth).addSpaceAdmin("alice", "team");
+        Mockito.verify(this.auth, Mockito.never())
+               .delSpaceMember(Mockito.anyString(), Mockito.anyString());
+    }
+
+    @Test
+    public void testApplyPresetContinuesRestoringCustomRolesAfterFailure() {
+        User user = user("alice", "alice");
+        BelongEntity first = BelongEntity.builder()
+                                         .id("belong-1")
+                                         .userId("alice")
+                                         .roleId("role-1")
+                                         .build();
+        BelongEntity second = BelongEntity.builder()
+                                          .id("belong-2")
+                                          .userId("alice")
+                                          .roleId("role-2")
+                                          .build();
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "alice"))
+               .thenReturn(java.util.Arrays.asList(first, second))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "analyst"))
+               .thenReturn(false);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "observer"))
+               .thenReturn(false);
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.setDefaultRole(
+                             "team", "alice", "observer"))
+               .thenThrow(new RuntimeException("role failed"));
+        Mockito.doThrow(new RuntimeException("first restore failed"))
+               .when(this.belongService)
+               .add(this.client, "team", "role-1", "alice");
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_READ_ONLY"));
+
+        Mockito.verify(this.belongService)
+               .add(this.client, "team", "role-1", "alice");
+        Mockito.verify(this.belongService)
+               .add(this.client, "team", "role-2", "alice");
+    }
+
+    @Test
+    public void testApplyPresetRemovesRoleCommittedBeforeClientFailure() {
+        User user = user("alice", "alice");
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList())
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.getUser("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "alice"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "analyst"))
+               .thenReturn(false);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "team", "alice", "observer"))
+               .thenReturn(false, true);
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.setDefaultRole(
+                             "team", "alice", "observer"))
+               .thenThrow(new RuntimeException("response lost"));
+
+        Assert.assertThrows(RuntimeException.class,
+                            () -> this.service.applySpacePreset(
+                                    this.client, "team", "alice",
+                                    "GS_READ_ONLY"));
+
+        Mockito.verify(this.graphSpace)
+               .deleteDefaultRole("team", "alice", "observer");
+        Mockito.verify(this.auth).delSpaceMember("alice", "team");
     }
 
     @Test

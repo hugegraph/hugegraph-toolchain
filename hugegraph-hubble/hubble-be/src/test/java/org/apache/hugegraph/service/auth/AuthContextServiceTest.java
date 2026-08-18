@@ -116,6 +116,8 @@ public class AuthContextServiceTest {
 
         Assert.assertFalse(capabilities(context).contains(
                            "account_permission_presets"));
+        Assert.assertFalse(capabilities(context).contains(
+                           "graphspace_members_manage"));
         Assert.assertTrue(actions(context, "members").isEmpty());
         Assert.assertTrue(actions(context, "roles").isEmpty());
         Assert.assertTrue(actions(context, "authorizations").isEmpty());

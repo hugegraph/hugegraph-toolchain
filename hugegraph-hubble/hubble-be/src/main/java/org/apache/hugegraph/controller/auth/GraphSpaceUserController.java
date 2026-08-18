@@ -145,10 +145,8 @@ public class GraphSpaceUserController extends AuthController {
     private HugeClient requireMemberManager(String graphSpace,
                                             String userId) {
         HugeClient client = this.requireGraphSpaceManager(graphSpace);
-        User account = client.auth().getUser(userId);
-        if (account != null &&
-            client.auth().listSpaceAdmin(graphSpace)
-                  .contains(account.name())) {
+        if (client.auth().listSuperAdmin().contains(userId) ||
+            client.auth().listSpaceAdmin(graphSpace).contains(userId)) {
             return this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         }
         return client;

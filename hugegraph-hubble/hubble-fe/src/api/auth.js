@@ -98,18 +98,15 @@ const getSpaceMembers = (graphspace, params, config = {}) => {
 };
 
 const getSpaceAdmins = (graphspace, params, config = {}) => {
-    return request.get(scopedAuthPath(graphspace, 'users/spaceadmin'),
-        {...config, params});
+    return request.get(scopedAuthPath(graphspace, 'users/spaceadmin'), {...config, params});
 };
 
 const setSpaceAdmin = (graphspace, id, config) => {
-    return request.post(scopedAuthPath(graphspace, 'users/spaceadmin', id),
-        undefined, config);
+    return request.post(scopedAuthPath(graphspace, 'users/spaceadmin', id), undefined, config);
 };
 
 const removeSpaceAdmin = (graphspace, id, config) => {
-    return request.delete(scopedAuthPath(graphspace, 'users/spaceadmin', id),
-        undefined, config);
+    return request.delete(scopedAuthPath(graphspace, 'users/spaceadmin', id), undefined, config);
 };
 
 const setSpacePreset = (graphspace, id, preset, config) => {

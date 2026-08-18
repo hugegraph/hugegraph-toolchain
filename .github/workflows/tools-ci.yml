@@ -59,9 +59,3 @@ jobs:
       - name: Run test
         run: |
           mvn test -Dtest=FuncTestSuite -pl hugegraph-tools -ntp
-
-      - name: Upload coverage to Codecov
-        uses: ./.github/actions/upload-coverage
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: target/jacoco.xml
