@@ -466,6 +466,30 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testCustomInterceptorKeepsGraphSpaceCollectionActionsUnscoped()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
+
+        for (String action : new String[]{"list", "builtin"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    "GET", "/api/v1.3/graphspaces/" + action);
+            request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+            request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+            Assert.assertTrue(interceptor.preHandle(
+                    request, new MockHttpServletResponse(), null));
+            Assert.assertNull(interceptor.graphSpace);
+        }
+        Mockito.verifyZeroInteractions(spaces);
+    }
+
+    @Test
     public void testCustomInterceptorAllowsGraphNamedLikeCollectionAction()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();

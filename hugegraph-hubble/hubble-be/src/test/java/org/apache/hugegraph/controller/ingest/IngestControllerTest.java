@@ -51,10 +51,12 @@ import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.entity.load.LoadTask;
 import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.load.DatasourceService;
 import org.apache.hugegraph.service.load.FileMappingService;
 import org.apache.hugegraph.service.load.JobManagerService;
 import org.apache.hugegraph.service.load.LoadTaskService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.hugegraph.testutil.Assert;
 
 public class IngestControllerTest {
@@ -335,7 +337,15 @@ public class IngestControllerTest {
            throws Exception {
         TestIngestController controller = new TestIngestController();
         LoadTaskService loadTaskService = Mockito.mock(LoadTaskService.class);
+        JobManagerService jobManagerService =
+                Mockito.mock(JobManagerService.class);
         this.setField(controller, "loadTaskService", loadTaskService);
+        this.setField(controller, "jobManagerService", jobManagerService);
+        Mockito.when(jobManagerService.get(7))
+               .thenReturn(JobManager.builder()
+                                     .graphSpace("DEFAULT")
+                                     .graph("hugegraph")
+                                     .build());
 
         LoadTask task = LoadTask.builder()
                                 .id(9)
@@ -360,6 +370,98 @@ public class IngestControllerTest {
         Assert.assertEquals(3, (int) metrics.avgRate);
         Assert.assertEquals(0, (int) metrics.curRate);
         Assert.assertEquals(63L, metrics.totalTime);
+    }
+
+    @Test
+    public void testTaskListFiltersProtectedGraphSpacesInAnonymousMode()
+           throws Exception {
+        TestIngestController controller = new TestIngestController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        GraphSpaceService graphSpaces = Mockito.mock(GraphSpaceService.class);
+        JobManagerService jobs = Mockito.mock(JobManagerService.class);
+        LoadTaskService loadTasks = Mockito.mock(LoadTaskService.class);
+        JobManager visible = JobManager.builder()
+                                       .id(1)
+                                       .jobName("visible")
+                                       .graphSpace("public")
+                                       .graph("graph")
+                                       .jobStatus(JobStatus.DEFAULT)
+                                       .build();
+        JobManager hidden = JobManager.builder()
+                                      .id(2)
+                                      .jobName("hidden")
+                                      .graphSpace("protected")
+                                      .graph("graph")
+                                      .jobStatus(JobStatus.DEFAULT)
+                                      .build();
+        Mockito.when(jobs.listAll()).thenReturn(List.of(visible, hidden));
+        Mockito.when(graphSpaces.listAnonymous(Mockito.any()))
+               .thenReturn(Collections.singletonList("public"));
+        this.setField(controller, "config", config);
+        this.setField(controller, "authMode", new AuthModeService(config));
+        this.setField(controller, "graphSpaceAccessService", graphSpaces);
+        this.setField(controller, "jobManagerService", jobs);
+        this.setField(controller, "loadTaskService", loadTasks);
+
+        Response response = controller.taskList("", 1, 10);
+
+        @SuppressWarnings("unchecked")
+        com.baomidou.mybatisplus.core.metadata.IPage<
+                IngestController.TaskVO> page =
+                (com.baomidou.mybatisplus.core.metadata.IPage<
+                        IngestController.TaskVO>)
+                response.getData();
+        Assert.assertEquals(1L, page.getTotal());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> option = (Map<String, Object>)
+                                     page.getRecords().get(0).ingestionOption;
+        Assert.assertEquals("public", option.get("graphspace"));
+        Mockito.verify(loadTasks).taskListByJob(1);
+        Mockito.verify(loadTasks, Mockito.never()).taskListByJob(2);
+    }
+
+    @Test
+    public void testTaskDetailValidatesOwningGraphSpace() throws Exception {
+        TestIngestController controller = new TestIngestController();
+        JobManagerService jobs = Mockito.mock(JobManagerService.class);
+        JobManager job = JobManager.builder()
+                                   .id(7)
+                                   .graphSpace("protected")
+                                   .graph("graph")
+                                   .build();
+        Mockito.when(jobs.get(7)).thenReturn(job);
+        this.setField(controller, "jobManagerService", jobs);
+
+        Response response = controller.taskDetail(7);
+
+        Assert.assertEquals(Constant.STATUS_OK, response.getStatus());
+        Assert.assertEquals("protected", controller.checkedGraphSpace);
+    }
+
+    @Test
+    public void testJobDetailValidatesParentGraphSpace() throws Exception {
+        TestIngestController controller = new TestIngestController();
+        JobManagerService jobs = Mockito.mock(JobManagerService.class);
+        LoadTaskService loadTasks = Mockito.mock(LoadTaskService.class);
+        LoadTask task = LoadTask.builder().id(9).jobId(7).build();
+        Mockito.when(loadTasks.get(9)).thenReturn(task);
+        Mockito.when(jobs.get(7))
+               .thenReturn(JobManager.builder()
+                                     .id(7)
+                                     .graphSpace("protected")
+                                     .graph("graph")
+                                     .build());
+        this.setField(controller, "jobManagerService", jobs);
+        this.setField(controller, "loadTaskService", loadTasks);
+
+        Response response = controller.jobDetail(9);
+
+        Assert.assertEquals(Constant.STATUS_OK, response.getStatus());
+        Assert.assertEquals("protected", controller.checkedGraphSpace);
     }
 
     private IngestController.IngestTaskRequest request(Path dataFile) {
@@ -474,9 +576,17 @@ public class IngestControllerTest {
 
     private static class TestIngestController extends IngestController {
 
+        private String checkedGraphSpace;
+
         @Override
         protected HugeClient authClient(String graphSpace, String graph) {
             return Mockito.mock(HugeClient.class);
+        }
+
+        @Override
+        protected void requireGraphSpaceAccess(HugeClient client,
+                                               String graphSpace) {
+            this.checkedGraphSpace = graphSpace;
         }
     }
 }

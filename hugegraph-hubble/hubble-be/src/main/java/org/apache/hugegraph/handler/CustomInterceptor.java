@@ -225,8 +225,13 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
         String[] parts = uri.split("/");
         for (int i = 0; i < parts.length; i++) {
             if ("graphspaces".equals(parts[i]) && i < parts.length - 1) {
-                graphSpace = parts[i + 1];
-                graphSpace = decodeSegment(graphSpace);
+                String candidate = parts[i + 1];
+                boolean collectionAction = i + 1 == parts.length - 1 &&
+                                           ("list".equals(candidate) ||
+                                            "builtin".equals(candidate));
+                if (!collectionAction) {
+                    graphSpace = decodeSegment(candidate);
+                }
             }
             if ("graphs".equals(parts[i]) && i < parts.length - 1) {
                 String candidate = parts[i + 1];
