@@ -30,6 +30,8 @@ import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.GraphSpaceManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.GraphSpaceEntity;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.structure.space.GraphSpace;
@@ -204,6 +206,76 @@ public class GraphSpaceServiceTest {
         Assert.assertEquals(1, response.size());
         Assert.assertEquals("public", response.get(0).get("name"));
         Assert.assertTrue((Boolean) response.get(0).get("authed"));
+    }
+
+    @Test
+    public void testAnonymousGraphSpacesExcludeProtectedSpaces() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        GraphSpace visible = graphSpace("public", false, "20260712");
+        GraphSpace protectedSpace = graphSpace("protected", true, "20260712");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.listGraphSpace())
+               .thenReturn(java.util.Arrays.asList("public", "protected"));
+        Mockito.when(manager.getGraphSpace("public")).thenReturn(visible);
+        Mockito.when(manager.getGraphSpace("protected"))
+               .thenReturn(protectedSpace);
+        Mockito.when(this.graphsService.listGraphNames(this.client, "public", ""))
+               .thenReturn(java.util.Collections.emptySet());
+
+        List<Map<String, Object>> response =
+                this.service.queryAnonymousGs(this.client, "", "");
+
+        Assert.assertEquals(1, response.size());
+        Assert.assertEquals("public", response.get(0).get("name"));
+        Assert.assertEquals(java.util.Collections.singletonList("public"),
+                            this.service.listAnonymous(this.client));
+        Mockito.verify(this.graphsService, Mockito.never())
+               .listGraphNames(this.client, "protected", "");
+    }
+
+    @Test
+    public void testAnonymousDetailRejectsProtectedSpaceBeforeStatistics() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        GraphSpace protectedSpace = graphSpace("protected", true, "20260712");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.getGraphSpace("protected"))
+               .thenReturn(protectedSpace);
+
+        try {
+            this.service.getAnonymous(this.client, "protected");
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        try {
+            this.service.isAuthForAnonymous(this.client, "protected");
+            Assert.fail("Expected protected GraphSpace auth to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        Mockito.verifyZeroInteractions(this.graphsService);
+    }
+
+    @Test
+    public void testAnonymousAuthHidesMissingGraphSpaceLikeProtectedSpace() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        ServerException missing = new ServerException("missing");
+        missing.status(404);
+        Mockito.when(manager.getGraphSpace("missing")).thenThrow(missing);
+
+        try {
+            this.service.isAuthForAnonymous(this.client, "missing");
+            Assert.fail("Expected missing GraphSpace auth to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        try {
+            this.service.getAnonymous(this.client, "missing");
+            Assert.fail("Expected missing GraphSpace detail to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
     }
 
     @Test

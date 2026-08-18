@@ -26,7 +26,9 @@ import org.apache.hugegraph.api.task.TasksWithPage;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.GraphSpaceEntity;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.structure.Task;
@@ -39,6 +41,7 @@ import org.apache.hugegraph.util.Log;
 import org.apache.hugegraph.util.PageUtil;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -219,6 +222,21 @@ public class GraphSpaceService {
                 .collect(Collectors.toList());
     }
 
+    public List<String> listAnonymous(HugeClient client) {
+        return queryAnonymousSpaces(client, "", "").stream()
+                .map(GraphSpace::getName)
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getAnonymous(HugeClient client,
+                                            String graphSpace) {
+        return anonymousView(client, publicSpace(client, graphSpace));
+    }
+
+    public boolean isAuthForAnonymous(HugeClient client, String graphSpace) {
+        return publicSpace(client, graphSpace).isAuth();
+    }
+
     public IPage<Map<String, Object>> queryAnonymousGsPage(
             HugeClient client, String query, String createTime,
             int pageNo, int pageSize) {
@@ -263,6 +281,7 @@ public class GraphSpaceService {
                                   space.getNickname() != null &&
                                   space.getNickname().contains(prefix)))
                 .filter(space -> space.getCreateTime() == null || space.getCreateTime().compareTo(after) > 0)
+                .filter(space -> !space.isAuth())
                 .collect(Collectors.toList());
         Collections.sort(results, (a, b) -> new BuiltInFirst().compare(
                 a.getName(), b.getName()));
@@ -277,6 +296,28 @@ public class GraphSpaceService {
         info.put("authed", true);
         info.put("default", false);
         return info;
+    }
+
+    private static GraphSpace publicSpace(HugeClient client,
+                                          String graphSpace) {
+        GraphSpace space;
+        try {
+            space = client.graphSpace().getGraphSpace(graphSpace);
+        } catch (ServerException e) {
+            if (e.status() == 401 || e.status() == 403 || e.status() == 404) {
+                throw unavailableGraphSpace();
+            }
+            throw e;
+        }
+        if (space == null || space.isAuth()) {
+            throw unavailableGraphSpace();
+        }
+        return space;
+    }
+
+    private static ExternalException unavailableGraphSpace() {
+        return new ExternalException(HttpStatus.NOT_FOUND.value(),
+                                     "GraphSpace is unavailable");
     }
 
     public Map<String, Object> toView(GraphSpaceEntity entity) {

@@ -19,6 +19,7 @@ package org.apache.hugegraph.driver;
 
 import java.util.Arrays;
 
+import org.apache.hugegraph.structure.auth.TokenPayload;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.testutil.Whitebox;
 import org.junit.Assert;
@@ -67,6 +68,37 @@ public class HugeClientCompatibilityTest {
         Assert.assertNull(this.client.findUserByName("missing"));
         Mockito.verify(this.auth, Mockito.never())
                .getUserByName(Mockito.anyString());
+    }
+
+    @Test
+    public void shouldFindCurrentUserFromVerifiedTokenIdentity() {
+        TokenPayload payload = Mockito.mock(TokenPayload.class);
+        User alice = user("alice");
+        Mockito.when(payload.userId()).thenReturn("user-id");
+        Mockito.when(payload.username()).thenReturn("alice");
+        Mockito.when(this.auth.verifyToken()).thenReturn(payload);
+        Mockito.when(this.auth.getUser("user-id")).thenReturn(alice);
+
+        Assert.assertSame(alice, this.client.findCurrentUser("alice"));
+        Mockito.verify(this.auth, Mockito.never()).listUsers();
+        Mockito.verify(this.auth, Mockito.never())
+               .getUserByName(Mockito.anyString());
+    }
+
+    @Test
+    public void shouldRejectMismatchedCurrentUserIdentity() {
+        TokenPayload payload = Mockito.mock(TokenPayload.class);
+        Mockito.when(payload.userId()).thenReturn("user-id");
+        Mockito.when(payload.username()).thenReturn("bob");
+        Mockito.when(this.auth.verifyToken()).thenReturn(payload);
+
+        try {
+            this.client.findCurrentUser("alice");
+            Assert.fail("Expected a mismatched current-user identity");
+        } catch (IllegalStateException ignored) {
+            // Expected
+        }
+        Mockito.verify(this.auth, Mockito.never()).getUser(Mockito.any());
     }
 
     private static User user(String name) {

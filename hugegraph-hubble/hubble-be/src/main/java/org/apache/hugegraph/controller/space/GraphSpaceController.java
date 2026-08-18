@@ -80,8 +80,11 @@ public class GraphSpaceController extends BaseController {
                                    Collections.singletonList("DEFAULT"));
         }
 
+        HugeClient client = this.authClient(null, null);
         List<String> graphSpaces =
-                this.graphSpaceService.listAll(this.authClient(null, null));
+                this.authMode != null && this.authMode.anonymous() ?
+                this.graphSpaceService.listAnonymous(client) :
+                this.graphSpaceService.listAll(client);
         return ImmutableMap.of("graphspaces", graphSpaces);
     }
 
@@ -129,8 +132,11 @@ public class GraphSpaceController extends BaseController {
         if (!isPdEnabled()) {
             return ImmutableMap.of("auth", false);
         }
-        boolean isAuth = graphSpaceService.isAuth(this.authClient(null, null),
-                                                  graphSpace);
+        HugeClient client = this.authClient(null, null);
+        boolean isAuth =
+                this.authMode != null && this.authMode.anonymous() ?
+                this.graphSpaceService.isAuthForAnonymous(client, graphSpace) :
+                this.graphSpaceService.isAuth(client, graphSpace);
         return ImmutableMap.of("auth", isAuth);
     }
 
@@ -145,10 +151,7 @@ public class GraphSpaceController extends BaseController {
         }
         HugeClient client = this.authClient(null, null);
         if (this.authMode != null && this.authMode.anonymous()) {
-            GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(this.graphSpaceService.getWithoutAdmins(client,
-                                                            graphspace));
-            entity.setStatistic(this.graphSpaceService.evCount(client, graphspace));
-            return this.graphSpaceService.toView(entity);
+            return this.graphSpaceService.getAnonymous(client, graphspace);
         }
         // Get GraphSpace Info
         return graphSpaceService.toView(

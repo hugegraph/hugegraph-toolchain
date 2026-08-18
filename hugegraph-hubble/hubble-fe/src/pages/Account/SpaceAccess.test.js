@@ -24,7 +24,7 @@ import {
     waitFor,
     within,
 } from '@testing-library/react';
-import SpaceAccess, {rolesPreset} from './SpaceAccess';
+import SpaceAccess, {loadAllPages, rolesPreset} from './SpaceAccess';
 import * as api from '../../api';
 
 let mockAuthContext;
@@ -113,6 +113,90 @@ test('keeps graphspace administrator selected with member roles', () => {
         {role_name: 'custom-role'},
         {permission_preset: 'GS_ADMIN'},
     ])).toBeNull();
+});
+
+test('loads every page without silently truncating member-management data', async () => {
+    const firstPage = Array.from({length: 500}, (_, index) => ({id: index}));
+    const request = jest.fn()
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: firstPage, total: '501'},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [{id: 500}], total: 501},
+        });
+
+    const response = await loadAllPages(request, {params: {query: ''}});
+
+    expect(response.data.records).toHaveLength(501);
+    expect(request).toHaveBeenNthCalledWith(1, {
+        query: '',
+        page_no: 1,
+        page_size: 500,
+    }, expect.any(Object));
+    expect(request).toHaveBeenNthCalledWith(2, {
+        query: '',
+        page_no: 2,
+        page_size: 500,
+    }, expect.any(Object));
+});
+
+test('continues after short pages while declared records remain', async () => {
+    const page = offset => Array.from({length: 200}, (_, index) => ({
+        id: offset + index,
+    }));
+    const request = jest.fn()
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: page(0), total: 501},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: page(200), total: 501},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: page(400).slice(0, 101), total: 501},
+        });
+
+    const response = await loadAllPages(request);
+
+    expect(response.data.records).toHaveLength(501);
+    expect(request).toHaveBeenCalledTimes(3);
+});
+
+test('treats blank total as absent instead of zero', async () => {
+    const firstPage = Array.from({length: 500}, (_, index) => ({id: index}));
+    const request = jest.fn()
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: firstPage, total: '   '},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [{id: 500}], total: '   '},
+        });
+
+    const response = await loadAllPages(request);
+
+    expect(response.data.records).toHaveLength(501);
+    expect(request).toHaveBeenCalledTimes(2);
+});
+
+test('fails when a paged response ends before its declared total', async () => {
+    const request = jest.fn()
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [{id: 0}], total: 2},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [], total: 2},
+        });
+
+    await expect(loadAllPages(request))
+        .rejects.toThrow('Record list ended before its declared total');
 });
 
 test('shows legacy role names without treating them as presets', async () => {

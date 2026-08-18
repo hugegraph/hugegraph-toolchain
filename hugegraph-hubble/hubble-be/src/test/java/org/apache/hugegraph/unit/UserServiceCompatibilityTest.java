@@ -35,6 +35,7 @@ import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.ServerException;
+import org.apache.hugegraph.exception.UnauthorizedException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.GraphSpaceUserService;
 import org.apache.hugegraph.service.auth.UserService;
@@ -126,9 +127,7 @@ public class UserServiceCompatibilityTest {
     @Test
     public void testStandalonePersonalUpdateOmitsPdOnlyNickname() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
-        Mockito.when(this.auth.getUserByName("user"))
-               .thenReturn(user("user"));
-        Mockito.when(this.client.findUserByName("user")).thenReturn(user("user"));
+        Mockito.when(this.client.findCurrentUser("user")).thenReturn(user("user"));
 
         this.service.updatePersonal(this.client, "user", "display-name",
                                     "description");
@@ -140,10 +139,37 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testCurrentUserIdentityMismatchIsUnauthorized() {
+        Mockito.when(this.client.findCurrentUser("user"))
+               .thenThrow(new IllegalStateException("mismatch"));
+
+        try {
+            this.service.getpersonal(this.client, "user");
+            Assert.fail("Expected an unauthorized current-user identity");
+        } catch (UnauthorizedException ignored) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testMissingCurrentUserRecordIsUnauthorized() {
+        ServerException missing = new ServerException("missing");
+        missing.status(404);
+        Mockito.when(this.client.findCurrentUser("user")).thenThrow(missing);
+
+        try {
+            this.service.getpersonal(this.client, "user");
+            Assert.fail("Expected an unauthorized missing current user");
+        } catch (UnauthorizedException ignored) {
+            // Expected
+        }
+    }
+
+    @Test
     public void testCurrentUserPresetUsesSelfPermissionApi() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        Mockito.when(this.client.findUserByName("user"))
+        Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(java.util.Collections.singletonList("SPACE"));
@@ -184,7 +210,7 @@ public class UserServiceCompatibilityTest {
     public void testCurrentUserIgnoresOnlyForbiddenGraphSpaces() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        Mockito.when(this.client.findUserByName("user"))
+        Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(Arrays.asList("OWNED", "DENIED"));
@@ -205,7 +231,7 @@ public class UserServiceCompatibilityTest {
     public void testLegacyAnalystKeepsGraphSpaceAccess() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
-        Mockito.when(this.client.findUserByName("user"))
+        Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(Collections.singletonList("SPACE"));

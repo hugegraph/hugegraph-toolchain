@@ -32,10 +32,8 @@ import {
     PERMISSION_PRESETS,
     toPermissionPayload,
 } from './permissionPresets';
+import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
 
-const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
-const GRAPHSPACE_PAGE_SIZE = 500;
-const GRAPHSPACE_MAX_RECORDS = 10_000;
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
 const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
 const permissionPresetChanged = (prev, next) => prev.permission_preset !== next.permission_preset;
@@ -46,52 +44,7 @@ const toProfilePayload = values => ({
     user_description: values.user_description,
 });
 
-const loadAllGraphspaces = async () => {
-    const records = [];
-    let pageNo = 1;
-    let total;
-    let done = false;
-    while (!done) {
-        const response = await api.manage.getGraphSpaceList({
-            page_no: pageNo,
-            page_size: GRAPHSPACE_PAGE_SIZE,
-        }, PAGE_ERROR_CONFIG);
-        if (response.status !== 200) {
-            return response;
-        }
-        const pageRecords = response.data?.records ?? [];
-        if (records.length + pageRecords.length > GRAPHSPACE_MAX_RECORDS) {
-            throw new Error('graphspace_list_exceeds_limit');
-        }
-        records.push(...pageRecords);
-        if (pageRecords.length === 0) {
-            done = true;
-            continue;
-        }
-        const rawTotal = response.data?.total;
-        const hasTotal = rawTotal !== null
-                         && rawTotal !== undefined
-                         && !(typeof rawTotal === 'string' && rawTotal.trim() === '');
-        const declaredTotal = Number(rawTotal);
-        if (hasTotal && Number.isFinite(declaredTotal) && declaredTotal >= 0) {
-            if (declaredTotal > GRAPHSPACE_MAX_RECORDS) {
-                throw new Error('graphspace_list_exceeds_limit');
-            }
-            total = declaredTotal;
-            if (records.length >= total) {
-                done = true;
-            }
-        }
-        else if (pageRecords.length < GRAPHSPACE_PAGE_SIZE) {
-            total = records.length;
-            done = true;
-        }
-        if (!done) {
-            pageNo += 1;
-        }
-    }
-    return {status: 200, data: {records, total: total ?? records.length}};
-};
+const loadAllGraphspaces = () => loadAllPages(api.manage.getGraphSpaceList);
 
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel

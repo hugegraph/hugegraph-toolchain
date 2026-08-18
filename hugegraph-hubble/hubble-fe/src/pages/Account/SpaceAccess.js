@@ -36,9 +36,8 @@ import * as api from '../../api';
 import TableHeader from '../../components/TableHeader';
 import {useAuthContext} from '../../auth/AuthContext';
 import {PERMISSION_PRESETS} from './permissionPresets';
+import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
 
-const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
-const PAGE_PARAMS = {query: '', page_no: 1, page_size: 200};
 const responseRecords = response => response?.data?.records ?? [];
 const showMutationError = (error, t) => {
     const response = error?.response ?? error;
@@ -205,7 +204,7 @@ const SpaceAccess = () => {
         spacesRequest.current = token;
         setSpacesLoading(true);
         setSpacesError(false);
-        api.manage.getGraphSpaceList(PAGE_PARAMS, PAGE_ERROR_CONFIG)
+        loadAllPages(api.manage.getGraphSpaceList, {params: {query: ''}})
             .then(response => {
                 if (spacesRequest.current !== token) {
                     return;
@@ -235,11 +234,13 @@ const SpaceAccess = () => {
 
     const spaces = scopes.all_graphspaces ? allSpaces : scopedSpaces;
     const graphSpace = spaces.includes(selectedSpace) ? selectedSpace : spaces[0];
-    const loadMembers = useCallback(space => api.auth.getSpaceMembers(
-        space, PAGE_PARAMS, PAGE_ERROR_CONFIG
+    const loadMembers = useCallback(space => loadAllPages(
+        (params, config) => api.auth.getSpaceMembers(space, params, config),
+        {params: {query: ''}}
     ), []);
-    const loadAdmins = useCallback(space => api.auth.getSpaceAdmins(
-        space, PAGE_PARAMS, PAGE_ERROR_CONFIG
+    const loadAdmins = useCallback(space => loadAllPages(
+        (params, config) => api.auth.getSpaceAdmins(space, params, config),
+        {params: {query: ''}}
     ), []);
     const members = useScopedResource(
         graphSpace, contextVersion, loadMembers, responseRecords
@@ -461,5 +462,5 @@ const SpaceAccess = () => {
     );
 };
 
-export {rolesPreset};
+export {loadAllPages, rolesPreset};
 export default SpaceAccess;

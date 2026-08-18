@@ -43,6 +43,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.exception.ServerException;
+import org.apache.hugegraph.exception.UnauthorizedException;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.HubbleUtil;
@@ -183,7 +184,7 @@ public class UserService extends AuthService {
     }
 
     public UserEntity getpersonal(HugeClient hugeClient, String username) {
-        User user = hugeClient.findUserByName(username);
+        User user = currentUser(hugeClient, username);
         if (user == null) {
             throw new InternalException("auth.user.get.%s Not Exits",
                     username);
@@ -575,7 +576,7 @@ public class UserService extends AuthService {
 
     public void updatePersonal(HugeClient hugeClient, String username,
                                String nickname, String description) {
-        User user = hugeClient.findUserByName(username);
+        User user = currentUser(hugeClient, username);
         if (isPdEnabled()) {
             user.nickname(nickname);
         } else {
@@ -602,12 +603,25 @@ public class UserService extends AuthService {
         }
         // Must fetch user first to get the ID, otherwise updateUser sends
         // PUT to the collection path (no {id}) and gets HTTP 405.
-        User user = hugeClient.findUserByName(username);
+        User user = currentUser(hugeClient, username);
         user.password(newpwd);
         hugeClient.auth().updateUser(user);
         return Response.builder()
                 .status(Constant.STATUS_OK)
                 .build();
+    }
+
+    private static User currentUser(HugeClient client, String username) {
+        try {
+            return client.findCurrentUser(username);
+        } catch (IllegalStateException e) {
+            throw new UnauthorizedException();
+        } catch (ServerException e) {
+            if (e.status() == 401 || e.status() == 403 || e.status() == 404) {
+                throw new UnauthorizedException();
+            }
+            throw e;
+        }
     }
 
     public List<String> listAdminSpace(HugeClient hugeClient, String username) {

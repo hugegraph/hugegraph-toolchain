@@ -24,7 +24,9 @@ import lombok.Getter;
 import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.rest.RestClientConfig;
+import org.apache.hugegraph.structure.auth.TokenPayload;
 import org.apache.hugegraph.structure.auth.User;
+import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.VersionUtil;
 import org.apache.hugegraph.version.ClientVersion;
 import org.slf4j.Logger;
@@ -273,6 +275,21 @@ public class HugeClient implements Closeable {
                         .filter(user -> name.equals(user.name()))
                         .findFirst()
                         .orElse(null);
+    }
+
+    public User findCurrentUser(String expectedUsername) {
+        TokenPayload payload = this.auth.verifyToken();
+        E.checkState(payload != null &&
+                     !Strings.isNullOrEmpty(payload.userId()) &&
+                     !Strings.isNullOrEmpty(payload.username()),
+                     "Invalid current-user identity");
+        E.checkState(payload.username().equals(expectedUsername),
+                     "Authenticated user does not match the expected user");
+
+        User user = this.auth.getUser(payload.userId());
+        E.checkState(user != null && expectedUsername.equals(user.name()),
+                     "Current-user record does not match the token identity");
+        return user;
     }
 
     public MetricsManager metrics() {
