@@ -85,8 +85,7 @@ const rolesPreset = roles => {
     if (presets.some(preset => preset === null)) {
         return null;
     }
-    if (values.some(role => (role?.permission_preset ?? role?.permissionPreset)
-                            === PERMISSION_PRESETS.GS_ADMIN)) {
+    if (values.some(role => (role?.permission_preset ?? role?.permissionPreset) === PERMISSION_PRESETS.GS_ADMIN)) {
         return PERMISSION_PRESETS.GS_ADMIN;
     }
     return values.length > 0 && presets.every(Boolean) && new Set(presets).size === 1 ? presets[0] : null;

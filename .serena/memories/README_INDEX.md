@@ -212,7 +212,7 @@ git --no-pager diff HEAD~1
 4. ❌ **DON'T** use `System.out.println` (use logger instead)
 5. ❌ **DON'T** forget Apache 2.0 license headers
 6. ❌ **DON'T** use tabs (use 4 spaces for Java, 2 for frontend)
-7. ❌ **DON'T** exceed 100 character line length
+7. ❌ **DON'T** exceed 120 character line length
 8. ❌ **DON'T** commit code that fails CI checks
 
 ## Getting Help

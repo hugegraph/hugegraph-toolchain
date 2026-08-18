@@ -565,16 +565,27 @@ public class OperationsPayloadParser {
             return "UNKNOWN";
         }
         String value = state.toUpperCase(Locale.ROOT);
-        if (value.contains("OK") || value.equals("UP")) {
-            return "UP";
+        switch (value) {
+            case "CLUSTER_OK":
+            case "OK":
+            case "UP":
+                return "UP";
+            case "CLUSTER_WARN":
+            case "CLUSTER_NOT_READY":
+            case "CLUSTER_OFFLINE":
+            case "WARN":
+            case "WARNING":
+            case "DEGRADED":
+            case "NOT_READY":
+            case "OFFLINE":
+                return "DEGRADED";
+            case "CLUSTER_FAULT":
+            case "FAULT":
+            case "DOWN":
+                return "DOWN";
+            default:
+                return "UNKNOWN";
         }
-        if (value.contains("WARN") || value.contains("DEGRADED")) {
-            return "DEGRADED";
-        }
-        if (value.contains("DOWN") || value.contains("FAULT")) {
-            return "DOWN";
-        }
-        return "UNKNOWN";
     }
 
     private String health(String state) {

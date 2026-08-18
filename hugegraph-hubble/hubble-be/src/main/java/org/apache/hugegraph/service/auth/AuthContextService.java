@@ -209,8 +209,8 @@ public class AuthContextService {
                 capabilities.add(GRAPHSPACES_MANAGE);
             }
         }
-        if (pdEnabled && (SUPERADMIN.equals(role) ||
-                          SPACEADMIN.equals(role))) {
+        if (pdEnabled && permissionPresets &&
+            (SUPERADMIN.equals(role) || SPACEADMIN.equals(role))) {
             capabilities.add(GRAPHSPACE_MEMBERS_MANAGE);
         }
         if (pdEnabled && SUPERADMIN.equals(role)) {

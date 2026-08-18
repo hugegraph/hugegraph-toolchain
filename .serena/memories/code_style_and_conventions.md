@@ -12,7 +12,7 @@
 ### Basic Formatting
 - **Indentation**: 4 spaces (NO TABS)
 - **Continuation Indent**: 8 spaces
-- **Line Length**: Maximum 100 characters
+- **Line Length**: Maximum 120 characters
 - **Line Wrapping**: Enabled for long lines
 - **Blank Lines**:
   - Keep max 1 blank line in declarations

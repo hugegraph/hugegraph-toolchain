@@ -86,6 +86,8 @@ public class GraphSpaceAuthOwnershipTest {
                .thenReturn(Collections.emptyList());
         Mockito.when(this.auth.listSpaceMember(Mockito.anyString()))
                .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -474,7 +476,8 @@ public class GraphSpaceAuthOwnershipTest {
                                           .id("belong-a")
                                           .userId("user-id")
                                           .build();
-        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.singletonList(scoped));
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id"))
+               .thenReturn(Collections.singletonList(scoped));
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
@@ -490,15 +493,18 @@ public class GraphSpaceAuthOwnershipTest {
     @Test
     public void testReadOnlyPresetAppliesSpaceWideObserver() {
         User account = new User();
-        account.setId("user-id");
+        account.setId("graph-user");
         account.name("graph-user");
-        Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
+        Mockito.when(this.auth.getUser("graph-user")).thenReturn(account);
         BelongService belongs = Mockito.mock(BelongService.class);
-        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.emptyList());
+        Mockito.when(belongs.list(this.client, "SPACE_A", null,
+                                  "graph-user"))
+               .thenReturn(Collections.emptyList());
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
-        service.applySpacePreset(this.client, "SPACE_A", "user-id", "GS_READ_ONLY");
+        service.applySpacePreset(this.client, "SPACE_A", "graph-user",
+                                 "GS_READ_ONLY");
 
         Mockito.verify(this.auth).addSpaceMember("graph-user", "SPACE_A");
         Mockito.verify(this.graphSpace).setDefaultRole(
@@ -586,6 +592,63 @@ public class GraphSpaceAuthOwnershipTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"permission_preset\":\"GS_ADMIN\"}"))
            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void testSpaceAdminCanAssignPresetToNewMemberWithoutPreRead()
+            throws Exception {
+        UserService authorization = Mockito.mock(UserService.class);
+        Mockito.when(authorization.isAssignSpaceAdmin(this.client, "SPACE"))
+               .thenReturn(true);
+        GraphSpaceUserService members =
+                Mockito.mock(GraphSpaceUserService.class);
+        TestGraphSpaceUserController controller =
+                new TestGraphSpaceUserController(this.client);
+        setBaseUserService(controller, authorization);
+        ReflectionTestUtils.setField(controller, "userService", members);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller)
+                                     .setControllerAdvice(
+                                             new ExceptionAdvisor())
+                                     .build();
+
+        mvc.perform(put("/api/v1.3/graphspaces/SPACE/auth/users/" +
+                        "new-member/preset")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"permission_preset\":\"GS_READ_WRITE\"}"))
+           .andExpect(status().isOk());
+
+        Mockito.verify(members).applySpacePreset(
+                this.client, "SPACE", "new-member", "GS_READ_WRITE");
+        Mockito.verify(this.auth, Mockito.never())
+               .getUser(Mockito.anyString());
+    }
+
+    @Test
+    public void testSpaceAdminCannotChangeGlobalAdminPreset()
+            throws Exception {
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(Collections.singletonList("global-admin"));
+        UserService authorization = Mockito.mock(UserService.class);
+        Mockito.when(authorization.isAssignSpaceAdmin(this.client, "SPACE"))
+               .thenReturn(true);
+        GraphSpaceUserService members =
+                Mockito.mock(GraphSpaceUserService.class);
+        TestGraphSpaceUserController controller =
+                new TestGraphSpaceUserController(this.client);
+        setBaseUserService(controller, authorization);
+        ReflectionTestUtils.setField(controller, "userService", members);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller)
+                                     .setControllerAdvice(
+                                             new ExceptionAdvisor())
+                                     .build();
+
+        mvc.perform(put("/api/v1.3/graphspaces/SPACE/auth/users/" +
+                        "global-admin/preset")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"permission_preset\":\"GS_READ_WRITE\"}"))
+           .andExpect(status().isForbidden());
+
+        Mockito.verifyZeroInteractions(members);
     }
 
     private static Target target(String id, String graphSpace) {
