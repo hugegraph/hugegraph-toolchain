@@ -223,27 +223,56 @@ public class GraphSpaceUserService extends AuthService {
                                  String userId, String preset) {
         requirePermissionPreset(preset);
         requirePermissionPresets(client);
-        User account = client.auth().getUser(userId);
-        E.checkNotNull(account, "User");
-        this.clearCustomRoles(client, graphSpace, userId);
-        this.clearDefaultRoles(client, graphSpace, account.name());
-        if (!client.auth().listSpaceMember(graphSpace)
-                   .contains(account.name())) {
-            client.auth().addSpaceMember(account.name(), graphSpace);
-        }
-        if ("GS_ADMIN".equals(preset)) {
-            if (!client.auth().listSpaceAdmin(graphSpace)
-                       .contains(account.name())) {
-                client.auth().addSpaceAdmin(account.name(), graphSpace);
+        E.checkArgument(!client.auth().listSuperAdmin().contains(userId),
+                        "Can't assign GraphSpace preset to super " +
+                        "administrator '%s'", userId);
+        boolean wasMember =
+                client.auth().listSpaceMember(graphSpace).contains(userId);
+        String username = userId;
+        SpacePresetState previous = null;
+        try {
+            if (!wasMember) {
+                client.auth().addSpaceMember(userId, graphSpace);
             }
-            this.setDefaultRole(client, graphSpace, account.name(), "analyst");
-            return;
+            User account = client.auth().getUser(userId);
+            E.checkNotNull(account, "User");
+            username = account.name();
+            previous = this.capturePresetState(client, graphSpace, userId,
+                                               username, wasMember);
+            previous.customRoles.forEach(
+                    belong -> this.belongService.deleteById(
+                            client, graphSpace, belong.getId()));
+            if (previous.analyst) {
+                client.graphSpace().deleteDefaultRole(
+                        graphSpace, username, "analyst");
+            }
+            if (previous.observer) {
+                client.graphSpace().deleteDefaultRole(
+                        graphSpace, username, "observer");
+            }
+            if ("GS_ADMIN".equals(preset)) {
+                if (!previous.admin) {
+                    client.auth().addSpaceAdmin(username, graphSpace);
+                }
+                this.setDefaultRole(client, graphSpace, username, "analyst");
+                return;
+            }
+            if (previous.admin) {
+                client.auth().delSpaceAdmin(username, graphSpace);
+            }
+            String role = "GS_READ_ONLY".equals(preset) ?
+                          "observer" : "analyst";
+            this.setDefaultRole(client, graphSpace, username, role);
+        } catch (RuntimeException e) {
+            if (previous == null) {
+                this.rollbackNewMember(client, graphSpace, userId,
+                                       wasMember, e);
+            } else {
+                this.restorePresetState(client, graphSpace, userId, username,
+                                        previous, e);
+            }
+            throw e;
         }
-        if (client.auth().listSpaceAdmin(graphSpace).contains(account.name())) {
-            client.auth().delSpaceAdmin(account.name(), graphSpace);
-        }
-        String role = "GS_READ_ONLY".equals(preset) ? "observer" : "analyst";
-        this.setDefaultRole(client, graphSpace, account.name(), role);
     }
 
     public void removeSpacePreset(HugeClient client, String graphSpace,
@@ -255,6 +284,97 @@ public class GraphSpaceUserService extends AuthService {
         if (!client.supportsDefaultRole()) {
             throw new ParameterizedException(
                       "auth.permission-preset.unsupported");
+        }
+    }
+
+    private SpacePresetState capturePresetState(HugeClient client,
+                                                String graphSpace,
+                                                String userId,
+                                                String username,
+                                                boolean member) {
+        List<BelongEntity> customRoles = this.belongService.list(
+                client, graphSpace, null, userId);
+        boolean analyst = client.graphSpace().checkDefaultRole(
+                graphSpace, username, "analyst");
+        boolean observer = client.graphSpace().checkDefaultRole(
+                graphSpace, username, "observer");
+        boolean admin = client.auth().listSpaceAdmin(graphSpace)
+                              .contains(username);
+        return new SpacePresetState(customRoles, member, admin,
+                                    analyst, observer);
+    }
+
+    private void restorePresetState(HugeClient client, String graphSpace,
+                                    String userId, String username,
+                                    SpacePresetState previous,
+                                    RuntimeException failure) {
+        previous.customRoles.forEach(belong -> {
+            this.tryRestore(() -> {
+                Set<String> currentRoles = this.belongService.list(
+                        client, graphSpace, null, userId).stream()
+                        .map(BelongEntity::getRoleId)
+                        .collect(Collectors.toSet());
+                if (!currentRoles.contains(belong.getRoleId())) {
+                    this.belongService.add(client, graphSpace,
+                                           belong.getRoleId(), userId);
+                }
+            }, graphSpace, userId,
+                            "custom role " + belong.getRoleId(), failure);
+        });
+        this.tryRestore(() -> this.restoreDefaultRole(
+                client, graphSpace, username, "analyst", previous.analyst),
+                        graphSpace, userId, "analyst role", failure);
+        this.tryRestore(() -> this.restoreDefaultRole(
+                client, graphSpace, username, "observer", previous.observer),
+                        graphSpace, userId, "observer role", failure);
+        this.tryRestore(() -> {
+            boolean current = client.auth().listSpaceAdmin(graphSpace)
+                                    .contains(username);
+            if (previous.admin && !current) {
+                client.auth().addSpaceAdmin(username, graphSpace);
+            } else if (!previous.admin && current) {
+                client.auth().delSpaceAdmin(username, graphSpace);
+            }
+        }, graphSpace, userId, "administrator", failure);
+        this.rollbackNewMember(client, graphSpace, userId,
+                               previous.member, failure);
+    }
+
+    private void restoreDefaultRole(HugeClient client, String graphSpace,
+                                    String username, String role,
+                                    boolean expected) {
+        boolean current = client.graphSpace().checkDefaultRole(
+                graphSpace, username, role);
+        if (expected && !current) {
+            client.graphSpace().setDefaultRole(graphSpace, username, role);
+        } else if (!expected && current) {
+            client.graphSpace().deleteDefaultRole(graphSpace, username, role);
+        }
+    }
+
+    private void rollbackNewMember(HugeClient client, String graphSpace,
+                                   String userId, boolean expected,
+                                   RuntimeException failure) {
+        this.tryRestore(() -> {
+            boolean current = client.auth().listSpaceMember(graphSpace)
+                                    .contains(userId);
+            if (expected && !current) {
+                client.auth().addSpaceMember(userId, graphSpace);
+            } else if (!expected && current) {
+                client.auth().delSpaceMember(userId, graphSpace);
+            }
+        }, graphSpace, userId, "membership", failure);
+    }
+
+    private void tryRestore(Runnable action, String graphSpace,
+                            String userId, String state,
+                            RuntimeException failure) {
+        try {
+            action.run();
+        } catch (RuntimeException rollbackFailure) {
+            failure.addSuppressed(rollbackFailure);
+            log.warn("Failed to restore GraphSpace {} for '{}' in '{}'",
+                     state, userId, graphSpace, rollbackFailure);
         }
     }
 
@@ -366,5 +486,24 @@ public class GraphSpaceUserService extends AuthService {
             }
         }
         return users;
+    }
+
+    private static class SpacePresetState {
+
+        private final List<BelongEntity> customRoles;
+        private final boolean member;
+        private final boolean admin;
+        private final boolean analyst;
+        private final boolean observer;
+
+        private SpacePresetState(List<BelongEntity> customRoles,
+                                 boolean member, boolean admin,
+                                 boolean analyst, boolean observer) {
+            this.customRoles = customRoles;
+            this.member = member;
+            this.admin = admin;
+            this.analyst = analyst;
+            this.observer = observer;
+        }
     }
 }
