@@ -120,12 +120,15 @@ public class UserServiceCompatibilityTest {
                                     .name("user")
                                     .nickname("display-name")
                                     .build();
+        user.setSuperadmin(true);
 
         this.service.update(this.client, user);
 
         ArgumentCaptor<User> request = ArgumentCaptor.forClass(User.class);
         Mockito.verify(this.auth).updateUser(request.capture());
         Assert.assertNull(request.getValue().nickname());
+        Mockito.verify(this.auth, Mockito.never())
+               .addSuperAdmin(Mockito.anyString());
     }
 
     @Test
@@ -465,7 +468,7 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
-    public void testLegacyUserUpdateReconcilesAdminSpaces() {
+    public void testLegacyUserUpdateRejectsPermissionChangesBeforeWrites() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
         Mockito.when(this.graphSpace.listGraphSpace())
@@ -474,11 +477,6 @@ public class UserServiceCompatibilityTest {
                .thenReturn(Collections.singletonList("user"));
         Mockito.when(this.auth.listSpaceAdmin("NEW"))
                .thenReturn(Collections.emptyList());
-        Mockito.when(this.client.findUserByName("user"))
-               .thenReturn(user("user"));
-        Mockito.when(this.auth.listSuperAdmin())
-               .thenReturn(Collections.singletonList("user"));
-        Mockito.when(this.auth.getUser("user")).thenReturn(user("user"));
         UserEntity account = UserEntity.builder()
                                        .id("user")
                                        .name("user")
@@ -486,15 +484,51 @@ public class UserServiceCompatibilityTest {
                                                Collections.singletonList("NEW"))
                                        .build();
 
-        this.service.update(this.client, account);
+        ParameterizedException error = null;
+        try {
+            this.service.update(this.client, account);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
 
-        Mockito.verify(this.auth).addSpaceAdmin("user", "NEW");
-        Mockito.verify(this.auth).delSpaceAdmin("user", "OLD");
-        Mockito.verify(this.auth).delSuperAdmin("user");
-        Mockito.verify(this.graphSpaceUsers, Mockito.never())
-               .applySpacePreset(Mockito.any(), Mockito.anyString(),
-                                 Mockito.anyString(), Mockito.anyString(),
-                                 Mockito.anyString());
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.unsupported",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .addSpaceAdmin(Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never())
+               .delSpaceAdmin(Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never())
+               .updateUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testLegacyUserUpdateRejectsPresetBeforeProfileWrite() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        UserEntity account = UserEntity.builder()
+                                       .id("user")
+                                       .name("user")
+                                       .permissionPreset("GS_READ_ONLY")
+                                       .graphspacePermissions(
+                                               Collections.singletonList(
+                                                       permission(
+                                                               "SPACE",
+                                                               "GS_READ_ONLY")))
+                                       .build();
+
+        ParameterizedException error = null;
+        try {
+            this.service.update(this.client, account);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.unsupported",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .updateUser(Mockito.any(User.class));
     }
 
     @Test
@@ -539,7 +573,7 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
-    public void testLegacyUserCreationSkipsPermissionPresetApis() {
+    public void testLegacyUserCreationRejectsPermissionPreset() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
         UserEntity user = userEntity("display-name");
@@ -548,9 +582,18 @@ public class UserServiceCompatibilityTest {
                 java.util.Collections.singletonMap(
                         "permission_preset", "GS_READ_ONLY")));
 
-        this.service.add(this.client, user);
+        ParameterizedException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (ParameterizedException e) {
+            error = e;
+        }
 
-        Mockito.verify(this.auth).createUser(Mockito.any(User.class));
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.unsupported",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .createUser(Mockito.any(User.class));
         Mockito.verify(this.graphSpaceUsers, Mockito.never())
                .validatePermissionPresets(Mockito.any(), Mockito.any(),
                                           Mockito.any());
@@ -641,30 +684,46 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
-    public void testLegacyAdminGrantFailureRollsBackEarlierSpaces() {
+    public void testLegacyAdminGrantIsRejectedBeforeAccountCreation() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
-        User created = user("user");
-        created.setId("u-1");
-        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
-               .thenReturn(created);
-        RuntimeException failure = new RuntimeException("grant failed");
-        Mockito.when(this.auth.addSpaceAdmin("user", "SECOND"))
-               .thenThrow(failure);
         UserEntity user = userEntity("display-name");
         user.setAdminSpaces(Arrays.asList("FIRST", "SECOND"));
 
-        RuntimeException error = null;
+        ParameterizedException error = null;
         try {
             this.service.add(this.client, user);
-        } catch (RuntimeException e) {
+        } catch (ParameterizedException e) {
             error = e;
         }
 
-        Assert.assertSame(failure, error);
-        Mockito.verify(this.auth).delSpaceAdmin("user", "SECOND");
-        Mockito.verify(this.auth).delSpaceAdmin("user", "FIRST");
-        Mockito.verify(this.auth).deleteUser("u-1");
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.unsupported",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .createUser(Mockito.any(User.class));
+        Mockito.verify(this.auth, Mockito.never())
+               .addSpaceAdmin(Mockito.anyString(), Mockito.anyString());
+    }
+
+    @Test
+    public void testLegacyAdminSpaceEndpointRejectsBeforeWrites() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+
+        ParameterizedException error = null;
+        try {
+            this.service.updateAdminSpace(
+                    this.client, "user", Collections.singletonList("SPACE"));
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.permission-preset.unsupported",
+                            error.getMessage());
+        Mockito.verify(this.auth, Mockito.never())
+               .addSpaceAdmin(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test
