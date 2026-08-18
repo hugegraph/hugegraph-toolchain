@@ -304,7 +304,8 @@ public class GraphSpaceService {
         try {
             space = client.graphSpace().getGraphSpace(graphSpace);
         } catch (ServerException e) {
-            if (e.status() == 401 || e.status() == 403 || e.status() == 404) {
+            if (e.status() == 400 || e.status() == 401 ||
+                e.status() == 403 || e.status() == 404) {
                 throw unavailableGraphSpace();
             }
             throw e;

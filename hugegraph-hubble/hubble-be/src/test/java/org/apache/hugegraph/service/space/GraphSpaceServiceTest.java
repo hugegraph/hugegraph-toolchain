@@ -261,7 +261,7 @@ public class GraphSpaceServiceTest {
         GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
         Mockito.when(this.client.graphSpace()).thenReturn(manager);
         ServerException missing = new ServerException("missing");
-        missing.status(404);
+        missing.status(400);
         Mockito.when(manager.getGraphSpace("missing")).thenThrow(missing);
 
         try {
