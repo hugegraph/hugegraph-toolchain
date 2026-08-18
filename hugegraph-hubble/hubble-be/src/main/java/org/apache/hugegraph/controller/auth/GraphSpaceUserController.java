@@ -105,8 +105,7 @@ public class GraphSpaceUserController extends AuthController {
         E.checkArgument(identity.equals(userId) ||
                         identity.equals(username),
                         "The account identity in the path and body must match");
-        this.userService.applySpacePreset(client, graphSpace, userId,
-                                          username, preset);
+        this.userService.applySpacePreset(client, graphSpace, userId, username, preset);
     }
 
     @DeleteMapping("spaceadmin/{id}")
@@ -158,22 +157,16 @@ public class GraphSpaceUserController extends AuthController {
         HugeClient client = this.requireGraphSpaceManager(graphSpace);
         User account = client.auth().getUser(userId);
         E.checkNotNull(account, "User");
-        return this.requireMemberManagerByUsername(client, graphSpace,
-                                                   account.name());
+        return this.requireMemberManagerByUsername(client, graphSpace, account.name());
     }
 
-    private HugeClient requireMemberManagerByUsername(String graphSpace,
-                                                      String username) {
+    private HugeClient requireMemberManagerByUsername(String graphSpace, String username) {
         HugeClient client = this.requireGraphSpaceManager(graphSpace);
-        return this.requireMemberManagerByUsername(client, graphSpace,
-                                                   username);
+        return this.requireMemberManagerByUsername(client, graphSpace, username);
     }
 
-    private HugeClient requireMemberManagerByUsername(HugeClient client,
-                                                      String graphSpace,
-                                                      String username) {
-        E.checkArgument(username != null && !username.isEmpty(),
-                        "The account name can't be empty");
+    private HugeClient requireMemberManagerByUsername(HugeClient client, String graphSpace, String username) {
+        E.checkArgument(username != null && !username.isEmpty(), "The account name can't be empty");
         if (client.auth().listSuperAdmin().contains(username) ||
             client.auth().listSpaceAdmin(graphSpace).contains(username)) {
             return this.requireGraphSpaceAuthorizationAdmin(graphSpace);

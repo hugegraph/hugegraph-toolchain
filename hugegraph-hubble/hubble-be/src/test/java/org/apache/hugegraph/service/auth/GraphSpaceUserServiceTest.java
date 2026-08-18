@@ -348,8 +348,7 @@ public class GraphSpaceUserServiceTest {
         Mockito.when(this.auth.listSpaceAdmin("team"))
                .thenReturn(Collections.emptyList());
 
-        this.service.applySpacePreset(this.client, "team", null, "alice",
-                                      "GS_READ_ONLY");
+        this.service.applySpacePreset(this.client, "team", null, "alice", "GS_READ_ONLY");
 
         Mockito.verify(this.auth).addSpaceMember("alice", "team");
         Mockito.verify(this.client).findUserByName("alice");

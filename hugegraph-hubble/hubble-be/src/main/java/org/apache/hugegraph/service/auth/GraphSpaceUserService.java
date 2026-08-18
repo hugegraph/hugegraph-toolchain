@@ -276,13 +276,10 @@ public class GraphSpaceUserService extends AuthService {
         }
     }
 
-    public void applySpacePreset(HugeClient client, String graphSpace,
-                                 String userId, String username,
-                                 String preset) {
+    public void applySpacePreset(HugeClient client, String graphSpace, String userId, String username, String preset) {
         requirePermissionPreset(preset);
         requirePermissionPresets(client);
-        E.checkArgument(username != null && !username.isEmpty(),
-                        "The account name can't be empty");
+        E.checkArgument(username != null && !username.isEmpty(), "The account name can't be empty");
         E.checkArgument(!client.auth().listSuperAdmin().contains(username),
                         "Can't assign GraphSpace preset to super " +
                         "administrator '%s'", username);
@@ -302,9 +299,7 @@ public class GraphSpaceUserService extends AuthService {
                             "Account id '%s' belongs to '%s', not '%s'",
                             userId, account.name(), username);
             resolvedUserId = account.id().toString();
-            previous = this.capturePresetState(client, graphSpace,
-                                               resolvedUserId,
-                                               username, wasMember);
+            previous = this.capturePresetState(client, graphSpace, resolvedUserId, username, wasMember);
             previous.customRoles.forEach(
                     belong -> this.belongService.deleteById(
                             client, graphSpace, belong.getId()));
@@ -334,9 +329,7 @@ public class GraphSpaceUserService extends AuthService {
                 this.rollbackNewMember(client, graphSpace, username,
                                        wasMember, e);
             } else {
-                this.restorePresetState(client, graphSpace, resolvedUserId,
-                                        username,
-                                        previous, e);
+                this.restorePresetState(client, graphSpace, resolvedUserId, username, previous, e);
             }
             throw e;
         }
@@ -376,8 +369,7 @@ public class GraphSpaceUserService extends AuthService {
                                     SpacePresetState previous,
                                     RuntimeException failure) {
         if (previous.member) {
-            this.rollbackNewMember(client, graphSpace, username, true,
-                                   failure);
+            this.rollbackNewMember(client, graphSpace, username, true, failure);
         }
         previous.customRoles.forEach(belong -> {
             this.tryRestore(() -> {
@@ -408,8 +400,7 @@ public class GraphSpaceUserService extends AuthService {
             }
         }, graphSpace, userId, "administrator", failure);
         if (!previous.member) {
-            this.rollbackNewMember(client, graphSpace, username, false,
-                                   failure);
+            this.rollbackNewMember(client, graphSpace, username, false, failure);
         }
     }
 

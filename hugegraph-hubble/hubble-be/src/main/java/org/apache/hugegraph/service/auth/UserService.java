@@ -284,8 +284,7 @@ public class UserService extends AuthService {
         }
     }
 
-    private void suppressRollback(Runnable rollback,
-                                  RuntimeException failure) {
+    private void suppressRollback(Runnable rollback, RuntimeException failure) {
         try {
             rollback.run();
         } catch (RuntimeException rollbackError) {
@@ -630,8 +629,7 @@ public class UserService extends AuthService {
         User previous = client.auth().getUser(userId);
         E.checkNotNull(previous, "User");
         String username = previous.name();
-        boolean previousSuperAdmin =
-                client.auth().listSuperAdmin().contains(username);
+        boolean previousSuperAdmin = client.auth().listSuperAdmin().contains(username);
         try {
             if (previousSuperAdmin && !userEntity.isSuperadmin()) {
                 client.auth().delSuperAdmin(username);
@@ -646,8 +644,7 @@ public class UserService extends AuthService {
                     userEntity.getPermissionPreset());
         } catch (RuntimeException error) {
             this.restoreAccountProfile(client, previous, error);
-            this.restoreSuperAdmin(client, username, previousSuperAdmin,
-                                   error);
+            this.restoreSuperAdmin(client, username, previousSuperAdmin, error);
             throw error;
         }
     }
@@ -845,8 +842,7 @@ public class UserService extends AuthService {
             return false;
         }
         User account = client.auth().getUser(uid);
-        return account != null &&
-               client.auth().listSuperAdmin().contains(account.name());
+        return account != null && client.auth().listSuperAdmin().contains(account.name());
     }
 
     public boolean isSuperAdmin(HugeClient client) {
