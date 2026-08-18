@@ -255,12 +255,32 @@ public class AuthSecurityTest {
                                      spaces);
 
         try {
-            controller.requirePublic(client, "protected");
+            controller.requireSpace(client, "protected");
             Assert.fail("Expected protected GraphSpace to be unavailable");
         } catch (ExternalException e) {
             Assert.assertEquals(HttpStatus.NOT_FOUND.value(), e.status());
         }
         Mockito.verify(spaces).requirePublicSpace(client, "protected");
+    }
+
+    @Test
+    public void testBodyGraphSpaceIsValidatedWhenPathScopeDiffers() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(Constant.GRAPHSPACE_ACCESS_KEY, "path-space");
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestBaseController controller = new TestBaseController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        HugeClient client = Mockito.mock(HugeClient.class);
+        ReflectionTestUtils.setField(controller, "config", config);
+        ReflectionTestUtils.setField(controller, "graphSpaceAccessService",
+                                     spaces);
+
+        controller.requireSpace(client, "body-space");
+
+        Mockito.verify(spaces).requireAccessibleSpace(client, "body-space");
     }
 
     @Test
@@ -401,6 +421,12 @@ public class AuthSecurityTest {
     public void testCustomInterceptorCreatesClientForAuthenticatedApi()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
         MockHttpServletRequest request = new MockHttpServletRequest(
                                             "GET",
                                             "/api/v1.3/graphspaces/space1" +
@@ -417,6 +443,7 @@ public class AuthSecurityTest {
         Assert.assertEquals("space1", interceptor.graphSpace);
         Assert.assertEquals("graph1", interceptor.graph);
         Assert.assertEquals("token", interceptor.token);
+        Mockito.verify(spaces).requireAccessibleSpace(null, "space1");
     }
 
     @Test
@@ -459,8 +486,13 @@ public class AuthSecurityTest {
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
                .thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
         AuthModeService mode = new AuthModeService(config);
         ReflectionTestUtils.setField(interceptor, "authMode", mode);
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "GET", "/api/v1.3/graphspaces/SPACE/graphs/graph/schema");
 
@@ -468,6 +500,38 @@ public class AuthSecurityTest {
         Assert.assertEquals(1, interceptor.unauthClients);
         Assert.assertEquals("SPACE", interceptor.graphSpace);
         Assert.assertEquals("graph", interceptor.graph);
+        Mockito.verify(spaces).requirePublicSpace(null, "SPACE");
+    }
+
+    @Test
+    public void testAnonymousPathScopeRejectsProtectedGraphSpace()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        ReflectionTestUtils.setField(interceptor, "authMode",
+                                     new AuthModeService(config));
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        Mockito.doThrow(new ExternalException(HttpStatus.NOT_FOUND.value(),
+                                              "unavailable"))
+               .when(spaces).requirePublicSpace(null, "protected");
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST", "/api/v1.3/graphspaces/protected/graphs/graph" +
+                        "/job-manager/1/upload-file");
+
+        try {
+            interceptor.preHandle(request, new MockHttpServletResponse(), null);
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(HttpStatus.NOT_FOUND.value(), e.status());
+        }
+        Assert.assertEquals(1, interceptor.unauthClients);
+        Mockito.verify(spaces).requirePublicSpace(null, "protected");
     }
 
     @Test
@@ -899,8 +963,8 @@ public class AuthSecurityTest {
             this.clearAuthSession();
         }
 
-        public void requirePublic(HugeClient client, String graphSpace) {
-            this.requireAnonymousPublicGraphSpace(client, graphSpace);
+        public void requireSpace(HugeClient client, String graphSpace) {
+            this.requireGraphSpaceAccess(client, graphSpace);
         }
     }
 

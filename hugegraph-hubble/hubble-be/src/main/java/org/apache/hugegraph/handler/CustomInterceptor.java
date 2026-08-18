@@ -29,6 +29,7 @@ import javax.servlet.http.HttpSession;
 //import org.apache.hugegraph.license.LicenseVerifier; // TODO C Remove Licence
 import org.apache.hugegraph.service.HugeClientPoolService;
 import org.apache.hugegraph.service.auth.AuthModeService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 //import org.apache.hugegraph.service.license.LicenseService;// TODO C Remove Licence
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -36,8 +37,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.util.PageUtil;
 
 import lombok.extern.log4j.Log4j2;
@@ -52,6 +55,10 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
     protected HugeClientPoolService hugeClientPoolService;
     @Autowired
     protected AuthModeService authMode;
+    @Autowired
+    protected HugeConfig config;
+    @Autowired
+    protected GraphSpaceService graphSpaceService;
 
     private static final Pattern CHECK_API_PATTERN =
                          Pattern.compile(".*/graph-connections/\\d+/.+");
@@ -134,7 +141,9 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
             String[] scope = this.requestScope(uri);
             String graphSpace = scope[0];
             String graph = scope[1];
-            if (this.authMode != null && this.authMode.anonymous()) {
+            boolean anonymous = this.authMode != null &&
+                                this.authMode.anonymous();
+            if (anonymous) {
                 client = unauthClient(graphSpace, graph);
             } else if (!this.hasAuthSession(request)) {
                 return;
@@ -143,9 +152,33 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
                         (String) request.getSession().getAttribute(Constant.TOKEN_KEY);
                 client = this.authClient(graphSpace, graph, token);
             }
+            this.requireGraphSpaceAccess(client, graphSpace, anonymous);
+            request.setAttribute(Constant.GRAPHSPACE_ACCESS_KEY, graphSpace);
         }
 
         request.setAttribute("hugeClient", client);
+    }
+
+    protected void requireGraphSpaceAccess(HugeClient client,
+                                           String graphSpace,
+                                           boolean anonymous) {
+        if (graphSpace == null || this.config == null ||
+            !this.config.get(HubbleOptions.PD_ENABLED)) {
+            return;
+        }
+        try {
+            if (anonymous) {
+                this.graphSpaceService.requirePublicSpace(client, graphSpace);
+            } else {
+                this.graphSpaceService.requireAccessibleSpace(client,
+                                                              graphSpace);
+            }
+        } catch (RuntimeException e) {
+            if (client != null) {
+                client.close();
+            }
+            throw e;
+        }
     }
 
     private boolean isLoginRequest(String uri) {

@@ -149,14 +149,14 @@ public abstract class BaseController {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
             HugeClient client = (HugeClient) request.getAttribute("hugeClient");
-            this.requireAnonymousPublicGraphSpace(client, graphSpace);
+            this.requireGraphSpaceAccess(client, graphSpace);
             client.assignGraph(graphSpace, graph);
             return client;
         }
         HugeClient client = this.authMode != null && this.authMode.anonymous() ?
                             this.hugeClientPoolService.createUnauthClient(graphSpace, graph) :
                             this.hugeClientPoolService.createAuthClient(graphSpace, graph, this.getToken());
-        this.requireAnonymousPublicGraphSpace(client, graphSpace);
+        this.requireGraphSpaceAccess(client, graphSpace);
         if (graphSpace != null || graph != null) {
             client.assignGraph(graphSpace, graph);
         }
@@ -188,7 +188,7 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceWrite(String graphSpace) {
         HugeClient client = this.authClient(null, null);
-        this.requireAnonymousPublicGraphSpace(client, graphSpace);
+        this.requireGraphSpaceAccess(client, graphSpace);
         this.authContextService.requireGraphSpaceWrite(
                 client, this.getUser(), graphSpace);
         client.assignGraph(graphSpace, null);
@@ -304,7 +304,7 @@ public abstract class BaseController {
 
         HugeClient client = hugeClientPoolService.create(url, graphSpace, graph,
                 this.getToken());
-        this.requireAnonymousPublicGraphSpace(client, graphSpace);
+        this.requireGraphSpaceAccess(client, graphSpace);
         return client;
     }
 
@@ -315,13 +315,22 @@ public abstract class BaseController {
         }
     }
 
-    protected void requireAnonymousPublicGraphSpace(HugeClient client,
-                                                    String graphSpace) {
-        if (graphSpace != null &&
-            this.authMode != null && this.authMode.anonymous() &&
-            config.get(HubbleOptions.PD_ENABLED)) {
+    protected void requireGraphSpaceAccess(HugeClient client,
+                                           String graphSpace) {
+        if (graphSpace == null || !config.get(HubbleOptions.PD_ENABLED)) {
+            return;
+        }
+        HttpServletRequest request = getRequest();
+        if (graphSpace.equals(
+                request.getAttribute(Constant.GRAPHSPACE_ACCESS_KEY))) {
+            return;
+        }
+        if (this.authMode != null && this.authMode.anonymous()) {
             this.graphSpaceAccessService.requirePublicSpace(client,
-                                                             graphSpace);
+                                                            graphSpace);
+        } else {
+            this.graphSpaceAccessService.requireAccessibleSpace(client,
+                                                                graphSpace);
         }
     }
 

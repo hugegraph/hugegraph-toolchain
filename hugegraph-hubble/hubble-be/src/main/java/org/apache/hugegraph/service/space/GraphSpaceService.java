@@ -487,7 +487,7 @@ public class GraphSpaceService {
 
     public boolean isAuthForAccessible(HugeClient client,
                                        String graphSpace) {
-        return accessibleSpace(client, graphSpace).isAuth();
+        return requireAccessibleSpace(client, graphSpace).isAuth();
     }
 
     public List<String> listAll(HugeClient client) {
@@ -519,7 +519,8 @@ public class GraphSpaceService {
 
     public GraphSpaceEntity getAccessibleWithAdmins(HugeClient client,
                                                     String graphSpace) {
-        return this.withAdmins(client, accessibleSpace(client, graphSpace));
+        return this.withAdmins(client, requireAccessibleSpace(client,
+                                                              graphSpace));
     }
 
     private GraphSpaceEntity withAdmins(HugeClient client,
@@ -534,8 +535,8 @@ public class GraphSpaceService {
         return entity;
     }
 
-    private static GraphSpace accessibleSpace(HugeClient client,
-                                              String graphSpace) {
+    public GraphSpace requireAccessibleSpace(HugeClient client,
+                                             String graphSpace) {
         GraphSpace space = graphSpaceOrUnavailable(client, graphSpace);
         if (!canCurrentUserAccess(client, space)) {
             throw unavailableGraphSpace();
