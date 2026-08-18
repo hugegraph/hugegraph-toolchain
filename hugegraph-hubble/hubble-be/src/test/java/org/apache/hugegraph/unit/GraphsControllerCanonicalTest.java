@@ -31,8 +31,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.util.NestedServletException;
 
 import org.apache.hugegraph.controller.graphs.GraphsController;
+import org.apache.hugegraph.config.HugeConfig;
+import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.entity.graphs.GraphCloneEntity;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.testutil.Assert;
 
@@ -54,6 +58,10 @@ public class GraphsControllerCanonicalTest {
         GraphsController controller = new GraphsController();
         this.graphsService = Mockito.mock(GraphsService.class);
         this.setField(controller, "graphsService", this.graphsService);
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        this.setField(controller, "config", config);
+        this.setField(BaseController.class, controller, "config", config);
 
         this.client = Mockito.mock(HugeClient.class);
         this.withClient = request -> {
@@ -206,9 +214,44 @@ public class GraphsControllerCanonicalTest {
         Mockito.verify(this.graphsService).getDefault(this.client);
     }
 
+    @Test
+    public void testCloneValidatesBodyTargetGraphSpace() throws Exception {
+        ScopeCapturingController controller = new ScopeCapturingController();
+        controller.client = this.client;
+        this.setField(controller, "graphsService", this.graphsService);
+        GraphCloneEntity clone = GraphCloneEntity.builder()
+                                                 .graphSpace("target")
+                                                 .name("copy")
+                                                 .build();
+
+        controller.clone("source", "original", clone);
+
+        Assert.assertEquals("target", controller.checkedGraphSpace);
+        Mockito.verify(this.graphsService).clone(
+                Mockito.eq(this.client),
+                Mockito.argThat(params -> "target".equals(
+                        params.get("graphspace"))));
+    }
+
     private void setField(Object object, String name, Object value)
                           throws Exception {
-        Field field = GraphsController.class.getDeclaredField(name);
+        Class<?> type = object.getClass();
+        while (type != null) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                field.set(object, value);
+                return;
+            } catch (NoSuchFieldException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    private void setField(Class<?> type, Object object, String name,
+                          Object value) throws Exception {
+        Field field = type.getDeclaredField(name);
         field.setAccessible(true);
         field.set(object, value);
     }
@@ -218,12 +261,19 @@ public class GraphsControllerCanonicalTest {
         private HugeClient client;
         private String graphspace;
         private String graph;
+        private String checkedGraphSpace;
 
         @Override
         protected HugeClient authClient(String graphspace, String graph) {
             this.graphspace = graphspace;
             this.graph = graph;
             return this.client;
+        }
+
+        @Override
+        protected void requireGraphSpaceAccess(HugeClient client,
+                                               String graphSpace) {
+            this.checkedGraphSpace = graphSpace;
         }
     }
 }

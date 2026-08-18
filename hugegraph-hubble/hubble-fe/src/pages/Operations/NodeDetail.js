@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Alert, Button, Descriptions, Progress, Skeleton, Space, Statistic} from 'antd';
+import {Alert, Button, Descriptions, Progress, Skeleton, Space, Statistic, Tooltip} from 'antd';
 import {ArrowLeftOutlined} from '@ant-design/icons';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
@@ -319,6 +319,13 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
     const reasonLabel = status.reason ? t(`operations.reason_${status.reason}`, {
         defaultValue: status.reason.replaceAll('_', ' '),
     }) : null;
+    const upgradeHelp = status.reason === 'unsupported_version'
+        ? t('operations.reason_unsupported_version_help') : null;
+    const availabilityStatus = (
+        <strong className={`availability-${availability.toLowerCase()}`}>
+            {availabilityLabel}
+        </strong>
+    );
     const statusDetails = (
         <div
             className='operations-metric-status'
@@ -336,9 +343,11 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
         <header className='operations-metric-header'>
             <div className='operations-metric-title-row'>
                 <h3>{name}</h3>
-                <strong className={`availability-${availability.toLowerCase()}`}>
-                    {availabilityLabel}
-                </strong>
+                {upgradeHelp ? (
+                    <Tooltip title={upgradeHelp}>
+                        <span tabIndex={0}>{availabilityStatus}</span>
+                    </Tooltip>
+                ) : availabilityStatus}
             </div>
             {statusDetails}
         </header>

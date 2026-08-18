@@ -67,7 +67,7 @@ public class VermeerController extends BaseController {
         String graphspace = body.graphspace;
         String graph = body.graph;
         String vGraph = vermeerService.convert2VG(graphspace, graph);
-        HugeClient client = this.authClient(null, null);
+        HugeClient client = this.authClient(graphspace, graph);
 
         Map<String, Object> graphInfo = HubbleUtil.uncheckedCast(
                 client.vermeer().getGraphInfoByName(vGraph).get("graph"));

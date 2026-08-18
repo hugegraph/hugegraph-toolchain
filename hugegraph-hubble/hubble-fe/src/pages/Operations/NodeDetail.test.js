@@ -340,6 +340,10 @@ test('renders each metric group from its own metric status', async () => {
     expect(within(raft).getByText('Unsupported service version')).toBeInTheDocument();
     expect(within(raft).getByText(/Unsupported by this service version/))
         .toBeInTheDocument();
+    fireEvent.mouseOver(within(raft).getByText('Unsupported'));
+    expect(await screen.findByText(
+        'Upgrade HugeGraph to a version that provides this metric.'
+    )).toBeInTheDocument();
 
     const backend = screen.getByRole('heading', {name: 'Backend'}).closest('section');
     expect(within(backend).getByText('Available')).toBeInTheDocument();

@@ -333,9 +333,13 @@ public class GraphsController extends BaseController {
     public Object clone(@PathVariable("graphspace") String graphspace,
                         @PathVariable("graph") String graph,
                         @RequestBody GraphCloneEntity graphCloneEntity) {
-        return this.graphsService.clone(this.authClient(graphspace, graph),
-                                        graphCloneEntity.convertMap(graphspace,
-                                                                    graph));
+        HugeClient client = this.authClient(graphspace, graph);
+        String targetGraphSpace = graphCloneEntity.getGraphSpace() == null ?
+                                  graphspace :
+                                  graphCloneEntity.getGraphSpace();
+        this.requireGraphSpaceAccess(client, targetGraphSpace);
+        return this.graphsService.clone(
+                client, graphCloneEntity.convertMap(graphspace, graph));
     }
     //
     //@Data

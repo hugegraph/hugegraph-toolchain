@@ -112,6 +112,7 @@ public class FileMappingController extends BaseController {
                        @PathVariable("graph") String graph,
                        @PathVariable("jobId") int jobId,
                        @PathVariable("id") int id) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -125,6 +126,7 @@ public class FileMappingController extends BaseController {
     public void clear(@PathVariable("graphspace") String graphSpace,
                       @PathVariable("graph") String graph,
                       @PathVariable("jobId") int jobId) {
+        this.requireGraphSpaceWrite(graphSpace);
         List<FileMapping> mappings = this.service.listByJob(graphSpace, graph,
                                                             jobId);
         Set<Integer> fileIds = new HashSet<>();
@@ -143,6 +145,7 @@ public class FileMappingController extends BaseController {
                                    @PathVariable("jobId") int jobId,
                                    @PathVariable("id") int id,
                                    @RequestBody FileSetting newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         Ex.check(!StringUtils.isEmpty(newEntity.getDelimiter()),
                  "load.file-mapping.file-setting.delimiter-cannot-be-empty");
         Ex.check(!StringUtils.isEmpty(newEntity.getCharset()),
@@ -175,6 +178,7 @@ public class FileMappingController extends BaseController {
                                         @PathVariable("jobId") int jobId,
                                         @PathVariable("id") int id,
                                         @RequestBody VertexMapping newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -195,6 +199,7 @@ public class FileMappingController extends BaseController {
                                            @PathVariable("id") int id,
                                            @PathVariable("vmid") String vmId,
                                            @RequestBody VertexMapping newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -221,6 +226,7 @@ public class FileMappingController extends BaseController {
                                            @PathVariable("jobId") int jobId,
                                            @PathVariable("id") int id,
                                            @PathVariable("vmid") String vmid) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -242,6 +248,7 @@ public class FileMappingController extends BaseController {
                                       @PathVariable("jobId") int jobId,
                                       @PathVariable("id") int id,
                                       @RequestBody EdgeMapping newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -262,6 +269,7 @@ public class FileMappingController extends BaseController {
                                          @PathVariable("id") int id,
                                          @PathVariable("emid") String emId,
                                          @RequestBody EdgeMapping newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -288,6 +296,7 @@ public class FileMappingController extends BaseController {
                                          @PathVariable("jobId") int jobId,
                                          @PathVariable("id") int id,
                                          @PathVariable("emid") String emid) {
+        this.requireGraphSpaceWrite(graphSpace);
         FileMapping mapping = this.service.get(graphSpace, graph, jobId, id);
         if (mapping == null) {
             throw new ExternalException("load.file-mapping.not-exist.id", id);
@@ -312,6 +321,7 @@ public class FileMappingController extends BaseController {
                               @PathVariable("graph") String graph,
                               @PathVariable("jobId") int jobId,
                               @RequestBody LoadParameter newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         this.checkLoadParameter(newEntity);
         List<FileMapping> mappings = this.service.listByJob(graphSpace, graph,
                                                             jobId);
@@ -327,6 +337,7 @@ public class FileMappingController extends BaseController {
     public JobManager nextStep(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph,
                                @PathVariable("jobId") int jobId) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.MAPPING,

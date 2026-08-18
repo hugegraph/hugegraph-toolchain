@@ -87,6 +87,7 @@ public class FileUploadController extends BaseController {
                                          @PathVariable("jobId") int jobId,
                                          @RequestParam("names")
                                          List<String> fileNames) {
+        this.requireGraphSpaceWrite(graphSpace);
         Ex.check(this.jobService.get(graphSpace, graph, jobId) != null,
                  "job-manager.not-exist.id", jobId);
         Ex.check(CollectionUtil.allUnique(fileNames),
@@ -126,6 +127,7 @@ public class FileUploadController extends BaseController {
                                    @RequestParam("token") String token,
                                    @RequestParam("total") int total,
                                    @RequestParam("index") int index) {
+        this.requireGraphSpaceWrite(graphSpace);
         this.checkTotalAndIndexValid(total, index);
         this.checkFileNameValid(fileName);
         this.checkFileNameMatchToken(fileName, token);
@@ -253,6 +255,7 @@ public class FileUploadController extends BaseController {
                           @PathVariable("jobId") int jobId,
                           @RequestParam("name") String fileName,
                           @RequestParam("token") String token) {
+        this.requireGraphSpaceWrite(graphSpace);
         this.checkFileNameValid(fileName);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
@@ -286,6 +289,7 @@ public class FileUploadController extends BaseController {
     public JobManager nextStep(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph,
                                @PathVariable("jobId") int jobId) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.UPLOADING,

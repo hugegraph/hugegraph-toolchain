@@ -25,6 +25,7 @@ import * as user from '../utils/user';
 import {withLanguageHeader} from './languageHeader';
 import {showThrottleWarning} from './throttleWarning';
 import {AUTH_REVALIDATE_EVENT} from '../utils/authEvents';
+import {isAuthEnabled} from '../utils/config';
 import {sanitizePublicError} from '../utils/publicError';
 
 const isJsonResponse = headers => {
@@ -152,8 +153,11 @@ instance.interceptors.response.use(
             if (isLoginRequest(response.config)) {
                 showLoginAuthError(response);
             }
-            else {
+            else if (isAuthEnabled()) {
                 redirectToLogin();
+            }
+            else {
+                showRequestError(response.data);
             }
             return Promise.reject(response);
         }
@@ -184,8 +188,11 @@ instance.interceptors.response.use(
             if (isLoginRequest(error.config)) {
                 showLoginAuthError(error.response);
             }
-            else {
+            else if (isAuthEnabled()) {
                 redirectToLogin();
+            }
+            else {
+                showRequestError(error.response?.data);
             }
             return Promise.reject(error);
         }
@@ -219,7 +226,7 @@ const request = {};
 
 const responseData = response => {
     const data = response?.data;
-    if (data?.status === 401) {
+    if (data?.status === 401 && isAuthEnabled()) {
         redirectToLogin();
     }
     return data;

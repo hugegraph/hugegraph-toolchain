@@ -470,7 +470,8 @@ public class GraphSpaceUserService extends AuthService {
     public boolean hasGraphSpaceAccess(HugeClient client, String graphSpace,
                                        String username) {
         if (!client.supportsDefaultRole()) {
-            return false;
+            return client.auth().listSpaceMember(graphSpace)
+                         .contains(username);
         }
         return client.graphSpace().checkDefaultRole(
                        graphSpace, username, "analyst") ||
