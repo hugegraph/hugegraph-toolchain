@@ -111,8 +111,12 @@ public class GremlinCollectionService {
         }
     }
 
-    public GremlinCollection get(int id) {
-        return this.mapper.selectById(id);
+    public GremlinCollection get(String graphSpace, String graph, int id) {
+        QueryWrapper<GremlinCollection> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", graphSpace)
+             .eq("graph", graph);
+        return this.mapper.selectOne(query);
     }
 
     public GremlinCollection getByName(String graphSpace, String graph,

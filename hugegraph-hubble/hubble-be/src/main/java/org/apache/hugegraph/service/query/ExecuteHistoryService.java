@@ -130,7 +130,14 @@ public class ExecuteHistoryService {
     }
 
     public ExecuteHistory get(HugeClient client, int id) {
-        ExecuteHistory history = this.mapper.selectById(id);
+        QueryWrapper<ExecuteHistory> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", client.getGraphSpaceName())
+             .eq("graph", client.getGraphName());
+        ExecuteHistory history = this.mapper.selectOne(query);
+        if (history == null) {
+            return null;
+        }
         if (history.getType().equals(ExecuteType.GREMLIN_ASYNC)) {
             try {
                 Task task = client.task().get(history.getAsyncId());
@@ -160,7 +167,10 @@ public class ExecuteHistoryService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void remove(HugeClient client, int id) {
-        ExecuteHistory history = this.mapper.selectById(id);
+        ExecuteHistory history = this.get(client, id);
+        if (history == null) {
+            return;
+        }
         if (history.getType().equals(ExecuteType.GREMLIN_ASYNC)) {
             client.task().delete(history.getAsyncId());
         }
