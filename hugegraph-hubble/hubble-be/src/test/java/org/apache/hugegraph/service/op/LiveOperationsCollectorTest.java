@@ -179,6 +179,35 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
+    public void testPdNotReadyKeepsPdNodesUpAndOverallDegraded()
+           throws IOException {
+        String notReady = cluster().replace("Cluster_OK",
+                                            "Cluster_Not_Ready");
+        HttpServer pd = pdServer(200, notReady, 200, stores());
+        Snapshot snapshot;
+        try {
+            snapshot = collector(true, pd).collect(serverClient(), false);
+        } finally {
+            pd.stop(0);
+        }
+
+        OperationsModels.SourceStatus pdSource = snapshot.getSources().get(
+                                                    "pd");
+        Assert.assertEquals("AVAILABLE", pdSource.getAvailability());
+        Assert.assertTrue(pdSource.isFresh());
+        Assert.assertEquals("DEGRADED", pdSource.getStatus());
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        long pdCount = snapshot.getNodes().stream()
+                               .filter(node -> "PD".equals(node.getType()))
+                               .count();
+        Assert.assertEquals(1L, pdCount);
+        Assert.assertTrue(snapshot.getNodes().stream()
+                                  .filter(node -> "PD".equals(node.getType()))
+                                  .allMatch(node -> "UP".equals(
+                                          node.getStatus())));
+    }
+
+    @Test
     public void testPdUnknownStatusMakesOverallSnapshotDegraded()
            throws IOException {
         String unknown = cluster().replace("Cluster_OK", "Cluster_Starting");
@@ -202,7 +231,7 @@ public class LiveOperationsCollectorTest {
 
         Snapshot snapshot = collector.collect(serverClient(), false);
 
-        Assert.assertEquals("UNKNOWN",
+        Assert.assertEquals("DEGRADED",
                             snapshot.getSources().get("pd").getStatus());
         Assert.assertEquals(0, http.leaderRequests());
     }
