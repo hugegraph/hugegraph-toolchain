@@ -103,11 +103,10 @@ public class OperationsPayloadParserTest {
     @Test
     public void testMapsExactClusterStates() {
         OperationsPayloadParser parser = new OperationsPayloadParser(MAPPER);
-        String[] states = {"Cluster_OK", "Cluster_Warn",
-                           "Cluster_Not_Ready", "Cluster_Offline",
-                           "Cluster_Fault", null, "Cluster_OKish"};
-        String[] expected = {"UP", "DEGRADED", "DEGRADED", "DEGRADED",
-                             "DOWN", "UNKNOWN", "UNKNOWN"};
+        String[] states = {"Cluster_OK", "Cluster_Warn", "Cluster_Not_Ready",
+                           "Cluster_Offline", "Cluster_Fault", null, "Cluster_OKish"};
+        String[] expected = {"UP", "DEGRADED", "DEGRADED", "DEGRADED", "DOWN",
+                             "UNKNOWN", "UNKNOWN"};
         String stores = "{\"status\":0,\"data\":{\"stores\":[]}}";
 
         for (int i = 0; i < states.length; i++) {
@@ -116,9 +115,7 @@ public class OperationsPayloadParserTest {
                            state + "\",";
             String cluster = "{\"status\":0,\"data\":{" + field +
                              "\"pdList\":[]}}";
-            Assert.assertEquals(expected[i], parser.parseTopology(cluster,
-                                                                   stores)
-                                          .getStatus());
+            Assert.assertEquals(expected[i], parser.parseTopology(cluster, stores).getStatus());
         }
     }
 

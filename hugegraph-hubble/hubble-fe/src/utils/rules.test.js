@@ -56,8 +56,8 @@ jest.mock('../i18n', () => ({
                 'common.validation.jdbc_rule':
                     '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name',
                 'common.validation.account_name_rule':
-                    '使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；'
-                    + '下划线不能位于首尾',
+                    '使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和'
+                    + '下划线；下划线不能位于首尾',
                 'common.validation.favorite_name_rule': '只能包含中文、字母、数字、_, 不能超过48个字符',
                 'common.validation.invalid_data_format': '非法的数据格式',
             },
@@ -194,8 +194,8 @@ describe('rules i18n defaults', () => {
             [rules.isJDBC(), '请输入正确的jdbc url, 例如：jdbc:mysql://127.0.0.1:3306/db_name'],
             [
                 rules.isAccountName(),
-                '使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；'
-                + '下划线不能位于首尾',
+                '使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和'
+                + '下划线；下划线不能位于首尾',
             ],
             [rules.isFavoriteName(), '只能包含中文、字母、数字、_, 不能超过48个字符'],
             [rules.isUUID(), '非法的数据格式'],

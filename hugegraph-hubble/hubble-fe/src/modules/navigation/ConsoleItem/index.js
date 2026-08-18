@@ -105,8 +105,7 @@ const ConsoleItem = ({embedded = false}) => {
             ? () => openDashboard(dashboard.url + path)
             : undefined,
     });
-    const nativeItem = (titleKey, path, required, modeAvailable = true,
-        modeReason = '') => {
+    const nativeItem = (titleKey, path, required, modeAvailable = true, modeReason = '') => {
         const available = modeAvailable && capabilities.includes(required);
         const disabled = capabilitiesLoading || Boolean(capabilitiesError) || !available;
         return {

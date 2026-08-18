@@ -36,8 +36,7 @@ import {
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
 const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
-const permissionPresetChanged = (prev, next) => (prev.permission_preset !== next.permission_preset
-);
+const permissionPresetChanged = (prev, next) => prev.permission_preset !== next.permission_preset;
 const toProfilePayload = values => ({
     user_name: values.user_name,
     user_nickname: values.user_nickname,
@@ -107,8 +106,7 @@ const EditLayer = ({
                         && values.permission_preset !== PRESERVE_PERMISSIONS
             ? toPermissionPayload(values)
             : toProfilePayload(values);
-        return api.auth.updateUser(data.id, payload, PAGE_ERROR_CONFIG
-        ).then(res => {
+        return api.auth.updateUser(data.id, payload, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.update_success'));
                 onCancel();
@@ -126,8 +124,7 @@ const EditLayer = ({
             ...values,
             permission_preset: PERMISSION_PRESETS.GS_ADMIN,
         });
-        return api.auth.updateAdminspace(data.id, payload.adminSpaces, PAGE_ERROR_CONFIG
-        ).then(res => {
+        return api.auth.updateAdminspace(data.id, payload.adminSpaces, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.set_success'));
                 onCancel();
@@ -226,8 +223,7 @@ const EditLayer = ({
                     if (op !== 'detail') {
                         form.setFieldsValue({
                             ...res.data,
-                            permission_preset: getAccountPreset(res.data)
-                                               ?? PRESERVE_PERMISSIONS,
+                            permission_preset: getAccountPreset(res.data) ?? PRESERVE_PERMISSIONS,
                             graphspaces: op === 'auth'
                                 ? (res.data?.adminSpaces ?? [])
                                 : getPresetSpaces(res.data),

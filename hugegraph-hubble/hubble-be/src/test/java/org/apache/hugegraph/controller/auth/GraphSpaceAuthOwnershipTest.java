@@ -476,7 +476,8 @@ public class GraphSpaceAuthOwnershipTest {
                                           .id("belong-a")
                                           .userId("user-id")
                                           .build();
-        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id")).thenReturn(Collections.singletonList(scoped));
+        Mockito.when(belongs.list(this.client, "SPACE_A", null, "user-id"))
+               .thenReturn(Collections.singletonList(scoped));
         GraphSpaceUserService service = new GraphSpaceUserService();
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
