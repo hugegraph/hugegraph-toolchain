@@ -24,6 +24,7 @@ const loadResponseHandlers = modulePath => {
     const modalWarning = jest.fn();
     const clearLogin = jest.fn();
     const isLogoutTransition = jest.fn(() => false);
+    const isAuthEnabled = jest.fn(() => true);
     const instance = {
         interceptors: {
             request: {
@@ -59,6 +60,9 @@ const loadResponseHandlers = modulePath => {
         clearLogin,
         isLogoutTransition,
     }));
+    jest.doMock('../utils/config', () => ({
+        isAuthEnabled,
+    }));
 
     const request = require(modulePath).default;
     return {
@@ -68,6 +72,7 @@ const loadResponseHandlers = modulePath => {
         modalWarning,
         clearLogin,
         isLogoutTransition,
+        isAuthEnabled,
         instance,
         request,
     };
@@ -90,6 +95,7 @@ describe.each(['./request'])('%s error semantics', modulePath => {
         jest.dontMock('antd');
         jest.dontMock('../i18n');
         jest.dontMock('../utils/user');
+        jest.dontMock('../utils/config');
         localStorage.clear();
         sessionStorage.clear();
     });
@@ -237,6 +243,28 @@ describe.each(['./request'])('%s error semantics', modulePath => {
         expect(instance.post).not.toHaveBeenCalled();
         expect(instance.put).not.toHaveBeenCalled();
         expect(instance.delete).not.toHaveBeenCalled();
+    });
+
+    it('keeps anonymous HTTP 401 local and shows the resource error', async () => {
+        const {reject, clearLogin, isAuthEnabled, messageError}
+            = loadResponseHandlers(modulePath);
+        isAuthEnabled.mockReturnValue(false);
+        const error = {
+            config: {url: '/graphspaces/protected/graphs/graph/schema'},
+            response: {
+                status: 401,
+                data: {
+                    status: 401,
+                    message: 'GraphSpace is unavailable',
+                },
+            },
+        };
+
+        await expect(reject(error)).rejects.toBe(error);
+        expect(clearLogin).not.toHaveBeenCalled();
+        expect(sessionStorage.getItem('redirect')).toBeNull();
+        expect(window.location.href).toBe('');
+        expect(messageError).toHaveBeenCalledWith('request.error');
     });
 
     it('rejects business 401 and redirects to login', async () => {

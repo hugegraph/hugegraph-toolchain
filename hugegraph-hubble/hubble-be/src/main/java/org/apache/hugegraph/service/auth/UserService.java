@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -235,15 +236,8 @@ public class UserService extends AuthService {
         }
 
         User newUser = client.auth().createUser(user);
-        List<String> attemptedAdminSpaces = new ArrayList<>();
         boolean superAdminAttempted = false;
         try {
-            if (!permissionPresets && ue.getAdminSpaces() != null) {
-                for (String graphspace : ue.getAdminSpaces()) {
-                    attemptedAdminSpaces.add(graphspace);
-                    client.auth().addSpaceAdmin(ue.getName(), graphspace);
-                }
-            }
             if (permissionPresets) {
                 this.graphSpaceUserService
                     .applyPermissionPresetsForNewAccount(
@@ -251,13 +245,12 @@ public class UserService extends AuthService {
                         ue.getGraphspacePermissions(),
                         ue.getPermissionPreset());
             }
-            if (newUser != null && ue.isSuperadmin()) {
+            if (permissionPresets && newUser != null && ue.isSuperadmin()) {
                 superAdminAttempted = true;
                 client.auth().addSuperAdmin(ue.getName());
             }
         } catch (RuntimeException error) {
             this.rollbackNewAccount(client, newUser, ue.getName(),
-                                    attemptedAdminSpaces,
                                     superAdminAttempted, error);
             throw error;
         }
@@ -265,18 +258,11 @@ public class UserService extends AuthService {
 
     private void rollbackNewAccount(HugeClient client, User user,
                                     String username,
-                                    List<String> attemptedAdminSpaces,
                                     boolean superAdminAttempted,
                                     RuntimeException failure) {
         if (superAdminAttempted) {
             this.suppressRollback(
                     () -> client.auth().delSuperAdmin(username), failure);
-        }
-        for (int i = attemptedAdminSpaces.size() - 1; i >= 0; i--) {
-            String graphSpace = attemptedAdminSpaces.get(i);
-            this.suppressRollback(
-                    () -> client.auth().delSpaceAdmin(username, graphSpace),
-                    failure);
         }
         if (user != null) {
             this.suppressRollback(
@@ -590,6 +576,9 @@ public class UserService extends AuthService {
         boolean permissionMutation = userEntity.getPermissionPreset() != null;
         this.validatePermissionMutation(hugeClient, userEntity, false,
                                         permissionPresets);
+        if (isPdEnabled() && !permissionPresets) {
+            this.validateLegacyPermissionUpdate(hugeClient, userEntity);
+        }
         User user = new User();
         user.setId(userEntity.getId());
         user.name(userEntity.getName());
@@ -604,23 +593,30 @@ public class UserService extends AuthService {
             this.updateModernPermissionAccount(hugeClient, user, userEntity);
             return;
         }
-        if (!permissionPresets) {
-            updateAdminSpace(hugeClient, userEntity.getName(),
-                             userEntity.getAdminSpaces());
-        }
-        if (!permissionPresets) {
-            String username = userEntity.getName();
-            boolean currentSuperAdmin =
-                    isSuperAdmin(hugeClient, user.id().toString());
-            if (currentSuperAdmin && !userEntity.isSuperadmin()) {
-                hugeClient.auth().delSuperAdmin(username);
-            }
-            if (!currentSuperAdmin && userEntity.isSuperadmin()) {
-                hugeClient.auth().addSuperAdmin(username);
-            }
-        }
-
         hugeClient.auth().updateUser(user);
+    }
+
+    private void validateLegacyPermissionUpdate(HugeClient client,
+                                                UserEntity user) {
+        if (user.getPermissionPreset() != null ||
+            user.getGraphspacePermissions() != null &&
+            !user.getGraphspacePermissions().isEmpty()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.unsupported");
+        }
+        if (user.getAdminSpaces() != null) {
+            List<String> current = this.listAdminSpace(client, user.getName());
+            if (!new HashSet<>(current).equals(
+                    new HashSet<>(user.getAdminSpaces()))) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.unsupported");
+            }
+        }
+        if (user.hasSuperadmin() &&
+            this.isSuperAdmin(client, user.getId()) != user.isSuperadmin()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.unsupported");
+        }
     }
 
     private void updateModernPermissionAccount(HugeClient client, User user,
@@ -683,6 +679,15 @@ public class UserService extends AuthService {
                                             boolean create,
                                             boolean supported) {
         if (!supported) {
+            if (create && (user.isSuperadmin() ||
+                           user.getPermissionPreset() != null ||
+                           user.getAdminSpaces() != null &&
+                           !user.getAdminSpaces().isEmpty() ||
+                           user.getGraphspacePermissions() != null &&
+                           !user.getGraphspacePermissions().isEmpty())) {
+                throw new ParameterizedException(
+                          "auth.permission-preset.unsupported");
+            }
             return;
         }
         String preset = user.getPermissionPreset();
@@ -692,6 +697,11 @@ public class UserService extends AuthService {
                           "auth.permission-preset.account-required");
             }
             return;
+        }
+        if (!create && user.getPassword() != null &&
+            !user.getPassword().isEmpty()) {
+            throw new ParameterizedException(
+                      "Update password and permissions separately");
         }
         boolean superAdminPreset = "SUPER_ADMIN".equals(preset);
         if (superAdminPreset != user.isSuperadmin()) {
@@ -779,22 +789,13 @@ public class UserService extends AuthService {
         if (adminspaces == null || !isPdEnabled()) {
             return;
         }
+        if (!hugeClient.supportsDefaultRole()) {
+            throw new ParameterizedException(
+                      "auth.permission-preset.unsupported");
+        }
         List<String> oldadminspaces = listAdminSpace(hugeClient, username);
         User account = hugeClient.findUserByName(username);
         E.checkNotNull(account, "User");
-        if (!hugeClient.supportsDefaultRole()) {
-            for (String adminspace : adminspaces) {
-                if (!oldadminspaces.contains(adminspace)) {
-                    hugeClient.auth().addSpaceAdmin(username, adminspace);
-                }
-            }
-            for (String oldadminspace : oldadminspaces) {
-                if (!adminspaces.contains(oldadminspace)) {
-                    hugeClient.auth().delSpaceAdmin(username, oldadminspace);
-                }
-            }
-            return;
-        }
         for (String adminspace : adminspaces) {
             if (!oldadminspaces.contains(adminspace)) {
                 this.graphSpaceUserService.applySpacePreset(hugeClient, adminspace, account.id().toString(),

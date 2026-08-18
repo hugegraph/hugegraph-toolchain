@@ -175,13 +175,17 @@ public class GraphSpaceUserServiceTest {
     }
 
     @Test
-    public void testLegacyAccessDoesNotCallNewDefaultRoleApi() {
+    public void testLegacyAccessUsesMembershipWithoutDefaultRoleApi() {
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.singletonList("alice"));
 
+        Assert.assertTrue(this.service.hasGraphSpaceAccess(
+                          this.client, "team", "alice"));
         Assert.assertFalse(this.service.hasGraphSpaceAccess(
-                           this.client, "team", "alice"));
+                           this.client, "team", "bob"));
         Mockito.verifyZeroInteractions(this.graphSpace);
-        Mockito.verifyZeroInteractions(this.auth);
+        Mockito.verify(this.auth, Mockito.times(2)).listSpaceMember("team");
     }
 
     @Test

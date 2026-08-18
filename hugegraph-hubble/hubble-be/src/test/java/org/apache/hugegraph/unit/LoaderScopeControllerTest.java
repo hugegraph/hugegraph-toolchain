@@ -23,6 +23,7 @@ import java.util.Arrays;
 import org.apache.hugegraph.controller.load.FileMappingController;
 import org.apache.hugegraph.controller.load.JobManagerController;
 import org.apache.hugegraph.controller.load.LoadTaskController;
+import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.JobManager;
 import org.apache.hugegraph.entity.load.LoadTask;
@@ -39,7 +40,7 @@ public class LoaderScopeControllerTest {
     @Test
     public void testJobCreateRejectsMissingNameAsParameterError() {
         JobManagerService service = Mockito.mock(JobManagerService.class);
-        JobManagerController controller = new JobManagerController(service);
+        JobManagerController controller = new TestJobManagerController(service);
 
         try {
             controller.create("space-a", "graph-a", JobManager.builder().build());
@@ -54,7 +55,7 @@ public class LoaderScopeControllerTest {
     public void testJobCreateNormalizesOptionalNullRemarks() {
         JobManagerService service = Mockito.mock(JobManagerService.class);
         JobManager entity = JobManager.builder().jobName("task_1").build();
-        JobManagerController controller = new JobManagerController(service);
+        JobManagerController controller = new TestJobManagerController(service);
 
         controller.create("space-a", "graph-a", entity);
 
@@ -85,7 +86,7 @@ public class LoaderScopeControllerTest {
                .thenReturn(Collections.singletonList(mapping));
         Mockito.when(taskService.taskListByJob(7))
                .thenReturn(Collections.emptyList());
-        FileMappingController controller = new FileMappingController();
+        FileMappingController controller = new TestFileMappingController();
         ReflectionTestUtils.setField(controller, "service", service);
         ReflectionTestUtils.setField(controller, "jobService", jobService);
         ReflectionTestUtils.setField(controller, "taskService", taskService);
@@ -121,5 +122,27 @@ public class LoaderScopeControllerTest {
 
         Mockito.verify(service).list("space-a", "graph-a", 7,
                                      Arrays.asList(13, 14));
+    }
+
+    private static class TestJobManagerController
+            extends JobManagerController {
+
+        TestJobManagerController(JobManagerService service) {
+            super(service);
+        }
+
+        @Override
+        protected HugeClient requireGraphSpaceWrite(String graphSpace) {
+            return Mockito.mock(HugeClient.class);
+        }
+    }
+
+    private static class TestFileMappingController
+            extends FileMappingController {
+
+        @Override
+        protected HugeClient requireGraphSpaceWrite(String graphSpace) {
+            return Mockito.mock(HugeClient.class);
+        }
     }
 }

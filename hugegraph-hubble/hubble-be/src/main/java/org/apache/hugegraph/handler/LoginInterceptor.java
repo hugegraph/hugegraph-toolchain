@@ -90,7 +90,6 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
             return false;
         }
         String scopedAuth = apiPath.substring(0, graphSpaceEnd) + "/auth";
-        return apiPath.equals(scopedAuth) ||
-               apiPath.startsWith(scopedAuth + "/");
+        return apiPath.startsWith(scopedAuth + "/");
     }
 }

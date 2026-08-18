@@ -210,6 +210,79 @@ test('preserves mixed GraphSpace permissions on profile edit', async () => {
     expect(payload).not.toHaveProperty('is_superadmin');
 });
 
+test('updates a password without resubmitting unchanged permissions', async () => {
+    mockAuthContext = {
+        capabilities: ['accounts_manage', 'account_permission_presets'],
+    };
+    api.auth.getUserInfo.mockResolvedValue({
+        status: 200,
+        data: {
+            user_name: 'alice',
+            permission_preset: 'GS_READ_ONLY',
+            graphspace_permissions: [{
+                graphspace: 'SPACE',
+                permission_preset: 'GS_READ_ONLY',
+            }],
+        },
+    });
+    api.auth.updateUser.mockResolvedValue({status: 200});
+
+    render(<EditLayer {...props} data={{id: 'alice'}} op='edit' />);
+
+    await screen.findByDisplayValue('alice');
+    const password = screen.getByPlaceholderText(
+        'account.form.default_password_placeholder'
+    );
+    fireEvent.change(password, {target: {value: 'new-password'}});
+    fireEvent.click(document.querySelector(
+        '.ant-modal-footer .ant-btn-primary'
+    ));
+
+    await waitFor(() => expect(api.auth.updateUser).toHaveBeenCalled());
+    const payload = api.auth.updateUser.mock.calls[0][1];
+    expect(payload.user_password).toBe('new-password');
+    expect(payload).not.toHaveProperty('permission_preset');
+    expect(payload).not.toHaveProperty('graphspace_permissions');
+});
+
+test('rejects a combined password and permission edit before the request', async () => {
+    mockAuthContext = {
+        capabilities: ['accounts_manage', 'account_permission_presets'],
+    };
+    api.auth.getUserInfo.mockResolvedValue({
+        status: 200,
+        data: {
+            user_name: 'alice',
+            permission_preset: 'GS_READ_ONLY',
+            graphspace_permissions: [{
+                graphspace: 'SPACE',
+                permission_preset: 'GS_READ_ONLY',
+            }],
+        },
+    });
+
+    render(<EditLayer {...props} data={{id: 'alice'}} op='edit' />);
+
+    await screen.findByDisplayValue('alice');
+    const password = screen.getByPlaceholderText(
+        'account.form.default_password_placeholder'
+    );
+    fireEvent.change(password, {target: {value: 'new-password'}});
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(screen.getByText(
+        'account.permission_preset.GS_READ_WRITE'
+    ));
+    fireEvent.click(document.querySelector(
+        '.ant-modal-footer .ant-btn-primary'
+    ));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+        'account.feedback.password_permission_separate'
+    );
+    expect(api.auth.updateUser).not.toHaveBeenCalled();
+});
+
 test('ignores a second account mutation while the first submit is pending', async () => {
     const detailRequest = deferred();
     const mutation = deferred();
