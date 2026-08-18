@@ -22,9 +22,12 @@ import java.io.Closeable;
 import lombok.Getter;
 
 import org.apache.hugegraph.client.RestClient;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.rest.RestClientConfig;
+import org.apache.hugegraph.structure.auth.TokenPayload;
 import org.apache.hugegraph.structure.auth.User;
+import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.VersionUtil;
 import org.apache.hugegraph.version.ClientVersion;
 import org.slf4j.Logger;
@@ -265,6 +268,10 @@ public class HugeClient implements Closeable {
         return this.compatibility.supportsDefaultRole();
     }
 
+    public boolean supportsPersonalProfileUpdate() {
+        return this.compatibility.supportsPersonalProfileUpdate();
+    }
+
     public User findUserByName(String name) {
         if (this.supportsDefaultRole()) {
             return this.auth.getUserByName(name);
@@ -273,6 +280,32 @@ public class HugeClient implements Closeable {
                         .filter(user -> name.equals(user.name()))
                         .findFirst()
                         .orElse(null);
+    }
+
+    public User findCurrentUser(String expectedUsername) {
+        TokenPayload payload = this.auth.verifyToken();
+        E.checkState(payload != null &&
+                     !Strings.isNullOrEmpty(payload.userId()) &&
+                     !Strings.isNullOrEmpty(payload.username()),
+                     "Invalid current-user identity");
+        E.checkState(payload.username().equals(expectedUsername),
+                     "Authenticated user does not match the expected user");
+
+        User user;
+        try {
+            user = this.auth.getUser(payload.userId());
+        } catch (ServerException e) {
+            if (e.status() != 403 ||
+                this.supportsPersonalProfileUpdate()) {
+                throw e;
+            }
+            user = new User();
+            user.setId(payload.userId());
+            user.name(payload.username());
+        }
+        E.checkState(user != null && expectedUsername.equals(user.name()),
+                     "Current-user record does not match the token identity");
+        return user;
     }
 
     public MetricsManager metrics() {

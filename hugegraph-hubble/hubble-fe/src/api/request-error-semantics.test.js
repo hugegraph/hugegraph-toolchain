@@ -23,6 +23,7 @@ const loadResponseHandlers = modulePath => {
     const messageError = jest.fn();
     const modalWarning = jest.fn();
     const clearLogin = jest.fn();
+    const isLogoutTransition = jest.fn(() => false);
     const instance = {
         interceptors: {
             request: {
@@ -56,6 +57,7 @@ const loadResponseHandlers = modulePath => {
     }));
     jest.doMock('../utils/user', () => ({
         clearLogin,
+        isLogoutTransition,
     }));
 
     const request = require(modulePath).default;
@@ -65,6 +67,7 @@ const loadResponseHandlers = modulePath => {
         messageError,
         modalWarning,
         clearLogin,
+        isLogoutTransition,
         instance,
         request,
     };
@@ -78,6 +81,7 @@ describe.each(['./request'])('%s error semantics', modulePath => {
             search: '?x=1',
             hash: '#result',
             href: '',
+            replace: jest.fn(),
         };
     });
 
@@ -257,6 +261,49 @@ describe.each(['./request'])('%s error semantics', modulePath => {
         expect(instance.put).not.toHaveBeenCalled();
         expect(instance.delete).not.toHaveBeenCalled();
     });
+
+    it('does not restore the previous route when logout receives business 401', async () => {
+        const {resolve, clearLogin, isLogoutTransition}
+            = loadResponseHandlers(modulePath);
+        isLogoutTransition.mockReturnValue(true);
+        const response = {
+            status: 200,
+            config: {url: '/auth/logout'},
+            data: {
+                status: 401,
+                message: 'Unauthorized',
+            },
+        };
+
+        await expect(resolve(response)).rejects.toBe(response);
+        expect(clearLogin).toHaveBeenCalledTimes(1);
+        expect(sessionStorage.getItem('redirect')).toBeNull();
+        expect(window.location.replace).toHaveBeenCalledWith('/login');
+        expect(window.location.href).toBe('');
+    });
+
+    it('does not restore the previous route when a concurrent status returns HTTP 401',
+        async () => {
+            const {reject, clearLogin, isLogoutTransition}
+                = loadResponseHandlers(modulePath);
+            isLogoutTransition.mockReturnValue(true);
+            const error = {
+                config: {url: '/auth/status'},
+                response: {
+                    status: 401,
+                    data: {
+                        status: 401,
+                        message: 'Unauthorized',
+                    },
+                },
+            };
+
+            await expect(reject(error)).rejects.toBe(error);
+            expect(clearLogin).toHaveBeenCalledTimes(1);
+            expect(sessionStorage.getItem('redirect')).toBeNull();
+            expect(window.location.replace).toHaveBeenCalledWith('/login');
+            expect(window.location.href).toBe('');
+        });
 
     it.each([401, 403])(
         'shows business %s from login without redirecting',

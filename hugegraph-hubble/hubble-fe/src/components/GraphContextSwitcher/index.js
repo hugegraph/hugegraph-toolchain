@@ -156,7 +156,17 @@ const GraphContextSwitcher = () => {
             })
             .catch(error => {
                 if (!cancelled) {
-                    setErrors(value => ({...value, graphs: errorKind(error)}));
+                    const kind = errorKind(error);
+                    if (pdEnabled && kind === 'forbidden') {
+                        clearWorkbenchGraphContext(localStorage);
+                        setContext({});
+                        setGraphs([]);
+                        setErrors(value => ({...value, graphs: false}));
+                        navigate('/navigation', {replace: true});
+                    }
+                    else {
+                        setErrors(value => ({...value, graphs: kind}));
+                    }
                     setLoading(value => ({...value, graphs: false}));
                 }
             });
@@ -164,7 +174,7 @@ const GraphContextSwitcher = () => {
         return () => {
             cancelled = true;
         };
-    }, [context.graphspace, navigate, reloadTokens.graphs]);
+    }, [context.graphspace, navigate, pdEnabled, reloadTokens.graphs]);
 
     useEffect(() => {
         if (!pdEnabled || loading.graphspaces || errors.graphspaces || !context.graphspace || (
@@ -173,18 +183,10 @@ const GraphContextSwitcher = () => {
             return;
         }
 
-        const graphspace = graphspaces[0]?.name;
-        const nextContext = graphspace ? {graphspace} : {};
-        setContext(nextContext);
+        setContext({});
         setGraphs([]);
-        if (graphspace) {
-            writeWorkbenchGraphContext(localStorage, nextContext);
-            navigate(`/graphspace/${encodeURIComponent(graphspace)}`, {replace: true});
-        }
-        else {
-            clearWorkbenchGraphContext(localStorage);
-            navigate('/graphspace', {replace: true});
-        }
+        clearWorkbenchGraphContext(localStorage);
+        navigate('/navigation', {replace: true});
     }, [
         context.graphspace,
         errors.graphspaces,

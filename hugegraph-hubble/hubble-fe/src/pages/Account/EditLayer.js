@@ -32,8 +32,8 @@ import {
     PERMISSION_PRESETS,
     toPermissionPayload,
 } from './permissionPresets';
+import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
 
-const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
 const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
 const permissionPresetChanged = (prev, next) => prev.permission_preset !== next.permission_preset;
@@ -43,6 +43,8 @@ const toProfilePayload = values => ({
     user_password: values.user_password,
     user_description: values.user_description,
 });
+
+const loadAllGraphspaces = () => loadAllPages(api.manage.getGraphSpaceList);
 
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel
@@ -189,7 +191,7 @@ const EditLayer = ({
         detailRequest.current = request;
         setGraphspaceList([]);
         if (op !== 'detail' && (permissionPresetsSupported || op === 'auth')) {
-            api.manage.getGraphSpaceList(undefined, PAGE_ERROR_CONFIG).then(res => {
+            loadAllGraphspaces().then(res => {
                 if (detailRequest.current !== request) {
                     return;
                 }
@@ -426,6 +428,7 @@ const EditLayer = ({
                                                                 />
                                                             )}
                                                             name="graphspaces"
+                                                            rules={[rules.required()]}
                                                         >
                                                             <Select options={graphspaceList} mode="multiple" />
                                                         </Form.Item>
@@ -452,6 +455,7 @@ const EditLayer = ({
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
                                         name="graphspaces"
+                                        rules={[rules.required()]}
                                     >
                                         <Select options={graphspaceList} mode="multiple" />
                                     </Form.Item>

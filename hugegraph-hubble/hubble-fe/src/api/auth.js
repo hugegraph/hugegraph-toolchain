@@ -109,8 +109,10 @@ const removeSpaceAdmin = (graphspace, id, config) => {
     return request.delete(scopedAuthPath(graphspace, 'users/spaceadmin', id), undefined, config);
 };
 
-const setSpacePreset = (graphspace, id, preset, config) => {
+const setSpacePreset = (graphspace, id, username, preset, config) => {
     return request.put(`${scopedAuthPath(graphspace, 'users', id)}/preset`, {
+        user_id: id === username ? undefined : id,
+        username,
         permission_preset: preset,
     }, config);
 };

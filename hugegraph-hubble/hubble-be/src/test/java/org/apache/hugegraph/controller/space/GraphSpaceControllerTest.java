@@ -39,6 +39,7 @@ import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.handler.ExceptionAdvisor;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.hugegraph.structure.space.GraphSpace;
@@ -105,6 +106,50 @@ public class GraphSpaceControllerTest {
         Assert.assertFalse(detail.containsKey("dp_username"));
         Assert.assertFalse(detail.containsKey("dp_password"));
         Assert.assertFalse(detail.containsKey("configs"));
+    }
+
+    @Test
+    public void testAnonymousEndpointsUseOnlyPublicGraphSpaces() {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        GraphSpaceService graphSpaceService = Mockito.mock(
+                                                GraphSpaceService.class);
+        TestGraphSpaceController controller =
+                new TestGraphSpaceController(client);
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED)).thenReturn(false);
+        AuthModeService authMode = new AuthModeService(config);
+        Mockito.when(graphSpaceService.listAnonymous(client))
+               .thenReturn(java.util.Collections.singletonList("public"));
+        Mockito.when(graphSpaceService.getAnonymous(client, "public"))
+               .thenReturn(java.util.Collections.singletonMap("name", "public"));
+        Mockito.when(graphSpaceService.isAuthForAnonymous(client, "public"))
+               .thenReturn(false);
+        controller.config = config;
+        ReflectionTestUtils.setField(controller, "authMode", authMode);
+        ReflectionTestUtils.setField(controller, "graphSpaceService",
+                                     graphSpaceService);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> names = (Map<String, Object>) controller.list();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> detail =
+                (Map<String, Object>) controller.get("public");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> auth =
+                (Map<String, Object>) controller.isAuth("public");
+
+        Assert.assertEquals(java.util.Collections.singletonList("public"),
+                            names.get("graphspaces"));
+        Assert.assertEquals("public", detail.get("name"));
+        Assert.assertEquals(false, auth.get("auth"));
+        Mockito.verify(graphSpaceService, Mockito.never()).listAll(client);
+        Mockito.verify(graphSpaceService, Mockito.never())
+               .isAuth(client, "public");
+        Mockito.verify(graphSpaceService, Mockito.never())
+               .getWithoutAdmins(client, "public");
+        Mockito.verify(graphSpaceService, Mockito.never())
+               .evCount(client, "public");
     }
 
     @Test

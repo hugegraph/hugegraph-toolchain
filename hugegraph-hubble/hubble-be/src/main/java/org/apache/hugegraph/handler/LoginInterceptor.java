@@ -65,12 +65,32 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
     }
 
     private static boolean isAnonymousAuthManagement(String uri) {
-        if (uri.contains("/graphspaces/") && uri.contains("/auth/")) {
-            return true;
-        }
-        if (!uri.contains("/auth/")) {
+        int apiIndex = uri.indexOf(Constant.API_VERSION);
+        if (apiIndex < 0) {
             return false;
         }
-        return !uri.endsWith("/auth/context") && !uri.endsWith("/auth/status") && !uri.endsWith("/auth/logout");
+        String apiPath = uri.substring(apiIndex);
+        String globalAuth = Constant.API_VERSION + "auth";
+        if (apiPath.equals(globalAuth + "/context") ||
+            apiPath.equals(globalAuth + "/status") ||
+            apiPath.equals(globalAuth + "/logout")) {
+            return false;
+        }
+        if (apiPath.equals(globalAuth) ||
+            apiPath.startsWith(globalAuth + "/")) {
+            return true;
+        }
+
+        String graphSpaces = Constant.API_VERSION + "graphspaces/";
+        if (!apiPath.startsWith(graphSpaces)) {
+            return false;
+        }
+        int graphSpaceEnd = apiPath.indexOf('/', graphSpaces.length());
+        if (graphSpaceEnd < 0) {
+            return false;
+        }
+        String scopedAuth = apiPath.substring(0, graphSpaceEnd) + "/auth";
+        return apiPath.equals(scopedAuth) ||
+               apiPath.startsWith(scopedAuth + "/");
     }
 }

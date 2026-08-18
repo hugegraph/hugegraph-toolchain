@@ -19,13 +19,16 @@
 package org.apache.hugegraph.service.space;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.hugegraph.api.task.TasksWithPage;
 // TODO fix import
 //import org.apache.hugegraph.client.api.task.TasksWithPage;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.GraphSpaceEntity;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.exception.InternalException;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.structure.Task;
@@ -38,6 +41,7 @@ import org.apache.hugegraph.util.Log;
 import org.apache.hugegraph.util.PageUtil;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -50,6 +54,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -116,39 +121,63 @@ public class GraphSpaceService {
     public IPage<Map<String, Object>> queryPage(HugeClient client, String query,
                                                 String createTime, int pageNo,
                                                 int pageSize) {
-        List<Map<String, Object>> results =
-                queryAllGs(client, query, createTime);
-        return PageUtil.page(results, pageNo, pageSize);
+        return pageAndMap(queryAllGsMetadata(client, query, createTime),
+                          pageNo, pageSize,
+                          info -> graphSpaceView(client, info));
     }
 
     public List<Map<String, Object>> queryAllGs(HugeClient client, String query,
                                                 String createTime) {
-        List<Map<String, Object>> results =
-                client.graphSpace().listProfile(query).stream()
-                      .filter((s) -> s.get("create_time").toString()
-                                      .compareTo(createTime) > 0)
-                      .collect(Collectors.toList());
-        // 将DEFAULT和neizhianli的图空间排在前面, 其他图空间按字母序排序
-        Collections.sort(results, (a, b) ->
-                new BuiltInFirst().compare(a.get("name").toString(),
-                                           b.get("name").toString()));
-        for (Map<String, Object> info : results) {
-            removeSensitiveFields(info);
-            String name = info.get("name").toString();
-            info.put("graphspace_admin",
-                     userService.listGraphSpaceAdmin(client, name));
-            Map<String, Object> statisticTotal = evCount(client, name);
-            info.put("statistic", statisticTotal);
-        }
+        return queryAllGsMetadata(client, query, createTime).stream()
+                .map(info -> graphSpaceView(client, info))
+                .collect(Collectors.toList());
+    }
+
+    private List<Map<String, Object>> queryAllGsMetadata(
+            HugeClient client, String query, String createTime) {
+        List<Map<String, Object>> results = client.graphSpace()
+                .listProfile(query).stream()
+                .filter(info -> info.get("create_time").toString()
+                                    .compareTo(createTime) > 0)
+                .collect(Collectors.toList());
+        Collections.sort(results, (a, b) -> new BuiltInFirst().compare(
+                a.get("name").toString(), b.get("name").toString()));
         return results;
+    }
+
+    private Map<String, Object> graphSpaceView(
+            HugeClient client, Map<String, Object> source) {
+        Map<String, Object> info = new HashMap<>(source);
+        removeSensitiveFields(info);
+        String name = info.get("name").toString();
+        info.put("graphspace_admin",
+                 userService.listGraphSpaceAdmin(client, name));
+        info.put("statistic", evCount(client, name));
+        return info;
     }
 
     public List<Map<String, Object>> queryAccessibleGs(HugeClient client,
                                                        String query,
                                                        String createTime) {
+        return queryAccessibleSpaces(client, query, createTime).stream()
+                .map(space -> accessibleView(client, space))
+                .collect(Collectors.toList());
+    }
+
+    public IPage<Map<String, Object>> queryAccessibleGsPage(
+            HugeClient client, String query, String createTime,
+            int pageNo, int pageSize) {
+        return pageAndMap(queryAccessibleSpaces(client, query, createTime),
+                          pageNo, pageSize,
+                          space -> accessibleView(client, space));
+    }
+
+    private List<GraphSpace> queryAccessibleSpaces(HugeClient client,
+                                                   String query,
+                                                   String createTime) {
         String prefix = query == null ? "" : query;
         String after = createTime == null ? "" : createTime;
-        List<Map<String, Object>> results = client.graphSpace()
+        List<GraphSpace> results = client.graphSpace()
                 .listGraphSpace().stream()
                 .map(client.graphSpace()::getGraphSpace)
                 .filter(space -> space != null &&
@@ -160,37 +189,93 @@ public class GraphSpaceService {
                 .filter(space -> !space.isAuth() ||
                                  client.auth().isSpaceAdmin(space.getName()) ||
                                  hasCurrentUserAccess(client, space.getName()))
-                .map(space -> {
-                    GraphSpaceEntity entity =
-                            GraphSpaceEntity.fromGraphSpace(space);
-                    entity.setStatistic(evCount(client, space.getName()));
-                    Map<String, Object> info = toView(entity);
-                    info.put("authed", true);
-                    info.put("default", false);
-                    return info;
-                })
                 .collect(Collectors.toList());
-        Collections.sort(results, (a, b) ->
-                new BuiltInFirst().compare(a.get("name").toString(),
-                                           b.get("name").toString()));
+        Collections.sort(results, (a, b) -> new BuiltInFirst().compare(
+                a.getName(), b.getName()));
         return results;
+    }
+
+    private Map<String, Object> accessibleView(HugeClient client,
+                                               GraphSpace space) {
+        GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(space);
+        entity.setStatistic(evCount(client, space.getName()));
+        Map<String, Object> info = toView(entity);
+        info.put("authed", true);
+        info.put("default", false);
+        return info;
     }
 
     private static boolean hasCurrentUserAccess(HugeClient client,
                                                 String graphSpace) {
+        if (!client.supportsDefaultRole()) {
+            return client.auth().isSpaceMember(graphSpace);
+        }
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        return client.supportsDefaultRole() &&
-               client.auth().checkDefaultRole(graphSpace, "observer");
+        return client.auth().checkDefaultRole(graphSpace, "observer");
     }
 
     public List<Map<String, Object>> queryAnonymousGs(HugeClient client,
                                                       String query,
                                                       String createTime) {
+        return queryAnonymousSpaces(client, query, createTime).stream()
+                .map(space -> anonymousView(client, space))
+                .collect(Collectors.toList());
+    }
+
+    public List<String> listAnonymous(HugeClient client) {
+        return queryAnonymousSpaces(client, "", "").stream()
+                .map(GraphSpace::getName)
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getAnonymous(HugeClient client,
+                                            String graphSpace) {
+        return anonymousView(client, publicSpace(client, graphSpace));
+    }
+
+    public boolean isAuthForAnonymous(HugeClient client, String graphSpace) {
+        return publicSpace(client, graphSpace).isAuth();
+    }
+
+    public IPage<Map<String, Object>> queryAnonymousGsPage(
+            HugeClient client, String query, String createTime,
+            int pageNo, int pageSize) {
+        List<GraphSpace> spaces =
+                queryAnonymousSpaces(client, query, createTime);
+        return pageAndMap(spaces, pageNo, pageSize,
+                          space -> anonymousView(client, space));
+    }
+
+    static <S, T> IPage<T> pageAndMap(
+            List<S> sourceRecords, int pageNo, int pageSize,
+            Function<S, T> mapper) {
+        int boundedSize = PageUtil.boundedSize(pageSize);
+        if (pageSize == -1 && sourceRecords.size() > boundedSize) {
+            throw new IllegalArgumentException(
+                      "GraphSpace list exceeds the maximum all-record limit of " +
+                      boundedSize);
+        }
+        IPage<S> source = PageUtil.page(sourceRecords, pageNo, pageSize);
+        List<T> records = source.getRecords().stream()
+                .map(mapper)
+                .collect(Collectors.toList());
+        Page<T> result =
+                new Page<>(source.getCurrent(), source.getSize(),
+                           sourceRecords.size(), true);
+        result.setRecords(records);
+        result.setOrders(Collections.emptyList());
+        result.setPages(source.getPages());
+        return result;
+    }
+
+    private List<GraphSpace> queryAnonymousSpaces(HugeClient client,
+                                                  String query,
+                                                  String createTime) {
         String prefix = query == null ? "" : query;
         String after = createTime == null ? "" : createTime;
-        List<Map<String, Object>> results = client.graphSpace()
+        List<GraphSpace> results = client.graphSpace()
                 .listGraphSpace().stream()
                 .map(client.graphSpace()::getGraphSpace)
                 .filter(space -> space != null &&
@@ -198,20 +283,44 @@ public class GraphSpaceService {
                                   space.getNickname() != null &&
                                   space.getNickname().contains(prefix)))
                 .filter(space -> space.getCreateTime() == null || space.getCreateTime().compareTo(after) > 0)
-                .map(space -> {
-                    GraphSpaceEntity entity =
-                            GraphSpaceEntity.fromGraphSpace(space);
-                    entity.setStatistic(evCount(client, space.getName()));
-                    Map<String, Object> info = toView(entity);
-                    info.put("authed", true);
-                    info.put("default", false);
-                    return info;
-                })
+                .filter(space -> !space.isAuth())
                 .collect(Collectors.toList());
-        Collections.sort(results, (a, b) ->
-                new BuiltInFirst().compare(a.get("name").toString(),
-                                           b.get("name").toString()));
+        Collections.sort(results, (a, b) -> new BuiltInFirst().compare(
+                a.getName(), b.getName()));
         return results;
+    }
+
+    private Map<String, Object> anonymousView(HugeClient client,
+                                              GraphSpace space) {
+        GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(space);
+        entity.setStatistic(evCount(client, space.getName()));
+        Map<String, Object> info = toView(entity);
+        info.put("authed", true);
+        info.put("default", false);
+        return info;
+    }
+
+    private static GraphSpace publicSpace(HugeClient client,
+                                          String graphSpace) {
+        GraphSpace space;
+        try {
+            space = client.graphSpace().getGraphSpace(graphSpace);
+        } catch (ServerException e) {
+            if (e.status() == 400 || e.status() == 401 ||
+                e.status() == 403 || e.status() == 404) {
+                throw unavailableGraphSpace();
+            }
+            throw e;
+        }
+        if (space == null || space.isAuth()) {
+            throw unavailableGraphSpace();
+        }
+        return space;
+    }
+
+    private static ExternalException unavailableGraphSpace() {
+        return new ExternalException(HttpStatus.NOT_FOUND.value(),
+                                     "GraphSpace is unavailable");
     }
 
     public Map<String, Object> toView(GraphSpaceEntity entity) {
