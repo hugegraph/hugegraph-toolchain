@@ -1343,6 +1343,7 @@
     "reason_refresh_failed": "Refresh failed",
     "reason_malformed_response": "Malformed response",
     "reason_unsupported_version": "Unsupported service version",
+    "reason_unsupported_version_help": "Upgrade HugeGraph to a version that provides this metric.",
     "reason_deployment_mode_unsupported": "Unsupported by the current deployment mode",
     "metric_labels": {
       "basic": "Memory & process",

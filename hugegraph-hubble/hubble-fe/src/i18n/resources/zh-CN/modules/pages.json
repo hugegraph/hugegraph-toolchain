@@ -1343,6 +1343,7 @@
     "reason_refresh_failed": "刷新失败",
     "reason_malformed_response": "响应格式异常",
     "reason_unsupported_version": "当前服务版本不支持",
+    "reason_unsupported_version_help": "请升级 HugeGraph 到提供该指标的版本。",
     "reason_deployment_mode_unsupported": "当前部署模式不支持",
     "metric_labels": {
       "basic": "内存与进程",
