@@ -573,11 +573,15 @@ public class UserService extends AuthService {
         if (isPdEnabled()) {
             user.nickname(userEntity.getNickname());
         }
+        if (permissionPresets && permissionMutation) {
+            this.updateModernPermissionAccount(hugeClient, user, userEntity);
+            return;
+        }
         if (!permissionPresets) {
             updateAdminSpace(hugeClient, userEntity.getName(),
                              userEntity.getAdminSpaces());
         }
-        if (!permissionPresets || permissionMutation) {
+        if (!permissionPresets) {
             boolean currentSuperAdmin =
                     isSuperAdmin(hugeClient, user.id().toString());
             if (currentSuperAdmin && !userEntity.isSuperadmin()) {
@@ -589,11 +593,58 @@ public class UserService extends AuthService {
         }
 
         hugeClient.auth().updateUser(user);
-        if (permissionPresets && permissionMutation) {
+    }
+
+    private void updateModernPermissionAccount(HugeClient client, User user,
+                                               UserEntity userEntity) {
+        String userId = user.id().toString();
+        User previous = client.auth().getUser(userId);
+        E.checkNotNull(previous, "User");
+        boolean previousSuperAdmin = isSuperAdmin(client, userId);
+        try {
+            if (previousSuperAdmin && !userEntity.isSuperadmin()) {
+                client.auth().delSuperAdmin(userId);
+            }
+            if (!previousSuperAdmin && userEntity.isSuperadmin()) {
+                client.auth().addSuperAdmin(userId);
+            }
+            client.auth().updateUser(user);
             this.graphSpaceUserService.applyPermissionPresets(
-                    hugeClient, userEntity.getName(),
+                    client, userEntity.getName(),
                     userEntity.getGraphspacePermissions(),
                     userEntity.getPermissionPreset());
+        } catch (RuntimeException error) {
+            this.restoreAccountProfile(client, previous, error);
+            this.restoreSuperAdmin(client, userId, previousSuperAdmin, error);
+            throw error;
+        }
+    }
+
+    private void restoreAccountProfile(HugeClient client, User previous,
+                                       RuntimeException failure) {
+        try {
+            client.auth().updateUser(previous);
+        } catch (RuntimeException rollbackError) {
+            failure.addSuppressed(rollbackError);
+            log.warn("Failed to restore profile for account '{}'",
+                     previous.id(), rollbackError);
+        }
+    }
+
+    private void restoreSuperAdmin(HugeClient client, String userId,
+                                   boolean expected,
+                                   RuntimeException failure) {
+        try {
+            boolean current = isSuperAdmin(client, userId);
+            if (expected && !current) {
+                client.auth().addSuperAdmin(userId);
+            } else if (!expected && current) {
+                client.auth().delSuperAdmin(userId);
+            }
+        } catch (RuntimeException rollbackError) {
+            failure.addSuppressed(rollbackError);
+            log.warn("Failed to restore super administrator state for '{}'",
+                     userId, rollbackError);
         }
     }
 

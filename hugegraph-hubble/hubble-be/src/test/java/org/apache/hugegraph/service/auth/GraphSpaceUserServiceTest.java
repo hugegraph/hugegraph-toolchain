@@ -280,6 +280,55 @@ public class GraphSpaceUserServiceTest {
     }
 
     @Test
+    public void testReconciliationRestoresEarlierGraphSpaces() {
+        User user = user("alice", "alice");
+        Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Arrays.asList("first", "second"));
+        Mockito.when(this.auth.listSpaceMember(Mockito.anyString()))
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.belongService.list(
+                             Mockito.eq(this.client), Mockito.anyString(),
+                             Mockito.isNull(), Mockito.eq("alice")))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "first", "alice", "analyst"))
+               .thenReturn(false);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "first", "alice", "observer"))
+               .thenReturn(true, false);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "second", "alice", "analyst"))
+               .thenReturn(false);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                             "second", "alice", "observer"))
+               .thenReturn(false);
+        Mockito.when(this.auth.listSpaceAdmin(Mockito.anyString()))
+               .thenReturn(Collections.emptyList());
+        GraphSpaceUserService service = Mockito.spy(this.service);
+        Mockito.doNothing().when(service)
+               .applySpacePreset(this.client, "first", "alice",
+                                 "GS_READ_ONLY");
+        RuntimeException failure = new RuntimeException("second failed");
+        Mockito.doThrow(failure).when(service)
+               .applySpacePreset(this.client, "second", "alice",
+                                 "GS_READ_ONLY");
+
+        Throwable error = Assert.assertThrows(
+                RuntimeException.class,
+                () -> service.applyPermissionPresets(
+                        this.client, "alice",
+                        Arrays.asList(
+                                permission("first", "GS_READ_ONLY"),
+                                permission("second", "GS_READ_ONLY")),
+                        "GS_READ_ONLY"));
+
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.graphSpace)
+               .setDefaultRole("first", "alice", "observer");
+    }
+
+    @Test
     public void testApplyAdminPresetAddsManagementAndWriteAccess() {
         User user = user("alice", "alice");
         Mockito.when(this.auth.getUser("alice")).thenReturn(user);

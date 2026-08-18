@@ -206,16 +206,35 @@ public class GraphSpaceUserService extends AuthService {
                                           desiredPreset));
             return;
         }
-        for (String graphSpace : client.graphSpace().listGraphSpace()) {
-            String desiredPreset = desired.get(graphSpace);
-            if (desiredPreset == null) {
-                this.unauthUser(client, graphSpace,
-                                account.id().toString());
-            } else {
-                this.applySpacePreset(client, graphSpace,
-                                      account.id().toString(),
-                                      desiredPreset);
+        List<String> graphSpaces = client.graphSpace().listGraphSpace();
+        Map<String, SpacePresetState> previous =
+                new java.util.LinkedHashMap<>();
+        String userId = account.id().toString();
+        String accountName = account.name();
+        for (String graphSpace : graphSpaces) {
+            boolean member = client.auth().listSpaceMember(graphSpace)
+                                   .contains(userId);
+            previous.put(graphSpace, this.capturePresetState(
+                    client, graphSpace, userId, accountName, member));
+        }
+        try {
+            for (String graphSpace : graphSpaces) {
+                String desiredPreset = desired.get(graphSpace);
+                if (desiredPreset == null) {
+                    this.unauthUser(client, graphSpace, userId);
+                } else {
+                    this.applySpacePreset(client, graphSpace, userId,
+                                          desiredPreset);
+                }
             }
+        } catch (RuntimeException error) {
+            for (int i = graphSpaces.size() - 1; i >= 0; i--) {
+                String graphSpace = graphSpaces.get(i);
+                this.restorePresetState(client, graphSpace, userId,
+                                        accountName, previous.get(graphSpace),
+                                        error);
+            }
+            throw error;
         }
     }
 

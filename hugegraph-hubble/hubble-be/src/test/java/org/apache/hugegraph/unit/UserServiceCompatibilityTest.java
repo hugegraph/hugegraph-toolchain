@@ -342,6 +342,7 @@ public class UserServiceCompatibilityTest {
     public void testModernUserUpdateUsesPresetAsPermissionSource() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.auth.getUser("user")).thenReturn(user("user"));
         Map<String, String> permission = new HashMap<>();
         permission.put("graphspace", "NEW");
         permission.put("permission_preset", "GS_ADMIN");
@@ -366,6 +367,46 @@ public class UserServiceCompatibilityTest {
                .addSpaceAdmin(Mockito.anyString(), Mockito.anyString());
         Mockito.verify(this.auth, Mockito.never())
                .addSuperAdmin(Mockito.anyString());
+    }
+
+    @Test
+    public void testModernUserUpdateRollsBackProfileAndSuperAdmin() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        User previous = user("user");
+        previous.description("old");
+        Mockito.when(this.auth.getUser("user")).thenReturn(previous);
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(Collections.singletonList("user"))
+               .thenReturn(Collections.emptyList());
+        UserEntity account = UserEntity.builder()
+                                       .id("user")
+                                       .name("user")
+                                       .description("new")
+                                       .build();
+        account.setPermissionPreset("GS_READ_ONLY");
+        account.setGraphspacePermissions(Collections.singletonList(
+                permission("team", "GS_READ_ONLY")));
+        RuntimeException failure = new RuntimeException("preset failed");
+        Mockito.doThrow(failure).when(this.graphSpaceUsers)
+               .applyPermissionPresets(
+                       this.client, "user",
+                       account.getGraphspacePermissions(), "GS_READ_ONLY");
+
+        RuntimeException error = null;
+        try {
+            this.service.update(this.client, account);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).delSuperAdmin("user");
+        Mockito.verify(this.auth).addSuperAdmin("user");
+        ArgumentCaptor<User> updates = ArgumentCaptor.forClass(User.class);
+        Mockito.verify(this.auth, Mockito.times(2))
+               .updateUser(updates.capture());
+        Assert.assertSame(previous, updates.getAllValues().get(1));
     }
 
     @Test
