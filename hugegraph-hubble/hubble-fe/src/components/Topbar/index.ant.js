@@ -34,8 +34,17 @@ import {
 import {useAuthContext} from '../../auth/AuthContext';
 import {isAuthEnabled} from '../../utils/config';
 
+const isUnauthorized = error => {
+    return error?.status === 401
+           || error?.data?.status === 401
+           || error?.response?.status === 401
+           || error?.response?.data?.status === 401
+           || error?.message?.includes('status code 401');
+};
+
 const Topbar = () => {
     const userInfo = user.getUser();
+    const userId = userInfo?.id;
     const location = useLocation();
     const {t} = useTranslation();
     const {context: authContext} = useAuthContext();
@@ -51,13 +60,13 @@ const Topbar = () => {
     useEffect(() => {
         let cancelled = false;
 
-        if (isAuthEnabled() && (!userInfo || !userInfo.id)) {
+        if (isAuthEnabled() && !userId) {
             return undefined;
         }
 
         api.auth.status()
             .then(res => {
-                if (!cancelled && res.status === 401) {
+                if (!cancelled && !user.isLogoutTransition() && res.status === 401) {
                     redirectToLogin();
                 }
             })
@@ -68,27 +77,37 @@ const Topbar = () => {
         return () => {
             cancelled = true;
         };
-    }, [redirectToLogin, userInfo]);
+    }, [redirectToLogin, userId]);
 
-    if (isAuthEnabled() && (!userInfo || !userInfo.id)) {
-        redirectToLogin();
-    }
+    useEffect(() => {
+        if (isAuthEnabled() && !userId && !user.isLogoutTransition()) {
+            redirectToLogin();
+        }
+    }, [redirectToLogin, userId]);
 
     const showShortcutHelp = useCallback(() => {
         window.dispatchEvent(new CustomEvent('hubble:shortcut-help'));
     }, []);
 
     const logout = useCallback(() => {
-
-        api.auth.logout().then(res => {
-            if (res.status === 200) {
-                sessionStorage.removeItem('redirect');
-                clearPersistedAlgorithmFormsForUser();
-                user.clearLogin();
-                message.success(t('Topbar.exit.success'));
-                window.location.replace('/login');
-            }
-        });
+        user.beginLogoutTransition();
+        api.auth.logout()
+            .then(res => {
+                if (res.status === 200) {
+                    sessionStorage.removeItem('redirect');
+                    clearPersistedAlgorithmFormsForUser();
+                    user.clearLogin();
+                    message.success(t('Topbar.exit.success'));
+                    window.location.replace('/login');
+                    return;
+                }
+                user.endLogoutTransition();
+            })
+            .catch(error => {
+                if (!isUnauthorized(error)) {
+                    user.endLogoutTransition();
+                }
+            });
     }, [t]);
 
     const userMenu = {
