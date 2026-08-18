@@ -82,6 +82,7 @@ import org.apache.hugegraph.service.auth.AuthContextService;
 import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.hugegraph.structure.auth.Login;
 import org.apache.hugegraph.structure.auth.LoginResult;
 
@@ -231,6 +232,35 @@ public class AuthSecurityTest {
         Assert.assertEquals(0, interceptor.authClients);
         Assert.assertEquals(0, interceptor.unauthClients);
         Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testAnonymousGraphClientRejectsProtectedGraphSpace() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestBaseController controller = new TestBaseController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED)).thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        HugeClient client = Mockito.mock(HugeClient.class);
+        Mockito.when(spaces.requirePublicSpace(client, "protected"))
+               .thenThrow(new ExternalException(HttpStatus.NOT_FOUND.value(),
+                                                "unavailable"));
+        ReflectionTestUtils.setField(controller, "config", config);
+        ReflectionTestUtils.setField(controller, "authMode",
+                                     new AuthModeService(config));
+        ReflectionTestUtils.setField(controller, "graphSpaceAccessService",
+                                     spaces);
+
+        try {
+            controller.requirePublic(client, "protected");
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(HttpStatus.NOT_FOUND.value(), e.status());
+        }
+        Mockito.verify(spaces).requirePublicSpace(client, "protected");
     }
 
     @Test
@@ -867,6 +897,10 @@ public class AuthSecurityTest {
 
         public void clearAuth() {
             this.clearAuthSession();
+        }
+
+        public void requirePublic(HugeClient client, String graphSpace) {
+            this.requireAnonymousPublicGraphSpace(client, graphSpace);
         }
     }
 

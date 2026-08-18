@@ -292,6 +292,33 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testLegacyUserDetailKeepsMembershipWithoutPreset() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        User account = user("alice");
+        account.setId("user-id");
+        Mockito.when(this.auth.getUser("user-id")).thenReturn(account);
+        Mockito.when(this.auth.listUsers())
+               .thenReturn(Collections.singletonList(account));
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Collections.singletonList("SPACE"));
+        Mockito.when(this.auth.listSpaceAdmin("SPACE"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpaceUsers.hasGraphSpaceAccess(
+                             this.client, "SPACE", "alice"))
+               .thenReturn(true);
+
+        UserEntity result = this.service.get(this.client, "user-id");
+
+        Assert.assertEquals(Collections.singletonList("SPACE"),
+                            result.getResSpaces());
+        Assert.assertEquals(Collections.emptyList(),
+                            result.getGraphspacePermissions());
+        Assert.assertEquals("LEGACY_CUSTOM", result.getPermissionPreset());
+        Assert.assertEquals(Collections.emptyList(), result.getAdminSpaces());
+    }
+
+    @Test
     public void testLegacyProfileUpdatePreservesPermissionAssignments() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);

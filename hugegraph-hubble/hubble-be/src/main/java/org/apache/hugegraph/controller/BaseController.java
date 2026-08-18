@@ -28,6 +28,7 @@ import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.auth.AuthContextService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hugegraph.config.HugeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,6 +66,8 @@ public abstract class BaseController {
     protected AuthModeService authMode;
     @Autowired
     protected AuthContextService authContextService;
+    @Autowired
+    protected GraphSpaceService graphSpaceAccessService;
 
     public static final String ORDER_ASC = "asc";
     public static final String ORDER_DESC = "desc";
@@ -146,12 +149,14 @@ public abstract class BaseController {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
             HugeClient client = (HugeClient) request.getAttribute("hugeClient");
+            this.requireAnonymousPublicGraphSpace(client, graphSpace);
             client.assignGraph(graphSpace, graph);
             return client;
         }
         HugeClient client = this.authMode != null && this.authMode.anonymous() ?
                             this.hugeClientPoolService.createUnauthClient(graphSpace, graph) :
                             this.hugeClientPoolService.createAuthClient(graphSpace, graph, this.getToken());
+        this.requireAnonymousPublicGraphSpace(client, graphSpace);
         if (graphSpace != null || graph != null) {
             client.assignGraph(graphSpace, graph);
         }
@@ -160,6 +165,7 @@ public abstract class BaseController {
     }
 
     protected HugeClient requireAccountManager() {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         String level = this.userService.userLevel(client, this.getUser());
         if (!"ADMIN".equals(level)) {
@@ -169,6 +175,7 @@ public abstract class BaseController {
     }
 
     protected HugeClient requireGraphSpaceManager(String graphSpace) {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client) &&
             !this.userService.isAssignSpaceAdmin(client, graphSpace)) {
@@ -181,6 +188,7 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceWrite(String graphSpace) {
         HugeClient client = this.authClient(null, null);
+        this.requireAnonymousPublicGraphSpace(client, graphSpace);
         this.authContextService.requireGraphSpaceWrite(
                 client, this.getUser(), graphSpace);
         client.assignGraph(graphSpace, null);
@@ -189,6 +197,7 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceAuthorizationAdmin(
             String graphSpace) {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client)) {
             throw new ForbiddenException("Permission denied: manage authorization objects");
@@ -198,6 +207,7 @@ public abstract class BaseController {
     }
 
     protected HugeClient requireGraphSpaceAdministrator() {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client)) {
             throw new ForbiddenException(
@@ -294,8 +304,25 @@ public abstract class BaseController {
 
         HugeClient client = hugeClientPoolService.create(url, graphSpace, graph,
                 this.getToken());
-
+        this.requireAnonymousPublicGraphSpace(client, graphSpace);
         return client;
+    }
+
+    private void requireAuthenticatedAuthorization() {
+        if (this.authMode != null && this.authMode.anonymous()) {
+            throw new ForbiddenException(
+                    "Authentication is required for this operation");
+        }
+    }
+
+    protected void requireAnonymousPublicGraphSpace(HugeClient client,
+                                                    String graphSpace) {
+        if (graphSpace != null &&
+            this.authMode != null && this.authMode.anonymous() &&
+            config.get(HubbleOptions.PD_ENABLED)) {
+            this.graphSpaceAccessService.requirePublicSpace(client,
+                                                             graphSpace);
+        }
     }
 
     public String getUrl() {

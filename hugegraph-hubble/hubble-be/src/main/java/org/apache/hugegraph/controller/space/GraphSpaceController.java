@@ -81,10 +81,14 @@ public class GraphSpaceController extends BaseController {
         }
 
         HugeClient client = this.authClient(null, null);
-        List<String> graphSpaces =
-                this.authMode != null && this.authMode.anonymous() ?
-                this.graphSpaceService.listAnonymous(client) :
-                this.graphSpaceService.listAll(client);
+        List<String> graphSpaces;
+        if (this.authMode != null && this.authMode.anonymous()) {
+            graphSpaces = this.graphSpaceService.listAnonymous(client);
+        } else if (this.userService.isSuperAdmin(client)) {
+            graphSpaces = this.graphSpaceService.listAll(client);
+        } else {
+            graphSpaces = this.graphSpaceService.listAccessible(client);
+        }
         return ImmutableMap.of("graphspaces", graphSpaces);
     }
 
@@ -133,10 +137,16 @@ public class GraphSpaceController extends BaseController {
             return ImmutableMap.of("auth", false);
         }
         HugeClient client = this.authClient(null, null);
-        boolean isAuth =
-                this.authMode != null && this.authMode.anonymous() ?
-                this.graphSpaceService.isAuthForAnonymous(client, graphSpace) :
-                this.graphSpaceService.isAuth(client, graphSpace);
+        boolean isAuth;
+        if (this.authMode != null && this.authMode.anonymous()) {
+            isAuth = this.graphSpaceService.isAuthForAnonymous(client,
+                                                               graphSpace);
+        } else if (this.userService.isSuperAdmin(client)) {
+            isAuth = this.graphSpaceService.isAuth(client, graphSpace);
+        } else {
+            isAuth = this.graphSpaceService.isAuthForAccessible(client,
+                                                                graphSpace);
+        }
         return ImmutableMap.of("auth", isAuth);
     }
 
@@ -153,9 +163,12 @@ public class GraphSpaceController extends BaseController {
         if (this.authMode != null && this.authMode.anonymous()) {
             return this.graphSpaceService.getAnonymous(client, graphspace);
         }
-        // Get GraphSpace Info
-        return graphSpaceService.toView(
-                graphSpaceService.getWithAdmins(client, graphspace));
+        GraphSpaceEntity entity = this.userService.isSuperAdmin(client) ?
+                                  graphSpaceService.getWithAdmins(client,
+                                                                  graphspace) :
+                                  graphSpaceService.getAccessibleWithAdmins(
+                                          client, graphspace);
+        return graphSpaceService.toView(entity);
     }
 
     @PostMapping

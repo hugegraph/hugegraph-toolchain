@@ -152,6 +152,9 @@ public class GraphSpaceServiceTest {
                                                       .toList()));
         Assert.assertTrue((Boolean) response.get(0).get("authed"));
         Assert.assertFalse((Boolean) response.get(0).get("default"));
+        Assert.assertEquals(java.util.Arrays.asList(
+                                    "admin", "analyst", "observer", "public"),
+                            this.service.listAccessible(this.client));
         Mockito.verify(auth, Mockito.never())
                .checkDefaultRole(Mockito.anyString(), Mockito.eq("observer"),
                                  Mockito.anyString());
@@ -252,6 +255,34 @@ public class GraphSpaceServiceTest {
         } catch (ExternalException e) {
             Assert.assertEquals(404, e.status());
         }
+        Mockito.verifyZeroInteractions(this.graphsService);
+    }
+
+    @Test
+    public void testAuthenticatedDetailRejectsUnassignedProtectedSpace() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        AuthManager auth = Mockito.mock(AuthManager.class);
+        GraphSpace protectedSpace = graphSpace("protected", true,
+                                               "20260712");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(this.client.auth()).thenReturn(auth);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        Mockito.when(manager.getGraphSpace("protected"))
+               .thenReturn(protectedSpace);
+
+        try {
+            this.service.getAccessibleWithAdmins(this.client, "protected");
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        try {
+            this.service.isAuthForAccessible(this.client, "protected");
+            Assert.fail("Expected protected GraphSpace auth to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(404, e.status());
+        }
+        Mockito.verify(auth, Mockito.times(2)).isSpaceMember("protected");
         Mockito.verifyZeroInteractions(this.graphsService);
     }
 

@@ -186,9 +186,7 @@ public class GraphSpaceService {
                                   space.getNickname().contains(prefix)))
                 .filter(space -> space.getCreateTime() == null ||
                                  space.getCreateTime().compareTo(after) > 0)
-                .filter(space -> !space.isAuth() ||
-                                 client.auth().isSpaceAdmin(space.getName()) ||
-                                 hasCurrentUserAccess(client, space.getName()))
+                .filter(space -> canCurrentUserAccess(client, space))
                 .collect(Collectors.toList());
         Collections.sort(results, (a, b) -> new BuiltInFirst().compare(
                 a.getName(), b.getName()));
@@ -216,6 +214,14 @@ public class GraphSpaceService {
         return client.auth().checkDefaultRole(graphSpace, "observer");
     }
 
+    private static boolean canCurrentUserAccess(HugeClient client,
+                                                GraphSpace graphSpace) {
+        return !graphSpace.isAuth() ||
+               client.auth().isSuperAdmin() ||
+               client.auth().isSpaceAdmin(graphSpace.getName()) ||
+               hasCurrentUserAccess(client, graphSpace.getName());
+    }
+
     public List<Map<String, Object>> queryAnonymousGs(HugeClient client,
                                                       String query,
                                                       String createTime) {
@@ -230,13 +236,19 @@ public class GraphSpaceService {
                 .collect(Collectors.toList());
     }
 
+    public List<String> listAccessible(HugeClient client) {
+        return queryAccessibleSpaces(client, "", "").stream()
+                .map(GraphSpace::getName)
+                .collect(Collectors.toList());
+    }
+
     public Map<String, Object> getAnonymous(HugeClient client,
                                             String graphSpace) {
-        return anonymousView(client, publicSpace(client, graphSpace));
+        return anonymousView(client, requirePublicSpace(client, graphSpace));
     }
 
     public boolean isAuthForAnonymous(HugeClient client, String graphSpace) {
-        return publicSpace(client, graphSpace).isAuth();
+        return requirePublicSpace(client, graphSpace).isAuth();
     }
 
     public IPage<Map<String, Object>> queryAnonymousGsPage(
@@ -300,8 +312,17 @@ public class GraphSpaceService {
         return info;
     }
 
-    private static GraphSpace publicSpace(HugeClient client,
-                                          String graphSpace) {
+    public GraphSpace requirePublicSpace(HugeClient client,
+                                        String graphSpace) {
+        GraphSpace space = graphSpaceOrUnavailable(client, graphSpace);
+        if (space.isAuth()) {
+            throw unavailableGraphSpace();
+        }
+        return space;
+    }
+
+    private static GraphSpace graphSpaceOrUnavailable(HugeClient client,
+                                                      String graphSpace) {
         GraphSpace space;
         try {
             space = client.graphSpace().getGraphSpace(graphSpace);
@@ -312,7 +333,7 @@ public class GraphSpaceService {
             }
             throw e;
         }
-        if (space == null || space.isAuth()) {
+        if (space == null) {
             throw unavailableGraphSpace();
         }
         return space;
@@ -464,6 +485,11 @@ public class GraphSpaceService {
         return space.isAuth();
     }
 
+    public boolean isAuthForAccessible(HugeClient client,
+                                       String graphSpace) {
+        return accessibleSpace(client, graphSpace).isAuth();
+    }
+
     public List<String> listAll(HugeClient client) {
         List<String> result = client.graphSpace().listGraphSpace().stream()
                                     .collect(Collectors.toList());
@@ -488,17 +514,33 @@ public class GraphSpaceService {
             throw new InternalException("graphspace.get.{} Not Exits",
                                         graphspace);
         }
+        return this.withAdmins(authClient, space);
+    }
 
-        GraphSpaceEntity graphSpaceEntity
-                = GraphSpaceEntity.fromGraphSpace(space);
+    public GraphSpaceEntity getAccessibleWithAdmins(HugeClient client,
+                                                    String graphSpace) {
+        return this.withAdmins(client, accessibleSpace(client, graphSpace));
+    }
 
-        if (authClient.auth().isSuperAdmin()) {
-            graphSpaceEntity.graphspaceAdmin =
-                    userService.listGraphSpaceAdmin(authClient, graphspace);
+    private GraphSpaceEntity withAdmins(HugeClient client,
+                                        GraphSpace graphSpace) {
+        GraphSpaceEntity entity = GraphSpaceEntity.fromGraphSpace(graphSpace);
+        if (client.auth().isSuperAdmin()) {
+            String name = graphSpace.getName();
+            entity.graphspaceAdmin =
+                    userService.listGraphSpaceAdmin(client, name);
         }
-        graphSpaceEntity.setStatistic(evCount(authClient, graphspace));
+        entity.setStatistic(evCount(client, graphSpace.getName()));
+        return entity;
+    }
 
-        return graphSpaceEntity;
+    private static GraphSpace accessibleSpace(HugeClient client,
+                                              String graphSpace) {
+        GraphSpace space = graphSpaceOrUnavailable(client, graphSpace);
+        if (!canCurrentUserAccess(client, space)) {
+            throw unavailableGraphSpace();
+        }
+        return space;
     }
 
     public void delete(HugeClient authClient, String graphspace) {
