@@ -396,6 +396,9 @@ public class AuthSecurityTest {
                                             "/api/v1.3/graphspaces/space1");
         request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.PASSWORD_KEY, "secret");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          System.currentTimeMillis() + 10000L);
 
         Assert.assertTrue(interceptor.preHandle(request,
                                                 new MockHttpServletResponse(),
@@ -745,6 +748,9 @@ public class AuthSecurityTest {
 
         Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
         Assert.assertNull(request.getSession().getAttribute(Constant.USERNAME_KEY));
+        Assert.assertNull(request.getSession().getAttribute(Constant.PASSWORD_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_EXPIRE_AT_KEY));
     }
 
     @Test
@@ -814,9 +820,11 @@ public class AuthSecurityTest {
                             Constant.USERNAME_KEY));
         Assert.assertEquals("server-token", request.getSession().getAttribute(
                             Constant.TOKEN_KEY));
-        Assert.assertNull(request.getSession().getAttribute("auth_password"));
-        Assert.assertNull(request.getSession().getAttribute(
-                          "auth_password_expire_at"));
+        Assert.assertEquals("pa", request.getSession().getAttribute(
+                            Constant.PASSWORD_KEY));
+        Assert.assertTrue(((Number) request.getSession().getAttribute(
+                           Constant.PASSWORD_EXPIRE_AT_KEY)).longValue() >
+                          System.currentTimeMillis());
     }
 
     @Test

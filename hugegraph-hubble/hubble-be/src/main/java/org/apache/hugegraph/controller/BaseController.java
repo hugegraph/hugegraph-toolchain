@@ -143,6 +143,8 @@ public abstract class BaseController {
     protected void clearAuthSession() {
         this.delSession(Constant.TOKEN_KEY);
         this.delSession(Constant.USERNAME_KEY);
+        this.delSession(Constant.PASSWORD_KEY);
+        this.delSession(Constant.PASSWORD_EXPIRE_AT_KEY);
     }
 
     protected HugeClient authClient(String graphSpace, String graph) {
