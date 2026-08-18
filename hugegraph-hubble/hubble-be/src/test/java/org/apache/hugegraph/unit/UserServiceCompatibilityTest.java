@@ -30,6 +30,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.AuthManager;
 import org.apache.hugegraph.driver.GraphSpaceManager;
@@ -130,6 +131,8 @@ public class UserServiceCompatibilityTest {
     @Test
     public void testStandalonePersonalUpdateOmitsPdOnlyNickname() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        Mockito.when(this.client.supportsPersonalProfileUpdate())
+               .thenReturn(true);
         Mockito.when(this.client.findCurrentUser("user")).thenReturn(user("user"));
 
         this.service.updatePersonal(this.client, "user", "display-name",
@@ -139,6 +142,45 @@ public class UserServiceCompatibilityTest {
         Mockito.verify(this.auth).updateUser(request.capture());
         Assert.assertNull(request.getValue().nickname());
         Assert.assertEquals("description", request.getValue().description());
+    }
+
+    @Test
+    public void testLegacyPersonalUpdateFailsBeforeServerWrite() {
+        Mockito.when(this.client.supportsPersonalProfileUpdate())
+               .thenReturn(false);
+
+        ParameterizedException error = null;
+        try {
+            this.service.updatePersonal(this.client, "user", "display-name",
+                                        "description");
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.profile.update-unsupported",
+                            error.getMessage());
+        Mockito.verify(this.client, Mockito.never())
+               .findCurrentUser(Mockito.anyString());
+        Mockito.verify(this.auth, Mockito.never())
+               .updateUser(Mockito.any(User.class));
+    }
+
+    @Test
+    public void testLegacyPasswordUpdateUsesVerifiedIdentity() {
+        User current = user("user");
+        current.setId("user-id");
+        Mockito.when(this.client.findCurrentUser("user"))
+               .thenReturn(current);
+
+        Response response = this.service.updatepwd(
+                this.client, "user", "old-password", "new-password");
+
+        Assert.assertEquals(200, response.getStatus());
+        ArgumentCaptor<User> request = ArgumentCaptor.forClass(User.class);
+        Mockito.verify(this.auth).updateUser(request.capture());
+        Assert.assertEquals("user-id", request.getValue().id());
+        Assert.assertEquals("new-password", request.getValue().password());
     }
 
     @Test
@@ -231,15 +273,14 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
-    public void testLegacyAnalystKeepsGraphSpaceAccess() {
+    public void testLegacySpaceMemberKeepsGraphSpaceAccess() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
         Mockito.when(this.client.findCurrentUser("user"))
                .thenReturn(user("user"));
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(Collections.singletonList("SPACE"));
-        Mockito.when(this.auth.checkDefaultRole("SPACE", "analyst"))
-               .thenReturn(true);
+        Mockito.when(this.auth.isSpaceMember("SPACE")).thenReturn(true);
 
         UserEntity result = this.service.getpersonal(this.client, "user");
 
@@ -247,7 +288,7 @@ public class UserServiceCompatibilityTest {
                             result.getResSpaces());
         Assert.assertEquals("LEGACY_CUSTOM", result.getPermissionPreset());
         Mockito.verify(this.auth, Mockito.never())
-               .checkDefaultRole("SPACE", "observer");
+               .checkDefaultRole(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test

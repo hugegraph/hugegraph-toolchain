@@ -19,6 +19,7 @@ package org.apache.hugegraph.driver;
 
 import java.util.Arrays;
 
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.structure.auth.TokenPayload;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.testutil.Whitebox;
@@ -83,6 +84,70 @@ public class HugeClientCompatibilityTest {
         Mockito.verify(this.auth, Mockito.never()).listUsers();
         Mockito.verify(this.auth, Mockito.never())
                .getUserByName(Mockito.anyString());
+    }
+
+    @Test
+    public void shouldUseVerifiedIdentityWhenLegacySelfReadIsForbidden() {
+        TokenPayload payload = Mockito.mock(TokenPayload.class);
+        ServerException forbidden = new ServerException("forbidden");
+        forbidden.status(403);
+        Whitebox.setInternalState(
+                this.client, "compatibility",
+                ServerCompatibility.Profile.GRAPHSPACE);
+        Mockito.when(payload.userId()).thenReturn("user-id");
+        Mockito.when(payload.username()).thenReturn("alice");
+        Mockito.when(this.auth.verifyToken()).thenReturn(payload);
+        Mockito.when(this.auth.getUser("user-id")).thenThrow(forbidden);
+
+        User user = this.client.findCurrentUser("alice");
+
+        Assert.assertEquals("user-id", user.id());
+        Assert.assertEquals("alice", user.name());
+        Mockito.verify(this.auth, Mockito.never()).listUsers();
+    }
+
+    @Test
+    public void shouldNotHideForbiddenModernSelfRead() {
+        TokenPayload payload = Mockito.mock(TokenPayload.class);
+        ServerException forbidden = new ServerException("forbidden");
+        forbidden.status(403);
+        Whitebox.setInternalState(
+                this.client, "compatibility",
+                ServerCompatibility.Profile.MODERN);
+        Mockito.when(payload.userId()).thenReturn("user-id");
+        Mockito.when(payload.username()).thenReturn("alice");
+        Mockito.when(this.auth.verifyToken()).thenReturn(payload);
+        Mockito.when(this.auth.getUser("user-id")).thenThrow(forbidden);
+
+        try {
+            this.client.findCurrentUser("alice");
+            Assert.fail("Expected modern self-read failure");
+        } catch (ServerException ignored) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void shouldNotUseLegacyFallbackForInvalidOrMissingUser() {
+        TokenPayload payload = Mockito.mock(TokenPayload.class);
+        Whitebox.setInternalState(
+                this.client, "compatibility",
+                ServerCompatibility.Profile.GRAPHSPACE);
+        Mockito.when(payload.userId()).thenReturn("user-id");
+        Mockito.when(payload.username()).thenReturn("alice");
+        Mockito.when(this.auth.verifyToken()).thenReturn(payload);
+
+        for (int status : Arrays.asList(401, 404)) {
+            ServerException failure = new ServerException("failure");
+            failure.status(status);
+            Mockito.doThrow(failure).when(this.auth).getUser("user-id");
+            try {
+                this.client.findCurrentUser("alice");
+                Assert.fail("Expected legacy self-read failure");
+            } catch (ServerException actual) {
+                Assert.assertSame(failure, actual);
+            }
+        }
     }
 
     @Test

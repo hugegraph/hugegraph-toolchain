@@ -491,11 +491,13 @@ public class UserService extends AuthService {
 
     private static boolean hasCurrentUserAccess(HugeClient client,
                                                 String graphSpace) {
+        if (!client.supportsDefaultRole()) {
+            return client.auth().isSpaceMember(graphSpace);
+        }
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        return client.supportsDefaultRole() &&
-               hasCurrentUserObserverRole(client, graphSpace);
+        return hasCurrentUserObserverRole(client, graphSpace);
     }
 
     private static boolean hasCurrentUserObserverRole(HugeClient client,
@@ -608,6 +610,10 @@ public class UserService extends AuthService {
 
     public void updatePersonal(HugeClient hugeClient, String username,
                                String nickname, String description) {
+        if (!hugeClient.supportsPersonalProfileUpdate()) {
+            throw new ParameterizedException(
+                      "auth.profile.update-unsupported");
+        }
         User user = currentUser(hugeClient, username);
         if (isPdEnabled()) {
             user.nickname(nickname);

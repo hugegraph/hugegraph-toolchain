@@ -69,6 +69,8 @@ public class AuthContextService {
     private static final char[] HEX = "0123456789abcdef".toCharArray();
     private static final Set<String> SELF_ACTIONS = set(
             "read", "update", "change_password");
+    private static final Set<String> LEGACY_SELF_ACTIONS = set(
+            "read", "change_password");
     private static final Set<String> CRUD_ACTIONS = set(
             "read", "create", "update", "delete");
     private static final Set<String> MEMBER_ACTIONS = set(
@@ -116,6 +118,8 @@ public class AuthContextService {
 
         boolean permissionPresets = pdEnabled &&
                                     client.supportsDefaultRole();
+        boolean profileUpdate =
+                client.supportsPersonalProfileUpdate();
         List<String> writeGraphSpaces = pdEnabled ?
                                         writeGraphSpaces(user,
                                                          permissionPresets) :
@@ -123,7 +127,8 @@ public class AuthContextService {
         Set<String> capabilities = this.capabilities(pdEnabled, role,
                                                      permissionPresets);
         Map<String, Set<String>> actions = this.actions(pdEnabled, role,
-                                                       permissionPresets);
+                                                       permissionPresets,
+                                                       profileUpdate);
         Map<String, Object> scopes = this.scopes(pdEnabled, role,
                                                  adminGraphSpaces,
                                                  writeGraphSpaces);
@@ -224,12 +229,14 @@ public class AuthContextService {
     }
 
     private Map<String, Set<String>> actions(boolean pdEnabled, String role,
-                                             boolean permissionPresets) {
+                                             boolean permissionPresets,
+                                             boolean profileUpdate) {
         Map<String, Set<String>> actions = new LinkedHashMap<>();
         boolean superAdmin = SUPERADMIN.equals(role);
         boolean spaceManager = pdEnabled && permissionPresets &&
                                (superAdmin || SPACEADMIN.equals(role));
-        actions.put("account", SELF_ACTIONS);
+        actions.put("account", profileUpdate ?
+                               SELF_ACTIONS : LEGACY_SELF_ACTIONS);
         actions.put("accounts", superAdmin ? CRUD_ACTIONS : emptySet());
         actions.put("graphspaces", pdEnabled ?
                    (superAdmin ? CRUD_ACTIONS : set("read")) : emptySet());

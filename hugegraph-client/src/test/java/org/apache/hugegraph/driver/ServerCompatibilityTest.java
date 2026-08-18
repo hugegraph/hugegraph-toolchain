@@ -41,6 +41,12 @@ public class ServerCompatibilityTest {
                           "1.7.0", "0.72.0.0"));
         Assert.assertFalse(ServerCompatibility.supportsDefaultRole(
                            "1.8.0", "0.71.0.0"));
+        Assert.assertFalse(
+                ServerCompatibility.supportsPersonalProfileUpdate(
+                        "1.7.0", "0.71.0.0"));
+        Assert.assertTrue(
+                ServerCompatibility.supportsPersonalProfileUpdate(
+                        "1.8.0", "0.72.0.0"));
         Assert.assertEquals(ServerCompatibility.Profile.GRAPHSPACE,
                             ServerCompatibility.profile("1.7.1",
                                                         "0.71.0.0"));

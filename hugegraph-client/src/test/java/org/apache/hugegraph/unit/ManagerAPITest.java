@@ -146,21 +146,28 @@ public class ManagerAPITest extends BaseUnitTest {
 
         AuthManager auth = new AuthManager(client, "DEFAULT", null);
         Assert.assertTrue(auth.isSpaceAdmin("space_a"));
-        Assert.assertTrue(auth.checkDefaultRole("space_b", "analyst"));
+        Assert.assertTrue(auth.isSpaceMember("space_b"));
+        Assert.assertTrue(auth.checkDefaultRole("space_c", "analyst"));
 
         Assert.assertEquals("graphspaces/space_a/auth/managers/check",
                             path.getAllValues().get(0));
-        Assert.assertEquals("graphspaces/space_b/auth/managers/default",
+        Assert.assertEquals("graphspaces/space_b/auth/managers/check",
                             path.getAllValues().get(1));
+        Assert.assertEquals("graphspaces/space_c/auth/managers/default",
+                            path.getAllValues().get(2));
         Assert.assertEquals(HugePermission.SPACE,
                             params.getAllValues().get(0).get("type"));
+        Assert.assertEquals(HugePermission.SPACE_MEMBER,
+                            params.getAllValues().get(1).get("type"));
         Assert.assertEquals("space_a",
                             params.getAllValues().get(0).get("graphspace"));
         Assert.assertEquals("space_b",
                             params.getAllValues().get(1).get("graphspace"));
+        Assert.assertEquals("space_c",
+                            params.getAllValues().get(2).get("graphspace"));
         Assert.assertEquals("analyst",
-                            params.getAllValues().get(1).get("role"));
-        Assert.assertFalse(params.getAllValues().get(1).containsKey("graph"));
+                            params.getAllValues().get(2).get("role"));
+        Assert.assertFalse(params.getAllValues().get(2).containsKey("graph"));
     }
 
     @Test

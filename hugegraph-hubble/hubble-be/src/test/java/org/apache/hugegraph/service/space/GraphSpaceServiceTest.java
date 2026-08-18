@@ -158,7 +158,7 @@ public class GraphSpaceServiceTest {
     }
 
     @Test
-    public void testLegacyAnalystGraphSpaceRemainsVisible() {
+    public void testLegacyMemberGraphSpaceRemainsVisible() {
         GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
         AuthManager auth = Mockito.mock(AuthManager.class);
         GraphSpace space = graphSpace("legacy", true, "20260712");
@@ -168,8 +168,7 @@ public class GraphSpaceServiceTest {
         Mockito.when(manager.listGraphSpace())
                .thenReturn(java.util.Collections.singletonList("legacy"));
         Mockito.when(manager.getGraphSpace("legacy")).thenReturn(space);
-        Mockito.when(auth.checkDefaultRole("legacy", "analyst"))
-               .thenReturn(true);
+        Mockito.when(auth.isSpaceMember("legacy")).thenReturn(true);
         Mockito.when(this.graphsService.listGraphNames(this.client, "legacy",
                                                        ""))
                .thenReturn(java.util.Collections.emptySet());
@@ -180,7 +179,7 @@ public class GraphSpaceServiceTest {
         Assert.assertEquals(1, response.size());
         Assert.assertEquals("legacy", response.get(0).get("name"));
         Mockito.verify(auth, Mockito.never())
-               .checkDefaultRole("legacy", "observer");
+               .checkDefaultRole(Mockito.anyString(), Mockito.anyString());
     }
 
     @Test
