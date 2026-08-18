@@ -281,9 +281,98 @@ test('loads graphspaces into the visible create account form', async () => {
         status: 200,
         data: {records: [{name: 'analytics'}]},
     }));
+    expect(api.manage.getGraphSpaceList).toHaveBeenCalledWith({
+        page_no: 1,
+        page_size: 500,
+    }, {suppressBusinessErrorToast: true});
     fireEvent.mouseDown(screen.getAllByRole('combobox')[1]);
 
     expect(await screen.findByRole('option', {name: 'analytics'})).toBeInTheDocument();
+});
+
+test('loads every GraphSpace page for permission assignment', async () => {
+    api.manage.getGraphSpaceList
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [{name: 'first'}], total: '2'},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [{name: 'second'}], total: 2},
+        });
+
+    render(<EditLayer {...props} data={{}} op='create' />);
+    await waitFor(() =>
+        expect(api.manage.getGraphSpaceList).toHaveBeenCalledTimes(2)
+    );
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[1]);
+
+    expect(await screen.findByRole('option', {name: 'first'}))
+        .toBeInTheDocument();
+    expect(await screen.findByRole('option', {name: 'second'}))
+        .toBeInTheDocument();
+});
+
+test('continues after a full GraphSpace page without total', async () => {
+    const firstPage = Array.from({length: 500}, (_, index) => ({
+        name: `space-${index}`,
+    }));
+    api.manage.getGraphSpaceList
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: firstPage},
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {records: [{name: 'last'}]},
+        });
+
+    render(<EditLayer {...props} data={{}} op='create' />);
+
+    await waitFor(() =>
+        expect(api.manage.getGraphSpaceList).toHaveBeenCalledTimes(2)
+    );
+});
+
+test.each([null, ''])(
+    'continues after a full GraphSpace page with empty total %p',
+    async total => {
+        const firstPage = Array.from({length: 500}, (_, index) => ({
+            name: `space-${index}`,
+        }));
+        api.manage.getGraphSpaceList
+            .mockResolvedValueOnce({
+                status: 200,
+                data: {records: firstPage, total},
+            })
+            .mockResolvedValueOnce({
+                status: 200,
+                data: {records: [{name: 'last'}]},
+            });
+
+        render(<EditLayer {...props} data={{}} op='create' />);
+
+        await waitFor(() =>
+            expect(api.manage.getGraphSpaceList).toHaveBeenCalledTimes(2)
+        );
+    }
+);
+
+test('accepts exactly 10000 GraphSpaces without a declared total', async () => {
+    api.manage.getGraphSpaceList.mockImplementation(({page_no: pageNo}) => {
+        const records = pageNo <= 20 ?
+                        Array.from({length: 500}, (_, index) => ({
+                            name: `space-${pageNo}-${index}`,
+                        })) :
+                        [];
+        return Promise.resolve({status: 200, data: {records}});
+    });
+
+    render(<EditLayer {...props} data={{}} op='create' />);
+
+    await waitFor(() =>
+        expect(api.manage.getGraphSpaceList).toHaveBeenCalledTimes(21)
+    );
 });
 
 test('requires an explicit password when creating an account', async () => {

@@ -34,7 +34,6 @@ import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
 import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.hugegraph.util.E;
-import org.apache.hugegraph.util.PageUtil;
 import org.apache.hugegraph.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -49,7 +48,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping(Constant.API_VERSION + "graphspaces")
@@ -104,8 +102,11 @@ public class GraphSpaceController extends BaseController {
         }
         if (this.authMode != null && this.authMode.anonymous()) {
             HugeClient client = this.authClient(null, null);
-            List<Map<String, Object>> graphSpaces = this.graphSpaceService.queryAnonymousGs(client, query, createTime);
-            return all ? graphSpaces : PageUtil.page(graphSpaces, pageNo, pageSize);
+            return all ?
+                   this.graphSpaceService.queryAnonymousGs(client, query,
+                                                           createTime) :
+                   this.graphSpaceService.queryAnonymousGsPage(
+                           client, query, createTime, pageNo, pageSize);
         }
         if (all) {
             HugeClient client = this.authClient(null, null);
@@ -119,8 +120,8 @@ public class GraphSpaceController extends BaseController {
         return this.userService.isSuperAdmin(client) ?
                graphSpaceService.queryPage(client, query, createTime,
                                            pageNo, pageSize) :
-               PageUtil.page(graphSpaceService.queryAccessibleGs(
-                       client, query, createTime), pageNo, pageSize);
+               graphSpaceService.queryAccessibleGsPage(
+                       client, query, createTime, pageNo, pageSize);
     }
 
     @GetMapping("{graphspace}/auth")

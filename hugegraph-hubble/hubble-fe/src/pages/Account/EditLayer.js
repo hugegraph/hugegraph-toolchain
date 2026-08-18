@@ -34,6 +34,8 @@ import {
 } from './permissionPresets';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
+const GRAPHSPACE_PAGE_SIZE = 500;
+const GRAPHSPACE_MAX_RECORDS = 10_000;
 const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
 const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
 const permissionPresetChanged = (prev, next) => prev.permission_preset !== next.permission_preset;
@@ -43,6 +45,48 @@ const toProfilePayload = values => ({
     user_password: values.user_password,
     user_description: values.user_description,
 });
+
+const loadAllGraphspaces = async () => {
+    const records = [];
+    let pageNo = 1;
+    let total;
+    while (true) {
+        const response = await api.manage.getGraphSpaceList({
+            page_no: pageNo,
+            page_size: GRAPHSPACE_PAGE_SIZE,
+        }, PAGE_ERROR_CONFIG);
+        if (response.status !== 200) {
+            return response;
+        }
+        const pageRecords = response.data?.records ?? [];
+        if (records.length + pageRecords.length > GRAPHSPACE_MAX_RECORDS) {
+            throw new Error('graphspace_list_exceeds_limit');
+        }
+        records.push(...pageRecords);
+        if (pageRecords.length === 0) {
+            break;
+        }
+        const rawTotal = response.data?.total;
+        const hasTotal = rawTotal !== null && rawTotal !== undefined &&
+                         !(typeof rawTotal === 'string' && rawTotal.trim() === '');
+        const declaredTotal = Number(rawTotal);
+        if (hasTotal && Number.isFinite(declaredTotal) && declaredTotal >= 0) {
+            if (declaredTotal > GRAPHSPACE_MAX_RECORDS) {
+                throw new Error('graphspace_list_exceeds_limit');
+            }
+            total = declaredTotal;
+            if (records.length >= total) {
+                break;
+            }
+        }
+        else if (pageRecords.length < GRAPHSPACE_PAGE_SIZE) {
+            total = records.length;
+            break;
+        }
+        pageNo += 1;
+    }
+    return {status: 200, data: {records, total: total ?? records.length}};
+};
 
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel
@@ -189,7 +233,7 @@ const EditLayer = ({
         detailRequest.current = request;
         setGraphspaceList([]);
         if (op !== 'detail' && (permissionPresetsSupported || op === 'auth')) {
-            api.manage.getGraphSpaceList(undefined, PAGE_ERROR_CONFIG).then(res => {
+            loadAllGraphspaces().then(res => {
                 if (detailRequest.current !== request) {
                     return;
                 }
