@@ -270,6 +270,107 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testModernUserUpdateReconcilesAdminSpaces() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Arrays.asList("OLD", "NEW"));
+        Mockito.when(this.auth.listSpaceAdmin("OLD"))
+               .thenReturn(Collections.singletonList("user"));
+        Mockito.when(this.auth.listSpaceAdmin("NEW"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.client.findUserByName("user"))
+               .thenReturn(user("user"));
+        UserEntity account = UserEntity.builder()
+                                       .id("user")
+                                       .name("user")
+                                       .adminSpaces(
+                                               Collections.singletonList("NEW"))
+                                       .build();
+        account.setSuperadmin(true);
+
+        this.service.update(this.client, account);
+
+        Mockito.verify(this.graphSpaceUsers).applySpacePreset(
+                this.client, "NEW", "user", "GS_ADMIN");
+        Mockito.verify(this.graphSpaceUsers).removeSpacePreset(
+                this.client, "OLD", "user");
+        Mockito.verify(this.auth).addSuperAdmin("user");
+    }
+
+    @Test
+    public void testLegacyUserUpdateReconcilesAdminSpaces() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Arrays.asList("OLD", "NEW"));
+        Mockito.when(this.auth.listSpaceAdmin("OLD"))
+               .thenReturn(Collections.singletonList("user"));
+        Mockito.when(this.auth.listSpaceAdmin("NEW"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.client.findUserByName("user"))
+               .thenReturn(user("user"));
+        Mockito.when(this.auth.listSuperAdmin())
+               .thenReturn(Collections.singletonList("user"));
+        UserEntity account = UserEntity.builder()
+                                       .id("user")
+                                       .name("user")
+                                       .adminSpaces(
+                                               Collections.singletonList("NEW"))
+                                       .build();
+
+        this.service.update(this.client, account);
+
+        Mockito.verify(this.auth).addSpaceAdmin("user", "NEW");
+        Mockito.verify(this.auth).delSpaceAdmin("user", "OLD");
+        Mockito.verify(this.auth).delSuperAdmin("user");
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .applySpacePreset(Mockito.any(), Mockito.anyString(),
+                                 Mockito.anyString(), Mockito.anyString());
+    }
+
+    @Test
+    public void testPdUserListReportsPresetAndCustomRoleState() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.auth.listUsers())
+               .thenReturn(Collections.singletonList(user("alice")));
+        Mockito.when(this.graphSpace.listGraphSpace())
+               .thenReturn(Arrays.asList("ADMIN", "WRITE", "READ", "CUSTOM"));
+        Mockito.when(this.auth.listSpaceAdmin("ADMIN"))
+               .thenReturn(Collections.singletonList("alice"));
+        Mockito.when(this.auth.listSpaceAdmin("WRITE"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin("READ"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin("CUSTOM"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                "WRITE", "alice", "analyst")).thenReturn(true);
+        Mockito.when(this.graphSpace.checkDefaultRole(
+                "READ", "alice", "observer")).thenReturn(true);
+        Mockito.when(this.graphSpaceUsers.hasCustomRoles(
+                this.client, "CUSTOM", "alice")).thenReturn(true);
+
+        UserEntity account = this.service.listUsers(this.client).get(0);
+
+        Assert.assertEquals(Integer.valueOf(1), account.getSpacenum());
+        Assert.assertEquals(Collections.singletonList("ADMIN"),
+                            account.getAdminSpaces());
+        Assert.assertEquals(3, account.getGraphspacePermissions().size());
+        Assert.assertEquals("GS_ADMIN",
+                            account.getGraphspacePermissions().get(0)
+                                   .get("permission_preset"));
+        Assert.assertEquals("GS_READ_WRITE",
+                            account.getGraphspacePermissions().get(1)
+                                   .get("permission_preset"));
+        Assert.assertEquals("GS_READ_ONLY",
+                            account.getGraphspacePermissions().get(2)
+                                   .get("permission_preset"));
+        Assert.assertEquals("LEGACY_CUSTOM", account.getPermissionPreset());
+    }
+
+    @Test
     public void testLegacyUserCreationSkipsPermissionPresetApis() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
