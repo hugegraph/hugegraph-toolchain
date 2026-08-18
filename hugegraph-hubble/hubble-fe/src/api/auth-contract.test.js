@@ -111,7 +111,7 @@ describe('auth API contract', () => {
             '/graphspaces/A%2FB/auth/users/spaceadmin/u%2F1'],
         ['removeSpaceAdmin', ['A/B', 'u/1'], 'delete',
             '/graphspaces/A%2FB/auth/users/spaceadmin/u%2F1'],
-        ['setSpacePreset', ['A/B', 'u/1', 'GS_READ_ONLY'], 'put-preset',
+        ['setSpacePreset', ['A/B', 'u/1', 'alice', 'GS_READ_ONLY'], 'put-preset',
             '/graphspaces/A%2FB/auth/users/u%2F1/preset'],
         ['addSpaceMember', ['A/B', {user_id: 'u'}], 'post',
             '/graphspaces/A%2FB/auth/users'],
@@ -166,7 +166,11 @@ describe('auth API contract', () => {
         }
         else if (verb === 'put-preset') {
             expect(mockRequest.put).toHaveBeenCalledWith(
-                route, {permission_preset: args[2]}, config
+                route, {
+                    user_id: args[1],
+                    username: args[2],
+                    permission_preset: args[3],
+                }, config
             );
         }
         else {

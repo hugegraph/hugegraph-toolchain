@@ -288,6 +288,7 @@ const SpaceAccess = () => {
     const openMember = useCallback(row => {
         memberForm.setFieldsValue({
             user_id: row?.user_id,
+            username: row?.user_name,
             permission_preset: rolesPreset(row?.roles),
         });
         setMemberDialog(row ?? {});
@@ -298,7 +299,11 @@ const SpaceAccess = () => {
     }, [memberForm]);
     const submitMember = useCallback(values => {
         runMutation(
-            () => api.auth.setSpacePreset(graphSpace, values.user_id, values.permission_preset,
+            () => api.auth.setSpacePreset(
+                graphSpace,
+                values.user_id ?? values.username,
+                values.username,
+                values.permission_preset,
                 PAGE_ERROR_CONFIG
             ),
             closeMember
@@ -432,13 +437,28 @@ const SpaceAccess = () => {
                 destroyOnClose
             >
                 <Form form={memberForm} layout="vertical" onFinish={submitMember}>
-                    <Form.Item
-                        name="user_id"
-                        label={t('account.space_access.member.id')}
-                        rules={[{required: true}]}
-                    >
-                        <Input disabled={Boolean(memberDialog?.user_id)} />
-                    </Form.Item>
+                    {memberDialog?.user_id ? (
+                        <>
+                            <Form.Item
+                                name="user_id"
+                                label={t('account.space_access.member.id')}
+                                rules={[{required: true}]}
+                            >
+                                <Input disabled />
+                            </Form.Item>
+                            <Form.Item name="username" hidden>
+                                <Input />
+                            </Form.Item>
+                        </>
+                    ) : (
+                        <Form.Item
+                            name="username"
+                            label={t('account.space_access.member.name')}
+                            rules={[{required: true}]}
+                        >
+                            <Input />
+                        </Form.Item>
+                    )}
                     <Form.Item
                         name="permission_preset"
                         label={t('account.space_access.member.roles')}

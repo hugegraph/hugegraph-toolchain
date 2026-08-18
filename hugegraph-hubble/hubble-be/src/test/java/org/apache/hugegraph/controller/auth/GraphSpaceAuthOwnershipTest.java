@@ -504,6 +504,7 @@ public class GraphSpaceAuthOwnershipTest {
         ReflectionTestUtils.setField(service, "belongService", belongs);
 
         service.applySpacePreset(this.client, "SPACE_A", "graph-user",
+                                 "graph-user",
                                  "GS_READ_ONLY");
 
         Mockito.verify(this.auth).addSpaceMember("graph-user", "SPACE_A");
@@ -614,11 +615,12 @@ public class GraphSpaceAuthOwnershipTest {
         mvc.perform(put("/api/v1.3/graphspaces/SPACE/auth/users/" +
                         "new-member/preset")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"permission_preset\":\"GS_READ_WRITE\"}"))
+                    .content("{\"username\":\"new-member\"," +
+                             "\"permission_preset\":\"GS_READ_WRITE\"}"))
            .andExpect(status().isOk());
 
         Mockito.verify(members).applySpacePreset(
-                this.client, "SPACE", "new-member", "GS_READ_WRITE");
+                this.client, "SPACE", null, "new-member", "GS_READ_WRITE");
         Mockito.verify(this.auth, Mockito.never())
                .getUser(Mockito.anyString());
     }
@@ -645,7 +647,8 @@ public class GraphSpaceAuthOwnershipTest {
         mvc.perform(put("/api/v1.3/graphspaces/SPACE/auth/users/" +
                         "global-admin/preset")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"permission_preset\":\"GS_READ_WRITE\"}"))
+                    .content("{\"username\":\"global-admin\"," +
+                             "\"permission_preset\":\"GS_READ_WRITE\"}"))
            .andExpect(status().isForbidden());
 
         Mockito.verifyZeroInteractions(members);

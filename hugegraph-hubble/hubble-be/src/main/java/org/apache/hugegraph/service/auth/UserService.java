@@ -235,33 +235,61 @@ public class UserService extends AuthService {
         }
 
         User newUser = client.auth().createUser(user);
-        if (!permissionPresets && ue.getAdminSpaces() != null) {
-            for (String graphspace : ue.getAdminSpaces()) {
-                client.auth().addSpaceAdmin(ue.getName(), graphspace);
+        List<String> attemptedAdminSpaces = new ArrayList<>();
+        boolean superAdminAttempted = false;
+        try {
+            if (!permissionPresets && ue.getAdminSpaces() != null) {
+                for (String graphspace : ue.getAdminSpaces()) {
+                    attemptedAdminSpaces.add(graphspace);
+                    client.auth().addSpaceAdmin(ue.getName(), graphspace);
+                }
             }
-        }
-        if (permissionPresets) {
-            try {
+            if (permissionPresets) {
                 this.graphSpaceUserService
                     .applyPermissionPresetsForNewAccount(
                         client, ue.getName(),
                         ue.getGraphspacePermissions(),
                         ue.getPermissionPreset());
-            } catch (RuntimeException error) {
-                if (newUser != null) {
-                    try {
-                        client.auth().deleteUser(newUser.id());
-                    } catch (RuntimeException rollbackError) {
-                        error.addSuppressed(rollbackError);
-                    }
-                }
-                throw error;
             }
+            if (newUser != null && ue.isSuperadmin()) {
+                superAdminAttempted = true;
+                client.auth().addSuperAdmin(ue.getName());
+            }
+        } catch (RuntimeException error) {
+            this.rollbackNewAccount(client, newUser, ue.getName(),
+                                    attemptedAdminSpaces,
+                                    superAdminAttempted, error);
+            throw error;
         }
+    }
 
-        if (newUser != null && ue.isSuperadmin()) {
-            // add superadmin
-            client.auth().addSuperAdmin(newUser.id().toString());
+    private void rollbackNewAccount(HugeClient client, User user,
+                                    String username,
+                                    List<String> attemptedAdminSpaces,
+                                    boolean superAdminAttempted,
+                                    RuntimeException failure) {
+        if (superAdminAttempted) {
+            this.suppressRollback(
+                    () -> client.auth().delSuperAdmin(username), failure);
+        }
+        for (int i = attemptedAdminSpaces.size() - 1; i >= 0; i--) {
+            String graphSpace = attemptedAdminSpaces.get(i);
+            this.suppressRollback(
+                    () -> client.auth().delSpaceAdmin(username, graphSpace),
+                    failure);
+        }
+        if (user != null) {
+            this.suppressRollback(
+                    () -> client.auth().deleteUser(user.id()), failure);
+        }
+    }
+
+    private void suppressRollback(Runnable rollback,
+                                  RuntimeException failure) {
+        try {
+            rollback.run();
+        } catch (RuntimeException rollbackError) {
+            failure.addSuppressed(rollbackError);
         }
     }
 
@@ -582,13 +610,14 @@ public class UserService extends AuthService {
                              userEntity.getAdminSpaces());
         }
         if (!permissionPresets) {
+            String username = userEntity.getName();
             boolean currentSuperAdmin =
                     isSuperAdmin(hugeClient, user.id().toString());
             if (currentSuperAdmin && !userEntity.isSuperadmin()) {
-                hugeClient.auth().delSuperAdmin(user.id().toString());
+                hugeClient.auth().delSuperAdmin(username);
             }
             if (!currentSuperAdmin && userEntity.isSuperadmin()) {
-                hugeClient.auth().addSuperAdmin(user.id().toString());
+                hugeClient.auth().addSuperAdmin(username);
             }
         }
 
@@ -600,13 +629,15 @@ public class UserService extends AuthService {
         String userId = user.id().toString();
         User previous = client.auth().getUser(userId);
         E.checkNotNull(previous, "User");
-        boolean previousSuperAdmin = isSuperAdmin(client, userId);
+        String username = previous.name();
+        boolean previousSuperAdmin =
+                client.auth().listSuperAdmin().contains(username);
         try {
             if (previousSuperAdmin && !userEntity.isSuperadmin()) {
-                client.auth().delSuperAdmin(userId);
+                client.auth().delSuperAdmin(username);
             }
             if (!previousSuperAdmin && userEntity.isSuperadmin()) {
-                client.auth().addSuperAdmin(userId);
+                client.auth().addSuperAdmin(username);
             }
             client.auth().updateUser(user);
             this.graphSpaceUserService.applyPermissionPresets(
@@ -615,7 +646,8 @@ public class UserService extends AuthService {
                     userEntity.getPermissionPreset());
         } catch (RuntimeException error) {
             this.restoreAccountProfile(client, previous, error);
-            this.restoreSuperAdmin(client, userId, previousSuperAdmin, error);
+            this.restoreSuperAdmin(client, username, previousSuperAdmin,
+                                   error);
             throw error;
         }
     }
@@ -631,20 +663,21 @@ public class UserService extends AuthService {
         }
     }
 
-    private void restoreSuperAdmin(HugeClient client, String userId,
+    private void restoreSuperAdmin(HugeClient client, String username,
                                    boolean expected,
                                    RuntimeException failure) {
         try {
-            boolean current = isSuperAdmin(client, userId);
+            boolean current = client.auth().listSuperAdmin()
+                                    .contains(username);
             if (expected && !current) {
-                client.auth().addSuperAdmin(userId);
+                client.auth().addSuperAdmin(username);
             } else if (!expected && current) {
-                client.auth().delSuperAdmin(userId);
+                client.auth().delSuperAdmin(username);
             }
         } catch (RuntimeException rollbackError) {
             failure.addSuppressed(rollbackError);
             log.warn("Failed to restore super administrator state for '{}'",
-                     userId, rollbackError);
+                     username, rollbackError);
         }
     }
 
@@ -768,6 +801,7 @@ public class UserService extends AuthService {
         for (String adminspace : adminspaces) {
             if (!oldadminspaces.contains(adminspace)) {
                 this.graphSpaceUserService.applySpacePreset(hugeClient, adminspace, account.id().toString(),
+                        account.name(),
                         "GS_ADMIN");
             }
         }
@@ -810,9 +844,9 @@ public class UserService extends AuthService {
         if (!isPdEnabled()) {
             return false;
         }
-        // Only used by superadmin
-        // Check: if user is spaceadmin for any graphspace
-        return client.auth().listSuperAdmin().contains(uid);
+        User account = client.auth().getUser(uid);
+        return account != null &&
+               client.auth().listSuperAdmin().contains(account.name());
     }
 
     public boolean isSuperAdmin(HugeClient client) {

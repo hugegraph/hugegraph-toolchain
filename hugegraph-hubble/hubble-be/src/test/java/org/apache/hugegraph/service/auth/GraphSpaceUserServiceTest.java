@@ -262,11 +262,12 @@ public class GraphSpaceUserServiceTest {
 
     @Test
     public void testNewAccountAppliesOnlyRequestedSpaces() {
-        User user = user("alice", "alice");
+        User user = user("u-1", "alice");
         Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
         GraphSpaceUserService service = Mockito.spy(this.service);
         Mockito.doNothing().when(service)
-               .applySpacePreset(this.client, "team", "alice",
+               .applySpacePreset(this.client, "team", "u-1",
+                                 "alice",
                                  "GS_READ_ONLY");
 
         service.applyPermissionPresetsForNewAccount(
@@ -275,21 +276,24 @@ public class GraphSpaceUserServiceTest {
                 "GS_READ_ONLY");
 
         Mockito.verify(service).applySpacePreset(
-                this.client, "team", "alice", "GS_READ_ONLY");
+                this.client, "team", "u-1", "alice", "GS_READ_ONLY");
         Mockito.verify(this.graphSpace, Mockito.never()).listGraphSpace();
     }
 
     @Test
     public void testReconciliationRestoresEarlierGraphSpaces() {
-        User user = user("alice", "alice");
+        User user = user("u-1", "alice");
         Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
         Mockito.when(this.graphSpace.listGraphSpace())
                .thenReturn(Arrays.asList("first", "second"));
-        Mockito.when(this.auth.listSpaceMember(Mockito.anyString()))
+        Mockito.when(this.auth.listSpaceMember("first"))
+               .thenReturn(Collections.singletonList("alice"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceMember("second"))
                .thenReturn(Collections.singletonList("alice"));
         Mockito.when(this.belongService.list(
                              Mockito.eq(this.client), Mockito.anyString(),
-                             Mockito.isNull(), Mockito.eq("alice")))
+                             Mockito.isNull(), Mockito.eq("u-1")))
                .thenReturn(Collections.emptyList());
         Mockito.when(this.graphSpace.checkDefaultRole(
                              "first", "alice", "analyst"))
@@ -307,11 +311,13 @@ public class GraphSpaceUserServiceTest {
                .thenReturn(Collections.emptyList());
         GraphSpaceUserService service = Mockito.spy(this.service);
         Mockito.doNothing().when(service)
-               .applySpacePreset(this.client, "first", "alice",
+               .applySpacePreset(this.client, "first", "u-1",
+                                 "alice",
                                  "GS_READ_ONLY");
         RuntimeException failure = new RuntimeException("second failed");
         Mockito.doThrow(failure).when(service)
-               .applySpacePreset(this.client, "second", "alice",
+               .applySpacePreset(this.client, "second", "u-1",
+                                 "alice",
                                  "GS_READ_ONLY");
 
         Throwable error = Assert.assertThrows(
@@ -324,8 +330,31 @@ public class GraphSpaceUserServiceTest {
                         "GS_READ_ONLY"));
 
         Assert.assertSame(failure, error);
+        InOrder rollback = Mockito.inOrder(this.auth, this.graphSpace);
+        rollback.verify(this.auth).addSpaceMember("alice", "first");
+        rollback.verify(this.graphSpace)
+                .setDefaultRole("first", "alice", "observer");
+    }
+
+    @Test
+    public void testNewMemberResolvesIdAfterUsernameMembership() {
+        User user = user("u-1", "alice");
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
+        Mockito.when(this.belongService.list(
+                             this.client, "team", null, "u-1"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.listSpaceAdmin("team"))
+               .thenReturn(Collections.emptyList());
+
+        this.service.applySpacePreset(this.client, "team", null, "alice",
+                                      "GS_READ_ONLY");
+
+        Mockito.verify(this.auth).addSpaceMember("alice", "team");
+        Mockito.verify(this.client).findUserByName("alice");
         Mockito.verify(this.graphSpace)
-               .setDefaultRole("first", "alice", "observer");
+               .setDefaultRole("team", "alice", "observer");
     }
 
     @Test
@@ -341,6 +370,7 @@ public class GraphSpaceUserServiceTest {
                .thenReturn(Collections.emptyList());
 
         this.service.applySpacePreset(this.client, "team", "alice",
+                                      "alice",
                                       "GS_ADMIN");
 
         Mockito.verify(this.auth).addSpaceMember("alice", "team");
@@ -362,6 +392,7 @@ public class GraphSpaceUserServiceTest {
                .thenReturn(Collections.singletonList("alice"));
 
         this.service.applySpacePreset(this.client, "team", "alice",
+                                      "alice",
                                       "GS_READ_WRITE");
 
         Mockito.verify(this.auth).delSpaceAdmin("alice", "team");
@@ -384,6 +415,7 @@ public class GraphSpaceUserServiceTest {
                .thenReturn(Collections.emptyList());
 
         this.service.applySpacePreset(this.client, "team", "alice",
+                                      "alice",
                                       "GS_READ_ONLY");
 
         InOrder order = Mockito.inOrder(this.auth);
@@ -404,6 +436,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_READ_ONLY"));
 
         InOrder order = Mockito.inOrder(this.auth);
@@ -423,6 +456,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_READ_ONLY"));
 
         Mockito.verify(this.auth).delSpaceMember("alice", "team");
@@ -448,6 +482,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_READ_ONLY"));
 
         InOrder order = Mockito.inOrder(this.auth, this.graphSpace);
@@ -478,6 +513,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_ADMIN"));
 
         InOrder order = Mockito.inOrder(this.auth, this.graphSpace);
@@ -522,6 +558,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_READ_WRITE"));
 
         Mockito.verify(this.belongService)
@@ -572,6 +609,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_READ_ONLY"));
 
         Mockito.verify(this.belongService)
@@ -605,6 +643,7 @@ public class GraphSpaceUserServiceTest {
         Assert.assertThrows(RuntimeException.class,
                             () -> this.service.applySpacePreset(
                                     this.client, "team", "alice",
+                                    "alice",
                                     "GS_READ_ONLY"));
 
         Mockito.verify(this.graphSpace)

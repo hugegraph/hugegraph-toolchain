@@ -332,7 +332,7 @@ test('submits only the selected preset when adding a member', async () => {
     fireEvent.click(screen.getByRole('button', {name: 'OK'}));
 
     await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
-        'SPACE_A', 'bob', 'GS_READ_WRITE', expect.any(Object)
+        'SPACE_A', 'bob', 'bob', 'GS_READ_WRITE', expect.any(Object)
     ));
 });
 
@@ -361,7 +361,7 @@ test('uses the preset API for GS admin', async () => {
     fireEvent.click(screen.getByRole('button', {name: 'OK'}));
 
     await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
-        'SPACE_A', 'bob', 'GS_ADMIN', expect.any(Object)
+        'SPACE_A', 'bob', 'bob', 'GS_ADMIN', expect.any(Object)
     ));
     expect(api.auth.addSpaceMember).not.toHaveBeenCalled();
 });

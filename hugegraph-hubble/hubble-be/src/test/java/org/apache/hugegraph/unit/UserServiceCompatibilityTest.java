@@ -373,15 +373,16 @@ public class UserServiceCompatibilityTest {
     public void testModernUserUpdateRollsBackProfileAndSuperAdmin() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
-        User previous = user("user");
+        User previous = user("alice");
+        previous.setId("u-1");
         previous.description("old");
-        Mockito.when(this.auth.getUser("user")).thenReturn(previous);
+        Mockito.when(this.auth.getUser("u-1")).thenReturn(previous);
         Mockito.when(this.auth.listSuperAdmin())
-               .thenReturn(Collections.singletonList("user"))
+               .thenReturn(Collections.singletonList("alice"))
                .thenReturn(Collections.emptyList());
         UserEntity account = UserEntity.builder()
-                                       .id("user")
-                                       .name("user")
+                                       .id("u-1")
+                                       .name("alice")
                                        .description("new")
                                        .build();
         account.setPermissionPreset("GS_READ_ONLY");
@@ -390,7 +391,7 @@ public class UserServiceCompatibilityTest {
         RuntimeException failure = new RuntimeException("preset failed");
         Mockito.doThrow(failure).when(this.graphSpaceUsers)
                .applyPermissionPresets(
-                       this.client, "user",
+                       this.client, "alice",
                        account.getGraphspacePermissions(), "GS_READ_ONLY");
 
         RuntimeException error = null;
@@ -401,8 +402,8 @@ public class UserServiceCompatibilityTest {
         }
 
         Assert.assertSame(failure, error);
-        Mockito.verify(this.auth).delSuperAdmin("user");
-        Mockito.verify(this.auth).addSuperAdmin("user");
+        Mockito.verify(this.auth).delSuperAdmin("alice");
+        Mockito.verify(this.auth).addSuperAdmin("alice");
         ArgumentCaptor<User> updates = ArgumentCaptor.forClass(User.class);
         Mockito.verify(this.auth, Mockito.times(2))
                .updateUser(updates.capture());
@@ -423,6 +424,7 @@ public class UserServiceCompatibilityTest {
                .thenReturn(user("user"));
         Mockito.when(this.auth.listSuperAdmin())
                .thenReturn(Collections.singletonList("user"));
+        Mockito.when(this.auth.getUser("user")).thenReturn(user("user"));
         UserEntity account = UserEntity.builder()
                                        .id("user")
                                        .name("user")
@@ -437,7 +439,8 @@ public class UserServiceCompatibilityTest {
         Mockito.verify(this.auth).delSuperAdmin("user");
         Mockito.verify(this.graphSpaceUsers, Mockito.never())
                .applySpacePreset(Mockito.any(), Mockito.anyString(),
-                                 Mockito.anyString(), Mockito.anyString());
+                                 Mockito.anyString(), Mockito.anyString(),
+                                 Mockito.anyString());
     }
 
     @Test
@@ -553,6 +556,61 @@ public class UserServiceCompatibilityTest {
         Assert.assertNotNull(error);
         Assert.assertSame(failure, error);
         Mockito.verify(this.auth).deleteUser("created-user");
+    }
+
+    @Test
+    public void testSuperAdminGrantFailureDeletesNewAccount() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        User created = user("alice");
+        created.setId("u-1");
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(created);
+        RuntimeException failure = new RuntimeException("grant failed");
+        Mockito.when(this.auth.addSuperAdmin("user")).thenThrow(failure);
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("SUPER_ADMIN");
+        user.setSuperadmin(true);
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).addSuperAdmin("user");
+        Mockito.verify(this.auth).delSuperAdmin("user");
+        Mockito.verify(this.auth).deleteUser("u-1");
+    }
+
+    @Test
+    public void testLegacyAdminGrantFailureRollsBackEarlierSpaces() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(false);
+        User created = user("user");
+        created.setId("u-1");
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(created);
+        RuntimeException failure = new RuntimeException("grant failed");
+        Mockito.when(this.auth.addSpaceAdmin("user", "SECOND"))
+               .thenThrow(failure);
+        UserEntity user = userEntity("display-name");
+        user.setAdminSpaces(Arrays.asList("FIRST", "SECOND"));
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).delSpaceAdmin("user", "SECOND");
+        Mockito.verify(this.auth).delSpaceAdmin("user", "FIRST");
+        Mockito.verify(this.auth).deleteUser("u-1");
     }
 
     @Test

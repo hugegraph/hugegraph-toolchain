@@ -203,6 +203,7 @@ public class GraphSpaceUserService extends AuthService {
             desired.forEach((graphSpace, desiredPreset) ->
                     this.applySpacePreset(client, graphSpace,
                                           account.id().toString(),
+                                          account.name(),
                                           desiredPreset));
             return;
         }
@@ -213,7 +214,7 @@ public class GraphSpaceUserService extends AuthService {
         String accountName = account.name();
         for (String graphSpace : graphSpaces) {
             boolean member = client.auth().listSpaceMember(graphSpace)
-                                   .contains(userId);
+                                   .contains(accountName);
             previous.put(graphSpace, this.capturePresetState(
                     client, graphSpace, userId, accountName, member));
         }
@@ -224,6 +225,7 @@ public class GraphSpaceUserService extends AuthService {
                     this.unauthUser(client, graphSpace, userId);
                 } else {
                     this.applySpacePreset(client, graphSpace, userId,
+                                          accountName,
                                           desiredPreset);
                 }
             }
@@ -275,24 +277,33 @@ public class GraphSpaceUserService extends AuthService {
     }
 
     public void applySpacePreset(HugeClient client, String graphSpace,
-                                 String userId, String preset) {
+                                 String userId, String username,
+                                 String preset) {
         requirePermissionPreset(preset);
         requirePermissionPresets(client);
-        E.checkArgument(!client.auth().listSuperAdmin().contains(userId),
+        E.checkArgument(username != null && !username.isEmpty(),
+                        "The account name can't be empty");
+        E.checkArgument(!client.auth().listSuperAdmin().contains(username),
                         "Can't assign GraphSpace preset to super " +
-                        "administrator '%s'", userId);
+                        "administrator '%s'", username);
         boolean wasMember =
-                client.auth().listSpaceMember(graphSpace).contains(userId);
-        String username = userId;
+                client.auth().listSpaceMember(graphSpace).contains(username);
+        String resolvedUserId = userId;
         SpacePresetState previous = null;
         try {
             if (!wasMember) {
-                client.auth().addSpaceMember(userId, graphSpace);
+                client.auth().addSpaceMember(username, graphSpace);
             }
-            User account = client.auth().getUser(userId);
+            User account = userId == null ?
+                           client.findUserByName(username) :
+                           client.auth().getUser(userId);
             E.checkNotNull(account, "User");
-            username = account.name();
-            previous = this.capturePresetState(client, graphSpace, userId,
+            E.checkArgument(username.equals(account.name()),
+                            "Account id '%s' belongs to '%s', not '%s'",
+                            userId, account.name(), username);
+            resolvedUserId = account.id().toString();
+            previous = this.capturePresetState(client, graphSpace,
+                                               resolvedUserId,
                                                username, wasMember);
             previous.customRoles.forEach(
                     belong -> this.belongService.deleteById(
@@ -320,10 +331,11 @@ public class GraphSpaceUserService extends AuthService {
             this.setDefaultRole(client, graphSpace, username, role);
         } catch (RuntimeException e) {
             if (previous == null) {
-                this.rollbackNewMember(client, graphSpace, userId,
+                this.rollbackNewMember(client, graphSpace, username,
                                        wasMember, e);
             } else {
-                this.restorePresetState(client, graphSpace, userId, username,
+                this.restorePresetState(client, graphSpace, resolvedUserId,
+                                        username,
                                         previous, e);
             }
             throw e;
@@ -363,6 +375,10 @@ public class GraphSpaceUserService extends AuthService {
                                     String userId, String username,
                                     SpacePresetState previous,
                                     RuntimeException failure) {
+        if (previous.member) {
+            this.rollbackNewMember(client, graphSpace, username, true,
+                                   failure);
+        }
         previous.customRoles.forEach(belong -> {
             this.tryRestore(() -> {
                 Set<String> currentRoles = this.belongService.list(
@@ -391,8 +407,10 @@ public class GraphSpaceUserService extends AuthService {
                 client.auth().delSpaceAdmin(username, graphSpace);
             }
         }, graphSpace, userId, "administrator", failure);
-        this.rollbackNewMember(client, graphSpace, userId,
-                               previous.member, failure);
+        if (!previous.member) {
+            this.rollbackNewMember(client, graphSpace, username, false,
+                                   failure);
+        }
     }
 
     private void restoreDefaultRole(HugeClient client, String graphSpace,
@@ -408,17 +426,17 @@ public class GraphSpaceUserService extends AuthService {
     }
 
     private void rollbackNewMember(HugeClient client, String graphSpace,
-                                   String userId, boolean expected,
+                                   String username, boolean expected,
                                    RuntimeException failure) {
         this.tryRestore(() -> {
             boolean current = client.auth().listSpaceMember(graphSpace)
-                                    .contains(userId);
+                                    .contains(username);
             if (expected && !current) {
-                client.auth().addSpaceMember(userId, graphSpace);
+                client.auth().addSpaceMember(username, graphSpace);
             } else if (!expected && current) {
-                client.auth().delSpaceMember(userId, graphSpace);
+                client.auth().delSpaceMember(username, graphSpace);
             }
-        }, graphSpace, userId, "membership", failure);
+        }, graphSpace, username, "membership", failure);
     }
 
     private void tryRestore(Runnable action, String graphSpace,

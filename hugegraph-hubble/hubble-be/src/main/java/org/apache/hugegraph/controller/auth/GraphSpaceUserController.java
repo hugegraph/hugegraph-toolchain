@@ -27,6 +27,7 @@ import org.apache.hugegraph.entity.auth.UserView;
 import org.apache.hugegraph.service.auth.GraphSpaceUserService;
 import org.apache.hugegraph.structure.auth.User;
 import org.apache.hugegraph.structure.auth.UserManager;
+import org.apache.hugegraph.util.E;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,18 +87,26 @@ public class GraphSpaceUserController extends AuthController {
             @PathVariable("id") String userId) {
         HugeClient client =
                 this.requireGraphSpaceAuthorizationAdmin(graphSpace);
-        return client.auth().addSpaceAdmin(userId, graphSpace);
+        User account = client.auth().getUser(userId);
+        E.checkNotNull(account, "User");
+        return client.auth().addSpaceAdmin(account.name(), graphSpace);
     }
 
     @PutMapping("{id}/preset")
     public void setPermissionPreset(
             @PathVariable("graphspace") String graphSpace,
-            @PathVariable("id") String userId,
+            @PathVariable("id") String identity,
             @RequestBody Map<String, String> body) {
         String preset = body.get("permission_preset");
-        HugeClient client = this.requirePresetManager(graphSpace, userId,
+        String userId = body.get("user_id");
+        String username = body.get("username");
+        HugeClient client = this.requirePresetManager(graphSpace, username,
                                                       preset);
-        this.userService.applySpacePreset(client, graphSpace, userId, preset);
+        E.checkArgument(identity.equals(userId) ||
+                        identity.equals(username),
+                        "The account identity in the path and body must match");
+        this.userService.applySpacePreset(client, graphSpace, userId,
+                                          username, preset);
     }
 
     @DeleteMapping("spaceadmin/{id}")
@@ -106,7 +115,9 @@ public class GraphSpaceUserController extends AuthController {
             @PathVariable("id") String userId) {
         HugeClient client =
                 this.requireGraphSpaceAuthorizationAdmin(graphSpace);
-        client.auth().delSpaceAdmin(userId, graphSpace);
+        User account = client.auth().getUser(userId);
+        E.checkNotNull(account, "User");
+        client.auth().delSpaceAdmin(account.name(), graphSpace);
     }
 
     @PostMapping
@@ -134,19 +145,37 @@ public class GraphSpaceUserController extends AuthController {
         this.userService.unauthUser(client, graphSpace, userId);
     }
 
-    private HugeClient requirePresetManager(String graphSpace, String userId,
+    private HugeClient requirePresetManager(String graphSpace, String username,
                                             String preset) {
         if ("GS_ADMIN".equals(preset)) {
             return this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         }
-        return this.requireMemberManager(graphSpace, userId);
+        return this.requireMemberManagerByUsername(graphSpace, username);
     }
 
     private HugeClient requireMemberManager(String graphSpace,
                                             String userId) {
         HugeClient client = this.requireGraphSpaceManager(graphSpace);
-        if (client.auth().listSuperAdmin().contains(userId) ||
-            client.auth().listSpaceAdmin(graphSpace).contains(userId)) {
+        User account = client.auth().getUser(userId);
+        E.checkNotNull(account, "User");
+        return this.requireMemberManagerByUsername(client, graphSpace,
+                                                   account.name());
+    }
+
+    private HugeClient requireMemberManagerByUsername(String graphSpace,
+                                                      String username) {
+        HugeClient client = this.requireGraphSpaceManager(graphSpace);
+        return this.requireMemberManagerByUsername(client, graphSpace,
+                                                   username);
+    }
+
+    private HugeClient requireMemberManagerByUsername(HugeClient client,
+                                                      String graphSpace,
+                                                      String username) {
+        E.checkArgument(username != null && !username.isEmpty(),
+                        "The account name can't be empty");
+        if (client.auth().listSuperAdmin().contains(username) ||
+            client.auth().listSpaceAdmin(graphSpace).contains(username)) {
             return this.requireGraphSpaceAuthorizationAdmin(graphSpace);
         }
         return client;
