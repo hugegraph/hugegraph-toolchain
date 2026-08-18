@@ -18,7 +18,6 @@
 package org.apache.hugegraph.controller.ingest;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -58,7 +57,6 @@ import org.apache.hugegraph.service.load.LoadTaskService;
 import org.apache.hugegraph.util.Ex;
 import org.apache.hugegraph.util.FileUtil;
 import org.apache.hugegraph.util.HubbleUtil;
-import org.apache.hugegraph.util.PageUtil;
 import org.apache.hugegraph.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -285,7 +283,8 @@ public class IngestController extends BaseController {
         mapping.setEdgeMappings(edgeMappings);
 
         GraphConnection connection = this.graphConnection(graphSpace, graph);
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
+        client.assignGraph(graphSpace, graph);
         LoadTask task = this.jobManagerService.createIngestTask(
                 job, mapping, connection, client);
         Map<String, Object> data = new HashMap<>();
@@ -378,7 +377,7 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Task not found: " + id).build();
         }
-        this.requireJobAccess(job);
+        this.requireJobWrite(job);
         jobManagerService.remove(id);
         return Response.builder().status(Constant.STATUS_OK).build();
     }
@@ -390,7 +389,7 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Task not found: " + id).build();
         }
-        this.requireJobAccess(job);
+        this.requireJobWrite(job);
         job.setJobStatus(JobStatus.DEFAULT);
         jobManagerService.update(job);
         return Response.builder().status(Constant.STATUS_OK).build();
@@ -403,7 +402,7 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Task not found: " + id).build();
         }
-        this.requireJobAccess(job);
+        this.requireJobWrite(job);
         job.setJobStatus(JobStatus.FAILED);
         jobManagerService.update(job);
         return Response.builder().status(Constant.STATUS_OK).build();
@@ -479,7 +478,7 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Job not found: " + id).build();
         }
-        this.requireLoadTaskAccess(task);
+        this.requireLoadTaskWrite(task);
         loadTaskService.remove(id);
         return Response.builder().status(Constant.STATUS_OK).build();
     }
@@ -530,26 +529,23 @@ public class IngestController extends BaseController {
 
     private IPage<JobManager> visibleJobPage(int pageNo, int pageSize,
                                              String query) {
-        List<JobManager> visible = this.visibleJobs(query);
-        int size = PageUtil.boundedSize(pageSize);
-        int from = Math.min((pageNo - 1) * size, visible.size());
-        int to = Math.min(from + size, visible.size());
-        Page<JobManager> page = new Page<>(pageNo, size, visible.size());
-        page.setRecords(new ArrayList<>(visible.subList(from, to)));
+        Set<String> graphSpaces = this.visibleGraphSpaces();
+        IPage<JobManager> page = this.jobManagerService.listByGraphSpaces(
+                graphSpaces, pageNo, pageSize, query);
         page.getRecords().forEach(jobManagerService::refreshStatus);
         return page;
     }
 
     private List<JobManager> visibleJobs(String query) {
         Set<String> graphSpaces = this.visibleGraphSpaces();
-        return jobManagerService.listAll().stream()
-                .filter(job -> graphSpaces == null ||
-                               graphSpaces.contains(job.getGraphSpace()))
-                .filter(job -> StringUtils.isEmpty(query) ||
-                               StringUtils.contains(job.getJobName(), query))
-                .sorted((left, right) -> compareCreateTime(
-                        left.getCreateTime(), right.getCreateTime()))
-                .collect(Collectors.toList());
+        List<JobManager> jobs =
+                this.jobManagerService.listByGraphSpaces(graphSpaces);
+        if (StringUtils.isEmpty(query)) {
+            return jobs;
+        }
+        return jobs.stream()
+                   .filter(job -> StringUtils.contains(job.getJobName(), query))
+                   .collect(Collectors.toList());
     }
 
     private Set<String> visibleGraphSpaces() {
@@ -577,6 +573,13 @@ public class IngestController extends BaseController {
                                      job.getGraphSpace());
     }
 
+    private void requireJobWrite(JobManager job) {
+        if (job == null) {
+            return;
+        }
+        this.requireGraphSpaceWrite(job.getGraphSpace());
+    }
+
     private void requireLoadTaskAccess(LoadTask task) {
         JobManager job = task.getJobId() == null ? null :
                          this.jobManagerService.get(task.getJobId());
@@ -585,14 +588,12 @@ public class IngestController extends BaseController {
         this.requireJobAccess(job);
     }
 
-    private static int compareCreateTime(Date left, Date right) {
-        if (left == null) {
-            return right == null ? 0 : 1;
-        }
-        if (right == null) {
-            return -1;
-        }
-        return right.compareTo(left);
+    private void requireLoadTaskWrite(LoadTask task) {
+        JobManager job = task.getJobId() == null ? null :
+                         this.jobManagerService.get(task.getJobId());
+        Ex.check(job != null, "job-manager.not-exist.id",
+                 task.getJobId());
+        this.requireJobWrite(job);
     }
 
     /**

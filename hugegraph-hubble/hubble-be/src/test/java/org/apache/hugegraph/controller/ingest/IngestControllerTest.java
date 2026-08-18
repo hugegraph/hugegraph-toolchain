@@ -391,14 +391,14 @@ public class IngestControllerTest {
                                        .graph("graph")
                                        .jobStatus(JobStatus.DEFAULT)
                                        .build();
-        JobManager hidden = JobManager.builder()
-                                      .id(2)
-                                      .jobName("hidden")
-                                      .graphSpace("protected")
-                                      .graph("graph")
-                                      .jobStatus(JobStatus.DEFAULT)
-                                      .build();
-        Mockito.when(jobs.listAll()).thenReturn(List.of(visible, hidden));
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<
+                JobManager> visiblePage =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(
+                        1, 10, 1);
+        visiblePage.setRecords(Collections.singletonList(visible));
+        Mockito.when(jobs.listByGraphSpaces(
+                Collections.singleton("public"), 1, 10, ""))
+               .thenReturn(visiblePage);
         Mockito.when(graphSpaces.listAnonymous(Mockito.any()))
                .thenReturn(Collections.singletonList("public"));
         this.setField(controller, "config", config);
@@ -421,7 +421,8 @@ public class IngestControllerTest {
                                      page.getRecords().get(0).ingestionOption;
         Assert.assertEquals("public", option.get("graphspace"));
         Mockito.verify(loadTasks).taskListByJob(1);
-        Mockito.verify(loadTasks, Mockito.never()).taskListByJob(2);
+        Mockito.verify(jobs).listByGraphSpaces(
+                Collections.singleton("public"), 1, 10, "");
     }
 
     @Test
@@ -577,6 +578,7 @@ public class IngestControllerTest {
     private static class TestIngestController extends IngestController {
 
         private String checkedGraphSpace;
+        private String writeGraphSpace;
 
         @Override
         protected HugeClient authClient(String graphSpace, String graph) {
@@ -587,6 +589,12 @@ public class IngestControllerTest {
         protected void requireGraphSpaceAccess(HugeClient client,
                                                String graphSpace) {
             this.checkedGraphSpace = graphSpace;
+        }
+
+        @Override
+        protected HugeClient requireGraphSpaceWrite(String graphSpace) {
+            this.writeGraphSpace = graphSpace;
+            return Mockito.mock(HugeClient.class);
         }
     }
 }

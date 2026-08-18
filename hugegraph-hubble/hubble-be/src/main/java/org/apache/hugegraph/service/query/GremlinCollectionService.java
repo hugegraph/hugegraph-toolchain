@@ -141,15 +141,24 @@ public class GremlinCollectionService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void update(GremlinCollection collection) {
-        if (this.mapper.updateById(collection) != 1) {
+    public void update(String graphSpace, String graph,
+                       GremlinCollection collection) {
+        QueryWrapper<GremlinCollection> query = Wrappers.query();
+        query.eq("id", collection.getId())
+             .eq("graphspace", graphSpace)
+             .eq("graph", graph);
+        if (this.mapper.update(collection, query) != 1) {
             throw new InternalException("entity.update.failed", collection);
         }
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void remove(int id) {
-        if (this.mapper.deleteById(id) != 1) {
+    public void remove(String graphSpace, String graph, int id) {
+        QueryWrapper<GremlinCollection> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", graphSpace)
+             .eq("graph", graph);
+        if (this.mapper.delete(query) != 1) {
             throw new InternalException("entity.delete.failed", id);
         }
     }

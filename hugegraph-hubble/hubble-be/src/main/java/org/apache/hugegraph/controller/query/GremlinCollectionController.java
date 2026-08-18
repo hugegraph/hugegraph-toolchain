@@ -116,6 +116,7 @@ public class GremlinCollectionController extends GremlinController {
     public GremlinCollection create(@PathVariable("graphspace") String graphSpace,
                                     @PathVariable("graph") String graph,
                                     @RequestBody GremlinCollection newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         this.checkParamsValid(newEntity, true);
         newEntity.setGraphSpace(graphSpace);
         newEntity.setGraph(graph);
@@ -136,6 +137,7 @@ public class GremlinCollectionController extends GremlinController {
                                     @PathVariable("graph") String graph,
                                     @PathVariable("id") int id,
                                     @RequestBody GremlinCollection newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         this.checkIdSameAsBody(id, newEntity);
         this.checkParamsValid(newEntity, false);
 
@@ -148,7 +150,7 @@ public class GremlinCollectionController extends GremlinController {
         entity.setGraphSpace(graphSpace);
         entity.setGraph(graph);
         this.checkEntityUnique(entity, false);
-        this.service.update(entity);
+        this.service.update(graphSpace, graph, entity);
         return entity;
     }
 
@@ -157,11 +159,12 @@ public class GremlinCollectionController extends GremlinController {
                                     @PathVariable("graphspace") String graphSpace,
                                     @PathVariable("graph") String graph,
                                     @PathVariable("id") int id) {
+        this.requireGraphSpaceWrite(graphSpace);
         GremlinCollection oldEntity = this.service.get(graphSpace, graph, id);
         if (oldEntity == null) {
             throw new ExternalException("gremlin-collection.not-exist.id", id);
         }
-        this.service.remove(id);
+        this.service.remove(graphSpace, graph, id);
         return oldEntity;
     }
 

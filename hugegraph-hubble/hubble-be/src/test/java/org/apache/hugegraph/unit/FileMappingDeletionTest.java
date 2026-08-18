@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hugegraph.controller.load.FileMappingController;
+import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
 import org.apache.hugegraph.entity.load.LoadTask;
@@ -70,7 +71,7 @@ public class FileMappingDeletionTest {
 
     private Fixture fixture(LoadStatus status) throws Exception {
         Fixture fixture = new Fixture();
-        fixture.controller = new FileMappingController();
+        fixture.controller = new TestFileMappingController();
         fixture.mappingService = Mockito.mock(FileMappingService.class);
         fixture.jobService = Mockito.mock(JobManagerService.class);
         LoadTaskService taskService = Mockito.mock(LoadTaskService.class);
@@ -95,9 +96,27 @@ public class FileMappingDeletionTest {
 
     private static void setField(Object target, String name, Object value)
             throws Exception {
-        Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(target, value);
+        Class<?> type = target.getClass();
+        while (type != null) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                field.set(target, value);
+                return;
+            } catch (NoSuchFieldException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    private static class TestFileMappingController
+            extends FileMappingController {
+
+        @Override
+        protected HugeClient requireGraphSpaceWrite(String graphSpace) {
+            return Mockito.mock(HugeClient.class);
+        }
     }
 
     private static final class Fixture {

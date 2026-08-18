@@ -113,6 +113,7 @@ public class LoadTaskController extends BaseController {
                            @PathVariable("graph") String graph,
                            @PathVariable("jobId") int jobId,
                            @RequestBody LoadTask entity) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(jobEntity.getJobStatus() == JobStatus.SETTING,
@@ -133,6 +134,7 @@ public class LoadTaskController extends BaseController {
                        @PathVariable("graph") String graph,
                        @PathVariable("jobId") int jobId,
                        @PathVariable("id") int id) {
+        this.requireGraphSpaceWrite(graphSpace);
         LoadTask task = this.service.get(graphSpace, graph, jobId, id);
         if (task == null) {
             throw new ExternalException("load.task.not-exist.id", id);
@@ -152,6 +154,7 @@ public class LoadTaskController extends BaseController {
                                 @PathVariable("jobId") int jobId,
                                 @RequestParam("file_mapping_ids")
                                 List<Integer> fileIds) {
+        this.requireGraphSpaceWrite(graphSpace);
         GraphConnection connection = new GraphConnection();
 
         connection.setCluster(config.get(HubbleOptions.PD_CLUSTER));
@@ -205,6 +208,7 @@ public class LoadTaskController extends BaseController {
                           @PathVariable("graph") String graph,
                           @PathVariable("jobId") int jobId,
                           @RequestParam("task_id") int taskId) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
@@ -225,6 +229,7 @@ public class LoadTaskController extends BaseController {
                            @PathVariable("graph") String graph,
                            @PathVariable("jobId") int jobId,
                            @RequestParam("task_id") int taskId) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
@@ -245,6 +250,7 @@ public class LoadTaskController extends BaseController {
                          @PathVariable("graph") String graph,
                          @PathVariable("jobId") int jobId,
                          @RequestParam("task_id") int taskId) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,
@@ -265,6 +271,7 @@ public class LoadTaskController extends BaseController {
                           @PathVariable("graph") String graph,
                           @PathVariable("jobId") int jobId,
                           @RequestParam("task_id") int taskId) {
+        this.requireGraphSpaceWrite(graphSpace);
         JobManager jobEntity = this.jobService.get(graphSpace, graph, jobId);
         Ex.check(jobEntity != null, "job-manager.not-exist.id", jobId);
         Ex.check(this.service.get(graphSpace, graph, jobId, taskId) != null,

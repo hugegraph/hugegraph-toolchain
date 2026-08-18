@@ -174,7 +174,11 @@ public class ExecuteHistoryService {
         if (history.getType().equals(ExecuteType.GREMLIN_ASYNC)) {
             client.task().delete(history.getAsyncId());
         }
-        if (this.mapper.deleteById(id) != 1) {
+        QueryWrapper<ExecuteHistory> query = Wrappers.query();
+        query.eq("id", id)
+             .eq("graphspace", client.getGraphSpaceName())
+             .eq("graph", client.getGraphName());
+        if (this.mapper.delete(query) != 1) {
             throw new InternalException("entity.delete.failed", history);
         }
     }

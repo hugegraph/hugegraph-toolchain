@@ -76,7 +76,8 @@ public class ExecuteHistoryController extends GremlinController {
     public ExecuteHistory delete(@PathVariable("graphspace") String graphSpace,
                                  @PathVariable("graph") String graph,
                                  @PathVariable("id") int id) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
+        client.assignGraph(graphSpace, graph);
         ExecuteHistory oldEntity = this.service.get(client, id);
         if (oldEntity == null) {
             throw new ExternalException("execute-history.not-exist.id", id);
