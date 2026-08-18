@@ -261,6 +261,25 @@ public class GraphSpaceUserServiceTest {
     }
 
     @Test
+    public void testNewAccountAppliesOnlyRequestedSpaces() {
+        User user = user("alice", "alice");
+        Mockito.when(this.client.findUserByName("alice")).thenReturn(user);
+        GraphSpaceUserService service = Mockito.spy(this.service);
+        Mockito.doNothing().when(service)
+               .applySpacePreset(this.client, "team", "alice",
+                                 "GS_READ_ONLY");
+
+        service.applyPermissionPresetsForNewAccount(
+                this.client, "alice",
+                Collections.singletonList(permission("team", "GS_READ_ONLY")),
+                "GS_READ_ONLY");
+
+        Mockito.verify(service).applySpacePreset(
+                this.client, "team", "alice", "GS_READ_ONLY");
+        Mockito.verify(this.graphSpace, Mockito.never()).listGraphSpace();
+    }
+
+    @Test
     public void testApplyAdminPresetAddsManagementAndWriteAccess() {
         User user = user("alice", "alice");
         Mockito.when(this.auth.getUser("alice")).thenReturn(user);

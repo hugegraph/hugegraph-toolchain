@@ -167,6 +167,21 @@ public class GraphSpaceUserService extends AuthService {
     public void applyPermissionPresets(HugeClient client, String username,
                                        List<Map<String, String>> permissions,
                                        String preset) {
+        this.applyPermissionPresets(client, username, permissions, preset,
+                                    true);
+    }
+
+    public void applyPermissionPresetsForNewAccount(
+            HugeClient client, String username,
+            List<Map<String, String>> permissions, String preset) {
+        this.applyPermissionPresets(client, username, permissions, preset,
+                                    false);
+    }
+
+    private void applyPermissionPresets(HugeClient client, String username,
+                                        List<Map<String, String>> permissions,
+                                        String preset,
+                                        boolean reconcileUnrequestedSpaces) {
         if (preset == null || "SUPER_ADMIN".equals(preset)) {
             return;
         }
@@ -183,6 +198,13 @@ public class GraphSpaceUserService extends AuthService {
             if (graphSpace != null) {
                 desired.put(graphSpace, permissionPreset);
             }
+        }
+        if (!reconcileUnrequestedSpaces) {
+            desired.forEach((graphSpace, desiredPreset) ->
+                    this.applySpacePreset(client, graphSpace,
+                                          account.id().toString(),
+                                          desiredPreset));
+            return;
         }
         for (String graphSpace : client.graphSpace().listGraphSpace()) {
             String desiredPreset = desired.get(graphSpace);

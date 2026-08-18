@@ -486,6 +486,35 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testModernScopedUserCreationRollsBackFailedPreset() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(user("created-user"));
+        UserEntity user = userEntity("display-name");
+        user.setPermissionPreset("GS_READ_ONLY");
+        user.setGraphspacePermissions(Collections.singletonList(
+                permission("team", "GS_READ_ONLY")));
+        RuntimeException failure = new RuntimeException("preset failed");
+        Mockito.doThrow(failure).when(this.graphSpaceUsers)
+               .applyPermissionPresetsForNewAccount(
+                       this.client, "user",
+                       user.getGraphspacePermissions(),
+                       "GS_READ_ONLY");
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, user);
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).deleteUser("created-user");
+    }
+
+    @Test
     public void testModernUserCreationRejectsUnknownPreset() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
@@ -575,5 +604,13 @@ public class UserServiceCompatibilityTest {
         user.setId(name);
         user.name(name);
         return user;
+    }
+
+    private static Map<String, String> permission(String graphSpace,
+                                                   String preset) {
+        Map<String, String> permission = new HashMap<>();
+        permission.put("graphspace", graphSpace);
+        permission.put("permission_preset", preset);
+        return permission;
     }
 }

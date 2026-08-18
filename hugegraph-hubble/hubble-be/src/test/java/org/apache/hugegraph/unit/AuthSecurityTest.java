@@ -203,6 +203,22 @@ public class AuthSecurityTest {
 
         MockHttpServletRequest context = new MockHttpServletRequest("GET", "/api/v1.3/auth/context");
         Assert.assertTrue(interceptor.preHandle(context, new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest scopedUsers = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/auth/users");
+        assertThrows(ExternalException.class, () ->
+                interceptor.preHandle(scopedUsers,
+                                      new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest authGraph = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/graphs/auth/schema");
+        Assert.assertTrue(interceptor.preHandle(
+                authGraph, new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest authGraphSpace = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/auth/graphs/hugegraph/schema");
+        Assert.assertTrue(interceptor.preHandle(
+                authGraphSpace, new MockHttpServletResponse(), null));
     }
 
     @Test

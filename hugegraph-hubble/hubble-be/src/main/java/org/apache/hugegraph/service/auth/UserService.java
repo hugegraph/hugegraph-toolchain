@@ -241,9 +241,22 @@ public class UserService extends AuthService {
             }
         }
         if (permissionPresets) {
-            this.graphSpaceUserService.applyPermissionPresets(
-                    client, ue.getName(), ue.getGraphspacePermissions(),
-                    ue.getPermissionPreset());
+            try {
+                this.graphSpaceUserService
+                    .applyPermissionPresetsForNewAccount(
+                        client, ue.getName(),
+                        ue.getGraphspacePermissions(),
+                        ue.getPermissionPreset());
+            } catch (RuntimeException error) {
+                if (newUser != null) {
+                    try {
+                        client.auth().deleteUser(newUser.id());
+                    } catch (RuntimeException rollbackError) {
+                        error.addSuppressed(rollbackError);
+                    }
+                }
+                throw error;
+            }
         }
 
         if (newUser != null && ue.isSuperadmin()) {
