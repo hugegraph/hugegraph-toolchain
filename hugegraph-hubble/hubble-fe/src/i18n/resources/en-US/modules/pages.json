@@ -403,6 +403,7 @@
       "save_failed": "Account was not saved",
       "save_retry": "Check the account fields and server connection, then retry.",
       "delete_retry": "The account could not be deleted. Refresh the list and retry.",
+      "password_permission_separate": "Save password and permission changes separately.",
       "presets_unavailable": "GraphSpace presets are unavailable",
       "presets_unavailable_help": "This deployment does not provide the required permission API. The account will be created without elevated permissions",
       "preset_edit_unavailable": "Permission editing is unavailable",

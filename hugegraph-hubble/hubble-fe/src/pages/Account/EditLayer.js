@@ -43,6 +43,9 @@ const toProfilePayload = values => ({
     user_password: values.user_password,
     user_description: values.user_description,
 });
+const sameSpaces = (left = [], right = []) => (
+    [...left].sort().join('\u0000') === [...right].sort().join('\u0000')
+);
 
 const loadAllGraphspaces = () => loadAllPages(api.manage.getGraphSpaceList);
 
@@ -104,7 +107,17 @@ const EditLayer = ({
         });
     }, [onCancel, permissionPresetsSupported, refresh, t]);
     const updateUser = useCallback(values => {
-        const payload = permissionPresetsSupported
+        const initialPreset = getAccountPreset(detail) ?? PRESERVE_PERMISSIONS;
+        const permissionsChanged = permissionPresetsSupported
+                                   && (values.permission_preset !== initialPreset
+                                       || !sameSpaces(
+                                           values.graphspaces,
+                                           getPresetSpaces(detail)
+                                       ));
+        if (values.user_password && permissionsChanged) {
+            throw new Error(t('account.feedback.password_permission_separate'));
+        }
+        const payload = permissionsChanged
                         && values.permission_preset !== PRESERVE_PERMISSIONS
             ? toPermissionPayload(values)
             : toProfilePayload(values);
@@ -119,7 +132,7 @@ const EditLayer = ({
 
             throw res;
         });
-    }, [onCancel, refresh, data.id, permissionPresetsSupported, t]);
+    }, [onCancel, refresh, data.id, detail, permissionPresetsSupported, t]);
 
     const updateUserAuth = useCallback(values => {
         const payload = toPermissionPayload({

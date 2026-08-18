@@ -403,6 +403,7 @@
       "save_failed": "账号未保存",
       "save_retry": "请检查账号字段和 Server 连接后重试。",
       "delete_retry": "账号删除失败，请刷新列表后重试。",
+      "password_permission_separate": "请分别保存密码和权限变更。",
       "presets_unavailable": "GraphSpace 权限预设不可用",
       "presets_unavailable_help": "当前部署未提供所需权限 API，账号将以无提升权限的普通账号创建",
       "preset_edit_unavailable": "当前无法编辑权限",

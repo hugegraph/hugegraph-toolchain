@@ -211,6 +211,11 @@ public class AuthSecurityTest {
                 interceptor.preHandle(scopedUsers,
                                       new MockHttpServletResponse(), null));
 
+        MockHttpServletRequest scopedStatus = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/auth");
+        Assert.assertTrue(interceptor.preHandle(
+                scopedStatus, new MockHttpServletResponse(), null));
+
         MockHttpServletRequest authGraph = new MockHttpServletRequest(
                 "GET", "/api/v1.3/graphspaces/DEFAULT/graphs/auth/schema");
         Assert.assertTrue(interceptor.preHandle(

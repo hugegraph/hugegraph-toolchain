@@ -693,6 +693,11 @@ public class UserService extends AuthService {
             }
             return;
         }
+        if (!create && user.getPassword() != null &&
+            !user.getPassword().isEmpty()) {
+            throw new ParameterizedException(
+                      "Update password and permissions separately");
+        }
         boolean superAdminPreset = "SUPER_ADMIN".equals(preset);
         if (superAdminPreset != user.isSuperadmin()) {
             throw new ParameterizedException(

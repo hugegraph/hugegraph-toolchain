@@ -397,6 +397,33 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
+    public void testModernCombinedPasswordAndPermissionUpdateIsRejected() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        UserEntity account = UserEntity.builder()
+                                       .id("user")
+                                       .name("user")
+                                       .password("new-password")
+                                       .build();
+        account.setPermissionPreset("GS_READ_ONLY");
+        account.setGraphspacePermissions(Collections.singletonList(
+                permission("team", "GS_READ_ONLY")));
+
+        try {
+            this.service.update(this.client, account);
+            Assert.fail("Expected combined update to be rejected");
+        } catch (ParameterizedException ignored) {
+            // Expected
+        }
+
+        Mockito.verify(this.auth, Mockito.never())
+               .updateUser(Mockito.any(User.class));
+        Mockito.verify(this.graphSpaceUsers, Mockito.never())
+               .applyPermissionPresets(Mockito.any(), Mockito.anyString(),
+                                       Mockito.any(), Mockito.any());
+    }
+
+    @Test
     public void testModernUserUpdateRollsBackProfileAndSuperAdmin() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
