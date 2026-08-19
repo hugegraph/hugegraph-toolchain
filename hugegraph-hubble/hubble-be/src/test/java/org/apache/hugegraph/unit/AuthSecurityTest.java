@@ -455,6 +455,27 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testCustomInterceptorKeepsBearerForRestWithLegacyPassword()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET",
+                                            "/api/v1.3/auth/users/getpersonal");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.PASSWORD_KEY, "secret");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          System.currentTimeMillis() + 10000L);
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(1, interceptor.authClients);
+        Assert.assertEquals("token", interceptor.token);
+    }
+
+    @Test
     public void testCustomInterceptorKeepsGraphCollectionActionsUnscoped()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();

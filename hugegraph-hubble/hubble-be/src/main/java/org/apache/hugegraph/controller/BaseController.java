@@ -21,6 +21,7 @@ package org.apache.hugegraph.controller;
 import java.util.List;
 import java.util.function.Function;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
@@ -219,7 +220,52 @@ public abstract class BaseController {
     }
 
     protected HugeClient authGremlinClient(String graphSpace, String graph) {
-        return this.authClient(graphSpace, graph);
+        if (this.authMode != null && this.authMode.anonymous()) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        HttpServletRequest request = this.getRequest();
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        String username = (String) session.getAttribute(Constant.USERNAME_KEY);
+        String token = (String) session.getAttribute(Constant.TOKEN_KEY);
+        String password = this.validSessionPassword(session);
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(token) ||
+            !StringUtils.hasText(password)) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        Object existing = request.getAttribute("hugeClient");
+        if (existing instanceof HugeClient) {
+            ((HugeClient) existing).close();
+        }
+        HugeClient client = this.createBasicClient(graphSpace, graph,
+                                                   username, password);
+        this.requireGraphSpaceAccess(client, graphSpace);
+        request.setAttribute("hugeClient", client);
+        return client;
+    }
+
+    protected HugeClient createBasicClient(String graphSpace, String graph,
+                                           String username, String password) {
+        return this.hugeClientPoolService.createBasicClient(
+                    graphSpace, graph, username, password);
+    }
+
+    private String validSessionPassword(HttpSession session) {
+        Object password = session.getAttribute(Constant.PASSWORD_KEY);
+        Object expiresAt = session.getAttribute(
+                           Constant.PASSWORD_EXPIRE_AT_KEY);
+        if (!(password instanceof String) || !(expiresAt instanceof Number) ||
+            System.currentTimeMillis() >= ((Number) expiresAt).longValue()) {
+            session.removeAttribute(Constant.PASSWORD_KEY);
+            session.removeAttribute(Constant.PASSWORD_EXPIRE_AT_KEY);
+            return null;
+        }
+        return (String) password;
     }
 
     protected HugeClient unauthClient() {

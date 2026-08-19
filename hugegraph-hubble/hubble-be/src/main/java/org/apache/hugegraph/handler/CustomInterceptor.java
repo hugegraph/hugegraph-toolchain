@@ -34,8 +34,6 @@ import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
 import org.apache.hugegraph.common.Constant;
@@ -209,43 +207,8 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
 
     protected HugeClient authClient(String graphSpace, String graph,
                                     String token) {
-        HttpServletRequest request = this.currentRequest();
-        if (request != null) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                String username = (String) session.getAttribute(
-                                  Constant.USERNAME_KEY);
-                String password = this.validSessionPassword(session);
-                if (StringUtils.hasText(username) &&
-                    StringUtils.hasText(password)) {
-                    return this.hugeClientPoolService.createBasicClient(
-                                graphSpace, graph, username, password);
-                }
-            }
-        }
         return this.hugeClientPoolService.createAuthClient(graphSpace, graph,
                                                            token);
-    }
-
-    private HttpServletRequest currentRequest() {
-        Object attributes = RequestContextHolder.getRequestAttributes();
-        if (!(attributes instanceof ServletRequestAttributes)) {
-            return null;
-        }
-        return ((ServletRequestAttributes) attributes).getRequest();
-    }
-
-    private String validSessionPassword(HttpSession session) {
-        Object password = session.getAttribute(Constant.PASSWORD_KEY);
-        Object expiresAt = session.getAttribute(
-                           Constant.PASSWORD_EXPIRE_AT_KEY);
-        if (!(password instanceof String) || !(expiresAt instanceof Number) ||
-            System.currentTimeMillis() >= ((Number) expiresAt).longValue()) {
-            session.removeAttribute(Constant.PASSWORD_KEY);
-            session.removeAttribute(Constant.PASSWORD_EXPIRE_AT_KEY);
-            return null;
-        }
-        return (String) password;
     }
 
     protected HugeClient unauthClient() {

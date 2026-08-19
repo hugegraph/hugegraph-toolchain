@@ -91,7 +91,7 @@ public class SchemaController extends BaseController {
     public Object addSchemaGroovy(@PathVariable("graphspace") String graphSpace,
                                   @PathVariable("graph") String graph,
                                   @RequestBody SchemaGroovy schemaGroovy) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         String content = schemaGroovy.getSchemaGroovy();
         log.info("Add schema groovy: {}", content);
         checkSchemaGroovy(content);

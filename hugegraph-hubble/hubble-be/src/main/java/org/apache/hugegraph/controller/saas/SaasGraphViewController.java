@@ -84,7 +84,7 @@ public class SaasGraphViewController extends GremlinController {
         StopWatch timer = StopWatch.createStarted();
 
         try {
-            HugeClient client = this.authClient(graphSpace, graph);
+            HugeClient client = this.authGremlinClient(graphSpace, graph);
             GremlinResult result =
                     this.queryService.executeGremlinQuery(client,
                                                           query.convert2GremlinQuery());
@@ -124,7 +124,7 @@ public class SaasGraphViewController extends GremlinController {
         Map<String, Object> result = new HashMap<>(3);
 
         try {
-            HugeClient client = this.authClient(graphSpace, graph);
+            HugeClient client = this.authGremlinClient(graphSpace, graph);
             asyncId = this.queryService.executeGremlinAsyncTask(client,
                                                                 query.convert2GremlinQuery());
             status = ExecuteStatus.ASYNC_TASK_SUCCESS;
