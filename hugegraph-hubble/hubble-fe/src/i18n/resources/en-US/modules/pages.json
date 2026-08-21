@@ -280,6 +280,8 @@
       "schema_apply_failed": "The graph was created, but its built-in Schema could not be applied. Retry from Metadata.",
       "schema_verify_failed": "The existing built-in Graph Schema could not be verified. Retry after the template service recovers.",
       "schema_conflict": "The existing {{name}} template differs from the built-in template. Rename it or use another template.",
+      "waiting_ready": "Waiting for all Server replicas...",
+      "waiting_ready_progress": "Waiting for Server replicas: {{ready}}/{{expected}} ready...",
       "create_success": "Graph created",
       "update_success": "Graph updated",
       "auth": "Enable Authentication",

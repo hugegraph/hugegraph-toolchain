@@ -280,6 +280,8 @@
       "schema_apply_failed": "图已创建，但内置 Schema 应用失败，请进入元数据页面重试。",
       "schema_verify_failed": "无法确认已有内置 Graph Schema，请等待模板服务恢复后重试。",
       "schema_conflict": "已有 {{name}} 模板与内置模板内容不同，请重命名它或改用其他模板。",
+      "waiting_ready": "正在等待所有 Server 副本就绪…",
+      "waiting_ready_progress": "正在等待 Server 副本：{{ready}}/{{expected}} 已就绪…",
       "create_success": "创建成功",
       "update_success": "更新成功",
       "auth": "是否开启鉴权",

@@ -27,6 +27,8 @@ import zhPages from '../../i18n/resources/zh-CN/modules/pages.json';
 jest.mock('../../api', () => ({
     auth: {
         login: jest.fn(),
+        mode: jest.fn(),
+        anonymous: jest.fn(),
     },
     config: {
         getConfig: jest.fn(),
@@ -74,6 +76,10 @@ const submitLoginForm = async (redirect = '%2Fnavigation') => {
 describe('Login request errors', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        api.auth.mode.mockResolvedValue({
+            status: 200,
+            data: {authentication: 'PASSWORD'},
+        });
         localStorage.clear();
         sessionStorage.clear();
         window.matchMedia = jest.fn().mockImplementation(query => ({
@@ -167,6 +173,37 @@ describe('Login request errors', () => {
         });
         expect(localStorage.getItem('user')).toBeNull();
         expect(window.location.replace).not.toHaveBeenCalled();
+    });
+
+    it('establishes an anonymous session without submitting credentials', async () => {
+        api.auth.mode.mockResolvedValue({
+            status: 200,
+            data: {authentication: 'ANONYMOUS'},
+        });
+        api.auth.anonymous.mockResolvedValue({
+            status: 200,
+            data: {id: 'anonymous', user_name: 'anonymous'},
+        });
+        api.config.getConfig.mockResolvedValue({status: 200, data: {}});
+
+        render(
+            <MemoryRouter
+                initialEntries={['/login?redirect=%2Fnavigation']}
+                future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+            >
+                <Login />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => expect(window.location.replace)
+            .toHaveBeenCalledWith('/navigation'));
+        expect(api.auth.anonymous).toHaveBeenCalledTimes(1);
+        expect(api.auth.login).not.toHaveBeenCalled();
+        expect(userUtil.setUser).toHaveBeenCalledWith({
+            id: 'anonymous',
+            user_name: 'anonymous',
+        });
+        expect(localStorage.getItem('user')).toBe('anonymous');
     });
 
     it('keeps rejected config requests from escaping after a successful login', async () => {

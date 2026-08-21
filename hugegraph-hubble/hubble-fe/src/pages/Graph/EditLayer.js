@@ -70,6 +70,9 @@ const EditLayer = ({
     const [schemaLoading, setSchemaLoading] = useState(false);
     const [schemaError, setSchemaError] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [waitingReady, setWaitingReady] = useState(false);
+    const [readyProgress, setReadyProgress] = useState(null);
+    const readinessPoll = useRef({generation: 0, timer: null});
     const [form] = Form.useForm();
     const {t} = useTranslation();
     const pdMode = isPdEnabled();
@@ -160,6 +163,59 @@ const EditLayer = ({
         form.setFieldValue('schema', undefined);
     }, [form]);
 
+    const stopReadinessTracking = useCallback(() => {
+        readinessPoll.current.generation += 1;
+        clearInterval(readinessPoll.current.timer);
+        readinessPoll.current.timer = null;
+        setWaitingReady(false);
+        setReadyProgress(null);
+    }, []);
+
+    const startReadinessTracking = useCallback(graphName => {
+        clearInterval(readinessPoll.current.timer);
+        const generation = readinessPoll.current.generation + 1;
+        readinessPoll.current.generation = generation;
+        setWaitingReady(true);
+        setReadyProgress(null);
+        let inFlight = false;
+        const poll = async () => {
+            if (inFlight || readinessPoll.current.generation !== generation) {
+                return;
+            }
+            inFlight = true;
+            try {
+                const res = await api.manage.getGraphStatus(
+                    graphspace,
+                    graphName,
+                    PAGE_ERROR_CONFIG
+                );
+                const status = res?.data;
+                if (readinessPoll.current.generation === generation
+                    && res?.status === 200
+                    && status?.expected_count != null) {
+                    setReadyProgress({
+                        ready: status.ready_count ?? 0,
+                        expected: status.expected_count,
+                    });
+                }
+            }
+            catch {
+                // A 404 is expected until new Server metadata is visible, and
+                // old Servers intentionally fall back to generic progress.
+            }
+            finally {
+                inFlight = false;
+            }
+        };
+        poll();
+        readinessPoll.current.timer = setInterval(poll, 500);
+    }, [graphspace]);
+
+    useEffect(() => () => {
+        readinessPoll.current.generation += 1;
+        clearInterval(readinessPoll.current.timer);
+    }, []);
+
     const onFinish = useCallback(async () => {
         let values;
         try {
@@ -208,7 +264,18 @@ const EditLayer = ({
             if (!pdMode) {
                 delete graphRequest.schema;
             }
-            const result = await api.manage.addGraph(graphspace, graphRequest);
+            if (pdMode) {
+                startReadinessTracking(values.graph);
+            }
+            let result;
+            try {
+                result = await api.manage.addGraph(graphspace, graphRequest);
+            }
+            finally {
+                if (pdMode) {
+                    stopReadinessTracking();
+                }
+            }
             if (result.status === 200 && sample) {
                 try {
                     const sampleResult = await api.manage.loadSampleGraph(
@@ -261,6 +328,7 @@ const EditLayer = ({
             return result;
         }).then(res => {
             setLoading(false);
+            setWaitingReady(false);
             if (res.status === 200) {
                 if (res.sampleResult?.data) {
                     message.success(t('graph.sample.success', {
@@ -278,6 +346,7 @@ const EditLayer = ({
             message.error(res.message);
         }).catch(error => {
             setLoading(false);
+            setWaitingReady(false);
             if (error.graphCreated) {
                 onCancel();
                 refresh();
@@ -292,6 +361,8 @@ const EditLayer = ({
         onCancel,
         pdMode,
         refresh,
+        startReadinessTracking,
+        stopReadinessTracking,
         t,
         validateForm,
     ]);
@@ -327,6 +398,9 @@ const EditLayer = ({
             width={600}
             onOk={onFinish}
             confirmLoading={loading}
+            okText={waitingReady ? readyProgress ? t(
+                'graph.form.waiting_ready_progress', readyProgress
+            ) : t('graph.form.waiting_ready') : undefined}
             maskClosable={false}
         >
             <Form

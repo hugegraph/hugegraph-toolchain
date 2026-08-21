@@ -129,6 +129,15 @@ public class HubbleOptions extends OptionHolder {
                     1024
             );
 
+    public static final ConfigOption<Integer> GRAPH_READY_TIMEOUT =
+            new ConfigOption<>(
+                    "graph.ready_timeout",
+                    "Maximum seconds to wait after graph creation for every " +
+                    "registered HugeGraph Server to report READY.",
+                    positiveInt(),
+                    60
+            );
+
     public static final ConfigOption<Integer> GREMLIN_SUFFIX_LIMIT =
             new ConfigOption<>(
                     "gremlin.suffix_limit",
@@ -286,6 +295,16 @@ public class HubbleOptions extends OptionHolder {
                     "pd.enabled=false. Example: http://127.0.0.1:8080",
                     null,
                     "http://127.0.0.1:8080"
+            );
+
+    public static final ConfigOption<Boolean> SERVER_AUTH_ENABLED =
+            new ConfigOption<>(
+                    "server.auth.enabled",
+                    "Whether HugeGraph Server authentication is enabled. " +
+                    "When false, Hubble creates an anonymous browser session " +
+                    "and never calls the Server login API.",
+                    null,
+                    true
             );
 
     public static final ConfigOption<String> PD_CLUSTER =

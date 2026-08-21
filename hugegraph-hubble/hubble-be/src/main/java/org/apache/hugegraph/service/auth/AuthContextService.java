@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.options.HubbleOptions;
@@ -76,6 +77,8 @@ public class AuthContextService {
             "read_health", "read_topology", "read_metrics");
     private static final Set<String> GRAPH_RESOURCE_ACTIONS = set(
             "use_authorized");
+    private static final Set<String> ANONYMOUS_GRAPH_RESOURCE_ACTIONS = set(
+            "read", "create", "update", "delete", "manage");
 
     private final HugeConfig config;
     private final UserService users;
@@ -88,6 +91,11 @@ public class AuthContextService {
 
     public Map<String, Object> context(HugeClient client, String username) {
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
+        boolean anonymous = !this.config.get(
+                            HubbleOptions.SERVER_AUTH_ENABLED);
+        if (anonymous) {
+            return this.anonymousContext(pdEnabled, username);
+        }
         String mode = pdEnabled ? "PD" : "NON_PD";
         String role;
         List<String> adminGraphSpaces = Collections.emptyList();
@@ -122,6 +130,49 @@ public class AuthContextService {
         context.put("capabilities", capabilities);
         context.put("actions", actions);
         context.put("scopes", scopes);
+        return Collections.unmodifiableMap(context);
+    }
+
+    private Map<String, Object> anonymousContext(boolean pdEnabled,
+                                                  String username) {
+        String mode = pdEnabled ? "PD" : "NON_PD";
+        Set<String> capabilities = new LinkedHashSet<>();
+        capabilities.add(GRAPH_RESOURCES_ACCESS);
+        if (pdEnabled) {
+            capabilities.add(GRAPHSPACES_READ);
+            capabilities.add(GRAPHSPACES_MANAGE);
+        }
+
+        Map<String, Set<String>> actions = new LinkedHashMap<>();
+        actions.put("account", emptySet());
+        actions.put("accounts", emptySet());
+        actions.put("graphspaces", pdEnabled ? CRUD_ACTIONS : emptySet());
+        actions.put("members", emptySet());
+        actions.put("roles", emptySet());
+        actions.put("authorizations", emptySet());
+        actions.put("operations", emptySet());
+        actions.put("graph_resources", ANONYMOUS_GRAPH_RESOURCE_ACTIONS);
+
+        Map<String, Object> scopes = new LinkedHashMap<>();
+        scopes.put("all_graphspaces", pdEnabled);
+        scopes.put("admin_graphspaces", pdEnabled ?
+                   Collections.singletonList(
+                           PDHugeClientFactory.DEFAULT_GRAPHSPACE) :
+                   Collections.emptyList());
+        scopes.put("graph_resources", "UNRESTRICTED");
+
+        String contextVersion = version(mode, username, SUPERADMIN,
+                                        capabilities, actions, scopes);
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("schema_version", SCHEMA_VERSION);
+        context.put("context_version", contextVersion);
+        context.put("mode", mode);
+        context.put("authentication", "ANONYMOUS");
+        context.put("username", username);
+        context.put("role", SUPERADMIN);
+        context.put("capabilities", Collections.unmodifiableSet(capabilities));
+        context.put("actions", Collections.unmodifiableMap(actions));
+        context.put("scopes", Collections.unmodifiableMap(scopes));
         return Collections.unmodifiableMap(context);
     }
 

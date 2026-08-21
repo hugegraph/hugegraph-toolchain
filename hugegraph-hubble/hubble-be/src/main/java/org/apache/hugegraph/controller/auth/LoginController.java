@@ -75,6 +75,9 @@ public class LoginController extends BaseController {
 
     @PostMapping("/login")
     public Object login(@RequestBody Login login) {
+        if (!this.serverAuthEnabled()) {
+            return this.createAnonymousSession();
+        }
         String address = this.getRequest().getRemoteAddr();
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
         this.loginAttemptGuard.checkAllowed(login.name(), address);
@@ -107,6 +110,35 @@ public class LoginController extends BaseController {
         } finally {
             this.clearRequestHugeClient();
         }
+    }
+
+    @GetMapping("/mode")
+    public Object mode() {
+        return ImmutableMap.of("authentication",
+                               this.serverAuthEnabled() ?
+                               "PASSWORD" : "ANONYMOUS");
+    }
+
+    @PostMapping("/anonymous")
+    public Object anonymous() {
+        if (this.serverAuthEnabled()) {
+            throw new ExternalException(HttpStatus.FORBIDDEN.value(),
+                                        "Anonymous login is disabled");
+        }
+        return this.createAnonymousSession();
+    }
+
+    private Object createAnonymousSession() {
+        this.clearAuthSession();
+        this.getRequest().getSession();
+        this.getRequest().changeSessionId();
+        this.setUser(Constant.ANONYMOUS_USER);
+        this.setAnonymousSession();
+        return currentAnonymousUser();
+    }
+
+    private boolean serverAuthEnabled() {
+        return this.config.get(HubbleOptions.SERVER_AUTH_ENABLED);
     }
 
     private LoginResult authenticate(Login login, boolean pdEnabled,
@@ -223,8 +255,24 @@ public class LoginController extends BaseController {
         return user;
     }
 
+    private static UserEntity currentAnonymousUser() {
+        UserEntity user = currentUser(Constant.ANONYMOUS_USER);
+        user.setAdminSpaces(Collections.singletonList(
+                            PDHugeClientFactory.DEFAULT_GRAPHSPACE));
+        user.setResSpaces(Collections.singletonList(
+                          PDHugeClientFactory.DEFAULT_GRAPHSPACE));
+        user.setSpacenum(1);
+        user.setSuperadmin(true);
+        return user;
+    }
+
     @GetMapping("/status")
     public Object status() {
+
+        if (this.isAnonymousSession()) {
+            return ImmutableMap.of("level", AuthContextService.SUPERADMIN,
+                                   "authentication", "ANONYMOUS");
+        }
 
         HugeClient client = authClient(null, null);
 

@@ -58,6 +58,8 @@ public final class Constant {
 
     public static final String TOKEN_KEY = "auth_token";
     public static final String USERNAME_KEY = "username";
+    public static final String ANONYMOUS_KEY = "anonymous_session";
+    public static final String ANONYMOUS_USER = "anonymous";
 
     public static final int NO_LIMIT = -1;
 

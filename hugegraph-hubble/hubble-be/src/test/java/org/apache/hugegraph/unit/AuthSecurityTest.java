@@ -178,6 +178,40 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testLoginInterceptorAllowsExplicitAnonymousSession() {
+        LoginInterceptor interceptor = new LoginInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET", "/api/v1.3/auth/context");
+        request.getSession().setAttribute(Constant.USERNAME_KEY,
+                                          Constant.ANONYMOUS_USER);
+        request.getSession().setAttribute(Constant.ANONYMOUS_KEY, Boolean.TRUE);
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                               new MockHttpServletResponse(),
+                                               null));
+    }
+
+    @Test
+    public void testCustomInterceptorUsesUnauthClientForAnonymousSession()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/graphs/hugegraph/schema");
+        request.getSession().setAttribute(Constant.USERNAME_KEY,
+                                          Constant.ANONYMOUS_USER);
+        request.getSession().setAttribute(Constant.ANONYMOUS_KEY, Boolean.TRUE);
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(1, interceptor.unauthClients);
+        Assert.assertEquals("DEFAULT", interceptor.graphSpace);
+        Assert.assertEquals("hugegraph", interceptor.graph);
+        Assert.assertNull(interceptor.token);
+    }
+
+    @Test
     public void testCustomInterceptorDoesNotCreateClientForMissingSession()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
@@ -482,6 +516,18 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testIngestionProxyAcceptsExplicitAnonymousSession() {
+        TestIngestionProxyServlet servlet = new TestIngestionProxyServlet();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET", "/ingest/tasks");
+        request.getSession().setAttribute(Constant.USERNAME_KEY,
+                                          Constant.ANONYMOUS_USER);
+        request.getSession().setAttribute(Constant.ANONYMOUS_KEY, Boolean.TRUE);
+
+        Assert.assertTrue(servlet.isAuthenticated(request));
+    }
+
+    @Test
     public void testClearAuthSessionClearsIdentityAndToken() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(
@@ -490,11 +536,13 @@ public class AuthSecurityTest {
 
         request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.ANONYMOUS_KEY, Boolean.TRUE);
 
         controller.clearAuth();
 
         Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
         Assert.assertNull(request.getSession().getAttribute(Constant.USERNAME_KEY));
+        Assert.assertNull(request.getSession().getAttribute(Constant.ANONYMOUS_KEY));
     }
 
     @Test
@@ -552,6 +600,8 @@ public class AuthSecurityTest {
         TestLoginController controller = new TestLoginController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.SERVER_AUTH_ENABLED))
+               .thenReturn(true);
         setField(controller, "config", config);
         Login login = new Login();
         login.name("admin");
@@ -567,6 +617,32 @@ public class AuthSecurityTest {
         Assert.assertNull(request.getSession().getAttribute("auth_password"));
         Assert.assertNull(request.getSession().getAttribute(
                           "auth_password_expire_at"));
+    }
+
+    @Test
+    public void testAnonymousLoginSkipsServerAuthentication() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        String oldSessionId = request.getSession().getId();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestLoginController controller = new TestLoginController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.SERVER_AUTH_ENABLED))
+               .thenReturn(false);
+        setField(controller, "config", config);
+
+        Object result = controller.anonymous();
+
+        Assert.assertTrue(result instanceof UserEntity);
+        Assert.assertNotEquals(oldSessionId, request.getSession().getId());
+        Assert.assertEquals(Constant.ANONYMOUS_USER,
+                            request.getSession().getAttribute(
+                                    Constant.USERNAME_KEY));
+        Assert.assertEquals(Boolean.TRUE,
+                            request.getSession().getAttribute(
+                                    Constant.ANONYMOUS_KEY));
+        Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
+        Mockito.verifyZeroInteractions(controller.attemptGuard);
     }
 
     @Test
@@ -604,6 +680,8 @@ public class AuthSecurityTest {
         TestLoginController controller = new TestLoginController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.SERVER_AUTH_ENABLED))
+               .thenReturn(true);
         setField(controller, "config", config);
 
         LoginResult loginResult = new LoginResult();
@@ -643,6 +721,8 @@ public class AuthSecurityTest {
         controller.failStandalone = true;
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.SERVER_AUTH_ENABLED))
+               .thenReturn(true);
         setField(controller, "config", config);
         Login login = new Login();
         login.name("admin");
@@ -671,6 +751,8 @@ public class AuthSecurityTest {
         TestLoginController controller = new TestLoginController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.SERVER_AUTH_ENABLED))
+               .thenReturn(true);
         setField(controller, "config", config);
 
         LoginResult loginResult = new LoginResult();
@@ -733,6 +815,10 @@ public class AuthSecurityTest {
                throws IOException {
             return this.doExecute(request, new MockHttpServletResponse(),
                                   new HttpGet("/ingest/tasks"));
+        }
+
+        public boolean isAuthenticated(MockHttpServletRequest request) {
+            return this.authenticated(request);
         }
     }
 
@@ -869,6 +955,16 @@ public class AuthSecurityTest {
         @Override
         protected org.apache.hugegraph.driver.HugeClient unauthClient() {
             this.unauthClients++;
+            return null;
+        }
+
+        @Override
+        protected org.apache.hugegraph.driver.HugeClient unauthClient(
+                  String graphSpace, String graph) {
+            this.unauthClients++;
+            this.graphSpace = graphSpace;
+            this.graph = graph;
+            this.token = null;
             return null;
         }
     }

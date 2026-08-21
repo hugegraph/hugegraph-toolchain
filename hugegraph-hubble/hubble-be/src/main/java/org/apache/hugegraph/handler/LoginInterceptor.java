@@ -36,8 +36,16 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
             return true;
         }
 
-        if (!this.hasTextSessionAttribute(request, Constant.TOKEN_KEY) ||
-            !this.hasTextSessionAttribute(request, Constant.USERNAME_KEY)) {
+        boolean authenticated =
+                this.hasTextSessionAttribute(request, Constant.TOKEN_KEY) &&
+                this.hasTextSessionAttribute(request, Constant.USERNAME_KEY);
+        boolean anonymous =
+                Boolean.TRUE.equals(request.getSession().getAttribute(
+                                    Constant.ANONYMOUS_KEY)) &&
+                Constant.ANONYMOUS_USER.equals(request.getSession()
+                                                       .getAttribute(
+                                                       Constant.USERNAME_KEY));
+        if (!authenticated && !anonymous) {
             throw new UnauthorizedException();
         }
 

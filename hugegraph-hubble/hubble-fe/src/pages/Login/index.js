@@ -69,19 +69,12 @@ const Login = () => {
         window.location.replace(safeRedirect);
     }, [location.search]);
 
-    const onFinish = useCallback(async value => {
-        let res;
-        try {
-            res = await api.auth.login(value);
-        }
-        catch {
-            return;
-        }
+    const completeLogin = useCallback(async (res, username) => {
         if (res.status !== 200) {
             return;
         }
 
-        localStorage.setItem('user', value.user_name);
+        localStorage.setItem('user', username);
         user.setUser(res.data);
         try {
             const configRes = await api.config.getConfig();
@@ -96,6 +89,47 @@ const Login = () => {
             navigateAfterLogin();
         }
     }, [navigateAfterLogin]);
+
+    const onFinish = useCallback(async value => {
+        let res;
+        try {
+            res = await api.auth.login(value);
+        }
+        catch {
+            return;
+        }
+        await completeLogin(res, value.user_name);
+    }, [completeLogin]);
+
+    useEffect(() => {
+        let active = true;
+        const establishAnonymousSession = async () => {
+            let mode;
+            try {
+                mode = await api.auth.mode();
+            }
+            catch {
+                return;
+            }
+            if (!active || mode.status !== 200
+                || mode.data?.authentication !== 'ANONYMOUS') {
+                return;
+            }
+            try {
+                const res = await api.auth.anonymous();
+                if (active) {
+                    await completeLogin(res, 'anonymous');
+                }
+            }
+            catch {
+                // Keep the credential form available when bootstrap fails.
+            }
+        };
+        establishAnonymousSession();
+        return () => {
+            active = false;
+        };
+    }, [completeLogin]);
 
     return (
         <div className={`${style.loginContainer} workbench-login`}>

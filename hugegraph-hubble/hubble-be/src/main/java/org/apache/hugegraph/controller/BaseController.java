@@ -21,6 +21,7 @@ package org.apache.hugegraph.controller;
 import java.util.List;
 import java.util.function.Function;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
@@ -31,6 +32,7 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -134,6 +136,22 @@ public abstract class BaseController {
     protected void clearAuthSession() {
         this.delSession(Constant.TOKEN_KEY);
         this.delSession(Constant.USERNAME_KEY);
+        this.delSession(Constant.ANONYMOUS_KEY);
+    }
+
+    protected void setAnonymousSession() {
+        this.setSession(Constant.ANONYMOUS_KEY, Boolean.TRUE);
+    }
+
+    protected boolean isAnonymousSession() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (!(attributes instanceof ServletRequestAttributes)) {
+            return false;
+        }
+        HttpSession session = ((ServletRequestAttributes) attributes)
+                              .getRequest().getSession(false);
+        return session != null && Boolean.TRUE.equals(
+               session.getAttribute(Constant.ANONYMOUS_KEY));
     }
 
     protected HugeClient authClient(String graphSpace, String graph) {
@@ -160,6 +178,10 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceManager(String graphSpace) {
         HugeClient client = this.authClient(null, null);
+        if (this.isAnonymousSession()) {
+            client.assignGraph(graphSpace, null);
+            return client;
+        }
         if (!this.userService.isSuperAdmin(client) &&
             !this.userService.isAssignSpaceAdmin(client, graphSpace)) {
             throw new ForbiddenException(
@@ -171,6 +193,9 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceAdministrator() {
         HugeClient client = this.authClient(null, null);
+        if (this.isAnonymousSession()) {
+            return client;
+        }
         if (!this.userService.isSuperAdmin(client)) {
             throw new ForbiddenException(
                     "Permission denied: manage graphspaces");

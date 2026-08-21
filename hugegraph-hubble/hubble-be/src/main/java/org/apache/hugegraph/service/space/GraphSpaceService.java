@@ -123,6 +123,15 @@ public class GraphSpaceService {
 
     public List<Map<String, Object>> queryAllGs(HugeClient client, String query,
                                                 String createTime) {
+        return this.queryAllGs(client, query, createTime, true);
+    }
+
+    public List<Map<String, Object>> queryAllGs(HugeClient client, String query,
+                                                String createTime,
+                                                boolean includeAdmins) {
+        if (!includeAdmins) {
+            return this.queryAnonymousGs(client, query, createTime);
+        }
         List<Map<String, Object>> results =
                 client.graphSpace().listProfile(query).stream()
                       .filter((s) -> s.get("create_time").toString()
@@ -135,11 +144,41 @@ public class GraphSpaceService {
         for (Map<String, Object> info : results) {
             removeSensitiveFields(info);
             String name = info.get("name").toString();
-            info.put("graphspace_admin",
-                     userService.listGraphSpaceAdmin(client, name));
+            info.put("graphspace_admin", includeAdmins ?
+                     userService.listGraphSpaceAdmin(client, name) :
+                     Collections.emptyList());
             Map<String, Object> statisticTotal = evCount(client, name);
             info.put("statistic", statisticTotal);
         }
+        return results;
+    }
+
+    private List<Map<String, Object>> queryAnonymousGs(HugeClient client,
+                                                       String query,
+                                                       String createTime) {
+        String prefix = query == null ? "" : query;
+        String after = createTime == null ? "" : createTime;
+        List<Map<String, Object>> results = client.graphSpace()
+                .listGraphSpace().stream()
+                .map(client.graphSpace()::getGraphSpace)
+                .filter(space -> space != null &&
+                                 (space.getName().contains(prefix) ||
+                                  space.getNickname() != null &&
+                                  space.getNickname().contains(prefix)))
+                .filter(space -> space.getCreateTime() == null ||
+                                 space.getCreateTime().compareTo(after) > 0)
+                .map(space -> {
+                    GraphSpaceEntity entity =
+                            GraphSpaceEntity.fromGraphSpace(space);
+                    entity.setStatistic(evCount(client, space.getName()));
+                    Map<String, Object> info = toView(entity);
+                    info.put("graphspace_admin", Collections.emptyList());
+                    return info;
+                })
+                .collect(Collectors.toList());
+        Collections.sort(results, (a, b) ->
+                new BuiltInFirst().compare(a.get("name").toString(),
+                                           b.get("name").toString()));
         return results;
     }
 
@@ -337,6 +376,12 @@ public class GraphSpaceService {
     }
 
     public GraphSpaceEntity getWithAdmins(HugeClient authClient, String graphspace) {
+        return this.getWithAdmins(authClient, graphspace, true);
+    }
+
+    public GraphSpaceEntity getWithAdmins(HugeClient authClient,
+                                          String graphspace,
+                                          boolean includeAdmins) {
         GraphSpace space = authClient.graphSpace().getGraphSpace(graphspace);
         if (space == null) {
             throw new InternalException("graphspace.get.{} Not Exits",
@@ -346,7 +391,7 @@ public class GraphSpaceService {
         GraphSpaceEntity graphSpaceEntity
                 = GraphSpaceEntity.fromGraphSpace(space);
 
-        if (authClient.auth().isSuperAdmin()) {
+        if (includeAdmins && authClient.auth().isSuperAdmin()) {
             graphSpaceEntity.graphspaceAdmin =
                     userService.listGraphSpaceAdmin(authClient, graphspace);
         }

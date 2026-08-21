@@ -107,6 +107,10 @@ const getGraph = (graphspace, graph, config) => {
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/get`, config);
 };
 
+const getGraphStatus = (graphspace, graph, config) => {
+    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/status`, config);
+};
+
 const delGraph = (graphspace, graph) => {
     return request.delete(`/graphspaces/${graphspace}/graphs/${graph}`);
 };
@@ -148,7 +152,8 @@ const cloneGraph = (graphspace, graph, params) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/clone`, params);
 };
 
-export {getGraphList, getGraph, addGraph, updateGraph, delGraph, getDefaultGraph,
+export {getGraphList, getGraph, getGraphStatus, addGraph, updateGraph, delGraph,
+    getDefaultGraph,
     getGraphView, setDefaultGraph, clearGraph, loadSampleGraph,
     getGraphStatistic, updateGraphStatistic, cloneGraph};
 

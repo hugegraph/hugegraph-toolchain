@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {message} from 'antd';
 import {EditLayer, validateGraphFields, ViewLayer} from './EditLayer';
@@ -39,6 +39,7 @@ jest.mock('../../api', () => ({
         addGraph: jest.fn(),
         loadSampleGraph: jest.fn(),
         getGraph: jest.fn(),
+        getGraphStatus: jest.fn(),
         updateGraph: jest.fn(),
     },
 }));
@@ -673,6 +674,48 @@ test('creates the graph before importing a selected example dataset', async () =
         {suppressBusinessErrorToast: true}
     );
     expect(onCancel).toHaveBeenCalled();
+});
+
+test('shows replica counts while cluster graph creation is pending', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    let resolveCreate;
+    api.manage.addGraph.mockImplementation(() => new Promise(resolve => {
+        resolveCreate = resolve;
+    }));
+    api.manage.getGraphStatus.mockResolvedValue({
+        status: 200,
+        data: {status: 'LOADING', ready_count: 1, expected_count: 2},
+    });
+    const onCancel = jest.fn();
+
+    render(
+        <EditLayer
+            visible
+            onCancel={onCancel}
+            refresh={jest.fn()}
+            graphspace='DEFAULT'
+            validateForm={jest.fn().mockResolvedValue({
+                graph: 'cluster_graph',
+                nickname: 'Cluster Graph',
+                sample: 'none',
+            })}
+        />
+    );
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    fireEvent.click(document.querySelector('.ant-modal-footer .ant-btn-primary'));
+
+    await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalled());
+    await waitFor(() => expect(api.manage.getGraphStatus).toHaveBeenCalledWith(
+        'DEFAULT',
+        'cluster_graph',
+        {suppressBusinessErrorToast: true}
+    ));
+    await waitFor(() => expect(screen.getByRole('button', {
+        name: /graph\.form\.waiting_ready_progress/,
+    })).toHaveClass('ant-btn-loading'));
+    await act(async () => resolveCreate({status: 200}));
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
 });
 
 test('lets users clear the optional example dataset choice', async () => {

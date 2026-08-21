@@ -38,6 +38,7 @@ import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.graphs.GraphStatisticsEntity;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.graphs.GraphsService;
@@ -173,6 +174,74 @@ public class GraphsServiceDefaultTest {
                 "\"rocksdb.data_path\":\"rocksdb-data/data_demo\""));
         Assert.assertTrue(configJson.getValue().contains(
                 "\"rocksdb.wal_path\":\"rocksdb-data/wal_demo\""));
+    }
+
+    @Test
+    public void testCreatePdGraphWaitsForEveryServerReady() {
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.GRAPH_READY_TIMEOUT)).thenReturn(1);
+        ReflectionTestUtils.setField(this.service, "config", config);
+        Mockito.when(this.graphs.graphStatus("demo"))
+               .thenReturn(readiness("LOADING", 1, 2),
+                           readiness("READY", 2, 2));
+
+        this.service.create(this.client, "Demo", "demo", null);
+
+        InOrder order = Mockito.inOrder(this.graphs);
+        order.verify(this.graphs).createGraph(Mockito.eq("demo"),
+                                              Mockito.anyString());
+        order.verify(this.graphs, Mockito.times(2)).graphStatus("demo");
+    }
+
+    @Test
+    public void testCreatePdGraphFailsOnReplicaFailure() {
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.GRAPH_READY_TIMEOUT)).thenReturn(1);
+        ReflectionTestUtils.setField(this.service, "config", config);
+        Mockito.when(this.graphs.graphStatus("demo"))
+               .thenReturn(readiness("FAILED", 1, 2));
+
+        try {
+            this.service.create(this.client, "Demo", "demo", null);
+            Assert.fail("Expected cluster readiness failure");
+        } catch (InternalException e) {
+            Assert.assertTrue(e.getMessage().contains("FAILED (1/2)"));
+        }
+    }
+
+    @Test
+    public void testCreatePdGraphAllowsServerWithoutReadinessEndpoint() {
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        Mockito.when(config.get(HubbleOptions.GRAPH_READY_TIMEOUT)).thenReturn(1);
+        ReflectionTestUtils.setField(this.service, "config", config);
+        ServerException unsupported = new ServerException("not found");
+        unsupported.status(404);
+        Mockito.when(this.graphs.graphStatus("demo")).thenThrow(unsupported);
+
+        this.service.create(this.client, "Demo", "demo", null);
+
+        Mockito.verify(this.graphs).graphStatus("demo");
+    }
+
+    @Test
+    public void testGraphStatusForwardsClusterReadiness() {
+        Map<String, Object> readiness = readiness("LOADING", 1, 2);
+        Mockito.when(this.graphs.graphStatus("demo")).thenReturn(readiness);
+
+        Assert.assertSame(readiness,
+                          this.service.graphStatus(this.client, "demo"));
+    }
+
+    private static Map<String, Object> readiness(String status, int ready,
+                                                 int expected) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", status);
+        result.put("ready_count", ready);
+        result.put("expected_count", expected);
+        return result;
     }
 
     @Test

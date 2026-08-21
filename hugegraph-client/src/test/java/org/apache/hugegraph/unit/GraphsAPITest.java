@@ -157,6 +157,23 @@ public class GraphsAPITest extends BaseUnitTest {
     }
 
     @Test
+    public void testGraphStatusUsesCanonicalGet() {
+        RestResult mockResult = Mockito.mock(RestResult.class);
+        Mockito.when(mockResult.readObject(Map.class))
+               .thenReturn(null);
+        ArgumentCaptor<String> pathCaptor =
+                ArgumentCaptor.forClass(String.class);
+        Mockito.when(this.mockClient.get(pathCaptor.capture()))
+               .thenReturn(mockResult);
+
+        this.graphsAPI.status("test-graph");
+
+        Assert.assertEquals("graphspaces/DEFAULT/graphs/test-graph/status",
+                            pathCaptor.getValue());
+        Mockito.verify(mockResult).readObject(Map.class);
+    }
+
+    @Test
     public void testPerGraphReloadIsDeprecated() throws NoSuchMethodException {
         Assert.assertNotNull(GraphsAPI.class.getMethod("reload", String.class)
                                             .getAnnotation(Deprecated.class));

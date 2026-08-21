@@ -40,6 +40,7 @@ import org.apache.hugegraph.entity.graphs.GraphStatisticsEntity;
 import org.apache.hugegraph.entity.query.ExecuteHistory;
 import org.apache.hugegraph.entity.query.GremlinQuery;
 import org.apache.hugegraph.entity.space.BuiltInEntity;
+import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.options.HubbleOptions;
@@ -112,6 +113,7 @@ public class GraphsService {
     private static final int SMALL_STATISTICS_PAGE_SIZE = 1000;
     private static final String GRAPH_HLM = "hlm";
     private static final String GRAPH_COVID19 = "covid19";
+    private static final long GRAPH_READY_POLL_INTERVAL_MILLIS = 250L;
 
     private final ConcurrentHashMap<String, Map<String, Object>> graphStatistics =
             new ConcurrentHashMap<>();
@@ -289,7 +291,82 @@ public class GraphsService {
         }
         conf.put("serializer", "binary");
 
-        return client.graphs().createGraph(graph, JsonUtil.toJson(conf));
+        Map<String, String> result =
+                client.graphs().createGraph(graph, JsonUtil.toJson(conf));
+        if (pdEnabled) {
+            this.waitUntilGraphReady(client.graphs(), graph);
+        }
+        return result;
+    }
+
+    private void waitUntilGraphReady(GraphsManager graphs, String graph) {
+        int timeout = this.config.get(HubbleOptions.GRAPH_READY_TIMEOUT);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeout);
+        String previousProgress = null;
+        Map<String, Object> lastStatus = Collections.emptyMap();
+
+        while (true) {
+            try {
+                lastStatus = graphs.graphStatus(graph);
+            } catch (ServerException e) {
+                if (e.status() == 404) {
+                    log.warn("HugeGraph Server does not expose cluster graph " +
+                             "readiness; graph '{}' was created without a " +
+                             "cross-replica readiness guarantee", graph);
+                    return;
+                }
+                if (e.status() == 401 || e.status() == 403) {
+                    throw e;
+                }
+                log.warn("Failed to read cluster readiness for graph '{}': {}",
+                         graph, e.getMessage());
+            }
+
+            String status = String.valueOf(lastStatus.get("status"));
+            String progress = graphReadyProgress(lastStatus);
+            if (!progress.equals(previousProgress)) {
+                log.info("Graph '{}' cluster readiness: {}", graph, progress);
+                previousProgress = progress;
+            }
+            if ("READY".equals(status)) {
+                return;
+            }
+            if ("FAILED".equals(status)) {
+                throw new InternalException(
+                        "Graph '%s' failed to become ready across the cluster: %s",
+                        graph, progress);
+            }
+
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0L) {
+                throw new InternalException(
+                        "Graph '%s' did not become ready within %s seconds: %s",
+                        graph, timeout, progress);
+            }
+            long sleepMillis = Math.min(GRAPH_READY_POLL_INTERVAL_MILLIS,
+                                        TimeUnit.NANOSECONDS.toMillis(remaining));
+            try {
+                Thread.sleep(Math.max(1L, sleepMillis));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new InternalException(
+                        "Interrupted while waiting for graph '%s' readiness",
+                        e, graph);
+            }
+        }
+    }
+
+    private static String graphReadyProgress(Map<String, Object> status) {
+        Object state = status.get("status");
+        Object ready = status.get("ready_count");
+        Object expected = status.get("expected_count");
+        return String.format("%s (%s/%s)", state == null ? "UNKNOWN" : state,
+                             ready == null ? "?" : ready,
+                             expected == null ? "?" : expected);
+    }
+
+    public Map<String, Object> graphStatus(HugeClient client, String graph) {
+        return client.graphs().graphStatus(graph);
     }
 
     public Map<String, String> create(HugeClient client, String nickname,
@@ -318,7 +395,12 @@ public class GraphsService {
             conf.put("schema.init_template", schemaTemplate);
         }
 
-        return client.graphs().createGraph(graph, JsonUtil.toJson(conf));
+        Map<String, String> result =
+                client.graphs().createGraph(graph, JsonUtil.toJson(conf));
+        if (pdEnabled) {
+            this.waitUntilGraphReady(client.graphs(), graph);
+        }
+        return result;
     }
 
     public void update(HugeClient client, String nickname,
