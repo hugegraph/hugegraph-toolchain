@@ -136,6 +136,25 @@ public class AuthContextServiceTest {
     }
 
     @Test
+    public void testAnonymousContextDeclaresUnrestrictedGraphPermissions() {
+        Fixture fixture = new Fixture(true, false);
+
+        Map<String, Object> context = fixture.service.context(fixture.client,
+                                                              "anonymous");
+
+        Assert.assertEquals("ANONYMOUS", context.get("authentication"));
+        Assert.assertEquals("SUPERADMIN", context.get("role"));
+        Assert.assertTrue(capabilities(context).contains("graphspaces_manage"));
+        Assert.assertTrue(actions(context, "graphspaces").contains("delete"));
+        Assert.assertTrue(actions(context, "graph_resources").contains("read"));
+        Assert.assertTrue(actions(context, "graph_resources").contains("manage"));
+        Assert.assertEquals("UNRESTRICTED",
+                            scopes(context).get("graph_resources"));
+        Assert.assertTrue((Boolean) scopes(context).get("all_graphspaces"));
+        Mockito.verifyZeroInteractions(fixture.users);
+    }
+
+    @Test
     public void testContextVersionIsStableButChangesWithScope() {
         Fixture fixture = new Fixture(true);
         Mockito.when(fixture.users.getpersonal(fixture.client, "alice"))
@@ -192,8 +211,14 @@ public class AuthContextServiceTest {
         private final AuthContextService service;
 
         private Fixture(boolean pdEnabled) {
+            this(pdEnabled, true);
+        }
+
+        private Fixture(boolean pdEnabled, boolean serverAuthEnabled) {
             Mockito.when(this.config.get(HubbleOptions.PD_ENABLED))
                    .thenReturn(pdEnabled);
+            Mockito.when(this.config.get(HubbleOptions.SERVER_AUTH_ENABLED))
+                   .thenReturn(serverAuthEnabled);
             this.service = new AuthContextService(this.config, this.users);
         }
     }

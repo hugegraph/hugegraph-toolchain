@@ -52,6 +52,18 @@ describe('auth API contract', () => {
         });
     });
 
+    it('bootstraps anonymous mode through explicit public endpoints', () => {
+        auth.mode();
+        auth.anonymous();
+
+        expect(mockRequest.get).toHaveBeenCalledWith('/auth/mode', {
+            suppressBusinessErrorToast: true,
+        });
+        expect(mockRequest.post).toHaveBeenCalledWith(
+            '/auth/anonymous', undefined, {suppressBusinessErrorToast: true}
+        );
+    });
+
     it('forwards page-owned Vermeer status error controls', () => {
         const config = {suppressBusinessErrorToast: true};
 

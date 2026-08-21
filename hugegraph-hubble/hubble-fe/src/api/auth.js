@@ -23,6 +23,16 @@ const login = data => {
     return request.post('/auth/login', data);
 };
 
+const mode = () => {
+    return request.get('/auth/mode', {suppressBusinessErrorToast: true});
+};
+
+const anonymous = () => {
+    return request.post('/auth/anonymous', undefined, {
+        suppressBusinessErrorToast: true,
+    });
+};
+
 const logout = () => {
     return request.get('/auth/logout');
 };
@@ -75,7 +85,8 @@ const updatePwd = (username, oldpwd, newpwd) => {
 
 const importUserUrl = '/api/v1.3/auth/users/batch';
 
-export {login, logout, status, context, getUserList, getAllUserList, getUserInfo, delUser,
+export {login, mode, anonymous, logout, status, context, getUserList,
+    getAllUserList, getUserInfo, delUser,
     updateUser, addUser, updatePwd, importUserUrl, updateAdminspace};
 
 const getPersonal = config => {

@@ -288,6 +288,16 @@ public class HubbleOptions extends OptionHolder {
                     "http://127.0.0.1:8080"
             );
 
+    public static final ConfigOption<Boolean> SERVER_AUTH_ENABLED =
+            new ConfigOption<>(
+                    "server.auth.enabled",
+                    "Whether HugeGraph Server authentication is enabled. " +
+                    "When false, Hubble creates an anonymous browser session " +
+                    "and never calls the Server login API.",
+                    null,
+                    true
+            );
+
     public static final ConfigOption<String> PD_CLUSTER =
             new ConfigOption<>(
                     "cluster",

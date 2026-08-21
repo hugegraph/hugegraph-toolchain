@@ -103,16 +103,20 @@ public class GraphSpaceController extends BaseController {
         }
         if (all) {
             HugeClient client = this.authClient(null, null);
-            return this.userService.isSuperAdmin(client) ?
-                   this.graphSpaceService.queryAllGs(client, query,
-                                                     createTime) :
+            return this.isAnonymousSession() ||
+                   this.userService.isSuperAdmin(client) ?
+                   this.graphSpaceService.queryAllGs(client, query, createTime,
+                                                     !this.isAnonymousSession()) :
                    this.graphSpaceService.queryAccessibleGs(client, query,
                                                             createTime);
         }
         HugeClient client = this.authClient(null, null);
-        return this.userService.isSuperAdmin(client) ?
-               graphSpaceService.queryPage(client, query, createTime,
-                                           pageNo, pageSize) :
+        return this.isAnonymousSession() ?
+               PageUtil.page(graphSpaceService.queryAllGs(
+                       client, query, createTime, false), pageNo, pageSize) :
+               this.userService.isSuperAdmin(client) ?
+               graphSpaceService.queryPage(client, query, createTime, pageNo,
+                                           pageSize) :
                PageUtil.page(graphSpaceService.queryAccessibleGs(
                        client, query, createTime), pageNo, pageSize);
     }
@@ -139,7 +143,8 @@ public class GraphSpaceController extends BaseController {
         HugeClient client = this.authClient(null, null);
         // Get GraphSpace Info
         return graphSpaceService.toView(
-                graphSpaceService.getWithAdmins(client, graphspace));
+                graphSpaceService.getWithAdmins(client, graphspace,
+                                                !this.isAnonymousSession()));
     }
 
     @PostMapping
@@ -153,9 +158,11 @@ public class GraphSpaceController extends BaseController {
         graphSpaceService.create(client, graphSpaceEntity.convertGraphSpace());
 
         // Add GraphSpace Admin
-        graphSpaceEntity.graphspaceAdmin.forEach(u -> {
-            client.auth().addSpaceAdmin(u, graphSpaceEntity.getName());
-        });
+        if (!this.isAnonymousSession()) {
+            graphSpaceEntity.graphspaceAdmin.forEach(u -> {
+                client.auth().addSpaceAdmin(u, graphSpaceEntity.getName());
+            });
+        }
 
         return get(graphSpaceEntity.getName());
     }
@@ -198,20 +205,19 @@ public class GraphSpaceController extends BaseController {
         graphSpaceService.update(client, graphSpaceEntity.convertGraphSpace());
 
         // Update graphspace admin
-        ImmutableSet<String> oldSpaceAdmins
-                = ImmutableSet.copyOf(userService.listGraphSpaceAdmin(client,
-                                                                      graphspace));
-        ImmutableSet<String> curSpaceAdmins
-                = ImmutableSet.copyOf(graphSpaceEntity.graphspaceAdmin);
+        if (!this.isAnonymousSession()) {
+            ImmutableSet<String> oldSpaceAdmins = ImmutableSet.copyOf(
+                    userService.listGraphSpaceAdmin(client, graphspace));
+            ImmutableSet<String> curSpaceAdmins = ImmutableSet.copyOf(
+                    graphSpaceEntity.graphspaceAdmin);
 
-        // a. Del
-        SetUtils.difference(oldSpaceAdmins, curSpaceAdmins).forEach(u -> {
-            client.auth().delSpaceAdmin(u, graphspace);
-        });
-        // b. Add
-        SetUtils.difference(curSpaceAdmins, oldSpaceAdmins).forEach(u -> {
-            client.auth().addSpaceAdmin(u, graphspace);
-        });
+            SetUtils.difference(oldSpaceAdmins, curSpaceAdmins).forEach(u -> {
+                client.auth().delSpaceAdmin(u, graphspace);
+            });
+            SetUtils.difference(curSpaceAdmins, oldSpaceAdmins).forEach(u -> {
+                client.auth().addSpaceAdmin(u, graphspace);
+            });
+        }
 
         return get(graphSpaceEntity.getName());
     }
@@ -225,9 +231,11 @@ public class GraphSpaceController extends BaseController {
                 "must not null");
 
         // Delete graphspace admin
-        userService.listGraphSpaceAdmin(client, graphspace).forEach(u -> {
-            client.auth().delSpaceAdmin(u, graphspace);
-        });
+        if (!this.isAnonymousSession()) {
+            userService.listGraphSpaceAdmin(client, graphspace).forEach(u -> {
+                client.auth().delSpaceAdmin(u, graphspace);
+            });
+        }
 
         // delete graphspace
         graphSpaceService.delete(client, graphspace);

@@ -72,11 +72,18 @@ public class IngestionProxyServlet extends ProxyServlet {
         return super.doExecute(servletRequest, servletResponse, proxyRequest);
     }
 
-    private boolean authenticated(HttpServletRequest servletRequest) {
-        return StringUtils.isNotBlank(this.sessionString(servletRequest,
-                                                        Constant.USERNAME_KEY)) &&
-               StringUtils.isNotBlank(this.sessionString(servletRequest,
-                                                        Constant.TOKEN_KEY));
+    protected boolean authenticated(HttpServletRequest servletRequest) {
+        boolean tokenSession =
+                StringUtils.isNotBlank(this.sessionString(servletRequest,
+                                                          Constant.USERNAME_KEY)) &&
+                StringUtils.isNotBlank(this.sessionString(servletRequest,
+                                                          Constant.TOKEN_KEY));
+        boolean anonymousSession =
+                Constant.ANONYMOUS_USER.equals(this.sessionString(
+                        servletRequest, Constant.USERNAME_KEY)) &&
+                Boolean.TRUE.equals(servletRequest.getSession().getAttribute(
+                                    Constant.ANONYMOUS_KEY));
+        return tokenSession || anonymousSession;
     }
 
     private String sessionString(HttpServletRequest servletRequest,

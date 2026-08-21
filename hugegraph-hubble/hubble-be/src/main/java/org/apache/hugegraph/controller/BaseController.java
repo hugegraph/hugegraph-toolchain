@@ -134,6 +134,15 @@ public abstract class BaseController {
     protected void clearAuthSession() {
         this.delSession(Constant.TOKEN_KEY);
         this.delSession(Constant.USERNAME_KEY);
+        this.delSession(Constant.ANONYMOUS_KEY);
+    }
+
+    protected void setAnonymousSession() {
+        this.setSession(Constant.ANONYMOUS_KEY, Boolean.TRUE);
+    }
+
+    protected boolean isAnonymousSession() {
+        return Boolean.TRUE.equals(this.getSession(Constant.ANONYMOUS_KEY));
     }
 
     protected HugeClient authClient(String graphSpace, String graph) {
@@ -160,6 +169,10 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceManager(String graphSpace) {
         HugeClient client = this.authClient(null, null);
+        if (this.isAnonymousSession()) {
+            client.assignGraph(graphSpace, null);
+            return client;
+        }
         if (!this.userService.isSuperAdmin(client) &&
             !this.userService.isAssignSpaceAdmin(client, graphSpace)) {
             throw new ForbiddenException(
@@ -171,6 +184,9 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceAdministrator() {
         HugeClient client = this.authClient(null, null);
+        if (this.isAnonymousSession()) {
+            return client;
+        }
         if (!this.userService.isSuperAdmin(client)) {
             throw new ForbiddenException(
                     "Permission denied: manage graphspaces");

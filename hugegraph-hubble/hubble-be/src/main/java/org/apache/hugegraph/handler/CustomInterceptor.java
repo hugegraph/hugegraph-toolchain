@@ -122,7 +122,8 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
             if (!this.hasAuthSession(request)) {
                 return;
             }
-            String token =
+            boolean anonymous = this.hasAnonymousSession(request);
+            String token = anonymous ? null :
                     (String) request.getSession().getAttribute(Constant.TOKEN_KEY);
             String [] res = uri.split("/");
             String graphSpace = null;
@@ -135,7 +136,8 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
                     graph = res[i + 1];
                 }
             }
-            client = this.authClient(graphSpace, graph, token);
+            client = anonymous ? this.unauthClient(graphSpace, graph) :
+                     this.authClient(graphSpace, graph, token);
         }
 
         request.setAttribute("hugeClient", client);
@@ -156,8 +158,18 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
         if (session == null) {
             return false;
         }
-        return this.hasTextSessionAttribute(session, Constant.TOKEN_KEY) &&
-               this.hasTextSessionAttribute(session, Constant.USERNAME_KEY);
+        boolean authenticated =
+                this.hasTextSessionAttribute(session, Constant.TOKEN_KEY) &&
+                this.hasTextSessionAttribute(session, Constant.USERNAME_KEY);
+        return authenticated || this.hasAnonymousSession(request);
+    }
+
+    private boolean hasAnonymousSession(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        return session != null &&
+               Boolean.TRUE.equals(session.getAttribute(Constant.ANONYMOUS_KEY)) &&
+               Constant.ANONYMOUS_USER.equals(
+                       session.getAttribute(Constant.USERNAME_KEY));
     }
 
     private boolean hasTextSessionAttribute(HttpSession session, String key) {
@@ -173,5 +185,9 @@ public class CustomInterceptor extends HandlerInterceptorAdapter {
 
     protected HugeClient unauthClient() {
         return this.hugeClientPoolService.createUnauthClient();
+    }
+
+    protected HugeClient unauthClient(String graphSpace, String graph) {
+        return this.hugeClientPoolService.create(null, graphSpace, graph, null);
     }
 }

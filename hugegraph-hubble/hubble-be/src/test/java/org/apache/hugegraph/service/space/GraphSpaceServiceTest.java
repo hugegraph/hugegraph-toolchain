@@ -27,6 +27,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.space.GraphSpaceEntity;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.graphs.GraphsService;
+import org.apache.hugegraph.structure.space.GraphSpace;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -101,6 +102,29 @@ public class GraphSpaceServiceTest {
         Assert.assertFalse(response.get(0).containsKey("dpUserName"));
         Assert.assertFalse(response.get(0).containsKey("dpPassWord"));
         Assert.assertFalse(response.get(0).containsKey("configs"));
+    }
+
+    @Test
+    public void testAnonymousListDoesNotUseAuthProfile() {
+        GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
+        GraphSpace graphSpace = new GraphSpace("public");
+        Mockito.when(this.client.graphSpace()).thenReturn(manager);
+        Mockito.when(manager.listGraphSpace()).thenReturn(
+                java.util.Collections.singletonList("public"));
+        Mockito.when(manager.getGraphSpace("public")).thenReturn(graphSpace);
+        Mockito.when(this.graphsService.listGraphNames(this.client,
+                                                       "public", ""))
+               .thenReturn(java.util.Collections.emptySet());
+
+        List<Map<String, Object>> response =
+                this.service.queryAllGs(this.client, "", "", false);
+
+        Assert.assertEquals(1, response.size());
+        Assert.assertEquals("public", response.get(0).get("name"));
+        Assert.assertEquals(java.util.Collections.emptyList(),
+                            response.get(0).get("graphspace_admin"));
+        Mockito.verify(manager, Mockito.never()).listProfile(Mockito.anyString());
+        Mockito.verifyZeroInteractions(this.userService);
     }
 
     @Test
