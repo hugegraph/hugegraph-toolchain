@@ -486,6 +486,7 @@
       "new_password_placeholder": "请输入新密码",
       "confirm_password_placeholder": "请再次输入密码",
       "password_mismatch": "两次密码不一致",
+      "password_changed_relogin": "密码修改成功，请重新登录。",
       "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾"
     }
   },

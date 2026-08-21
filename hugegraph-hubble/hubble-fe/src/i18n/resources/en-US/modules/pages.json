@@ -486,6 +486,7 @@
       "new_password_placeholder": "Enter new password",
       "confirm_password_placeholder": "Enter new password again",
       "password_mismatch": "Passwords do not match",
+      "password_changed_relogin": "Password changed successfully. Please sign in again.",
       "account_name_rule": "Account name must be 1-16 characters and cannot start or end with an underscore"
     }
   },

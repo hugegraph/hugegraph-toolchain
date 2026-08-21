@@ -24,6 +24,7 @@ import style from './index.module.scss';
 import EditLayer from './EditLayer';
 import * as api from '../../api';
 import * as rules from '../../utils/rules';
+import * as user from '../../utils/user';
 
 const My = () => {
     const {t} = useTranslation();
@@ -71,8 +72,15 @@ const My = () => {
             setLoading(true);
             const res = await api.auth.updatePwd(data.user_name, old_password, user_password);
             if (res.status === 200) {
-                message.success(t('common.msg.update_success'));
-                setChangePass(false);
+                message.success(t('my.edit.password_changed_relogin'));
+                try {
+                    await api.auth.logout();
+                }
+                finally {
+                    sessionStorage.removeItem('redirect');
+                    user.clearLogin();
+                    window.location.replace('/login');
+                }
                 return;
             }
 
