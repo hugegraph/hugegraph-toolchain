@@ -190,8 +190,9 @@ const EditLayer = ({
                     PAGE_ERROR_CONFIG
                 );
                 const status = res?.data;
-                if (readinessPoll.current.generation === generation &&
-                    res?.status === 200 && status?.expected_count != null) {
+                if (readinessPoll.current.generation === generation
+                    && res?.status === 200
+                    && status?.expected_count != null) {
                     setReadyProgress({
                         ready: status.ready_count ?? 0,
                         expected: status.expected_count,
