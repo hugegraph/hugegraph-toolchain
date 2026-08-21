@@ -206,6 +206,13 @@ public class GraphsController extends BaseController {
         return result;
     }
 
+    @GetMapping("{graph}/status")
+    public Object status(@PathVariable("graphspace") String graphspace,
+                         @PathVariable("graph") String graph) {
+        return this.graphsService.graphStatus(
+                this.authClient(graphspace, null), graph);
+    }
+
     @PostMapping("{graph}/statistics")
     public void postStatistics(
             @PathVariable("graphspace") String graphspace,

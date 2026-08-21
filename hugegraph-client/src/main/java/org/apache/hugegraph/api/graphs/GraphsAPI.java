@@ -92,6 +92,13 @@ public class GraphsAPI extends API {
         return result.readObject(Map.class);
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> status(String name) {
+        RestResult result = this.client.get(joinPath(this.path(), name,
+                                                     "status"));
+        return result.readObject(Map.class);
+    }
+
     public List<String> list() {
         RestResult result = this.client.get(this.path());
         return result.readList(this.type(), String.class);

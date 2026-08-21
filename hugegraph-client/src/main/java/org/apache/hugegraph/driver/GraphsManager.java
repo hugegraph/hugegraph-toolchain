@@ -65,6 +65,10 @@ public class GraphsManager {
         return this.graphsAPI.get(graph);
     }
 
+    public Map<String, Object> graphStatus(String graph) {
+        return this.graphsAPI.status(graph);
+    }
+
     public List<String> listGraph() {
         return this.graphsAPI.list();
     }

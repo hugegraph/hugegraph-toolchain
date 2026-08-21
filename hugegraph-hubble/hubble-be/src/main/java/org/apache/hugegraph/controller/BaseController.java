@@ -21,6 +21,7 @@ package org.apache.hugegraph.controller;
 import java.util.List;
 import java.util.function.Function;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
@@ -31,6 +32,7 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -142,7 +144,14 @@ public abstract class BaseController {
     }
 
     protected boolean isAnonymousSession() {
-        return Boolean.TRUE.equals(this.getSession(Constant.ANONYMOUS_KEY));
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (!(attributes instanceof ServletRequestAttributes)) {
+            return false;
+        }
+        HttpSession session = ((ServletRequestAttributes) attributes)
+                              .getRequest().getSession(false);
+        return session != null && Boolean.TRUE.equals(
+               session.getAttribute(Constant.ANONYMOUS_KEY));
     }
 
     protected HugeClient authClient(String graphSpace, String graph) {

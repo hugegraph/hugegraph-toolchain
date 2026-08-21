@@ -129,6 +129,15 @@ public class HubbleOptions extends OptionHolder {
                     1024
             );
 
+    public static final ConfigOption<Integer> GRAPH_READY_TIMEOUT =
+            new ConfigOption<>(
+                    "graph.ready_timeout",
+                    "Maximum seconds to wait after graph creation for every " +
+                    "registered HugeGraph Server to report READY.",
+                    positiveInt(),
+                    60
+            );
+
     public static final ConfigOption<Integer> GREMLIN_SUFFIX_LIMIT =
             new ConfigOption<>(
                     "gremlin.suffix_limit",
