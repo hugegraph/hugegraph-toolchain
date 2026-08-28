@@ -21,6 +21,9 @@ import userEvent from '@testing-library/user-event';
 import My from './index';
 import * as api from '../../api';
 import * as user from '../../utils/user';
+import {
+    clearPersistedAlgorithmFormsForUser,
+} from '../../modules/algorithm/algorithmsForm/algorithmFormPersistence';
 
 let mockAuthContext = null;
 
@@ -37,12 +40,16 @@ jest.mock('../../api', () => ({
         getPersonal: jest.fn(),
         status: jest.fn(),
         updatePwd: jest.fn(),
-        logout: jest.fn(),
     },
 }));
 
 jest.mock('../../utils/user', () => ({
     clearLogin: jest.fn(),
+    beginLogoutTransition: jest.fn(),
+}));
+
+jest.mock('../../modules/algorithm/algorithmsForm/algorithmFormPersistence', () => ({
+    clearPersistedAlgorithmFormsForUser: jest.fn(),
 }));
 
 jest.mock('./EditLayer', () => ({refresh}) => (
@@ -258,7 +265,6 @@ test('stops password submit loading when the request rejects', async () => {
     ));
     await waitFor(() => expect(confirm).not.toHaveClass('ant-btn-loading'));
     expect(screen.getByPlaceholderText('my.edit.new_password_placeholder')).toBeInTheDocument();
-    expect(api.auth.logout).not.toHaveBeenCalled();
     expect(user.clearLogin).not.toHaveBeenCalled();
     expect(window.location.replace).not.toHaveBeenCalled();
 });
@@ -275,15 +281,13 @@ test('stops password submit loading and preserves the form on a non-200 response
     ));
     await waitFor(() => expect(confirm).not.toHaveClass('ant-btn-loading'));
     expect(screen.getByPlaceholderText('my.edit.old_password_placeholder')).toHaveValue('old-pass');
-    expect(api.auth.logout).not.toHaveBeenCalled();
     expect(user.clearLogin).not.toHaveBeenCalled();
     expect(window.location.replace).not.toHaveBeenCalled();
 });
 
-test('logs out and redirects to login only after the password update succeeds', async () => {
+test('clears local auth and redirects only after the password update succeeds', async () => {
     const request = deferred();
     api.auth.updatePwd.mockReturnValue(request.promise);
-    api.auth.logout.mockResolvedValue({status: 200});
     sessionStorage.setItem('redirect', '/gremlin/DEFAULT/hugegraph');
     const confirm = await openPasswordForm();
     await fillValidPasswords();
@@ -297,21 +301,9 @@ test('logs out and redirects to login only after the password update succeeds', 
 
     request.resolve({status: 200});
 
-    await waitFor(() => expect(api.auth.logout).toHaveBeenCalledTimes(1));
-    expect(user.clearLogin).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(user.clearLogin).toHaveBeenCalledTimes(1));
+    expect(user.beginLogoutTransition).toHaveBeenCalledTimes(1);
+    expect(clearPersistedAlgorithmFormsForUser).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('redirect')).toBeNull();
-    expect(window.location.replace).toHaveBeenCalledWith('/login');
-});
-
-test('redirects to login even when logout fails after the password changed', async () => {
-    api.auth.updatePwd.mockResolvedValue({status: 200});
-    api.auth.logout.mockRejectedValue(new Error('down'));
-    const confirm = await openPasswordForm();
-    await fillValidPasswords();
-
-    await userEvent.click(confirm);
-
-    await waitFor(() => expect(api.auth.logout).toHaveBeenCalledTimes(1));
-    expect(user.clearLogin).toHaveBeenCalledTimes(1);
     expect(window.location.replace).toHaveBeenCalledWith('/login');
 });
