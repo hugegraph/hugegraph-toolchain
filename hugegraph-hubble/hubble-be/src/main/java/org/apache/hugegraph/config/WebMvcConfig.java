@@ -18,6 +18,7 @@
 
 package org.apache.hugegraph.config;
 
+import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.handler.LoginInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -66,6 +67,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(this.loginInterceptor())
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/**/auth/login")
+                .excludePathPatterns(Constant.API_VERSION + "config")
                 .excludePathPatterns("/logout")
                 .excludePathPatterns("/api/**/auth/logout");
     }

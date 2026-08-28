@@ -354,6 +354,7 @@
     },
     "empty": {
       "description": "这个 GraphSpace 已可用，但还没有图。创建第一张图后即可配置 Schema、导入和查询数据",
+      "read_only_description": "当前只读账号在此 GraphSpace 中暂无可访问的图",
       "create": "创建第一张图",
       "demo_prerequisite": "创建图后，选择该图并前往数据导入，即可快速构建 Demo 数据集。",
       "view_demo": "查看 Demo 数据入口",
@@ -377,7 +378,8 @@
       "name": "账号名",
       "remark": "备注",
       "level": "账号级别",
-      "resource": "资源权限",
+      "resource": "图空间",
+      "resource_all": "全部",
       "create_time": "创建时间",
       "is_superadmin": "是否为超级管理员",
       "permission": "管理权限"
@@ -386,6 +388,26 @@
       "ADMIN": "超级管理员",
       "SPACEADMIN": "空间管理员",
       "USER": "普通用户"
+    },
+    "permission_preset": {
+      "SUPER_ADMIN": "超级管理员",
+      "GS_READ_ONLY": "GraphSpace 只读",
+      "GS_READ_WRITE": "GraphSpace 读写",
+      "GS_ADMIN": "GraphSpace 管理员",
+      "preserve_mixed": "保留现有混合权限",
+      "mixed": "混合 GraphSpace 权限",
+      "unassigned": "未分配 GraphSpace 权限预设",
+      "legacy_custom": "旧版/自定义权限"
+    },
+    "feedback": {
+      "save_failed": "账号未保存",
+      "save_retry": "请检查账号字段和 Server 连接后重试。",
+      "delete_retry": "账号删除失败，请刷新列表后重试。",
+      "password_permission_separate": "请分别保存密码和权限变更。",
+      "presets_unavailable": "GraphSpace 权限预设不可用",
+      "presets_unavailable_help": "当前部署未提供所需权限 API，账号将以无提升权限的普通账号创建",
+      "preset_edit_unavailable": "当前无法编辑权限",
+      "preset_edit_unavailable_help": "仍可修改用户资料和密码，现有权限将保持不变；升级当前连接的 HugeGraph REST API 至 0.72 或更高版本后可编辑权限"
     },
     "form": {
       "title_detail": "查看账号",
@@ -396,7 +418,7 @@
       "id_help": "用于登录的唯一账号标识，创建后不可修改",
       "id_placeholder": "用户登录",
       "name": "账号名",
-      "name_help": "显示给其他管理员识别的账号名称，创建后仍可修改",
+      "name_help": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线",
       "name_placeholder": "账号名设置后可更改",
       "is_superadmin": "是否为超级管理员",
       "level": "账号级别",
@@ -408,7 +430,11 @@
       "default_password_help": "创建账号时设置的初始密码；用户登录后应尽快修改",
       "default_password_placeholder": "请输入 5–16 位初始密码",
       "permission": "管理权限",
-      "permission_help": "选择该账号可以管理的图空间；普通访问权限由 HugeGraph 角色控制"
+      "permission_help": "选择该账号可以管理的图空间；普通访问权限由 HugeGraph 角色控制",
+      "permission_preset": "权限预设",
+      "permission_preset_help": "选择清晰的预设语义，底层角色与资源目标由系统维护",
+      "graphspaces": "GraphSpace",
+      "graphspaces_help": "选择该预设覆盖的 GraphSpace"
     },
     "space_access": {
       "global_tab": "全局账号",
@@ -428,7 +454,8 @@
         "id": "账号 ID",
         "name": "账号名",
         "roles": "角色",
-        "remove_confirm": "确定从该 GraphSpace 移除此成员吗？"
+        "remove_confirm": "确定从该 GraphSpace 移除此成员吗？",
+        "preset_unavailable": "当前 GraphSpace 不支持所选权限预设。"
       },
       "role": {
         "add": "创建角色",
@@ -487,7 +514,7 @@
       "confirm_password_placeholder": "请再次输入密码",
       "password_mismatch": "两次密码不一致",
       "password_changed_relogin": "密码修改成功，请重新登录。",
-      "account_name_rule": "账号名不超过16个字符，且不能以下划线开始和结尾"
+      "account_name_rule": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；下划线不能位于首尾"
     }
   },
   "role": {
@@ -1079,6 +1106,7 @@
       "empty_title": "创建第一个图 Schema",
       "empty_description": "建议先定义可复用属性，再创建顶点类型和边类型",
       "create_from_template": "根据模板创建 Schema",
+      "read_only_empty": "当前图尚无 Schema，需要读写或管理员账号才能创建。",
       "template_description": "选择内置示例或当前图空间已保存的模板，直接应用到当前图",
       "manual_title": "或手动创建 Schema",
       "builtin_templates": "内置示例",
@@ -1129,7 +1157,7 @@
     "read_only": {
       "page_title": "{{name}} - Schema 模板库",
       "title": "只读模板库",
-      "description": "可在此浏览内置模板与已保存模板；创建、保存、编辑和删除模板需要 PD 模式",
+      "description": "可在此浏览内置模板与已保存模板；当前连接或账号无法创建、保存、编辑和删除模板",
       "apply_to_graph": "前往 {{graph}} 应用模板",
       "choose_graph": "选择图并应用模板",
       "builtin": "内置"
@@ -1217,6 +1245,8 @@
     "node_id_copied": "节点 ID 已复制",
     "node_id_copy_failed": "无法复制节点 ID",
     "leader_role": "Leader 角色",
+    "leader": "Leader",
+    "follower": "Follower",
     "leader_shard": "{{count}} 个 Leader 分区",
     "leader_shards": "{{count}} 个 Leader 分区",
     "node_profile": "节点概况",
@@ -1256,7 +1286,7 @@
     "node_count": "{{count}} 个节点",
     "node_count_plural": "{{count}} 个节点",
     "more_nodes": "查看另外 {{count}} 个节点",
-    "cluster_facts": "集群事实",
+    "cluster_facts": "集群信息",
     "fact_stores_up": "在线 Store",
     "fact_pd_leader": "PD Leader",
     "fact_capacity": "容量",
@@ -1306,8 +1336,8 @@
     "metric_scope_backend": "后端指标由 Server 和 Store 节点提供，不会在 {{nodeType}} 节点采集。",
     "reason_upstream_timeout": "上游超时",
     "reason_upstream_unavailable": "上游不可用",
-    "reason_metrics_target_untrusted": "指标采集目标未通过信任校验，请检查 PD/Prometheus target 配置",
-    "reason_metrics_target_missing": "未发现 Store 指标采集目标，请检查 target 配置",
+    "reason_metrics_target_untrusted": "Store 指标来源不在信任列表中。请将其完整协议、主机和端口加入 operations.store.allowed_targets，重启 Hubble 后刷新。",
+    "reason_metrics_target_missing": "PD 未返回 Store 指标目标。请检查 PD target 发现和 Store REST 指标端口后刷新。",
     "reason_upstream_deadline": "指标采集超时",
     "reason_metrics_not_collected": "当前节点未采集该指标",
     "reason_topology_fields_unavailable": "拓扑未提供该字段",
@@ -1315,6 +1345,7 @@
     "reason_refresh_failed": "刷新失败",
     "reason_malformed_response": "响应格式异常",
     "reason_unsupported_version": "当前服务版本不支持",
+    "reason_unsupported_version_help": "请升级 HugeGraph 到提供该指标的版本。",
     "reason_deployment_mode_unsupported": "当前部署模式不支持",
     "metric_labels": {
       "basic": "内存与进程",
@@ -1376,6 +1407,7 @@
     "datasource_manage": "数据源管理",
     "operation_manage": "运维管理",
     "cluster_overview": "集群概览",
+    "cluster_overview_requires_pd": "集群概览依赖 PD，单机模式不可用；可前往节点页面查看 Server 状态。",
     "nodes": "节点",
     "advanced_monitoring": "外部高级 Dashboard",
     "operations_unavailable": "当前账号无可用的原生运维权限。",

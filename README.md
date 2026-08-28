@@ -12,6 +12,13 @@
 
 A comprehensive suite of client SDKs, data tools, and management utilities for [Apache HugeGraph](https://github.com/apache/hugegraph) graph database. Build applications, load data, and manage graphs with production-ready tools.
 
+Hubble's primary authentication and connection design targets HugeGraph
+`1.8/master`: PD discovery supplies the server address, anonymous mode uses a
+real unauthenticated client, and account/GraphSpace permissions are reduced to
+four readable presets. A thin adapter keeps 1.7 usable and limits 1.5 to its
+standalone core graph workflow; version checks are centralized rather than
+spread across UI pages.
+
 **Quick Navigation**: [Architecture](#architecture-overview) | [Quick Start](#quick-start) | [Modules](#module-overview) | [Build](#build--development) | [Docker](#docker) | [Related Projects](#related-projects)
 
 ## Related Projects
@@ -57,7 +64,7 @@ graph TB
     CLIENT --> HUBBLE
     CLIENT --> TOOLS
     CLIENT --> SPARK
-    HUBBLE -.->|WIP: pd-client| PD
+    HUBBLE -.->|PD discovery UI| PD
 
     LOADER -.->|Sources| SRC["CSV | JSON | HDFS<br/>MySQL | Kafka"]
     SPARK -.->|I/O| SPK["Spark DataFrames"]
@@ -381,7 +388,7 @@ mvn clean install -DskipTests -Dmaven.javadoc.skip=true -ntp
 ### Code Style
 
 Checkstyle is enforced via `tools/checkstyle.xml`:
-- Max line length: 100 characters
+- Max line length: 120 characters
 - 4-space indentation (no tabs)
 - No star imports
 - No `System.out.println`

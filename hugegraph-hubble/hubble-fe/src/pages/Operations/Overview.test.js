@@ -394,6 +394,39 @@ test('shows a bounded, failure-first list of nodes needing attention', async () 
     ]);
 });
 
+test('shows the recovery reason for unavailable Store metrics without stale copy',
+    async () => {
+        getOverview.mockResolvedValue({
+            status: 'DEGRADED',
+            observed_at: 1000,
+            sources: {},
+            facts: {},
+            nodes: [{
+                id: 'store-untrusted',
+                name: 'store-untrusted',
+                type: 'STORE',
+                status: 'UP',
+                metric_statuses: {
+                    system: {
+                        availability: 'UNAVAILABLE',
+                        stale: false,
+                        reason: 'metrics_target_untrusted',
+                    },
+                },
+            }],
+        });
+
+        renderOverview();
+
+        const attention = await screen.findByRole('region', {
+            name: 'Nodes needing attention',
+        });
+        expect(within(attention).getByRole('img', {
+            name: /operations\.store\.allowed_targets/,
+        })).toBeInTheDocument();
+        expect(within(attention).queryByText('Stale')).not.toBeInTheDocument();
+    });
+
 test('keeps every failed source visible when the whole cluster is down', async () => {
     getOverview.mockResolvedValue({
         status: 'DOWN',
@@ -495,11 +528,9 @@ test('renders leader, capacity and attention facts in the visual hierarchy', asy
             pd_leader: 'pd-1',
             stores_up: 22,
             stores: 24,
-            capacity_used: 38.2,
-            capacity_total: 60,
-            capacity_unit: 'TB',
-            data_size: 14.6,
-            data_size_unit: 'TB',
+            capacity_used_bytes: 40_802_189_312,
+            capacity_total_bytes: 64_424_509_440,
+            data_size_bytes: 15_676_565_504,
         },
         nodes: [
             {id: 'store-3', name: 'store-3', type: 'STORE', status: 'DOWN'},
@@ -515,8 +546,10 @@ test('renders leader, capacity and attention facts in the visual hierarchy', asy
     expect(screen.getByText('1 Store is down')).toBeInTheDocument();
     expect(screen.getByText('PD Leader')).toBeInTheDocument();
     expect(screen.getByText('pd-1')).toBeInTheDocument();
+    expect(screen.getByText('14.6 GiB')).toBeInTheDocument();
+    expect(screen.getByText('38 GiB / 60 GiB (63%)')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', {name: 'Capacity'})).toHaveAttribute(
-        'aria-valuenow', '64'
+        'aria-valuenow', '63'
     );
     const attention = screen.getByRole('region', {name: 'Nodes needing attention'});
     expect(within(attention).getByRole('table')).toBeInTheDocument();

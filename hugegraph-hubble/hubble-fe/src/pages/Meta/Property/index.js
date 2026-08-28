@@ -29,7 +29,7 @@ import MetaTableStatus from '../common/MetaTableStatus';
 const PROPERTY_IN_USE_KEY = 'schema.property.in_use';
 const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
-const PropertyTable = ({noHeader, forceRefresh}) => {
+const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [refresh, setRefresh] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
@@ -134,7 +134,7 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
             align: 'center',
             render: val => val.toLocaleLowerCase(),
         },
-        {
+        canWrite && {
             title: t('schema.property.col.operation'),
             width: 120,
             align: 'center',
@@ -144,7 +144,7 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
                 </RowActionButton>
             ),
         },
-    ];
+    ].filter(Boolean);
 
     return (
         <>
@@ -153,9 +153,17 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
                 <Row>
                     <Col>
                         <Space>
-                            <Button type='primary' onClick={handleShowLayer}>{t('common.action.create')}</Button>
+                            {canWrite && (
+                                <Button type='primary' onClick={handleShowLayer}>
+                                    {t('common.action.create')}
+                                </Button>
+                            )}
                             <Button onClick={handleRefresh}>{t('common.action.refresh')}</Button>
-                            <Button onClick={handleDeleteBatch}>{t('schema.common.batch_delete')}</Button>
+                            {canWrite && (
+                                <Button onClick={handleDeleteBatch}>
+                                    {t('schema.common.batch_delete')}
+                                </Button>
+                            )}
                         </Space>
                     </Col>
                 </Row>
@@ -167,7 +175,7 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
             <Table
                 columns={columns}
                 dataSource={data}
-                rowSelection={noHeader ? null : {
+                rowSelection={noHeader || !canWrite ? null : {
                     type: 'checkbox',
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
@@ -179,7 +187,7 @@ const PropertyTable = ({noHeader, forceRefresh}) => {
                 loading={loading}
             />
 
-            {!noHeader
+            {!noHeader && canWrite
             && (
                 <EditPropertyLayer
                     visible={editLayerVisible}

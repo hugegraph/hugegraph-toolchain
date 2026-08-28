@@ -140,7 +140,7 @@ public class GraphSpaceAuthMutationAuthorizationTest {
     }
 
     @Test
-    public void testCurrentSpaceAdminCanManageScopedAuthorizationResources()
+    public void testCurrentSpaceAdminCanManageMembersOnly()
             throws Exception {
         Mockito.when(this.authorizationService.isAssignSpaceAdmin(
                 this.client, "SPACE"))
@@ -149,8 +149,11 @@ public class GraphSpaceAuthMutationAuthorizationTest {
                 Mockito.eq(this.client), Mockito.any()))
                .thenReturn("SPACEADMIN");
 
-        this.assertScopedReadsAllowed();
-        this.assertScopedCreatesAllowed();
+        this.assertLowLevelReadsForbidden();
+        ReadRoute members = this.memberReadRoute();
+        mvc(members.controller).perform(members.request)
+                               .andExpect(status().isOk());
+        this.assertScopedCreatesForbidden();
     }
 
     @Test
@@ -191,6 +194,12 @@ public class GraphSpaceAuthMutationAuthorizationTest {
         }
     }
 
+    private void assertLowLevelReadsForbidden() throws Exception {
+        for (ReadRoute route : this.lowLevelReadRoutes()) {
+            assertForbidden(mvc(route.controller), route.request);
+        }
+    }
+
     private void assertScopedReadsForbidden() throws Exception {
         for (ReadRoute route : this.scopedReadRoutes()) {
             assertForbidden(mvc(route.controller), route.request);
@@ -198,6 +207,14 @@ public class GraphSpaceAuthMutationAuthorizationTest {
     }
 
     private ReadRoute[] scopedReadRoutes() {
+        ReadRoute[] lowLevel = this.lowLevelReadRoutes();
+        return new ReadRoute[]{
+                lowLevel[0], lowLevel[1], lowLevel[2], lowLevel[3],
+                this.memberReadRoute()
+        };
+    }
+
+    private ReadRoute[] lowLevelReadRoutes() {
         return new ReadRoute[]{
                 new ReadRoute(this.prepare(new TestBelongController(
                         this.client), "belongService",
@@ -214,12 +231,15 @@ public class GraphSpaceAuthMutationAuthorizationTest {
                 new ReadRoute(this.prepare(new TestTargetController(
                         this.client), "targetService",
                         Mockito.mock(TargetService.class)),
-                              get("/api/v1.3/graphspaces/SPACE/auth/targets")),
-                new ReadRoute(this.prepare(new TestGraphSpaceUserController(
+                              get("/api/v1.3/graphspaces/SPACE/auth/targets"))
+        };
+    }
+
+    private ReadRoute memberReadRoute() {
+        return new ReadRoute(this.prepare(new TestGraphSpaceUserController(
                         this.client), "userService",
                         Mockito.mock(GraphSpaceUserService.class)),
-                              get("/api/v1.3/graphspaces/SPACE/auth/users"))
-        };
+                             get("/api/v1.3/graphspaces/SPACE/auth/users"));
     }
 
     private void assertScopedCreatesAllowed() throws Exception {
@@ -240,6 +260,25 @@ public class GraphSpaceAuthMutationAuthorizationTest {
         mvc(target).perform(post("/api/v1.3/graphspaces/SPACE/auth/targets")
                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
                    .andExpect(status().isOk());
+    }
+
+    private void assertScopedCreatesForbidden() throws Exception {
+        BelongController belong = this.prepare(new TestBelongController(
+                this.client), "belongService", Mockito.mock(BelongService.class));
+        AccessController access = this.prepare(new TestAccessController(
+                this.client), "accessService", Mockito.mock(AccessService.class));
+        TargetController target = this.prepare(new TestTargetController(
+                this.client), "targetService", Mockito.mock(TargetService.class));
+
+        assertForbidden(mvc(belong),
+                post("/api/v1.3/graphspaces/SPACE/auth/belongs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role_id\":\"r\",\"user_id\":\"u\"}"));
+        assertForbidden(mvc(access),
+                post("/api/v1.3/graphspaces/SPACE/auth/accesses")
+                    .contentType(MediaType.APPLICATION_JSON).content("{}"));
+        assertForbidden(mvc(target),
+                post("/api/v1.3/graphspaces/SPACE/auth/targets").contentType(MediaType.APPLICATION_JSON).content("{}"));
     }
 
     private <T extends BaseController> T prepare(T controller,

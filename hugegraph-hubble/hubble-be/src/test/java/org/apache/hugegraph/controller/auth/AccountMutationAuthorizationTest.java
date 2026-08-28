@@ -491,12 +491,12 @@ public class AccountMutationAuthorizationTest {
                 () -> controller.create("SPACE", member));
 
         org.junit.Assert.assertTrue(failure.getMessage()
-                                           .contains("graphspace members"));
+                                           .contains("authorization objects"));
         Mockito.verifyZeroInteractions(memberService);
     }
 
     @Test
-    public void testCurrentSpaceAdminCanAssignGraphSpaceMembership() {
+    public void testCurrentSpaceAdminCannotUseLegacyRoleMembershipRoute() {
         TestGraphSpaceUserController controller =
                 new TestGraphSpaceUserController(this.client, "manager");
         GraphSpaceUserService memberService =
@@ -510,12 +510,11 @@ public class AccountMutationAuthorizationTest {
                .thenReturn(true);
         UserView member = new UserView("bob", "bob",
                                       Collections.emptyList());
-        Mockito.when(memberService.createOrUpdate(this.client, "SPACE",
-                                                  member))
-               .thenReturn(member);
 
-        org.junit.Assert.assertSame(member,
-                                    controller.create("SPACE", member));
+        assertForbidden(() -> controller.create("SPACE", member));
+        assertForbidden(() -> controller.createOrUpdate("SPACE", "bob",
+                                                        member));
+        Mockito.verifyZeroInteractions(memberService);
     }
 
     @Test

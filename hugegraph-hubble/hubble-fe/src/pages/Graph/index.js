@@ -53,10 +53,10 @@ import GraphCard from './Card';
 import ClearGraphConfirmModal from './ClearGraphConfirmModal';
 import KeyboardAction from '../../components/KeyboardAction';
 import {getResourceDisplayName} from '../../utils/displayName';
-import {useAuthContext} from '../../auth/AuthContext';
 import {sanitizePublicError} from '../../utils/publicError';
 import EditableNicknameCell from './EditableNicknameCell';
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
+import {useGraphspaceAccess} from '../../auth/graphspaceAccess';
 
 const GraphRowAction = ({onAction, graph, children}) => {
     const handleClick = useCallback(() => onAction(graph), [graph, onAction]);
@@ -106,14 +106,10 @@ const Graph = () => {
     const [sampleLoading, setSampleLoading] = useState('');
     const {graphspace} = useParams();
     const navigate = useNavigate();
-    const {context: authContext} = useAuthContext();
     const pdMode = isPdEnabled();
     const graphCreateEnabled = isGraphCreateEnabled(pdMode);
     const graphDefaultMutationEnabled = isGraphDefaultMutationEnabled(pdMode);
-    const adminGraphspaces = authContext?.scopes?.admin_graphspaces ?? [];
-    const canUpdateGraphspace = value => authContext?.role === 'SUPERADMIN'
-        || authContext?.scopes?.all_graphspaces === true
-        || adminGraphspaces.includes(value);
+    const {canManage, canWrite} = useGraphspaceAccess(graphspace);
 
     const handlePagination = useCallback(current => {
         setPagination({...pagination, current});
@@ -337,13 +333,15 @@ const Graph = () => {
         <Empty
             description={hasFilters
                 ? t('graph.empty.filtered_description')
-                : t('graph.empty.description')}
+                : canManage
+                    ? t('graph.empty.description')
+                    : t('graph.empty.read_only_description')}
         >
             {hasFilters ? (
                 <Button onClick={handleClearFilters}>
                     {t('graph.empty.clear_filters')}
                 </Button>
-            ) : (
+            ) : canManage ? (
                 <Space direction='vertical' size={8}>
                     {graphCreateEnabled && (
                         <Button type='primary' onClick={showEditLayer}>
@@ -355,7 +353,7 @@ const Graph = () => {
                     </span>
                     <Link to='/task'>{t('graph.empty.view_demo')}</Link>
                 </Space>
-            )}
+            ) : null}
         </Empty>
     );
 
@@ -364,7 +362,7 @@ const Graph = () => {
             title: t('graph.col.name'),
             render: row => (
                 <GraphNicknameColumn
-                    canEdit={canUpdateGraphspace(row.graphspace || graphspace)}
+                    canEdit={canManage}
                     onSave={saveNickname}
                     row={row}
                     t={t}
@@ -411,14 +409,14 @@ const Graph = () => {
                         <Link to={`/graphspace/${graphspace}/graph/${row.name}/meta`}>
                             {t('graph.menu.meta_config')}
                         </Link>
-                        {(row.default)
+                        {(row.default || !canManage)
                             ? <span className={style.disable}>{t('graph.menu.clear_graph')}</span>
                             : (
                                 <GraphRowAction onAction={clearGraph} graph={row.name}>
                                     {t('graph.menu.clear_graph')}
                                 </GraphRowAction>
                             )}
-                        {(row.graphspace === 'neizhianli')
+                        {(row.graphspace === 'neizhianli' || !canManage)
                             ? <span className={style.disable}>{t('common.action.delete')}</span>
                             : (
                                 <GraphRowAction onAction={deleteGraph} graph={row.name}>
@@ -429,7 +427,7 @@ const Graph = () => {
                             {t('graph.menu.view_schema')}
                         </GraphRowAction>
                         {graphDefaultMutationEnabled && (
-                            row.default
+                            row.default || !canManage
                                 ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
                                 : (
                                     <GraphRowAction onAction={handleSetDefault} graph={row.name}>
@@ -459,33 +457,34 @@ const Graph = () => {
     const getMenus = item => {
         const itemGraphspace = item.graphspace || graphspace;
         const immutable = itemGraphspace === 'neizhianli';
-        const readOnly = !canUpdateGraphspace(itemGraphspace);
-        const sampleDisabled = immutable || readOnly || Boolean(sampleLoading);
+        const sampleDisabled = immutable || !canWrite || Boolean(sampleLoading);
         return [
             {
                 key: 'clear',
                 danger: true,
-                disabled: item.default,
-                label: item.default
+                disabled: item.default || !canManage,
+                label: item.default || !canManage
                     ? <span className={style.disable}>{t('graph.menu.clear_graph')}</span>
                     : t('graph.menu.clear_graph'),
-                onClick: item.default ? undefined : () => clearGraph(item.name),
+                onClick: item.default || !canManage
+                    ? undefined : () => clearGraph(item.name),
             },
             graphDefaultMutationEnabled && {
                 key: 'default',
-                disabled: item.default,
-                label: item.default
+                disabled: item.default || !canManage,
+                label: item.default || !canManage
                     ? <span className={style.disable}>{t('graph.menu.set_default')}</span>
                     : t('graph.menu.set_default'),
-                onClick: item.default ? undefined : () => handleSetDefault(item.name),
+                onClick: item.default || !canManage
+                    ? undefined : () => handleSetDefault(item.name),
             },
             {
                 key: 'edit',
-                disabled: immutable,
-                label: immutable
+                disabled: immutable || !canManage,
+                label: immutable || !canManage
                     ? <span className={style.disable}>{t('common.action.edit')}</span>
                     : t('common.action.edit'),
-                onClick: immutable
+                onClick: immutable || !canManage
                     ? undefined : () => editGraph(item.name),
             },
             {
@@ -512,11 +511,11 @@ const Graph = () => {
             {
                 key: 'delete',
                 danger: true,
-                disabled: immutable,
-                label: immutable
+                disabled: immutable || !canManage,
+                label: immutable || !canManage
                     ? <span className={style.disable}>{t('common.action.delete')}</span>
                     : t('common.action.delete'),
-                onClick: immutable
+                onClick: immutable || !canManage
                     ? undefined : () => deleteGraph(item.name),
             },
             graphCreateEnabled && {
@@ -628,11 +627,13 @@ const Graph = () => {
                                             <GraphCard
                                                 item={item}
                                                 menus={menus}
+                                                canMutate={canWrite}
                                             />
                                         </Col>
                                     );
                                 })}
-                                {graphCreateEnabled && data.length > 0 && (
+                                {graphCreateEnabled && canManage
+                                    && data.length > 0 && (
                                     <Col span={8} key='add'>
                                         <KeyboardAction
                                             onAction={showEditLayer}
@@ -661,7 +662,7 @@ const Graph = () => {
                     )
                     : (
                         <>
-                            {graphCreateEnabled && (
+                            {graphCreateEnabled && canManage && (
                                 <>
                                     <Row>
                                         <Col>

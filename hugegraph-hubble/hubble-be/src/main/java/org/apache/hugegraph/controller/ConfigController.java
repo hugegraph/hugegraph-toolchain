@@ -39,11 +39,8 @@ public class ConfigController {
     @GetMapping
     public Map<String, Object> getConfig() {
         Map<String, Object> result = new HashMap<>();
-        boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
-        result.put("pd_enabled", pdEnabled);
-        if (!pdEnabled) {
-            result.put("server_url", config.get(HubbleOptions.SERVER_URL));
-        }
+        result.put("pd_enabled", config.get(HubbleOptions.PD_ENABLED));
+        result.put("auth_enabled", config.get(HubbleOptions.AUTH_ENABLED));
         return result;
     }
 }

@@ -340,6 +340,10 @@ test('renders each metric group from its own metric status', async () => {
     expect(within(raft).getByText('Unsupported service version')).toBeInTheDocument();
     expect(within(raft).getByText(/Unsupported by this service version/))
         .toBeInTheDocument();
+    fireEvent.mouseOver(within(raft).getByText('Unsupported'));
+    expect(await screen.findByText(
+        'Upgrade HugeGraph to a version that provides this metric.'
+    )).toBeInTheDocument();
 
     const backend = screen.getByRole('heading', {name: 'Backend'}).closest('section');
     expect(within(backend).getByText('Available')).toBeInTheDocument();
@@ -353,7 +357,7 @@ test('renders each metric group from its own metric status', async () => {
     }
 });
 
-test('explains metric groups that do not apply to a PD node', async () => {
+test('hides metric groups that do not apply to a PD node', async () => {
     getNode.mockResolvedValue({
         ...response,
         node: {
@@ -376,22 +380,12 @@ test('explains metric groups that do not apply to a PD node', async () => {
     const sources = screen.getByRole('region', {name: 'Source freshness'});
     expect(within(sources).getByText('PD')).toBeInTheDocument();
     expect(within(sources).getByText('Store')).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'System'}))
+        .toBeInTheDocument();
 
-    const drive = screen.getByRole('heading', {name: 'Drive'}).closest('section');
-    expect(within(drive).getByText('Not applicable')).toBeInTheDocument();
-    expect(within(drive).getByText(
-        'Drive metrics are collected from Store nodes, not PD nodes.'
-    )).toBeInTheDocument();
-
-    const raft = screen.getByRole('heading', {name: 'Raft'}).closest('section');
-    expect(within(raft).getByText(
-        'Raft metrics are collected from Store nodes, not PD nodes.'
-    )).toBeInTheDocument();
-
-    const backend = screen.getByRole('heading', {name: 'Backend'}).closest('section');
-    expect(within(backend).getByText(
-        'Backend metrics are provided by Server and Store nodes, not PD nodes.'
-    )).toBeInTheDocument();
+    expect(screen.queryByRole('heading', {name: 'Drive'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', {name: 'Raft'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', {name: 'Backend'})).not.toBeInTheDocument();
     expect(screen.queryByText('Unsupported by this service version')).not.toBeInTheDocument();
 });
 

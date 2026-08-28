@@ -58,6 +58,15 @@ public final class Constant {
 
     public static final String TOKEN_KEY = "auth_token";
     public static final String USERNAME_KEY = "username";
+    /**
+     * Server-side-only legacy Gremlin credentials. 1.7's Gremlin HTTP
+     * channel accepts Basic auth while its REST APIs accept the login token.
+     */
+    public static final String PASSWORD_KEY = "auth_password";
+    public static final String PASSWORD_EXPIRE_AT_KEY =
+                               "auth_password_expire_at";
+    public static final String GRAPHSPACE_ACCESS_KEY =
+                               "validated_graphspace";
 
     public static final int NO_LIMIT = -1;
 

@@ -28,6 +28,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,6 +47,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.servlet.handler.MappedInterceptor;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -55,6 +59,7 @@ import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.IngestionProxyServlet;
+import org.apache.hugegraph.config.WebMvcConfig;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.controller.auth.LoginController;
 import org.apache.hugegraph.driver.AuthManager;
@@ -74,8 +79,10 @@ import org.apache.hugegraph.handler.LoginInterceptor;
 import org.apache.hugegraph.handler.MessageSourceHandler;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.AuthContextService;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.hugegraph.structure.auth.Login;
 import org.apache.hugegraph.structure.auth.LoginResult;
 
@@ -178,6 +185,130 @@ public class AuthSecurityTest {
     }
 
     @Test
+    public void testAnonymousModeBlocksAuthManagementButAllowsContext() {
+        LoginInterceptor interceptor = new LoginInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        AuthModeService mode = new AuthModeService(config);
+        ReflectionTestUtils.setField(interceptor, "authMode", mode);
+
+        MockHttpServletRequest users = new MockHttpServletRequest("GET", "/api/v1.3/auth/users");
+        try {
+            interceptor.preHandle(users, new MockHttpServletResponse(), null);
+            Assert.fail("Expected anonymous auth management to be blocked");
+        } catch (ExternalException forbidden) {
+            Assert.assertEquals(HttpStatus.FORBIDDEN.value(),
+                                forbidden.status());
+        }
+
+        MockHttpServletRequest context = new MockHttpServletRequest("GET", "/api/v1.3/auth/context");
+        Assert.assertTrue(interceptor.preHandle(context, new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest scopedUsers = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/auth/users");
+        assertThrows(ExternalException.class, () ->
+                interceptor.preHandle(scopedUsers,
+                                      new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest scopedStatus = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/auth");
+        Assert.assertTrue(interceptor.preHandle(
+                scopedStatus, new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest authGraph = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/DEFAULT/graphs/auth/schema");
+        Assert.assertTrue(interceptor.preHandle(
+                authGraph, new MockHttpServletResponse(), null));
+
+        MockHttpServletRequest authGraphSpace = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/auth/graphs/hugegraph/schema");
+        Assert.assertTrue(interceptor.preHandle(
+                authGraphSpace, new MockHttpServletResponse(), null));
+    }
+
+    @Test
+    public void testConfigBootstrapDoesNotCreateServerClient()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1.3/config");
+
+        Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
+        Assert.assertEquals(0, interceptor.authClients);
+        Assert.assertEquals(0, interceptor.unauthClients);
+        Assert.assertNull(request.getAttribute("hugeClient"));
+    }
+
+    @Test
+    public void testAnonymousGraphClientRejectsProtectedGraphSpace() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestBaseController controller = new TestBaseController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED)).thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        HugeClient client = Mockito.mock(HugeClient.class);
+        Mockito.when(spaces.requirePublicSpace(client, "protected"))
+               .thenThrow(new ExternalException(HttpStatus.NOT_FOUND.value(),
+                                                "unavailable"));
+        ReflectionTestUtils.setField(controller, "config", config);
+        ReflectionTestUtils.setField(controller, "authMode",
+                                     new AuthModeService(config));
+        ReflectionTestUtils.setField(controller, "graphSpaceAccessService",
+                                     spaces);
+
+        try {
+            controller.requireSpace(client, "protected");
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(HttpStatus.NOT_FOUND.value(), e.status());
+        }
+        Mockito.verify(spaces).requirePublicSpace(client, "protected");
+    }
+
+    @Test
+    public void testBodyGraphSpaceIsValidatedWhenPathScopeDiffers() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(Constant.GRAPHSPACE_ACCESS_KEY, "path-space");
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestBaseController controller = new TestBaseController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        HugeClient client = Mockito.mock(HugeClient.class);
+        ReflectionTestUtils.setField(controller, "config", config);
+        ReflectionTestUtils.setField(controller, "graphSpaceAccessService",
+                                     spaces);
+
+        controller.requireSpace(client, "body-space");
+
+        Mockito.verify(spaces).requireAccessibleSpace(client, "body-space");
+    }
+
+    @Test
+    public void testOnlyBootstrapConfigBypassesLoginInterceptor() {
+        InterceptorRegistry registry = new InterceptorRegistry();
+        new WebMvcConfig().addInterceptors(registry);
+        List<Object> interceptors = ReflectionTestUtils.invokeMethod(
+                registry, "getInterceptors");
+        MappedInterceptor login = interceptors.stream()
+                .map(MappedInterceptor.class::cast)
+                .filter(interceptor -> interceptor.getInterceptor()
+                                                  instanceof LoginInterceptor)
+                .findFirst()
+                .orElseThrow(AssertionError::new);
+        AntPathMatcher matcher = new AntPathMatcher();
+
+        Assert.assertFalse(login.matches(
+                Constant.API_VERSION + "config", matcher));
+        Assert.assertTrue(login.matches(
+                Constant.API_VERSION + "setting/config", matcher));
+    }
+
+    @Test
     public void testCustomInterceptorDoesNotCreateClientForMissingSession()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
@@ -265,6 +396,9 @@ public class AuthSecurityTest {
                                             "/api/v1.3/graphspaces/space1");
         request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.PASSWORD_KEY, "secret");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          System.currentTimeMillis() + 10000L);
 
         Assert.assertTrue(interceptor.preHandle(request,
                                                 new MockHttpServletResponse(),
@@ -295,6 +429,12 @@ public class AuthSecurityTest {
     public void testCustomInterceptorCreatesClientForAuthenticatedApi()
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
         MockHttpServletRequest request = new MockHttpServletRequest(
                                             "GET",
                                             "/api/v1.3/graphspaces/space1" +
@@ -311,6 +451,140 @@ public class AuthSecurityTest {
         Assert.assertEquals("space1", interceptor.graphSpace);
         Assert.assertEquals("graph1", interceptor.graph);
         Assert.assertEquals("token", interceptor.token);
+        Mockito.verify(spaces).requireAccessibleSpace(null, "space1");
+    }
+
+    @Test
+    public void testCustomInterceptorKeepsBearerForRestWithLegacyPassword()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET",
+                                            "/api/v1.3/auth/users/getpersonal");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.PASSWORD_KEY, "secret");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          System.currentTimeMillis() + 10000L);
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(1, interceptor.authClients);
+        Assert.assertEquals("token", interceptor.token);
+    }
+
+    @Test
+    public void testCustomInterceptorKeepsGraphCollectionActionsUnscoped()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+
+        for (String action : new String[]{"list", "default"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    "GET", "/api/v1.3/graphspaces/space1/graphs/" + action);
+            request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+            request.getSession().setAttribute(Constant.USERNAME_KEY, "user");
+
+            Assert.assertTrue(interceptor.preHandle(
+                    request, new MockHttpServletResponse(), null));
+            Assert.assertEquals("space1", interceptor.graphSpace);
+            Assert.assertNull(interceptor.graph);
+        }
+        Assert.assertEquals(2, interceptor.authClients);
+    }
+
+    @Test
+    public void testCustomInterceptorKeepsGraphSpaceCollectionActionsUnscoped()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
+
+        for (String action : new String[]{"list", "builtin"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    "GET", "/api/v1.3/graphspaces/" + action);
+            request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+            request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+
+            Assert.assertTrue(interceptor.preHandle(
+                    request, new MockHttpServletResponse(), null));
+            Assert.assertNull(interceptor.graphSpace);
+        }
+        Mockito.verifyZeroInteractions(spaces);
+    }
+
+    @Test
+    public void testCustomInterceptorAllowsGraphNamedLikeCollectionAction()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/space1/graphs/list/schema");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "user");
+
+        Assert.assertTrue(interceptor.preHandle(
+                request, new MockHttpServletResponse(), null));
+        Assert.assertEquals("space1", interceptor.graphSpace);
+        Assert.assertEquals("list", interceptor.graph);
+    }
+
+    @Test
+    public void testAnonymousClientUsesGraphSpaceScope() throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        AuthModeService mode = new AuthModeService(config);
+        ReflectionTestUtils.setField(interceptor, "authMode", mode);
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/api/v1.3/graphspaces/SPACE/graphs/graph/schema");
+
+        Assert.assertTrue(interceptor.preHandle(request, new MockHttpServletResponse(), null));
+        Assert.assertEquals(1, interceptor.unauthClients);
+        Assert.assertEquals("SPACE", interceptor.graphSpace);
+        Assert.assertEquals("graph", interceptor.graph);
+        Mockito.verify(spaces).requirePublicSpace(null, "SPACE");
+    }
+
+    @Test
+    public void testAnonymousPathScopeRejectsProtectedGraphSpace()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
+               .thenReturn(false);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED))
+               .thenReturn(true);
+        ReflectionTestUtils.setField(interceptor, "authMode",
+                                     new AuthModeService(config));
+        ReflectionTestUtils.setField(interceptor, "config", config);
+        GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
+        Mockito.doThrow(new ExternalException(HttpStatus.NOT_FOUND.value(),
+                                              "unavailable"))
+               .when(spaces).requirePublicSpace(null, "protected");
+        ReflectionTestUtils.setField(interceptor, "graphSpaceService", spaces);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST", "/api/v1.3/graphspaces/protected/graphs/graph" +
+                        "/job-manager/1/upload-file");
+
+        try {
+            interceptor.preHandle(request, new MockHttpServletResponse(), null);
+            Assert.fail("Expected protected GraphSpace to be unavailable");
+        } catch (ExternalException e) {
+            Assert.assertEquals(HttpStatus.NOT_FOUND.value(), e.status());
+        }
+        Assert.assertEquals(1, interceptor.unauthClients);
+        Mockito.verify(spaces).requirePublicSpace(null, "protected");
     }
 
     @Test
@@ -495,6 +769,9 @@ public class AuthSecurityTest {
 
         Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
         Assert.assertNull(request.getSession().getAttribute(Constant.USERNAME_KEY));
+        Assert.assertNull(request.getSession().getAttribute(Constant.PASSWORD_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_EXPIRE_AT_KEY));
     }
 
     @Test
@@ -564,9 +841,11 @@ public class AuthSecurityTest {
                             Constant.USERNAME_KEY));
         Assert.assertEquals("server-token", request.getSession().getAttribute(
                             Constant.TOKEN_KEY));
-        Assert.assertNull(request.getSession().getAttribute("auth_password"));
-        Assert.assertNull(request.getSession().getAttribute(
-                          "auth_password_expire_at"));
+        Assert.assertEquals("pa", request.getSession().getAttribute(
+                            Constant.PASSWORD_KEY));
+        Assert.assertTrue(((Number) request.getSession().getAttribute(
+                           Constant.PASSWORD_EXPIRE_AT_KEY)).longValue() >
+                          System.currentTimeMillis());
     }
 
     @Test
@@ -741,6 +1020,10 @@ public class AuthSecurityTest {
         public void clearAuth() {
             this.clearAuthSession();
         }
+
+        public void requireSpace(HugeClient client, String graphSpace) {
+            this.requireGraphSpaceAccess(client, graphSpace);
+        }
     }
 
     private static class TestLoginController extends LoginController {
@@ -869,6 +1152,15 @@ public class AuthSecurityTest {
         @Override
         protected org.apache.hugegraph.driver.HugeClient unauthClient() {
             this.unauthClients++;
+            return null;
+        }
+
+        @Override
+        protected org.apache.hugegraph.driver.HugeClient unauthClient(
+                  String graphSpace, String graph) {
+            this.unauthClients++;
+            this.graphSpace = graphSpace;
+            this.graph = graph;
             return null;
         }
     }

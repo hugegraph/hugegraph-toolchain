@@ -38,8 +38,9 @@ public class BaseControllerGremlinClientTest {
     }
 
     @Test
-    public void testGremlinClientIgnoresLegacyPasswordAndUsesToken() {
+    public void testGremlinClientUsesLegacyBasicCredentials() {
         HugeClient tokenClient = Mockito.mock(HugeClient.class);
+        HugeClient basicClient = Mockito.mock(HugeClient.class);
 
         MockHttpServletRequest request = this.requestWithAuth();
         request.setAttribute("hugeClient", tokenClient);
@@ -48,15 +49,14 @@ public class BaseControllerGremlinClientTest {
 
         TestController controller = new TestController();
         controller.authClient = tokenClient;
+        controller.basicClient = basicClient;
 
         HugeClient client = controller.gremlinClient("DEFAULT", "hugegraph");
 
-        Assert.assertSame(tokenClient, client);
-        Assert.assertSame(tokenClient, request.getAttribute("hugeClient"));
-        Assert.assertTrue(controller.authClientCreated);
-        Assert.assertEquals("DEFAULT", controller.graphSpace);
-        Assert.assertEquals("hugegraph", controller.graph);
-        Mockito.verify(tokenClient, Mockito.never()).close();
+        Assert.assertSame(basicClient, client);
+        Assert.assertSame(basicClient, request.getAttribute("hugeClient"));
+        Assert.assertFalse(controller.authClientCreated);
+        Mockito.verify(tokenClient).close();
     }
 
     @Test
@@ -132,6 +132,7 @@ public class BaseControllerGremlinClientTest {
     private static class TestController extends BaseController {
 
         private HugeClient authClient;
+        private HugeClient basicClient;
         private boolean authClientCreated;
         private String graphSpace;
         private String graph;
@@ -151,6 +152,18 @@ public class BaseControllerGremlinClientTest {
             this.graph = graph;
             this.getRequest().setAttribute("hugeClient", this.authClient);
             return this.authClient;
+        }
+
+        @Override
+        protected HugeClient createBasicClient(String graphSpace, String graph,
+                                               String username, String password) {
+            return this.basicClient;
+        }
+
+        @Override
+        protected void requireGraphSpaceAccess(HugeClient client,
+                                               String graphSpace) {
+            // No graph-space service is needed for this client-selection test.
         }
     }
 }

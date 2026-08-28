@@ -19,6 +19,8 @@
 package org.apache.hugegraph.service.load;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -117,6 +119,38 @@ public class JobManagerService {
 
     public List<JobManager> listAll() {
         return this.mapper.selectList(null);
+    }
+
+    public List<JobManager> listByGraphSpaces(
+            Collection<String> graphSpaces) {
+        if (graphSpaces != null && graphSpaces.isEmpty()) {
+            return Collections.emptyList();
+        }
+        QueryWrapper<JobManager> query = Wrappers.query();
+        if (graphSpaces != null) {
+            query.in("graphspace", graphSpaces);
+        }
+        query.orderByDesc("create_time");
+        return this.mapper.selectList(query);
+    }
+
+    public IPage<JobManager> listByGraphSpaces(
+            Collection<String> graphSpaces, int pageNo, int pageSize,
+            String content) {
+        Page<JobManager> page = new Page<>(pageNo,
+                                           PageUtil.boundedSize(pageSize));
+        if (graphSpaces != null && graphSpaces.isEmpty()) {
+            return page;
+        }
+        QueryWrapper<JobManager> query = Wrappers.query();
+        if (graphSpaces != null) {
+            query.in("graphspace", graphSpaces);
+        }
+        if (content != null && !content.isEmpty()) {
+            query.like("job_name", content);
+        }
+        query.orderByDesc("create_time");
+        return this.mapper.selectPage(page, query);
     }
 
     public IPage<JobManager> listAll(int pageNo, int pageSize, String content) {

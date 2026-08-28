@@ -105,6 +105,14 @@ describe('auth API contract', () => {
     it.each([
         ['getSpaceMembers', ['A/B', {page_no: 1}], 'get',
             '/graphspaces/A%2FB/auth/users'],
+        ['getSpaceAdmins', ['A/B', {page_no: 1}], 'get',
+            '/graphspaces/A%2FB/auth/users/spaceadmin'],
+        ['setSpaceAdmin', ['A/B', 'u/1'], 'post-empty',
+            '/graphspaces/A%2FB/auth/users/spaceadmin/u%2F1'],
+        ['removeSpaceAdmin', ['A/B', 'u/1'], 'delete',
+            '/graphspaces/A%2FB/auth/users/spaceadmin/u%2F1'],
+        ['setSpacePreset', ['A/B', 'u/1', 'alice', 'GS_READ_ONLY'], 'put-preset',
+            '/graphspaces/A%2FB/auth/users/u%2F1/preset'],
         ['addSpaceMember', ['A/B', {user_id: 'u'}], 'post',
             '/graphspaces/A%2FB/auth/users'],
         ['updateSpaceMember', ['A/B', 'u/1', {roles: []}], 'put',
@@ -149,6 +157,20 @@ describe('auth API contract', () => {
                 ? {role_id: args[1], target_id: args[2]} : undefined;
             expect(mockRequest.delete).toHaveBeenCalledWith(
                 route, expectedParams, config
+            );
+        }
+        else if (verb === 'post-empty') {
+            expect(mockRequest.post).toHaveBeenCalledWith(
+                route, undefined, config
+            );
+        }
+        else if (verb === 'put-preset') {
+            expect(mockRequest.put).toHaveBeenCalledWith(
+                route, {
+                    user_id: args[1],
+                    username: args[2],
+                    permission_preset: args[3],
+                }, config
             );
         }
         else {

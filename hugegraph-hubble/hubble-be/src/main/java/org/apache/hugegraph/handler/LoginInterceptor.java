@@ -20,6 +20,10 @@ package org.apache.hugegraph.handler;
 
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.exception.UnauthorizedException;
+import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.service.auth.AuthModeService;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
@@ -28,11 +32,21 @@ import javax.servlet.http.HttpServletResponse;
 
 public class LoginInterceptor extends HandlerInterceptorAdapter {
 
+    @Autowired
+    private AuthModeService authMode;
+
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+        if (this.authMode != null && this.authMode.anonymous()) {
+            if (isAnonymousAuthManagement(request.getRequestURI())) {
+                throw new ExternalException(HttpStatus.FORBIDDEN.value(),
+                                            "Authentication is disabled");
+            }
             return true;
         }
 
@@ -48,5 +62,34 @@ public class LoginInterceptor extends HandlerInterceptorAdapter {
                                             String key) {
         Object value = request.getSession().getAttribute(key);
         return value instanceof String && StringUtils.hasText((String) value);
+    }
+
+    private static boolean isAnonymousAuthManagement(String uri) {
+        int apiIndex = uri.indexOf(Constant.API_VERSION);
+        if (apiIndex < 0) {
+            return false;
+        }
+        String apiPath = uri.substring(apiIndex);
+        String globalAuth = Constant.API_VERSION + "auth";
+        if (apiPath.equals(globalAuth + "/context") ||
+            apiPath.equals(globalAuth + "/status") ||
+            apiPath.equals(globalAuth + "/logout")) {
+            return false;
+        }
+        if (apiPath.equals(globalAuth) ||
+            apiPath.startsWith(globalAuth + "/")) {
+            return true;
+        }
+
+        String graphSpaces = Constant.API_VERSION + "graphspaces/";
+        if (!apiPath.startsWith(graphSpaces)) {
+            return false;
+        }
+        int graphSpaceEnd = apiPath.indexOf('/', graphSpaces.length());
+        if (graphSpaceEnd < 0) {
+            return false;
+        }
+        String scopedAuth = apiPath.substring(0, graphSpaceEnd) + "/auth";
+        return apiPath.startsWith(scopedAuth + "/");
     }
 }

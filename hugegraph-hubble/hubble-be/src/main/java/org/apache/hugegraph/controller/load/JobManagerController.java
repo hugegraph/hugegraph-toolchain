@@ -23,6 +23,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.common.Response;
+import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.entity.enums.JobStatus;
 import org.apache.hugegraph.entity.enums.LoadStatus;
 import org.apache.hugegraph.entity.load.FileMapping;
@@ -54,7 +55,7 @@ import java.util.List;
 @RestController
 @RequestMapping(Constant.API_VERSION + "graphspaces/{graphspace}/graphs" +
         "/{graph}/job-manager")
-public class JobManagerController {
+public class JobManagerController extends BaseController {
 
     private static final int LIMIT = 500;
 
@@ -73,6 +74,7 @@ public class JobManagerController {
     public JobManager create(@PathVariable("graphspace") String graphSpace,
                              @PathVariable("graph") String graph,
                              @RequestBody JobManager entity) {
+        this.requireGraphSpaceWrite(graphSpace);
         synchronized (this.service) {
             Ex.check(!StringUtils.isEmpty(entity.getJobName()),
                      "common.param.cannot-be-null-or-empty", "job_name");
@@ -111,6 +113,7 @@ public class JobManagerController {
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("graph") String graph,
                        @PathVariable("id") int id) {
+        this.requireGraphSpaceWrite(graphSpace);
         this.service.deleteJob(graphSpace, graph, id);
     }
 
@@ -155,6 +158,7 @@ public class JobManagerController {
                              @PathVariable("graph") String graph,
                              @PathVariable("id") int id,
                              @RequestBody JobManager newEntity) {
+        this.requireGraphSpaceWrite(graphSpace);
         Ex.check(!StringUtils.isEmpty(newEntity.getJobName()),
                  "common.param.cannot-be-null-or-empty", "job_name");
         Ex.check(newEntity.getJobName().length() <= 48,

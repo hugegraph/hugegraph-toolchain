@@ -22,8 +22,14 @@ import My from './index';
 import * as api from '../../api';
 import * as user from '../../utils/user';
 
+let mockAuthContext = null;
+
 jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: key => key}),
+}));
+
+jest.mock('../../auth/AuthContext', () => ({
+    useAuthContext: () => ({context: mockAuthContext}),
 }));
 
 jest.mock('../../api', () => ({
@@ -49,6 +55,11 @@ jest.mock('../../utils/rules', () => ({
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthContext = {
+        actions: {
+            account: ['read', 'update', 'change_password'],
+        },
+    };
     window.matchMedia = jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
@@ -59,6 +70,25 @@ beforeEach(() => {
     delete window.location;
     window.location = {replace: jest.fn()};
     api.auth.status.mockResolvedValue({status: 200, data: {level: 'ADMIN'}});
+});
+
+test('keeps legacy profile read and password actions without edit', async () => {
+    mockAuthContext = {
+        actions: {account: ['read', 'change_password']},
+    };
+    api.auth.getPersonal.mockResolvedValue({
+        status: 200,
+        data: {user_name: 'alice'},
+    });
+
+    render(<My />);
+
+    expect(await screen.findByRole('heading', {name: 'alice'}))
+        .toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'common.action.edit'}))
+        .not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'my.edit.title'}))
+        .toBeInTheDocument();
 });
 
 const deferred = () => {

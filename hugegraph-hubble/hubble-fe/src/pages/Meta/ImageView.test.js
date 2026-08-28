@@ -22,6 +22,7 @@ import ImageView from './ImageView';
 import * as api from '../../api';
 
 let mockRouteParams = {graphspace: 'space-a', graph: 'graph-a'};
+let mockCanWrite = true;
 
 jest.mock('antd', () => {
     const actual = jest.requireActual('antd');
@@ -49,6 +50,9 @@ jest.mock('../../api', () => ({
         getSchema: jest.fn(),
         addGraphSchema: jest.fn(),
     },
+}));
+jest.mock('../../auth/graphspaceAccess', () => ({
+    useGraphspaceAccess: () => ({canWrite: mockCanWrite}),
 }));
 
 jest.mock('../../components/GraphinView', () => props => {
@@ -118,6 +122,7 @@ jest.mock('./Property', () => () => null);
 beforeEach(() => {
     jest.clearAllMocks();
     mockRouteParams = {graphspace: 'space-a', graph: 'graph-a'};
+    mockCanWrite = true;
     window.matchMedia = jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
@@ -524,6 +529,41 @@ test('opens schema editing on double click but not on single click', async () =>
     fireEvent.doubleClick(screen.getByTestId('schema-node-double-click'));
     await waitFor(() => expect(screen.getByTestId('vertex-edit-layer'))
         .toHaveTextContent('person'));
+});
+
+test('keeps Schema controls read-only without a write scope', async () => {
+    mockCanWrite = false;
+    loadSchema({vertices: [schemaVertex('person')]});
+
+    render(<ImageView />);
+
+    await waitForPresentation('person');
+    expect(screen.queryByRole('button', {name: 'schema.property.create'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'schema.vertex.create'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'schema.edge.form.title_create'}))
+        .not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'schema.image_view.view_properties'}))
+        .toBeInTheDocument();
+    expect(screen.queryByText('schema.image_view.hover.edit_hint'))
+        .not.toBeInTheDocument();
+    expect(screen.queryByTestId('vertex-edit-layer')).not.toBeInTheDocument();
+
+    fireEvent.doubleClick(screen.getByTestId('schema-node-double-click'));
+    expect(screen.queryByTestId('vertex-edit-layer')).not.toBeInTheDocument();
+});
+
+test('explains an empty Schema without offering mutations to a read-only account', async () => {
+    mockCanWrite = false;
+
+    render(<ImageView />);
+
+    expect(await screen.findByText('schema.image_view.read_only_empty'))
+        .toBeInTheDocument();
+    expect(screen.queryByRole('button', {
+        name: 'schema.image_view.create_from_template',
+    })).not.toBeInTheDocument();
 });
 
 test('links safely to the official HugeGraph SchemaLabel documentation', async () => {

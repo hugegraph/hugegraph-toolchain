@@ -30,7 +30,7 @@ import * as api from '../../../api';
 const VERTEX_IN_USE_KEY = 'schema.vertex.in_use';
 const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
 
-const VertexTable = () => {
+const VertexTable = ({canWrite = true}) => {
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [refresh, setRefresh] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
@@ -152,7 +152,7 @@ const VertexTable = () => {
             ellipsis: true,
             render: val => val.map(item => item.name).join(';'),
         },
-        {
+        canWrite && {
             title: t('common.operation'),
             align: 'center',
             render: val => (
@@ -166,7 +166,7 @@ const VertexTable = () => {
                 </Space>
             ),
         },
-    ];
+    ].filter(Boolean);
 
     useEffect(() => {
         api.manage.getMetaPropertyList(graphspace, graph, {page_size: -1}).then(res => {
@@ -184,9 +184,17 @@ const VertexTable = () => {
         <>
             <TableHeader>
                 <Space>
-                    <Button type='primary' onClick={handleCreate}>{t('common.create')}</Button>
+                    {canWrite && (
+                        <Button type='primary' onClick={handleCreate}>
+                            {t('common.create')}
+                        </Button>
+                    )}
                     <Button onClick={handleRefresh}>{t('common.refresh')}</Button>
-                    <Button onClick={handleDeleteBatch}>{t('common.batch_delete')}</Button>
+                    {canWrite && (
+                        <Button onClick={handleDeleteBatch}>
+                            {t('common.batch_delete')}
+                        </Button>
+                    )}
                 </Space>
             </TableHeader>
 
@@ -194,12 +202,12 @@ const VertexTable = () => {
             <Table
                 columns={columns}
                 dataSource={data}
-                rowSelection={{
+                rowSelection={canWrite ? {
                     type: 'checkbox',
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },
-                }}
+                } : null}
                 pagination={pagination}
                 onChange={handleTable}
                 rowKey={rowKey}
@@ -207,7 +215,7 @@ const VertexTable = () => {
                 scroll={{x: 'max-content'}}
             />
 
-            <EditVertexLayer
+            {canWrite && <EditVertexLayer
                 visible={editLayerVisible}
                 onCancle={handleHideLayer}
                 graph={graph}
@@ -215,7 +223,7 @@ const VertexTable = () => {
                 refresh={handleRefresh}
                 name={vertexName}
                 propertyList={propertyList}
-            />
+            />}
         </>
     );
 };

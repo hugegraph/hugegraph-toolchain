@@ -19,6 +19,8 @@
 package org.apache.hugegraph.controller.space;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import com.google.common.collect.ImmutableMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,7 @@ import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.controller.BaseController;
 import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.space.SchemaTemplateService;
 import org.apache.hugegraph.structure.space.SchemaTemplate;
@@ -94,7 +97,7 @@ public class SchemaTemplateController extends BaseController {
                          @RequestBody SchemaTemplate schemaTemplate) {
         E.checkArgument(isPdEnabled(),
                 "Schema template is not supported in standalone mode");
-        HugeClient client = this.authClient(graphSpace, null);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
 
         return schemaTemplateService.create(client, schemaTemplate);
     }
@@ -102,7 +105,8 @@ public class SchemaTemplateController extends BaseController {
     @DeleteMapping("{name}")
     public void delete(@PathVariable("graphspace") String graphSpace,
                        @PathVariable("name") String name) {
-        HugeClient client = this.authClient(graphSpace, null);
+        HugeClient client = this.requireTemplateOwnerOrManager(graphSpace,
+                                                               name);
         schemaTemplateService.delete(client, name);
     }
 
@@ -110,8 +114,28 @@ public class SchemaTemplateController extends BaseController {
     public Object update(@PathVariable("graphspace") String graphSpace,
                          @PathVariable("name") String name,
                          @RequestBody SchemaTemplate schemaTemplate) {
-        HugeClient client = this.authClient(graphSpace, null);
+        HugeClient client = this.requireTemplateOwnerOrManager(graphSpace,
+                                                               name);
         schemaTemplate.name(name);
         return schemaTemplateService.update(client, schemaTemplate);
+    }
+
+    private HugeClient requireTemplateOwnerOrManager(String graphSpace,
+                                                     String name) {
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
+        if (this.authMode != null && this.authMode.anonymous()) {
+            return client;
+        }
+        if (this.userService.isSuperAdmin(client) ||
+            this.userService.isAssignSpaceAdmin(client, graphSpace)) {
+            return client;
+        }
+
+        Map template = this.schemaTemplateService.get(client, name);
+        if (!Objects.equals(this.getUser(), template.get("creator"))) {
+            throw new ForbiddenException(
+                    "Permission denied: modify schema template");
+        }
+        return client;
     }
 }

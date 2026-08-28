@@ -31,7 +31,7 @@ import {
     RefreshButton,
     TierIcon,
 } from './components';
-import {formatObservedAt, hasStaleMetrics} from './topology';
+import {formatObservedAt, hasStaleMetrics, metricIssueReason} from './topology';
 import {operationsReturnState} from './navigation';
 import './operations.scss';
 
@@ -83,7 +83,7 @@ const NodeIdentityCell = ({record, returnState, unavailable, t}) => {
                     aria-label={leader
                         ? t('operations.leader_role') : nodeRoleLabel(record, t)}
                 >
-                    {record.role ?? nodeRoleLabel(record, t)}
+                    {nodeRoleLabel(record, t)}
                 </Tag>
             )}
             <Tooltip title={record.id}>
@@ -250,7 +250,11 @@ const Nodes = () => {
         {title: t('operations.status'), dataIndex: 'status', key: 'status', width: 140,
             sorter: true, sortOrder: sortOrder('status'),
             render: (value, record) => (
-                <HealthStatus status={value} stale={hasStaleMetrics(record)} />
+                <HealthStatus
+                    status={value}
+                    reason={metricIssueReason(record)}
+                    stale={hasStaleMetrics(record)}
+                />
             )},
         {title: t('operations.last_observed'), key: 'observed_at', width: 208,
             sorter: true, sortOrder: sortOrder('observed_at'), render: () => observed},

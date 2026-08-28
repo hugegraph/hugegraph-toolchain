@@ -31,4 +31,8 @@ const isPdEnabled = () => {
     return getConfig().pd_enabled;
 };
 
-export {setConfig, getConfig, isPdEnabled};
+const isAuthEnabled = () => {
+    return getConfig().auth_enabled !== false;
+};
+
+export {setConfig, getConfig, isPdEnabled, isAuthEnabled};

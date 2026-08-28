@@ -181,7 +181,7 @@ describe('GraphContextSwitcher', () => {
         expect(screen.getByRole('option', {name: 'demo_space'})).toBeInTheDocument();
     });
 
-    test('replaces a missing GraphSpace and never reuses its graph', async () => {
+    test('clears a missing GraphSpace instead of guessing another one', async () => {
         sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
         api.manage.getGraphSpaceList.mockResolvedValueOnce({
             status: 200,
@@ -191,14 +191,12 @@ describe('GraphContextSwitcher', () => {
 
         await waitFor(() => {
             expect(screen.getByRole('combobox', {name: 'workbench.context.graphspace'}))
-                .toHaveValue('space_b');
+                .toHaveValue('');
         });
         expect(screen.getByRole('combobox', {name: 'workbench.context.graph'}))
             .not.toHaveValue('old_graph');
-        expect(screen.getByText('/graphspace/space_b')).toBeInTheDocument();
-        expect(JSON.parse(localStorage.getItem('hubble_workbench_graph_context'))).toEqual({
-            graphspace: 'space_b',
-        });
+        expect(screen.getByText('/navigation')).toBeInTheDocument();
+        expect(localStorage.getItem('hubble_workbench_graph_context')).toBeNull();
     });
 
     test('clears a deep-linked graph that does not belong to its GraphSpace', async () => {
@@ -306,6 +304,46 @@ describe('GraphContextSwitcher', () => {
         expect(screen.queryByRole('button', {
             name: 'workbench.context.retry_graphs',
         })).not.toBeInTheDocument();
+    });
+
+    test('clears a forbidden PD GraphSpace left by a previous account', async () => {
+        sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
+        localStorage.setItem('hubble_workbench_graph_context', JSON.stringify({
+            graphspace: 'space_a',
+            graph: 'graph_a',
+        }));
+        api.manage.getGraphList.mockResolvedValueOnce({status: 403, data: null});
+        renderSwitcher('/gremlin/space_a/graph_a');
+
+        await waitFor(() => {
+            expect(screen.getByText('/navigation')).toBeInTheDocument();
+        });
+        expect(localStorage.getItem('hubble_workbench_graph_context')).toBeNull();
+        expect(screen.getByRole('combobox', {
+            name: 'workbench.context.graphspace',
+        })).toHaveValue('');
+        expect(screen.queryByText('workbench.context.graphs_forbidden'))
+            .not.toBeInTheDocument();
+    });
+
+    test('clears a masked missing PD GraphSpace after access is revoked', async () => {
+        sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
+        localStorage.setItem('hubble_workbench_graph_context', JSON.stringify({
+            graphspace: 'space_a',
+            graph: 'graph_a',
+        }));
+        api.manage.getGraphList.mockResolvedValueOnce({status: 404, data: null});
+        renderSwitcher('/gremlin/space_a/graph_a');
+
+        await waitFor(() => {
+            expect(screen.getByText('/navigation')).toBeInTheDocument();
+        });
+        expect(localStorage.getItem('hubble_workbench_graph_context')).toBeNull();
+        expect(screen.getByRole('combobox', {
+            name: 'workbench.context.graphspace',
+        })).toHaveValue('');
+        expect(screen.queryByText('workbench.context.graphs_load_failed'))
+            .not.toBeInTheDocument();
     });
 
     test('graph success cannot erase a concurrent GraphSpace failure', async () => {

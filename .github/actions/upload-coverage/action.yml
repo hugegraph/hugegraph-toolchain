@@ -17,4 +17,5 @@ runs:
       uses: codecov/codecov-action@v7
       with:
         token: ${{ inputs.token }}
+        slug: ${{ github.repository }}
         files: ${{ inputs.file }}

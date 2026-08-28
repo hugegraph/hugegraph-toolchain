@@ -354,6 +354,7 @@
     },
     "empty": {
       "description": "This GraphSpace is ready but has no graphs yet. Create the first graph to model, import, and query data",
+      "read_only_description": "This GraphSpace has no graphs available to this read-only account",
       "create": "Create first graph",
       "demo_prerequisite": "After creating a graph, select it and use Data Import to build a quick Demo dataset.",
       "view_demo": "View Demo data entry",
@@ -377,7 +378,8 @@
       "name": "Account Name",
       "remark": "Remark",
       "level": "Account Level",
-      "resource": "Resource Permission",
+      "resource": "GraphSpaces",
+      "resource_all": "All",
       "create_time": "Created At",
       "is_superadmin": "Super Admin",
       "permission": "Admin Permission"
@@ -386,6 +388,26 @@
       "ADMIN": "Super Administrator",
       "SPACEADMIN": "Space Administrator",
       "USER": "Regular User"
+    },
+    "permission_preset": {
+      "SUPER_ADMIN": "Super Administrator",
+      "GS_READ_ONLY": "GraphSpace Read-only",
+      "GS_READ_WRITE": "GraphSpace Read-write",
+      "GS_ADMIN": "GraphSpace Administrator",
+      "preserve_mixed": "Keep existing mixed access",
+      "mixed": "Mixed GraphSpace access",
+      "unassigned": "No GraphSpace preset assigned",
+      "legacy_custom": "Legacy/custom access"
+    },
+    "feedback": {
+      "save_failed": "Account was not saved",
+      "save_retry": "Check the account fields and server connection, then retry.",
+      "delete_retry": "The account could not be deleted. Refresh the list and retry.",
+      "password_permission_separate": "Save password and permission changes separately.",
+      "presets_unavailable": "GraphSpace presets are unavailable",
+      "presets_unavailable_help": "This deployment does not provide the required permission API. The account will be created without elevated permissions",
+      "preset_edit_unavailable": "Permission editing is unavailable",
+      "preset_edit_unavailable_help": "Profile and password changes remain available; existing permissions are preserved until the connected HugeGraph REST API is upgraded to 0.72 or later"
     },
     "form": {
       "title_detail": "View Account",
@@ -396,7 +418,7 @@
       "id_help": "The unique login identifier. It cannot be changed after creation",
       "id_placeholder": "Login username",
       "name": "Display Name",
-      "name_help": "The name shown to administrators. It can be changed later",
+      "name_help": "Use 1–16 characters without spaces; Chinese/CJK forms, letters, numbers, and underscores are supported",
       "name_placeholder": "Can be changed after creation",
       "is_superadmin": "Super Admin",
       "level": "Account Level",
@@ -408,7 +430,11 @@
       "default_password_help": "The initial password for a new account. The user should change it after signing in",
       "default_password_placeholder": "Enter a 5–16 character initial password",
       "permission": "Admin Permission",
-      "permission_help": "Select the GraphSpaces this account may administer. HugeGraph roles control ordinary access"
+      "permission_help": "Select the GraphSpaces this account may administer. HugeGraph roles control ordinary access",
+      "permission_preset": "Access preset",
+      "permission_preset_help": "Choose one clear access preset; low-level roles and targets stay internal",
+      "graphspaces": "GraphSpaces",
+      "graphspaces_help": "Select the GraphSpaces covered by this preset"
     },
     "space_access": {
       "global_tab": "Global Accounts",
@@ -428,7 +454,8 @@
         "id": "Account ID",
         "name": "Account Name",
         "roles": "Roles",
-        "remove_confirm": "Remove this member from the GraphSpace?"
+        "remove_confirm": "Remove this member from the GraphSpace?",
+        "preset_unavailable": "The selected permission preset is not available on this GraphSpace."
       },
       "role": {
         "add": "Create Role",
@@ -487,7 +514,7 @@
       "confirm_password_placeholder": "Enter new password again",
       "password_mismatch": "Passwords do not match",
       "password_changed_relogin": "Password changed successfully. Please sign in again.",
-      "account_name_rule": "Account name must be 1-16 characters and cannot start or end with an underscore"
+      "account_name_rule": "Use 1–16 characters without spaces; letters, numbers, Chinese/CJK forms, and underscores are supported; underscores cannot be first or last"
     }
   },
   "role": {
@@ -1079,6 +1106,7 @@
       "empty_title": "Build your first graph schema",
       "empty_description": "Define reusable properties first, then create vertex and edge types",
       "create_from_template": "Create Schema from a Template",
+      "read_only_empty": "This graph has no Schema yet. A read-write or administrator account is required to create one.",
       "template_description": "Choose a built-in example or a saved template from this GraphSpace and apply it to the current graph",
       "manual_title": "Or create the Schema manually",
       "builtin_templates": "Built-in Examples",
@@ -1129,7 +1157,7 @@
     "read_only": {
       "page_title": "{{name}} - Schema Template Library",
       "title": "Read-only template library",
-      "description": "You can browse built-in and saved templates here. Creating, saving, editing, and deleting templates requires PD mode",
+      "description": "You can browse built-in and saved templates here. Creating, saving, editing, and deleting templates are unavailable for this connection or account",
       "apply_to_graph": "Apply templates to {{graph}}",
       "choose_graph": "Choose a graph to apply a template",
       "builtin": "Built in"
@@ -1217,6 +1245,8 @@
     "node_id_copied": "Node ID copied",
     "node_id_copy_failed": "Could not copy the node ID",
     "leader_role": "Leader role",
+    "leader": "Leader",
+    "follower": "Follower",
     "leader_shard": "{{count}} leader shard",
     "leader_shards": "{{count}} leader shards",
     "node_profile": "Node profile",
@@ -1306,8 +1336,8 @@
     "metric_scope_backend": "Backend metrics are provided by Server and Store nodes, not {{nodeType}} nodes.",
     "reason_upstream_timeout": "Upstream timed out",
     "reason_upstream_unavailable": "Upstream unavailable",
-    "reason_metrics_target_untrusted": "The metrics target failed the trust check. Review the PD/Prometheus target configuration.",
-    "reason_metrics_target_missing": "No Store metrics target was discovered. Review the target configuration.",
+    "reason_metrics_target_untrusted": "The Store metrics origin is not trusted. Add its exact scheme, host, and port to operations.store.allowed_targets, restart Hubble, then refresh.",
+    "reason_metrics_target_missing": "PD did not report a Store metrics target. Check PD target discovery and the Store REST metrics port, then refresh.",
     "reason_upstream_deadline": "Metrics collection timed out",
     "reason_metrics_not_collected": "This metric is not collected from the current node",
     "reason_topology_fields_unavailable": "The topology did not provide this field",
@@ -1315,6 +1345,7 @@
     "reason_refresh_failed": "Refresh failed",
     "reason_malformed_response": "Malformed response",
     "reason_unsupported_version": "Unsupported service version",
+    "reason_unsupported_version_help": "Upgrade HugeGraph to a version that provides this metric.",
     "reason_deployment_mode_unsupported": "Unsupported by the current deployment mode",
     "metric_labels": {
       "basic": "Memory & process",
@@ -1376,6 +1407,7 @@
     "datasource_manage": "Data Source Management",
     "operation_manage": "Operations",
     "cluster_overview": "Cluster Overview",
+    "cluster_overview_requires_pd": "Cluster Overview requires PD and is unavailable in standalone mode. Use Nodes to inspect server status.",
     "nodes": "Nodes",
     "advanced_monitoring": "External Advanced Dashboard",
     "operations_unavailable": "Native operations capabilities are unavailable for this account.",

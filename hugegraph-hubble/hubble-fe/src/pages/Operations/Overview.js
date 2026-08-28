@@ -41,10 +41,13 @@ import {
     SourceStrip,
 } from './components';
 import {
+    formatBytes,
     formatMetricValue,
     formatObservedAge,
     formatObservedAt,
     hasStaleMetrics,
+    metricIssueReason,
+    ratioPercent,
     selectAttentionNodes,
 } from './topology';
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
@@ -189,10 +192,9 @@ const Overview = () => {
     const pdLeader = facts.pd_leader ?? nodes.find(node => (
         node.type === 'PD' && node.role === 'LEADER'
     ))?.name;
-    const capacityPercent = Number.isFinite(facts.capacity_used)
-        && Number.isFinite(facts.capacity_total) && facts.capacity_total > 0
-        ? Math.round(facts.capacity_used / facts.capacity_total * 100)
-        : null;
+    const capacityPercent = ratioPercent(
+        facts.capacity_used_bytes, facts.capacity_total_bytes
+    );
     const dashboardStatusReason = dashboard.status === 'checking'
         ? t('navigation_page.dashboard_checking')
         : dashboard.status === 'unconfigured'
@@ -223,7 +225,11 @@ const Overview = () => {
             title: t('operations.status'),
             dataIndex: 'status',
             render: (status, node) => (
-                <HealthStatus status={status} stale={hasStaleMetrics(node)} />
+                <HealthStatus
+                    status={status}
+                    reason={metricIssueReason(node)}
+                    stale={hasStaleMetrics(node)}
+                />
             ),
         },
     ];
@@ -240,7 +246,11 @@ const Overview = () => {
             title: t('operations.status'),
             dataIndex: 'status',
             render: (status, node) => (
-                <HealthStatus status={status} stale={hasStaleMetrics(node)} />
+                <HealthStatus
+                    status={status}
+                    reason={metricIssueReason(node)}
+                    stale={hasStaleMetrics(node)}
+                />
             ),
         },
         {
@@ -294,8 +304,7 @@ const Overview = () => {
             key: 'data_size',
             icon: HddOutlined,
             label: t('operations.fact_data_size'),
-            value: facts.data_size === null || facts.data_size === undefined
-                ? null : `${facts.data_size} ${facts.data_size_unit ?? ''}`.trim(),
+            value: formatBytes(facts.data_size_bytes),
         },
     ];
 
@@ -440,8 +449,8 @@ const Overview = () => {
                                         <span>{t('operations.fact_capacity')}</span>
                                         <strong>
                                             {capacityPercent === null ? unavailable : (
-                                                `${facts.capacity_used} / ${facts.capacity_total} `
-                                                + `${facts.capacity_unit ?? ''} `
+                                                `${formatBytes(facts.capacity_used_bytes)} / `
+                                                + `${formatBytes(facts.capacity_total_bytes)} `
                                                 + `(${capacityPercent}%)`
                                             )}
                                         </strong>

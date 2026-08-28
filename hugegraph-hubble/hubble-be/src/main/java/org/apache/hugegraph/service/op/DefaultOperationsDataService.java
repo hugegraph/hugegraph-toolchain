@@ -50,6 +50,12 @@ import org.apache.hugegraph.service.op.OperationsModels.SourceStatus;
 @Service
 public class DefaultOperationsDataService implements OperationsDataService {
 
+    private static final Set<String> PD_FACTS = Set.of(
+            "graphs", "partitions", "replicas", "stores", "stores_up",
+            "data_size_bytes");
+    private static final Set<String> STORE_FACTS = Set.of(
+            "capacity_total_bytes", "capacity_used_bytes");
+
     private final OperationsCollector collector;
     private final long ttlMillis;
     private final Clock clock;
@@ -265,10 +271,7 @@ public class DefaultOperationsDataService implements OperationsDataService {
                         .map(node -> staleNode(node, source))
                         .forEach(nodes::add);
             }
-            if ("pd".equals(sourceName)) {
-                facts.clear();
-                facts.putAll(previous.getFacts());
-            }
+            this.mergeFailedFacts(facts, previous.getFacts(), sourceName);
         }
         if (!stale) {
             return current;
@@ -277,6 +280,25 @@ public class DefaultOperationsDataService implements OperationsDataService {
                         "DEGRADED";
         return new Snapshot(status, current.getObservedAt(), true,
                             "partial_refresh_failed", sources, nodes, facts);
+    }
+
+    private void mergeFailedFacts(Map<String, Long> current,
+                                  Map<String, Long> previous,
+                                  String source) {
+        Set<String> owned;
+        if ("pd".equals(source)) {
+            owned = PD_FACTS;
+        } else if ("stores".equals(source)) {
+            owned = STORE_FACTS;
+        } else {
+            return;
+        }
+        for (String fact : owned) {
+            current.remove(fact);
+            if (previous.containsKey(fact)) {
+                current.put(fact, previous.get(fact));
+            }
+        }
     }
 
     private boolean mergeFailedMetricGroups(List<Node> current,

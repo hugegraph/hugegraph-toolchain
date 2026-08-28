@@ -95,7 +95,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult rings(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph,
                                @RequestBody RingsEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.rings(client, body);
     }
 
@@ -103,7 +103,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult advancedPaths(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph,
                                        @RequestBody PathsRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.advancedpaths(client, body);
     }
 
@@ -111,7 +111,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult sameNeighbors(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph,
                                        @RequestBody SameNeighborsEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.sameNeighbors(client, body);
     }
 
@@ -119,7 +119,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult kout(@PathVariable("graphspace") String graphSpace,
                               @PathVariable("graph") String graph,
                               @RequestBody KoutEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.kout(client, body);
     }
 
@@ -127,7 +127,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult koutPost(@PathVariable("graphspace") String graphSpace,
                                   @PathVariable("graph") String graph,
                                   @RequestBody KoutRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.koutPost(client, body);
     }
 
@@ -135,7 +135,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult kneighbor(@PathVariable("graphspace") String graphSpace,
                                    @PathVariable("graph") String graph,
                                    @RequestBody KneighborEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.kneighbor(client, body);
     }
 
@@ -143,7 +143,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult kneighborPost(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph,
                                        @RequestBody KneighborRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.kneighborPost(client, body);
     }
 
@@ -151,7 +151,7 @@ public class OltpAlgoController extends BaseController {
     public JaccardsimilarityView jaccardSimilarity(@PathVariable("graphspace") String graphSpace,
                                                    @PathVariable("graph") String graph,
                                                    @RequestBody JaccardSimilarityEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.jaccardSimilarity(client, body);
     }
 
@@ -160,7 +160,7 @@ public class OltpAlgoController extends BaseController {
             @PathVariable("graphspace") String graphSpace,
             @PathVariable("graph") String graph,
             @RequestBody SingleSourceJaccardSimilarityRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.jaccardSimilarityPost(client, body);
     }
 
@@ -168,7 +168,7 @@ public class OltpAlgoController extends BaseController {
     public RanksView personalRank(@PathVariable("graphspace") String graphSpace,
                                   @PathVariable("graph") String graph,
                                   @RequestBody PersonalRankAPI.Request body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.personalRank(client, body);
     }
 
@@ -176,7 +176,7 @@ public class OltpAlgoController extends BaseController {
     public RanksView neighborRank(@PathVariable("graphspace") String graphSpace,
                                   @PathVariable("graph") String graph,
                                   @RequestBody NeighborRankAPI.Request body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.neighborRank(client, body);
     }
 
@@ -184,7 +184,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult allShortPaths(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph,
                                        @RequestBody AllShortestPathsEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.allShortestPaths(client, body);
     }
 
@@ -199,7 +199,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult weightedShortestPath(@PathVariable("graphspace") String graphSpace,
                                               @PathVariable("graph") String graph,
                                               @RequestBody WeightedShortestPathEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.weightedShortestPath(client, body);
     }
 
@@ -208,7 +208,7 @@ public class OltpAlgoController extends BaseController {
             @PathVariable("graphspace") String graphSpace,
             @PathVariable("graph") String graph,
             @RequestBody SingleSourceShortestPathEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.singleSourceShortestPath(client, body);
     }
 
@@ -216,7 +216,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult multiNodeShortestPath(@PathVariable("graphspace") String graphSpace,
                                                @PathVariable("graph") String graph,
                                                @RequestBody MultiNodeShortestPathRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.multiNodeShortestPath(client, body);
     }
 
@@ -224,7 +224,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult paths(@PathVariable("graphspace") String graphSpace,
                                @PathVariable("graph") String graph,
                                @RequestBody PathsEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.paths(client, body);
     }
 
@@ -232,7 +232,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult customizedPaths(@PathVariable("graphspace") String graphSpace,
                                          @PathVariable("graph") String graph,
                                          @RequestBody CustomizedPathsRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.customizedPaths(client, body);
     }
 
@@ -240,7 +240,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult templatePaths(@PathVariable("graphspace") String graphSpace,
                                        @PathVariable("graph") String graph,
                                        @RequestBody TemplatePathsRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.templatePaths(client, body);
     }
 
@@ -248,7 +248,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult crosspoints(@PathVariable("graphspace") String graphSpace,
                                      @PathVariable("graph") String graph,
                                      @RequestBody CrossPointsEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.crosspoints(client, body);
     }
 
@@ -256,7 +256,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult customizedcrosspoints(@PathVariable("graphspace") String graphSpace,
                                                @PathVariable("graph") String graph,
                                                @RequestBody CrosspointsRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.customizedcrosspoints(client, body);
     }
 
@@ -264,7 +264,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult rays(@PathVariable("graphspace") String graphSpace,
                               @PathVariable("graph") String graph,
                               @RequestBody RaysEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.rays(client, body);
     }
 
@@ -272,7 +272,7 @@ public class OltpAlgoController extends BaseController {
     public FusiformsimilarityView fusiformsimilarity(@PathVariable("graphspace") String graphSpace,
                                                      @PathVariable("graph") String graph,
                                                      @RequestBody FusiformSimilarityRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.fusiformsimilarity(client, body);
     }
 
@@ -280,7 +280,7 @@ public class OltpAlgoController extends BaseController {
     public Map<String, Double> adamicadar(@PathVariable("graphspace") String graphSpace,
                                           @PathVariable("graph") String graph,
                                           @RequestBody AdamicadarEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.adamicadar(client, body);
     }
 
@@ -288,7 +288,7 @@ public class OltpAlgoController extends BaseController {
     public Map<String, Double> resourceallocation(@PathVariable("graphspace") String graphSpace,
                                                   @PathVariable("graph") String graph,
                                                   @RequestBody ResourceallocationEntity body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.resourceallocation(client, body);
     }
 
@@ -296,7 +296,7 @@ public class OltpAlgoController extends BaseController {
     public GremlinResult sameneighborsbatch(@PathVariable("graphspace") String graphSpace,
                                             @PathVariable("graph") String graph,
                                             @RequestBody SameNeighborsBatchRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.sameneighborsbatch(client, body);
     }
 
@@ -304,7 +304,7 @@ public class OltpAlgoController extends BaseController {
     public EgonetView egonet(@PathVariable("graphspace") String graphSpace,
                              @PathVariable("graph") String graph,
                              @RequestBody EgonetRequest body) {
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.authGremlinClient(graphSpace, graph);
         return this.service.egonet(client, body);
     }
 }

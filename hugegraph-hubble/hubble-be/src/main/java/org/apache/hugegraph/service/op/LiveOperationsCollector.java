@@ -270,6 +270,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                 Topology topology = this.parser.parseTopology(EMPTY_CLUSTER,
                                                               stores, now);
                 this.mergeNodes(nodes, topology.getNodes());
+                facts.putAll(topology.getFacts());
                 storesParsed = true;
             } catch (MalformedUpstreamException e) {
                 storesStatus = malformed(now);

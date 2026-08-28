@@ -21,11 +21,15 @@ package org.apache.hugegraph.controller;
 import java.util.List;
 import java.util.function.Function;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.factory.PDHugeClientFactory;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.UserService;
+import org.apache.hugegraph.service.auth.AuthModeService;
+import org.apache.hugegraph.service.auth.AuthContextService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hugegraph.config.HugeConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +63,12 @@ public abstract class BaseController {
 
     @Autowired
     protected UserService userService;
+    @Autowired
+    protected AuthModeService authMode;
+    @Autowired
+    protected AuthContextService authContextService;
+    @Autowired
+    protected GraphSpaceService graphSpaceAccessService;
 
     public static final String ORDER_ASC = "asc";
     public static final String ORDER_DESC = "desc";
@@ -134,22 +144,31 @@ public abstract class BaseController {
     protected void clearAuthSession() {
         this.delSession(Constant.TOKEN_KEY);
         this.delSession(Constant.USERNAME_KEY);
+        this.delSession(Constant.PASSWORD_KEY);
+        this.delSession(Constant.PASSWORD_EXPIRE_AT_KEY);
     }
 
     protected HugeClient authClient(String graphSpace, String graph) {
         HttpServletRequest request = getRequest();
         if (request.getAttribute("hugeClient") != null) {
             HugeClient client = (HugeClient) request.getAttribute("hugeClient");
+            this.requireGraphSpaceAccess(client, graphSpace);
             client.assignGraph(graphSpace, graph);
             return client;
         }
-        HugeClient client = this.hugeClientPoolService.createAuthClient(
-                graphSpace, graph, this.getToken());
+        HugeClient client = this.authMode != null && this.authMode.anonymous() ?
+                            this.hugeClientPoolService.createUnauthClient(graphSpace, graph) :
+                            this.hugeClientPoolService.createAuthClient(graphSpace, graph, this.getToken());
+        this.requireGraphSpaceAccess(client, graphSpace);
+        if (graphSpace != null || graph != null) {
+            client.assignGraph(graphSpace, graph);
+        }
         request.setAttribute("hugeClient", client);
         return client;
     }
 
     protected HugeClient requireAccountManager() {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         String level = this.userService.userLevel(client, this.getUser());
         if (!"ADMIN".equals(level)) {
@@ -159,6 +178,7 @@ public abstract class BaseController {
     }
 
     protected HugeClient requireGraphSpaceManager(String graphSpace) {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client) &&
             !this.userService.isAssignSpaceAdmin(client, graphSpace)) {
@@ -169,7 +189,28 @@ public abstract class BaseController {
         return client;
     }
 
+    protected HugeClient requireGraphSpaceWrite(String graphSpace) {
+        HugeClient client = this.authClient(null, null);
+        this.requireGraphSpaceAccess(client, graphSpace);
+        this.authContextService.requireGraphSpaceWrite(
+                client, this.getUser(), graphSpace);
+        client.assignGraph(graphSpace, null);
+        return client;
+    }
+
+    protected HugeClient requireGraphSpaceAuthorizationAdmin(
+            String graphSpace) {
+        this.requireAuthenticatedAuthorization();
+        HugeClient client = this.authClient(null, null);
+        if (!this.userService.isSuperAdmin(client)) {
+            throw new ForbiddenException("Permission denied: manage authorization objects");
+        }
+        client.assignGraph(graphSpace, null);
+        return client;
+    }
+
     protected HugeClient requireGraphSpaceAdministrator() {
+        this.requireAuthenticatedAuthorization();
         HugeClient client = this.authClient(null, null);
         if (!this.userService.isSuperAdmin(client)) {
             throw new ForbiddenException(
@@ -179,7 +220,52 @@ public abstract class BaseController {
     }
 
     protected HugeClient authGremlinClient(String graphSpace, String graph) {
-        return this.authClient(graphSpace, graph);
+        if (this.authMode != null && this.authMode.anonymous()) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        HttpServletRequest request = this.getRequest();
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        String username = (String) session.getAttribute(Constant.USERNAME_KEY);
+        String token = (String) session.getAttribute(Constant.TOKEN_KEY);
+        String password = this.validSessionPassword(session);
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(token) ||
+            !StringUtils.hasText(password)) {
+            return this.authClient(graphSpace, graph);
+        }
+
+        Object existing = request.getAttribute("hugeClient");
+        if (existing instanceof HugeClient) {
+            ((HugeClient) existing).close();
+        }
+        HugeClient client = this.createBasicClient(graphSpace, graph,
+                                                   username, password);
+        this.requireGraphSpaceAccess(client, graphSpace);
+        request.setAttribute("hugeClient", client);
+        return client;
+    }
+
+    protected HugeClient createBasicClient(String graphSpace, String graph,
+                                           String username, String password) {
+        return this.hugeClientPoolService.createBasicClient(
+                    graphSpace, graph, username, password);
+    }
+
+    private String validSessionPassword(HttpSession session) {
+        Object password = session.getAttribute(Constant.PASSWORD_KEY);
+        Object expiresAt = session.getAttribute(
+                           Constant.PASSWORD_EXPIRE_AT_KEY);
+        if (!(password instanceof String) || !(expiresAt instanceof Number) ||
+            System.currentTimeMillis() >= ((Number) expiresAt).longValue()) {
+            session.removeAttribute(Constant.PASSWORD_KEY);
+            session.removeAttribute(Constant.PASSWORD_EXPIRE_AT_KEY);
+            return null;
+        }
+        return (String) password;
     }
 
     protected HugeClient unauthClient() {
@@ -266,8 +352,34 @@ public abstract class BaseController {
 
         HugeClient client = hugeClientPoolService.create(url, graphSpace, graph,
                 this.getToken());
-
+        this.requireGraphSpaceAccess(client, graphSpace);
         return client;
+    }
+
+    private void requireAuthenticatedAuthorization() {
+        if (this.authMode != null && this.authMode.anonymous()) {
+            throw new ForbiddenException(
+                    "Authentication is required for this operation");
+        }
+    }
+
+    protected void requireGraphSpaceAccess(HugeClient client,
+                                           String graphSpace) {
+        if (graphSpace == null || !config.get(HubbleOptions.PD_ENABLED)) {
+            return;
+        }
+        HttpServletRequest request = getRequest();
+        if (graphSpace.equals(
+                request.getAttribute(Constant.GRAPHSPACE_ACCESS_KEY))) {
+            return;
+        }
+        if (this.authMode != null && this.authMode.anonymous()) {
+            this.graphSpaceAccessService.requirePublicSpace(client,
+                                                            graphSpace);
+        } else {
+            this.graphSpaceAccessService.requireAccessibleSpace(client,
+                                                                graphSpace);
+        }
     }
 
     public String getUrl() {

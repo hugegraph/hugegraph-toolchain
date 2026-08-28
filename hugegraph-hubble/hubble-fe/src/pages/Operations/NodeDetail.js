@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Alert, Button, Descriptions, Progress, Skeleton, Space, Statistic} from 'antd';
+import {Alert, Button, Descriptions, Progress, Skeleton, Space, Statistic, Tooltip} from 'antd';
 import {ArrowLeftOutlined} from '@ant-design/icons';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
@@ -26,6 +26,7 @@ import {isPdEnabled} from '../../utils/config';
 import {
     displayNodeType,
     HealthStatus,
+    nodeRoleLabel,
     RefreshButton,
     SourceStrip,
     TierIcon,
@@ -318,6 +319,13 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
     const reasonLabel = status.reason ? t(`operations.reason_${status.reason}`, {
         defaultValue: status.reason.replaceAll('_', ' '),
     }) : null;
+    const upgradeHelp = status.reason === 'unsupported_version'
+        ? t('operations.reason_unsupported_version_help') : null;
+    const availabilityStatus = (
+        <strong className={`availability-${availability.toLowerCase()}`}>
+            {availabilityLabel}
+        </strong>
+    );
     const statusDetails = (
         <div
             className='operations-metric-status'
@@ -335,9 +343,11 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
         <header className='operations-metric-header'>
             <div className='operations-metric-title-row'>
                 <h3>{name}</h3>
-                <strong className={`availability-${availability.toLowerCase()}`}>
-                    {availabilityLabel}
-                </strong>
+                {upgradeHelp ? (
+                    <Tooltip title={upgradeHelp}>
+                        <span tabIndex={0}>{availabilityStatus}</span>
+                    </Tooltip>
+                ) : availabilityStatus}
             </div>
             {statusDetails}
         </header>
@@ -502,23 +512,6 @@ const NodeDetail = () => {
         }
         return {availability: node.metrics?.[group] ? 'AVAILABLE' : 'UNSUPPORTED'};
     };
-    const metricScopeMessage = (group, status) => {
-        if (status.availability !== 'NOT_APPLICABLE') {
-            return null;
-        }
-        if (['drive', 'raft'].includes(group)) {
-            return t('operations.metric_scope_store_only', {
-                metric: t(`operations.metric_${group}`),
-                nodeType: displayNodeType(node.type),
-            });
-        }
-        if (group === 'backend' && node.type === 'PD') {
-            return t('operations.metric_scope_backend', {
-                nodeType: displayNodeType(node.type),
-            });
-        }
-        return null;
-    };
     return (
         <main className='operations-page operations-node-detail'>
             <header className='operations-page-header'>
@@ -538,8 +531,11 @@ const NodeDetail = () => {
                         <div>
                             <h2>{node.name ?? t('operations.unavailable')}</h2>
                             <span>
-                                {displayNodeType(node.type)} · {node.role ?? node.version
-                                    ?? t('operations.unavailable')}
+                                {displayNodeType(node.type)} · {
+                                    node.role
+                                        ? nodeRoleLabel(node, t)
+                                        : (node.version ?? t('operations.unavailable'))
+                                }
                             </span>
                         </div>
                         <HealthStatus status={node.status} size='large' />
@@ -572,7 +568,7 @@ const NodeDetail = () => {
                     </Descriptions.Item>
                     {node.role && (
                         <Descriptions.Item label={t('operations.role')}>
-                            {node.role}
+                            {nodeRoleLabel(node, t)}
                         </Descriptions.Item>
                     )}
                     <Descriptions.Item label={t('operations.version')}>
@@ -585,8 +581,7 @@ const NodeDetail = () => {
                 className='operations-metric-grid'
                 aria-label={t('operations.node_metrics')}
             >
-                {(pdMode ? ['system', 'drive', 'raft', 'backend']
-                    : applicableMetricGroups).map(group => {
+                {applicableMetricGroups.map(group => {
                     const status = metricStatus(group);
                     return (
                         <MetricGroup
@@ -595,7 +590,6 @@ const NodeDetail = () => {
                             name={t(`operations.metric_${group}`)}
                             values={node.metrics?.[group]}
                             status={status}
-                            emptyMessage={metricScopeMessage(group, status)}
                         />
                     );
                 })}

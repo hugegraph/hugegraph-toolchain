@@ -29,6 +29,7 @@ import {useLocation} from 'react-router-dom';
 import * as api from '../api/index';
 import {AUTH_REVALIDATE_EVENT} from '../utils/authEvents';
 import {getUser, USER_CHANGE_EVENT} from '../utils/user';
+import {isAuthEnabled} from '../utils/config';
 
 const REFRESH_INTERVAL_MS = 60_000;
 const MIN_REFRESH_INTERVAL_MS = 5_000;
@@ -41,6 +42,7 @@ const AuthContext = createContext({
 });
 
 const isSignedIn = () => Boolean(getUser()?.id);
+const shouldLoadContext = () => isSignedIn() || !isAuthEnabled();
 
 const unwrapContext = response => {
     if (response?.status !== 200 || !response.data
@@ -60,11 +62,11 @@ const AuthContextProvider = ({children}) => {
     const lastSuccessRef = useRef(0);
     const [identityEpoch, setIdentityEpoch] = useState(0);
     const [state, setState] = useState(() => (
-        isSignedIn() ? {...emptyState, loading: true} : emptyState
+        shouldLoadContext() ? {...emptyState, loading: true} : emptyState
     ));
 
     const load = useCallback(({force = false} = {}) => {
-        if (!isSignedIn()) {
+        if (!shouldLoadContext()) {
             setState(emptyState);
             return Promise.resolve(null);
         }
@@ -87,7 +89,7 @@ const AuthContextProvider = ({children}) => {
             .then(context => {
                 if (epoch === epochRef.current
                     && requestId === latestRequestRef.current
-                    && isSignedIn()) {
+                    && shouldLoadContext()) {
                     lastSuccessRef.current = Date.now();
                     setState({loading: false, context, error: null});
                 }
@@ -116,7 +118,7 @@ const AuthContextProvider = ({children}) => {
             inFlightRef.current = null;
             lastSuccessRef.current = 0;
             setIdentityEpoch(epochRef.current);
-            if (isSignedIn()) {
+            if (shouldLoadContext()) {
                 load({force: true}).catch(() => undefined);
             }
             else {

@@ -25,6 +25,7 @@ import {useTranslation} from 'react-i18next';
 
 import * as api from '../../../api';
 import {useOperationsCapabilities} from '../../../pages/Operations/capabilities';
+import {isPdEnabled} from '../../../utils/config';
 import Item from '../Item';
 import {normalizeDashboardUrl} from './dashboard';
 
@@ -36,6 +37,7 @@ const ConsoleItem = ({embedded = false}) => {
         capabilities,
         error: capabilitiesError,
     } = useOperationsCapabilities();
+    const pdMode = isPdEnabled();
     const [dashboard, setDashboard] = useState({status: 'loading', url: ''});
 
     useEffect(() => {
@@ -103,14 +105,16 @@ const ConsoleItem = ({embedded = false}) => {
             ? () => openDashboard(dashboard.url + path)
             : undefined,
     });
-    const nativeItem = (titleKey, path, required) => {
-        const available = capabilities.includes(required);
+    const nativeItem = (titleKey, path, required, modeAvailable = true, modeReason = '') => {
+        const available = modeAvailable && capabilities.includes(required);
         const disabled = capabilitiesLoading || Boolean(capabilitiesError) || !available;
         return {
             title: t(titleKey),
             url: available ? path : '',
             disabled,
-            reason: disabled ? t('navigation_page.operations_unavailable') : '',
+            reason: disabled
+                ? (!modeAvailable && modeReason
+                    ? modeReason : t('navigation_page.operations_unavailable')) : '',
             badge: disabled ? t('navigation_page.unavailable') : '',
         };
     };
@@ -130,7 +134,9 @@ const ConsoleItem = ({embedded = false}) => {
                 nativeItem(
                     'navigation_page.cluster_overview',
                     '/operations/overview',
-                    'operations_health_read'
+                    'operations_health_read',
+                    pdMode,
+                    t('navigation_page.cluster_overview_requires_pd')
                 ),
                 nativeItem(
                     'navigation_page.nodes',

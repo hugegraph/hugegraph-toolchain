@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
+import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.op.OperationsCapabilityService;
@@ -51,6 +52,8 @@ public class AuthContextService {
 
     public static final String ACCOUNT_SELF_MANAGE = "account_self_manage";
     public static final String ACCOUNTS_MANAGE = "accounts_manage";
+    public static final String ACCOUNT_PERMISSION_PRESETS =
+                               "account_permission_presets";
     public static final String GRAPHSPACES_READ = "graphspaces_read";
     public static final String GRAPHSPACES_MANAGE = "graphspaces_manage";
     public static final String GRAPHSPACE_MEMBERS_MANAGE =
@@ -66,6 +69,8 @@ public class AuthContextService {
     private static final char[] HEX = "0123456789abcdef".toCharArray();
     private static final Set<String> SELF_ACTIONS = set(
             "read", "update", "change_password");
+    private static final Set<String> LEGACY_SELF_ACTIONS = set(
+            "read", "change_password");
     private static final Set<String> CRUD_ACTIONS = set(
             "read", "create", "update", "delete");
     private static final Set<String> MEMBER_ACTIONS = set(
@@ -87,12 +92,17 @@ public class AuthContextService {
     }
 
     public Map<String, Object> context(HugeClient client, String username) {
+        if (Boolean.FALSE.equals(
+                this.config.get(HubbleOptions.AUTH_ENABLED))) {
+            return anonymousContext(this.config.get(HubbleOptions.PD_ENABLED));
+        }
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
         String mode = pdEnabled ? "PD" : "NON_PD";
         String role;
+        UserEntity user = null;
         List<String> adminGraphSpaces = Collections.emptyList();
         if (pdEnabled) {
-            UserEntity user = this.users.getpersonal(client, username);
+            user = this.users.getpersonal(client, username);
             adminGraphSpaces = sorted(user.getAdminSpaces());
             if (user.isSuperadmin()) {
                 role = SUPERADMIN;
@@ -106,10 +116,22 @@ public class AuthContextService {
             role = "ADMIN".equals(serverRole) ? SUPERADMIN : USER;
         }
 
-        Set<String> capabilities = this.capabilities(pdEnabled, role);
-        Map<String, Set<String>> actions = this.actions(pdEnabled, role);
+        boolean permissionPresets = pdEnabled &&
+                                    client.supportsDefaultRole();
+        boolean profileUpdate =
+                client.supportsPersonalProfileUpdate();
+        List<String> writeGraphSpaces = pdEnabled ?
+                                        writeGraphSpaces(user,
+                                                         permissionPresets) :
+                                        Collections.emptyList();
+        Set<String> capabilities = this.capabilities(pdEnabled, role,
+                                                     permissionPresets);
+        Map<String, Set<String>> actions = this.actions(pdEnabled, role,
+                                                       permissionPresets,
+                                                       profileUpdate);
         Map<String, Object> scopes = this.scopes(pdEnabled, role,
-                                                 adminGraphSpaces);
+                                                 adminGraphSpaces,
+                                                 writeGraphSpaces);
         String version = version(mode, username, role, capabilities,
                                  actions, scopes);
 
@@ -125,12 +147,66 @@ public class AuthContextService {
         return Collections.unmodifiableMap(context);
     }
 
-    private Set<String> capabilities(boolean pdEnabled, String role) {
+    public void requireGraphSpaceWrite(HugeClient client, String username,
+                                       String graphSpace) {
+        if (Boolean.FALSE.equals(
+                this.config.get(HubbleOptions.AUTH_ENABLED)) ||
+            !this.config.get(HubbleOptions.PD_ENABLED) ||
+            !client.supportsDefaultRole()) {
+            return;
+        }
+
+        UserEntity user = this.users.getpersonal(client, username);
+        if (user.isSuperadmin() ||
+            contains(user.getAdminSpaces(), graphSpace) ||
+            writeGraphSpaces(user, true).contains(graphSpace)) {
+            return;
+        }
+        throw new ForbiddenException(
+                "Permission denied: write graphspace resources");
+    }
+
+    private static Map<String, Object> anonymousContext(boolean pdEnabled) {
+        Set<String> capabilities = new LinkedHashSet<>();
+        capabilities.add(GRAPH_RESOURCES_ACCESS);
+        if (pdEnabled) {
+            capabilities.add(GRAPHSPACES_READ);
+        }
+        capabilities.addAll(OperationsCapabilityService.forLevel("ADMIN"));
+
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("schema_version", SCHEMA_VERSION);
+        context.put("context_version",
+                    pdEnabled ? "anonymous-v2-pd" : "anonymous-v2-non-pd");
+        context.put("mode", "NON_AUTH");
+        context.put("username", null);
+        context.put("role", "ANONYMOUS");
+        Map<String, Set<String>> actions = new LinkedHashMap<>();
+        actions.put("graphspaces", pdEnabled ?
+                   Collections.singleton("read") : Collections.emptySet());
+        actions.put("operations", OPERATIONS_ACTIONS);
+        context.put("capabilities",
+                    Collections.unmodifiableSet(capabilities));
+        context.put("actions", actions);
+        Map<String, Object> scopes = new LinkedHashMap<>();
+        scopes.put("all_graphspaces", pdEnabled);
+        scopes.put("admin_graphspaces", Collections.emptyList());
+        scopes.put("write_graphspaces", Collections.emptyList());
+        scopes.put("graph_resources", "SERVER_ANONYMOUS");
+        context.put("scopes", scopes);
+        return Collections.unmodifiableMap(context);
+    }
+
+    private Set<String> capabilities(boolean pdEnabled, String role,
+                                     boolean permissionPresets) {
         Set<String> capabilities = new LinkedHashSet<>();
         capabilities.add(ACCOUNT_SELF_MANAGE);
         capabilities.add(GRAPH_RESOURCES_ACCESS);
         if (pdEnabled) {
             capabilities.add(GRAPHSPACES_READ);
+        }
+        if (permissionPresets) {
+            capabilities.add(ACCOUNT_PERMISSION_PRESETS);
         }
         if (SUPERADMIN.equals(role)) {
             capabilities.add(ACCOUNTS_MANAGE);
@@ -138,9 +214,11 @@ public class AuthContextService {
                 capabilities.add(GRAPHSPACES_MANAGE);
             }
         }
-        if (pdEnabled && (SUPERADMIN.equals(role) ||
-                          SPACEADMIN.equals(role))) {
+        if (pdEnabled && permissionPresets &&
+            (SUPERADMIN.equals(role) || SPACEADMIN.equals(role))) {
             capabilities.add(GRAPHSPACE_MEMBERS_MANAGE);
+        }
+        if (pdEnabled && SUPERADMIN.equals(role)) {
             capabilities.add(GRAPHSPACE_ROLES_MANAGE);
             capabilities.add(GRAPHSPACE_AUTHORIZATIONS_MANAGE);
         }
@@ -150,18 +228,22 @@ public class AuthContextService {
         return Collections.unmodifiableSet(capabilities);
     }
 
-    private Map<String, Set<String>> actions(boolean pdEnabled, String role) {
+    private Map<String, Set<String>> actions(boolean pdEnabled, String role,
+                                             boolean permissionPresets,
+                                             boolean profileUpdate) {
         Map<String, Set<String>> actions = new LinkedHashMap<>();
         boolean superAdmin = SUPERADMIN.equals(role);
-        boolean spaceManager = pdEnabled &&
+        boolean spaceManager = pdEnabled && permissionPresets &&
                                (superAdmin || SPACEADMIN.equals(role));
-        actions.put("account", SELF_ACTIONS);
+        actions.put("account", profileUpdate ?
+                               SELF_ACTIONS : LEGACY_SELF_ACTIONS);
         actions.put("accounts", superAdmin ? CRUD_ACTIONS : emptySet());
         actions.put("graphspaces", pdEnabled ?
                    (superAdmin ? CRUD_ACTIONS : set("read")) : emptySet());
         actions.put("members", spaceManager ? MEMBER_ACTIONS : emptySet());
-        actions.put("roles", spaceManager ? CRUD_ACTIONS : emptySet());
-        actions.put("authorizations", spaceManager ?
+        actions.put("roles", permissionPresets && superAdmin ?
+                   CRUD_ACTIONS : emptySet());
+        actions.put("authorizations", permissionPresets && superAdmin ?
                    AUTHORIZATION_ACTIONS : emptySet());
         actions.put("operations", superAdmin ?
                    OPERATIONS_ACTIONS : emptySet());
@@ -170,13 +252,48 @@ public class AuthContextService {
     }
 
     private Map<String, Object> scopes(boolean pdEnabled, String role,
-                                       List<String> adminGraphSpaces) {
+                                       List<String> adminGraphSpaces,
+                                       List<String> writeGraphSpaces) {
         Map<String, Object> scopes = new LinkedHashMap<>();
         scopes.put("all_graphspaces",
                    pdEnabled && SUPERADMIN.equals(role));
         scopes.put("admin_graphspaces", adminGraphSpaces);
+        scopes.put("write_graphspaces", writeGraphSpaces);
         scopes.put("graph_resources", "SERVER_AUTHORIZED");
         return Collections.unmodifiableMap(scopes);
+    }
+
+    private static List<String> writeGraphSpaces(UserEntity user,
+                                                 boolean permissionPresets) {
+        if (user.isSuperadmin()) {
+            return Collections.emptyList();
+        }
+        if (!permissionPresets) {
+            return sorted(user.getResSpaces());
+        }
+
+        Set<String> values = new TreeSet<>();
+        if (user.getGraphspacePermissions() != null) {
+            for (Map<String, String> permission :
+                 user.getGraphspacePermissions()) {
+                String preset = permission.get("permission_preset");
+                if ("GS_READ_WRITE".equals(preset) ||
+                    "GS_ADMIN".equals(preset)) {
+                    String graphSpace = permission.get("graphspace");
+                    if (graphSpace != null) {
+                        values.add(graphSpace);
+                    }
+                }
+            }
+        }
+        if (user.getAdminSpaces() != null) {
+            for (String graphSpace : user.getAdminSpaces()) {
+                if (graphSpace != null) {
+                    values.add(graphSpace);
+                }
+            }
+        }
+        return Collections.unmodifiableList(new ArrayList<>(values));
     }
 
     private static List<String> sorted(Collection<String> values) {
@@ -185,6 +302,10 @@ public class AuthContextService {
         }
         return Collections.unmodifiableList(new ArrayList<>(
                new TreeSet<>(values)));
+    }
+
+    private static boolean contains(Collection<String> values, String value) {
+        return values != null && values.contains(value);
     }
 
     private static Set<String> set(String... values) {

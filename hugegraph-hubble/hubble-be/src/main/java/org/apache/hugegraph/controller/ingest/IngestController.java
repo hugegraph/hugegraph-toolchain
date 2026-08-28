@@ -283,7 +283,8 @@ public class IngestController extends BaseController {
         mapping.setEdgeMappings(edgeMappings);
 
         GraphConnection connection = this.graphConnection(graphSpace, graph);
-        HugeClient client = this.authClient(graphSpace, graph);
+        HugeClient client = this.requireGraphSpaceWrite(graphSpace);
+        client.assignGraph(graphSpace, graph);
         LoadTask task = this.jobManagerService.createIngestTask(
                 job, mapping, connection, client);
         Map<String, Object> data = new HashMap<>();
@@ -299,9 +300,7 @@ public class IngestController extends BaseController {
             @RequestParam(name = "page_no", required = false, defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false, defaultValue = "10") int pageSize) {
 
-        // list all jobs across all graphspaces - use empty strings to get all
-        // We need to query without graphspace/graph filter for the ingest view
-        IPage<JobManager> page = jobManagerService.listAll(pageNo, pageSize, query);
+        IPage<JobManager> page = this.visibleJobPage(pageNo, pageSize, query);
 
         IPage<TaskVO> result = page.convert(job -> {
             TaskVO vo = new TaskVO();
@@ -367,11 +366,18 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Task not found: " + id).build();
         }
+        this.requireJobAccess(job);
         return Response.builder().status(Constant.STATUS_OK).data(job).build();
     }
 
     @DeleteMapping("/tasks/{id}")
     public Response deleteTask(@PathVariable("id") int id) {
+        JobManager job = jobManagerService.get(id);
+        if (job == null) {
+            return Response.builder().status(Constant.STATUS_NOT_FOUND)
+                           .message("Task not found: " + id).build();
+        }
+        this.requireJobWrite(job);
         jobManagerService.remove(id);
         return Response.builder().status(Constant.STATUS_OK).build();
     }
@@ -383,6 +389,7 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Task not found: " + id).build();
         }
+        this.requireJobWrite(job);
         job.setJobStatus(JobStatus.DEFAULT);
         jobManagerService.update(job);
         return Response.builder().status(Constant.STATUS_OK).build();
@@ -395,6 +402,7 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Task not found: " + id).build();
         }
+        this.requireJobWrite(job);
         job.setJobStatus(JobStatus.FAILED);
         jobManagerService.update(job);
         return Response.builder().status(Constant.STATUS_OK).build();
@@ -408,6 +416,12 @@ public class IngestController extends BaseController {
             @RequestParam(name = "page_no", required = false, defaultValue = "1") int pageNo,
             @RequestParam(name = "page_size", required = false, defaultValue = "10") int pageSize) {
 
+        JobManager job = jobManagerService.get(taskId);
+        if (job == null) {
+            return Response.builder().status(Constant.STATUS_NOT_FOUND)
+                           .message("Task not found: " + taskId).build();
+        }
+        this.requireJobAccess(job);
         List<LoadTask> tasks = loadTaskService.taskListByJob(taskId);
 
         // Manual pagination
@@ -453,11 +467,18 @@ public class IngestController extends BaseController {
             return Response.builder().status(Constant.STATUS_NOT_FOUND)
                            .message("Job not found: " + id).build();
         }
+        this.requireLoadTaskAccess(task);
         return Response.builder().status(Constant.STATUS_OK).data(task).build();
     }
 
     @DeleteMapping("/jobs/{id}")
     public Response deleteJob(@PathVariable("id") int id) {
+        LoadTask task = loadTaskService.get(id);
+        if (task == null) {
+            return Response.builder().status(Constant.STATUS_NOT_FOUND)
+                           .message("Job not found: " + id).build();
+        }
+        this.requireLoadTaskWrite(task);
         loadTaskService.remove(id);
         return Response.builder().status(Constant.STATUS_OK).build();
     }
@@ -466,7 +487,7 @@ public class IngestController extends BaseController {
 
     @GetMapping("/metrics/task")
     public Response metricsTask() {
-        List<JobManager> all = jobManagerService.listAll();
+        List<JobManager> all = this.visibleJobs("");
         all.forEach(jobManagerService::refreshStatus);
 
         long runningOnce = 0;
@@ -505,6 +526,75 @@ public class IngestController extends BaseController {
     }
 
     // ===== Helpers =====
+
+    private IPage<JobManager> visibleJobPage(int pageNo, int pageSize,
+                                             String query) {
+        Set<String> graphSpaces = this.visibleGraphSpaces();
+        IPage<JobManager> page = this.jobManagerService.listByGraphSpaces(
+                graphSpaces, pageNo, pageSize, query);
+        page.getRecords().forEach(jobManagerService::refreshStatus);
+        return page;
+    }
+
+    private List<JobManager> visibleJobs(String query) {
+        Set<String> graphSpaces = this.visibleGraphSpaces();
+        List<JobManager> jobs =
+                this.jobManagerService.listByGraphSpaces(graphSpaces);
+        if (StringUtils.isEmpty(query)) {
+            return jobs;
+        }
+        return jobs.stream()
+                   .filter(job -> StringUtils.contains(job.getJobName(), query))
+                   .collect(Collectors.toList());
+    }
+
+    private Set<String> visibleGraphSpaces() {
+        if (this.config == null ||
+            !this.config.get(HubbleOptions.PD_ENABLED)) {
+            return null;
+        }
+        HugeClient client = this.authClient(null, null);
+        if (this.authMode != null && this.authMode.anonymous()) {
+            return new LinkedHashSet<>(
+                    this.graphSpaceAccessService.listAnonymous(client));
+        }
+        if (this.userService.isSuperAdmin(client)) {
+            return null;
+        }
+        return new LinkedHashSet<>(
+                this.graphSpaceAccessService.listAccessible(client));
+    }
+
+    private void requireJobAccess(JobManager job) {
+        if (job == null) {
+            return;
+        }
+        this.requireGraphSpaceAccess(this.authClient(null, null),
+                                     job.getGraphSpace());
+    }
+
+    private void requireJobWrite(JobManager job) {
+        if (job == null) {
+            return;
+        }
+        this.requireGraphSpaceWrite(job.getGraphSpace());
+    }
+
+    private void requireLoadTaskAccess(LoadTask task) {
+        JobManager job = task.getJobId() == null ? null :
+                         this.jobManagerService.get(task.getJobId());
+        Ex.check(job != null, "job-manager.not-exist.id",
+                 task.getJobId());
+        this.requireJobAccess(job);
+    }
+
+    private void requireLoadTaskWrite(LoadTask task) {
+        JobManager job = task.getJobId() == null ? null :
+                         this.jobManagerService.get(task.getJobId());
+        Ex.check(job != null, "job-manager.not-exist.id",
+                 task.getJobId());
+        this.requireJobWrite(job);
+    }
 
     /**
      * Same format-whitelist check as

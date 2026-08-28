@@ -90,6 +90,9 @@ public class OperationsPayloadParser {
         this.putLong(facts, "replicas", cluster.get("shardCount"));
         this.putLong(facts, "stores", cluster.get("storeSize"));
         this.putLong(facts, "stores_up", cluster.get("onlineStoreSize"));
+        this.putKilobytesAsBytes(facts, "data_size_bytes",
+                                 cluster.get("dataSize"));
+        this.putCapacityFacts(facts, storeNodes.values());
         return new Topology(this.clusterStatus(this.text(cluster, "state")),
                             nodes, facts);
     }
@@ -452,6 +455,47 @@ public class OperationsPayloadParser {
         }
     }
 
+    private void putKilobytesAsBytes(Map<String, Long> target, String key,
+                                     JsonNode value) {
+        Long kilobytes = this.longValue(value);
+        if (kilobytes == null || kilobytes < 0L) {
+            return;
+        }
+        try {
+            target.put(key, Math.multiplyExact(kilobytes, 1024L));
+        } catch (ArithmeticException ignored) {
+            // An overflowing upstream value is unavailable, never a fake size.
+        }
+    }
+
+    private void putCapacityFacts(Map<String, Long> target,
+                                  Iterable<JsonNode> stores) {
+        long total = 0L;
+        long available = 0L;
+        boolean found = false;
+        try {
+            for (JsonNode store : stores) {
+                Long storeTotal = this.longValue(store.get("capacity"));
+                Long storeAvailable = this.longValue(store.get("available"));
+                if (storeTotal == null || storeAvailable == null ||
+                    storeTotal < 0L || storeAvailable < 0L ||
+                    storeAvailable > storeTotal) {
+                    return;
+                }
+                total = Math.addExact(total, storeTotal);
+                available = Math.addExact(available, storeAvailable);
+                found = true;
+            }
+            if (found) {
+                target.put("capacity_total_bytes", total);
+                target.put("capacity_used_bytes",
+                           Math.subtractExact(total, available));
+            }
+        } catch (ArithmeticException ignored) {
+            // Partial or overflowing capacity is less useful than unavailable.
+        }
+    }
+
     private void putMetric(Map<String, Object> target, String key,
                            JsonNode value) {
         Long number = this.longValue(value);
@@ -521,16 +565,27 @@ public class OperationsPayloadParser {
             return "UNKNOWN";
         }
         String value = state.toUpperCase(Locale.ROOT);
-        if (value.contains("OK") || value.equals("UP")) {
-            return "UP";
+        switch (value) {
+            case "CLUSTER_OK":
+            case "OK":
+            case "UP":
+                return "UP";
+            case "CLUSTER_WARN":
+            case "CLUSTER_NOT_READY":
+            case "CLUSTER_OFFLINE":
+            case "WARN":
+            case "WARNING":
+            case "DEGRADED":
+            case "NOT_READY":
+            case "OFFLINE":
+                return "DEGRADED";
+            case "CLUSTER_FAULT":
+            case "FAULT":
+            case "DOWN":
+                return "DOWN";
+            default:
+                return "UNKNOWN";
         }
-        if (value.contains("WARN") || value.contains("DEGRADED")) {
-            return "DEGRADED";
-        }
-        if (value.contains("DOWN") || value.contains("FAULT")) {
-            return "DOWN";
-        }
-        return "UNKNOWN";
     }
 
     private String health(String state) {

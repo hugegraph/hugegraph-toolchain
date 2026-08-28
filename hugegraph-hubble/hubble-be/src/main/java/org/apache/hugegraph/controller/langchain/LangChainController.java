@@ -184,7 +184,7 @@ public class LangChainController extends BaseController {
                 requestLangChainParams.userName, requestLangChainParams.password);
 
         try {
-            HugeClient client = this.authClient(graphSpace, graph);
+            HugeClient client = this.authGremlinClient(graphSpace, graph);
             JsonView result =
                     this.queryService.executeSingleGremlinQuery(client, query);
             return result.getData();

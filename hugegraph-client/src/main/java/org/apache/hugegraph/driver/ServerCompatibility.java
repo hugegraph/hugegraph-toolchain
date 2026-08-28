@@ -1,0 +1,111 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hugegraph.driver;
+
+import org.apache.hugegraph.util.VersionUtil;
+
+/**
+ * Small compatibility boundary shared by Hubble and clients.
+ *
+ * <p>Version checks belong here so callers can express capabilities instead
+ * of branching on server versions in controllers or pages. Unknown versions
+ * deliberately use the conservative legacy profile.</p>
+ */
+public final class ServerCompatibility {
+
+    private static final String GRAPHSPACE_MIN_VERSION = "1.7.0";
+    private static final String DEFAULT_ROLE_MIN_API_VERSION = "0.72";
+
+    private ServerCompatibility() {
+    }
+
+    public static Profile profile(String coreVersion) {
+        return profile(coreVersion, null);
+    }
+
+    public static Profile profile(String coreVersion, String apiVersion) {
+        if (supportsDefaultRoleApi(apiVersion)) {
+            return Profile.MODERN;
+        }
+        if (coreVersion == null || coreVersion.trim().isEmpty()) {
+            return Profile.LEGACY;
+        }
+        try {
+            String normalized = coreVersion.trim();
+            return VersionUtil.gte(normalized, GRAPHSPACE_MIN_VERSION) ? Profile.GRAPHSPACE : Profile.LEGACY;
+        } catch (RuntimeException ignored) {
+            return Profile.LEGACY;
+        }
+    }
+
+    private static boolean supportsDefaultRoleApi(String apiVersion) {
+        if (apiVersion == null || apiVersion.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            return VersionUtil.gte(apiVersion.trim(),
+                                   DEFAULT_ROLE_MIN_API_VERSION);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    public static boolean supportsGraphSpace(String coreVersion) {
+        return profile(coreVersion).supportsGraphSpace();
+    }
+
+    public static boolean supportsDefaultRole(String coreVersion,
+                                              String apiVersion) {
+        return profile(coreVersion, apiVersion).supportsDefaultRole();
+    }
+
+    public static boolean supportsPersonalProfileUpdate(
+            String coreVersion, String apiVersion) {
+        return profile(coreVersion, apiVersion)
+               .supportsPersonalProfileUpdate();
+    }
+
+    public enum Profile {
+        LEGACY(false, false, false),
+        GRAPHSPACE(true, false, false),
+        MODERN(true, true, true);
+
+        private final boolean graphSpace;
+        private final boolean defaultRole;
+        private final boolean personalProfileUpdate;
+
+        Profile(boolean graphSpace, boolean defaultRole,
+                boolean personalProfileUpdate) {
+            this.graphSpace = graphSpace;
+            this.defaultRole = defaultRole;
+            this.personalProfileUpdate = personalProfileUpdate;
+        }
+
+        public boolean supportsGraphSpace() {
+            return this.graphSpace;
+        }
+
+        public boolean supportsDefaultRole() {
+            return this.defaultRole;
+        }
+
+        public boolean supportsPersonalProfileUpdate() {
+            return this.personalProfileUpdate;
+        }
+    }
+}

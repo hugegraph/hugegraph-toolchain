@@ -162,8 +162,7 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
-    public void testPdDegradedStatusMakesOverallSnapshotDegraded()
-           throws IOException {
+    public void testPdDegradedStatusMakesOverallSnapshotDegraded() throws IOException {
         String degraded = cluster().replace("Cluster_OK", "Cluster_Warn");
         HttpServer pd = pdServer(200, degraded, 200, stores());
         Snapshot snapshot;
@@ -174,13 +173,36 @@ public class LiveOperationsCollectorTest {
         }
 
         Assert.assertEquals("DEGRADED", snapshot.getStatus());
-        Assert.assertEquals("DEGRADED",
-                            snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("DEGRADED", snapshot.getSources().get("pd").getStatus());
     }
 
     @Test
-    public void testPdUnknownStatusMakesOverallSnapshotDegraded()
-           throws IOException {
+    public void testPdNotReadyKeepsPdNodesUpAndOverallDegraded() throws IOException {
+        String notReady = cluster().replace("Cluster_OK", "Cluster_Not_Ready");
+        HttpServer pd = pdServer(200, notReady, 200, stores());
+        Snapshot snapshot;
+        try {
+            snapshot = collector(true, pd).collect(serverClient(), false);
+        } finally {
+            pd.stop(0);
+        }
+
+        OperationsModels.SourceStatus pdSource = snapshot.getSources().get("pd");
+        Assert.assertEquals("AVAILABLE", pdSource.getAvailability());
+        Assert.assertTrue(pdSource.isFresh());
+        Assert.assertEquals("DEGRADED", pdSource.getStatus());
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        long pdCount = snapshot.getNodes().stream()
+                               .filter(node -> "PD".equals(node.getType()))
+                               .count();
+        Assert.assertEquals(1L, pdCount);
+        Assert.assertTrue(snapshot.getNodes().stream()
+                                  .filter(node -> "PD".equals(node.getType()))
+                                  .allMatch(node -> "UP".equals(node.getStatus())));
+    }
+
+    @Test
+    public void testPdUnknownStatusMakesOverallSnapshotDegraded() throws IOException {
         String unknown = cluster().replace("Cluster_OK", "Cluster_Starting");
         HttpServer pd = pdServer(200, unknown, 200, stores());
         Snapshot snapshot;
@@ -191,8 +213,18 @@ public class LiveOperationsCollectorTest {
         }
 
         Assert.assertEquals("DEGRADED", snapshot.getStatus());
-        Assert.assertEquals("UNKNOWN",
-                            snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("UNKNOWN", snapshot.getSources().get("pd").getStatus());
+    }
+
+    @Test
+    public void testUsesOnlyConfiguredPdServiceForClusterState() {
+        LeaderAwareHttpClient http = new LeaderAwareHttpClient("pd-1");
+        LiveOperationsCollector collector = leaderAwareCollector(http);
+
+        Snapshot snapshot = collector.collect(serverClient(), false);
+
+        Assert.assertEquals("DEGRADED", snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals(0, http.leaderRequests());
     }
 
     @Test
@@ -228,6 +260,10 @@ public class LiveOperationsCollectorTest {
                                                     .get(group).getAvailability());
         }
         Assert.assertEquals(Long.valueOf(2000L), store.getObservedAt());
+        Assert.assertEquals(100L,
+                            snapshot.getFacts().get("capacity_total_bytes"));
+        Assert.assertEquals(60L,
+                            snapshot.getFacts().get("capacity_used_bytes"));
         Assert.assertFalse(store.getMetrics().toString().contains("secret"));
         OperationsModels.Node pdNode = snapshot.getNodes().stream()
                 .filter(node -> "PD".equals(node.getType()))
@@ -713,6 +749,15 @@ public class LiveOperationsCollectorTest {
                                               "http://[::1]:8520")));
     }
 
+    private static LiveOperationsCollector leaderAwareCollector(
+            LeaderAwareHttpClient http) {
+        return new LiveOperationsCollector(
+                true, "http://pd-service:8620", "hubble", "secret",
+                "store-hubble", "store-secret", "server-under-test", http,
+                new OperationsPayloadParser(new ObjectMapper()), CLOCK,
+                4, 1000, Collections.singleton("http://127.0.0.1:8520"));
+    }
+
     private static HugeClient serverClient() {
         HugeClient client = Mockito.mock(HugeClient.class);
         VersionManager version = Mockito.mock(VersionManager.class);
@@ -796,14 +841,14 @@ public class LiveOperationsCollectorTest {
                "\"pdLeader\":{\"restUrl\":\"http://pd:8620\"," +
                "\"state\":\"Up\",\"role\":\"Leader\"}," +
                "\"stores\":[{\"storeId\":1,\"state\":\"Up\"," +
-               "\"capacity\":100,\"available\":40}]}}";
+               "\"partitionCount\":12}]}}";
     }
 
     private static String stores() {
         return "{\"status\":0,\"data\":{\"stores\":[{" +
                "\"storeId\":\"1\",\"address\":\"127.0.0.1:8500\"," +
                "\"restAddress\":\"127.0.0.1:PD_TEST_PORT\"," +
-               "\"state\":\"Up\"}]}}";
+               "\"state\":\"Up\",\"capacity\":100,\"available\":40}]}}";
     }
 
     private static String storesWithoutRestAddress() {
@@ -957,5 +1002,57 @@ public class LiveOperationsCollectorTest {
         private Set<String> metricAuthorities() {
             return this.metricAuthorities;
         }
+    }
+
+    private static final class LeaderAwareHttpClient
+                         extends OperationsHttpClient {
+
+        private final String leaderHost;
+        private final AtomicInteger leaderRequests;
+
+        private LeaderAwareHttpClient(String leaderHost) {
+            super(1000, 1000, 8192);
+            this.leaderHost = leaderHost;
+            this.leaderRequests = new AtomicInteger();
+        }
+
+        @Override
+        public String get(java.net.URI target, String username, String password,
+                          Set<String> allowedTargets) {
+            return this.response(target);
+        }
+
+        @Override
+        public String get(java.net.URI target, String username,
+                          String password) {
+            return this.response(target);
+        }
+
+        private String response(java.net.URI target) {
+            if ("/v1/cluster".equals(target.getPath())) {
+                if (!"pd-service".equals(target.getHost())) {
+                    this.leaderRequests.incrementAndGet();
+                    return leaderCluster("Cluster_OK", this.leaderHost);
+                }
+                return leaderCluster("Cluster_Not_Ready", this.leaderHost);
+            }
+            if ("/v1/stores".equals(target.getPath())) {
+                return stores();
+            }
+            throw new AssertionError("Unexpected operations target " + target);
+        }
+
+        private int leaderRequests() {
+            return this.leaderRequests.get();
+        }
+    }
+
+    private static String leaderCluster(String state, String leaderHost) {
+        return "{\"status\":0,\"data\":{\"state\":\"" + state + "\"," +
+               "\"graphSize\":2,\"pdList\":[{\"restUrl\":\"" +
+               leaderHost + ":8620\",\"state\":\"Up\"," +
+               "\"role\":\"Leader\"}],\"pdLeader\":{\"restUrl\":\"" +
+               leaderHost + ":8620\",\"state\":\"Up\"," +
+               "\"role\":\"Leader\"},\"stores\":[]}}";
     }
 }

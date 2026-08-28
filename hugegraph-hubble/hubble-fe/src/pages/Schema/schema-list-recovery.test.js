@@ -23,6 +23,8 @@ import * as api from '../../api';
 let mockGraphspace = 'SPACE';
 let mockPdEnabled = true;
 let mockWorkbenchContext = {};
+let mockAccess = {canManage: true, canWrite: true};
+let mockAuthContext = {context: {username: 'alice'}};
 const mockTranslate = (key, values) => ({
     'schema_template.title': `${values?.name || 'unknown'} - Schema templates`,
     'schema_template.create': 'Create template',
@@ -96,6 +98,12 @@ jest.mock('../../utils/config', () => ({
 jest.mock('../../utils/workbenchGraphContext', () => ({
     readWorkbenchGraphContext: () => mockWorkbenchContext,
 }));
+jest.mock('../../auth/graphspaceAccess', () => ({
+    useGraphspaceAccess: () => mockAccess,
+}));
+jest.mock('../../auth/AuthContext', () => ({
+    useAuthContext: () => mockAuthContext,
+}));
 jest.mock('react-router-dom', () => ({
     useNavigate: () => jest.fn(),
     useParams: () => ({graphspace: mockGraphspace}),
@@ -121,6 +129,8 @@ afterEach(() => {
     mockGraphspace = 'SPACE';
     mockPdEnabled = true;
     mockWorkbenchContext = {};
+    mockAccess = {canManage: true, canWrite: true};
+    mockAuthContext = {context: {username: 'alice'}};
     jest.clearAllMocks();
     window.localStorage.clear();
 });
@@ -163,6 +173,70 @@ it('keeps non-PD Schema templates accessible as a read-only library', async () =
     expect(api.manage.updateSchema).not.toHaveBeenCalled();
     expect(api.manage.delSchema).not.toHaveBeenCalled();
     await waitForLoadingToFinish();
+});
+
+it('keeps a PD read-only account from mutating schema templates', async () => {
+    mockAccess = {canManage: false, canWrite: false};
+    window.history.replaceState({}, '', '/graphspace/SPACE/schema?create=true');
+    api.manage.getGraphSpace.mockResolvedValue({
+        status: 200,
+        data: {nickname: 'Space'},
+    });
+    api.manage.getSchemaList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{
+                name: 'saved_schema',
+                creator: 'alice',
+                schema: 'schema.propertyKey("name").asText().create()',
+            }],
+            total: 1,
+        },
+    });
+
+    render(<Schema />);
+
+    expect(await screen.findByText('saved_schema')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Create template'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Edit saved_schema'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Delete saved_schema'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Use example People network'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByTestId('schema-edit-layer')).not.toBeInTheDocument();
+});
+
+it('lets read-write users manage only their own saved templates', async () => {
+    mockAccess = {canManage: false, canWrite: true};
+    api.manage.getGraphSpace.mockResolvedValue({
+        status: 200,
+        data: {nickname: 'Space'},
+    });
+    api.manage.getSchemaList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [
+                {name: 'owned_schema', creator: 'alice'},
+                {name: 'shared_schema', creator: 'bob'},
+            ],
+            total: 2,
+        },
+    });
+
+    render(<Schema />);
+
+    expect(await screen.findByRole('button', {name: 'Create template'}))
+        .toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Edit owned_schema'}))
+        .toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Delete owned_schema'}))
+        .toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Edit shared_schema'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Delete shared_schema'}))
+        .not.toBeInTheDocument();
 });
 
 it('links a non-PD read-only library without graph context to the graph overview', async () => {

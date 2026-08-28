@@ -23,8 +23,9 @@ on:
 
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
-  HUGEGRAPH_SERVER_COMMIT: 99936be5f41fccd193f120e01206e3cf3c73a050
-  HUGEGRAPH_SERVER_FETCH_REF: refs/heads/master
+  # Server PR #3159 declares the GraphSpace default-role contract as API 0.72.
+  HUGEGRAPH_SERVER_COMMIT: 52035dad9ee8d6b666329ca0d03950c773d3e1eb
+  HUGEGRAPH_SERVER_FETCH_REF: refs/pull/3159/head
 
 jobs:
   hubble-ci:
@@ -138,6 +139,16 @@ jobs:
           cd ../../../
           pwd
           $TRAVIS_DIR/install-hugegraph.sh $COMMIT_ID $COMMIT_REF
+          API_VERSION="$(curl --fail --silent http://127.0.0.1:8080/versions |
+            python -c 'import json,sys; print(json.load(sys.stdin)["versions"]["api"])')"
+          python - "$API_VERSION" <<'PY'
+          import sys
+          parts = tuple(int(value) for value in sys.argv[1].split(".")[:2])
+          if parts < (0, 72):
+              raise SystemExit(
+                  f"Expected HugeGraph REST API >= 0.72, got {sys.argv[1]}"
+              )
+          PY
 
       - name: Release package audit
         env:
@@ -197,4 +208,4 @@ jobs:
         uses: ./.github/actions/upload-coverage
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: target/site/jacoco/*.xml
+          file: hugegraph-hubble/hubble-be/target/jacoco.xml

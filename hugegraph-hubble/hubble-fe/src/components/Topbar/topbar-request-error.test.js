@@ -20,6 +20,7 @@ import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import Topbar from './index.ant';
 import * as api from '../../api/index';
+import * as user from '../../utils/user';
 
 const mockUseAuthContext = jest.fn();
 
@@ -116,6 +117,7 @@ jest.mock('antd', () => {
 describe('Topbar request errors', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        user.endLogoutTransition();
         api.manage.getGraphList.mockResolvedValue({
             status: 200,
             data: {records: [{name: 'hugegraph'}]},
@@ -276,9 +278,9 @@ describe('Topbar request errors', () => {
         api.auth.status.mockResolvedValue({status: 200});
         api.auth.logout.mockResolvedValue({status: 200});
 
-        render(
+        const view = render(
             <MemoryRouter
-                initialEntries={['/navigation']}
+                initialEntries={['/graphspace/DEFAULT']}
                 future={{v7_startTransition: true, v7_relativeSplatPath: true}}
             >
                 <Topbar />
@@ -289,5 +291,48 @@ describe('Topbar request errors', () => {
 
         await waitFor(() => expect(api.auth.logout).toHaveBeenCalledTimes(1));
         expect(window.location.replace).toHaveBeenCalledWith('/login');
+        view.rerender(
+            <MemoryRouter
+                initialEntries={['/graphspace/DEFAULT']}
+                future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+            >
+                <Topbar />
+            </MemoryRouter>
+        );
+        expect(sessionStorage.getItem('redirect')).toBeNull();
+        expect(window.location.href).toBe('http://localhost/navigation');
+        expect(user.isLogoutTransition()).toBe(true);
+    });
+
+    it.each([
+        ['HTTP', {response: {status: 401, data: {status: 401}}}],
+        ['business', {status: 200, data: {status: 401}}],
+    ])('does not restore the old route after a logout %s 401', async (_, error) => {
+        api.auth.status.mockResolvedValue({status: 200});
+        api.auth.logout.mockRejectedValue(error);
+
+        const view = render(
+            <MemoryRouter
+                initialEntries={['/graphspace/DEFAULT']}
+                future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+            >
+                <Topbar />
+            </MemoryRouter>
+        );
+
+        fireEvent.click(screen.getByRole('button', {name: 'Topbar.exit.name'}));
+        await waitFor(() => expect(api.auth.logout).toHaveBeenCalledTimes(1));
+        view.rerender(
+            <MemoryRouter
+                initialEntries={['/graphspace/DEFAULT']}
+                future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+            >
+                <Topbar />
+            </MemoryRouter>
+        );
+
+        expect(user.isLogoutTransition()).toBe(true);
+        expect(sessionStorage.getItem('redirect')).toBeNull();
+        expect(window.location.href).toBe('http://localhost/navigation');
     });
 });
