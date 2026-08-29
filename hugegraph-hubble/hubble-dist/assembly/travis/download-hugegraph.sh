@@ -25,7 +25,7 @@ fi
 
 COMMIT_ID=$1
 COMMIT_REF=${2:-}
-HUGEGRAPH_GIT_URL=${HUGEGRAPH_GIT_URL:-"https://github.com/apache/hugegraph.git"}
+HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
 GIT_DIR=hugegraph
 CACHE_DIR="${HOME}/hugegraph-cache-${COMMIT_ID}"
 
