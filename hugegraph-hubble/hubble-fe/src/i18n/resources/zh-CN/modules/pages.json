@@ -186,6 +186,7 @@
     "title": "图管理",
     "view_mode": "图列表视图",
     "create": "新建图",
+    "server_upgrade_hint": "当前 Server 版本过低，部分功能不可用，请及时升级到最新版本。",
     "search_placeholder": "请输入图名称",
     "unavailable": "图列表暂不可用，请检查 Server 连接后重试。",
     "set_default_confirm": "确认更改图的默认设置?",
@@ -513,6 +514,7 @@
       "new_password_placeholder": "请输入新密码",
       "confirm_password_placeholder": "请再次输入密码",
       "password_mismatch": "两次密码不一致",
+      "password_changed_relogin": "密码修改成功，请重新登录。",
       "account_name_rule": "使用 1–16 个不含空格的字符，支持中文/东亚兼容字符、字母、数字和下划线；下划线不能位于首尾"
     }
   },

@@ -10,17 +10,12 @@ graph data load, schema management, graph relationship analysis, and graphical d
 ## Authentication, connections, and compatibility
 
 Hubble uses one capability-driven connection boundary for `1.8/master`.
-`auth.enabled=true` creates an authenticated session; when it is `false`, Hubble
-uses an unauthenticated client and does not create a fake user. Account and
-permission entry points are hidden in anonymous mode. Connection switching
-always goes through the backend resolver. In PD mode, a valid server address
-returned by discovery is sufficient; a manually configured server URL is not
-required.
-
-Container and orchestrated deployments can set `HUBBLE_AUTH_ENABLED=true` or
-`false`. This explicit runtime value overrides `auth.enabled` from the
-properties file, and invalid values fail startup instead of silently selecting
-an authentication mode.
+Authentication mode is detected from the connected HugeGraph Server; Hubble
+does not maintain a separate authentication switch. Account and permission
+entry points are hidden when Server allows anonymous access. Connection
+switching always goes through the backend resolver. In PD mode, a valid server
+address returned by discovery is sufficient; a manually configured server URL
+is not required.
 
 The UI presents four stable permission meanings: super administrator, GraphSpace
 read-only, GraphSpace read-write, and GraphSpace administrator. The last one

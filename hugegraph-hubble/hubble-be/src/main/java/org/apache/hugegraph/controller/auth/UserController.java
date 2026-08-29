@@ -131,7 +131,13 @@ public class UserController extends BaseController {
                     "Permission denied: change another account password");
         }
         HugeClient client = this.authClient(null, null);
-        return userService.updatepwd(client, pwd.getUsername(), pwd.getOldpwd(), pwd.getNewpwd());
+        Response response = userService.updatepwd(client, pwd.getUsername(),
+                                                  pwd.getOldpwd(),
+                                                  pwd.getNewpwd());
+        if (response.getStatus() == Constant.STATUS_OK) {
+            this.clearAuthSession();
+        }
+        return response;
     }
 
     @GetMapping("listadminspace/{username}")

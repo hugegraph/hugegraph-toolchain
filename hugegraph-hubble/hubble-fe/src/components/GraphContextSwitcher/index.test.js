@@ -326,6 +326,26 @@ describe('GraphContextSwitcher', () => {
             .not.toBeInTheDocument();
     });
 
+    test('clears a masked missing PD GraphSpace after access is revoked', async () => {
+        sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
+        localStorage.setItem('hubble_workbench_graph_context', JSON.stringify({
+            graphspace: 'space_a',
+            graph: 'graph_a',
+        }));
+        api.manage.getGraphList.mockResolvedValueOnce({status: 404, data: null});
+        renderSwitcher('/gremlin/space_a/graph_a');
+
+        await waitFor(() => {
+            expect(screen.getByText('/navigation')).toBeInTheDocument();
+        });
+        expect(localStorage.getItem('hubble_workbench_graph_context')).toBeNull();
+        expect(screen.getByRole('combobox', {
+            name: 'workbench.context.graphspace',
+        })).toHaveValue('');
+        expect(screen.queryByText('workbench.context.graphs_load_failed'))
+            .not.toBeInTheDocument();
+    });
+
     test('graph success cannot erase a concurrent GraphSpace failure', async () => {
         sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
         api.manage.getGraphSpaceList.mockResolvedValueOnce({status: 500, data: null});

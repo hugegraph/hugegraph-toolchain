@@ -20,7 +20,6 @@ import {
     getGraphspacePath,
     getManageNavItems,
     getTaskGraphspaceOptions,
-    isGraphCreateEnabled,
     isGraphDefaultMutationEnabled,
     isPdOnlyPath,
     shouldUseNonPdDefaultGraphspace,
@@ -55,9 +54,7 @@ describe('product mode helpers', () => {
         expect(shouldUseNonPdDefaultGraphspace(true, 'demo')).toBe(false);
     });
 
-    test('keeps graph create available while disabling default mutation in non-PD mode', () => {
-        expect(isGraphCreateEnabled(false)).toBe(true);
-        expect(isGraphCreateEnabled(true)).toBe(true);
+    test('keeps default mutation scoped to PD mode', () => {
         expect(isGraphDefaultMutationEnabled(false)).toBe(false);
         expect(isGraphDefaultMutationEnabled(true)).toBe(true);
     });

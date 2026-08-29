@@ -377,10 +377,10 @@ public class IngestControllerTest {
            throws Exception {
         TestIngestController controller = new TestIngestController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(false);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED))
                .thenReturn(true);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(authMode.anonymous()).thenReturn(true);
         GraphSpaceService graphSpaces = Mockito.mock(GraphSpaceService.class);
         JobManagerService jobs = Mockito.mock(JobManagerService.class);
         LoadTaskService loadTasks = Mockito.mock(LoadTaskService.class);
@@ -402,7 +402,7 @@ public class IngestControllerTest {
         Mockito.when(graphSpaces.listAnonymous(Mockito.any()))
                .thenReturn(Collections.singletonList("public"));
         this.setField(controller, "config", config);
-        this.setField(controller, "authMode", new AuthModeService(config));
+        this.setField(controller, "authMode", authMode);
         this.setField(controller, "graphSpaceAccessService", graphSpaces);
         this.setField(controller, "jobManagerService", jobs);
         this.setField(controller, "loadTaskService", loadTasks);

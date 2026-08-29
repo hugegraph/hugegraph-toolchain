@@ -118,8 +118,8 @@ public class GraphSpaceControllerTest {
                 new TestGraphSpaceController(client);
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED)).thenReturn(false);
-        AuthModeService authMode = new AuthModeService(config);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(authMode.anonymous()).thenReturn(true);
         Mockito.when(graphSpaceService.listAnonymous(client))
                .thenReturn(java.util.Collections.singletonList("public"));
         Mockito.when(graphSpaceService.getAnonymous(client, "public"))
@@ -270,9 +270,10 @@ public class GraphSpaceControllerTest {
                                               client, userService,
                                               graphSpaceService);
         HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED)).thenReturn(false);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(authMode.anonymous()).thenReturn(true);
         ReflectionTestUtils.setField(controller, "authMode",
-                                     new AuthModeService(config));
+                                     authMode);
 
         assertForbidden(() -> controller.add(new GraphSpaceEntity()));
 

@@ -25,14 +25,21 @@ public class ServerCompatibilityTest {
     @Test
     public void shouldKeepLegacyServersConservative() {
         Assert.assertFalse(ServerCompatibility.supportsGraphSpace("1.5.0"));
-        Assert.assertFalse(ServerCompatibility.supportsGraphSpace("1.6.0"));
+        Assert.assertFalse(ServerCompatibility.supportsCypher("1.5.0"));
         Assert.assertFalse(ServerCompatibility.supportsGraphSpace(null));
+        Assert.assertFalse(ServerCompatibility.supportsCypher(null));
+        Assert.assertFalse(ServerCompatibility.supportsGraphCreate(null));
         Assert.assertFalse(ServerCompatibility.supportsGraphSpace("not-a-version"));
+        Assert.assertFalse(ServerCompatibility.supportsCypher("not-a-version"));
+        Assert.assertFalse(ServerCompatibility.supportsGraphCreate("not-a-version"));
+        Assert.assertFalse(ServerCompatibility.supportsGraphCreate("0.66"));
     }
 
     @Test
     public void shouldExposeGraphSpaceForModernServers() {
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace("1.7.0"));
+        Assert.assertTrue(ServerCompatibility.supportsCypher("1.7.0"));
+        Assert.assertTrue(ServerCompatibility.supportsGraphCreate("0.67"));
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace(" 1.7.0 "));
         Assert.assertTrue(ServerCompatibility.supportsGraphSpace("1.8.0"));
         Assert.assertFalse(ServerCompatibility.supportsDefaultRole(

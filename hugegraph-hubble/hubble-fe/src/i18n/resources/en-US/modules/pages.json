@@ -186,6 +186,7 @@
     "title": "Graph Management",
     "view_mode": "Graph list view",
     "create": "New Graph",
+    "server_upgrade_hint": "This Server version is too old for some features. Please upgrade to the latest version.",
     "search_placeholder": "Search by graph name",
     "unavailable": "Graphs are unavailable. Check the server connection and retry.",
     "set_default_confirm": "Confirm changing the default graph?",
@@ -513,6 +514,7 @@
       "new_password_placeholder": "Enter new password",
       "confirm_password_placeholder": "Enter new password again",
       "password_mismatch": "Passwords do not match",
+      "password_changed_relogin": "Password changed successfully. Please sign in again.",
       "account_name_rule": "Use 1–16 characters without spaces; letters, numbers, Chinese/CJK forms, and underscores are supported; underscores cannot be first or last"
     }
   },

@@ -29,11 +29,15 @@ const resolveGraphspaceAccess = (context, graphspace, pdEnabled) => {
 
     const scopes = context.scopes ?? {};
     const anonymousStandalone = context.mode === 'NON_AUTH' && !pdEnabled;
+    const anonymousPd = context.mode === 'NON_AUTH' && pdEnabled;
     const canManage = anonymousStandalone
-        || context.role === 'SUPERADMIN'
-        || scopes.all_graphspaces === true
-        || includes(scopes.admin_graphspaces, graphspace);
+        || (!anonymousPd && (
+            context.role === 'SUPERADMIN'
+            || scopes.all_graphspaces === true
+            || includes(scopes.admin_graphspaces, graphspace)
+        ));
     const canWrite = canManage
+        || anonymousPd
         || context.mode === 'NON_PD'
         || includes(scopes.write_graphspaces, graphspace);
     return {canManage, canWrite};

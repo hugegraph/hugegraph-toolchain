@@ -32,6 +32,7 @@ import * as api from '../../../api';
 import _ from 'lodash';
 import {scopedStorageKey} from '../../../utils/user';
 import {sanitizePublicError} from '../../../utils/publicError';
+import {isCypherEnabled} from '../../../utils/config';
 
 const {STANDBY, LOADING, SUCCESS, FAILED} = GRAPH_STATUS;
 const {QUERY} = GREMLIN_EXECUTES_MODE;
@@ -75,6 +76,7 @@ export const extractQueryErrorMessage = (error, fallback) => {
 const AnalysisHome = () => {
     const {t} = useTranslation();
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
+    const cypherEnabled = isCypherEnabled();
     const [queryStatus, setQueryStatus] = useState(STANDBY);
     const [queryMessage, setQueryMessage] = useState();
     const [isQueryMode, setQueryMode] = useState(true);
@@ -567,6 +569,7 @@ const AnalysisHome = () => {
                 onExecute={onExecute}
                 onRefresh={onFavoriteRefresh}
                 isExecuting={queryStatus === LOADING}
+                cypherEnabled={cypherEnabled}
             />
             {analysisMode !== TEXT2GQL && <QueryResult
                 queryResult={queryResult}

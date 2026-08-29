@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -32,6 +33,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.multipart.MultipartFile;
 
 import org.apache.hugegraph.controller.BaseController;
+import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.entity.auth.UserView;
@@ -111,9 +114,15 @@ public class AccountMutationAuthorizationTest {
                                            .oldpwd("old")
                                            .newpwd("new")
                                            .build();
+        Mockito.when(this.authorizationService.updatepwd(
+                     this.client, "alice", "old", "new"))
+               .thenReturn(Response.builder()
+                                   .status(Constant.STATUS_OK)
+                                   .build());
         controller.updatepwd(own);
         Mockito.verify(this.authorizationService)
                .updatepwd(this.client, "alice", "old", "new");
+        Assert.assertTrue(controller.authSessionCleared());
     }
 
     @Test
@@ -605,6 +614,7 @@ public class AccountMutationAuthorizationTest {
 
         private final HugeClient client;
         private final String username;
+        private boolean authSessionCleared;
 
         TestUserController(HugeClient client, String username) {
             this.client = client;
@@ -619,6 +629,15 @@ public class AccountMutationAuthorizationTest {
         @Override
         protected String getUser() {
             return this.username;
+        }
+
+        @Override
+        protected void clearAuthSession() {
+            this.authSessionCleared = true;
+        }
+
+        boolean authSessionCleared() {
+            return this.authSessionCleared;
         }
     }
 

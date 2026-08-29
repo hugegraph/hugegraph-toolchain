@@ -256,8 +256,7 @@ public class AuthContextServiceTest {
     @Test
     public void testAnonymousModeGetsReadOnlyOperationsCapabilities() {
         Fixture fixture = new Fixture(true);
-        Mockito.when(fixture.config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(false);
+        Mockito.when(fixture.authMode.anonymous()).thenReturn(true);
 
         Map<String, Object> context = fixture.service.context(fixture.client,
                                                               null);
@@ -341,6 +340,8 @@ public class AuthContextServiceTest {
         private final HugeClient client = Mockito.mock(HugeClient.class);
         private final HugeConfig config = Mockito.mock(HugeConfig.class);
         private final UserService users = Mockito.mock(UserService.class);
+        private final AuthModeService authMode =
+                Mockito.mock(AuthModeService.class);
         private final AuthContextService service;
 
         private Fixture(boolean pdEnabled) {
@@ -348,7 +349,8 @@ public class AuthContextServiceTest {
                    .thenReturn(pdEnabled);
             Mockito.when(this.client.supportsPersonalProfileUpdate())
                    .thenReturn(true);
-            this.service = new AuthContextService(this.config, this.users);
+            this.service = new AuthContextService(this.config, this.users,
+                                                  this.authMode);
         }
     }
 }

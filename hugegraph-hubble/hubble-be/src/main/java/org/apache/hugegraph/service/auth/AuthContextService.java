@@ -84,16 +84,18 @@ public class AuthContextService {
 
     private final HugeConfig config;
     private final UserService users;
+    private final AuthModeService authMode;
 
     @Autowired
-    public AuthContextService(HugeConfig config, UserService users) {
+    public AuthContextService(HugeConfig config, UserService users,
+                              AuthModeService authMode) {
         this.config = config;
         this.users = users;
+        this.authMode = authMode;
     }
 
     public Map<String, Object> context(HugeClient client, String username) {
-        if (Boolean.FALSE.equals(
-                this.config.get(HubbleOptions.AUTH_ENABLED))) {
+        if (this.authMode.anonymous()) {
             return anonymousContext(this.config.get(HubbleOptions.PD_ENABLED));
         }
         boolean pdEnabled = this.config.get(HubbleOptions.PD_ENABLED);
@@ -149,8 +151,7 @@ public class AuthContextService {
 
     public void requireGraphSpaceWrite(HugeClient client, String username,
                                        String graphSpace) {
-        if (Boolean.FALSE.equals(
-                this.config.get(HubbleOptions.AUTH_ENABLED)) ||
+        if (this.authMode.anonymous() ||
             !this.config.get(HubbleOptions.PD_ENABLED) ||
             !client.supportsDefaultRole()) {
             return;

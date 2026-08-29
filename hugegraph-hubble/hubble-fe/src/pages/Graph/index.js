@@ -42,10 +42,9 @@ import {PlusOutlined} from '@ant-design/icons';
 import {Link, useParams, useNavigate} from 'react-router-dom';
 import style from './index.module.scss';
 import * as api from '../../api';
-import {isPdEnabled} from '../../utils/config';
+import {isGraphCreateEnabled, isPdEnabled} from '../../utils/config';
 import {
     DEFAULT_GRAPHSPACE,
-    isGraphCreateEnabled,
     isGraphDefaultMutationEnabled,
 } from '../../utils/productMode';
 import moment from 'moment';
@@ -107,7 +106,10 @@ const Graph = () => {
     const {graphspace} = useParams();
     const navigate = useNavigate();
     const pdMode = isPdEnabled();
-    const graphCreateEnabled = isGraphCreateEnabled(pdMode);
+    const graphCreateEnabled = isGraphCreateEnabled();
+    const graphCreateUnavailableHint = t('graph.server_upgrade_hint');
+    const cloneUnavailableHint = graphCreateEnabled
+        ? t('graph.clone.unavailable') : graphCreateUnavailableHint;
     const graphDefaultMutationEnabled = isGraphDefaultMutationEnabled(pdMode);
     const {canManage, canWrite} = useGraphspaceAccess(graphspace);
 
@@ -435,19 +437,17 @@ const Graph = () => {
                                     </GraphRowAction>
                                 )
                         )}
-                        {graphCreateEnabled && (
-                            <Tooltip title={t('graph.clone.unavailable')}>
-                                <span
-                                    className={style.disable}
-                                    role='button'
-                                    aria-disabled='true'
-                                    aria-label={`${t('graph.menu.clone')}: ${t('graph.clone.unavailable')}`}
-                                    tabIndex={0}
-                                >
-                                    {t('graph.menu.clone')}
-                                </span>
-                            </Tooltip>
-                        )}
+                        <Tooltip title={cloneUnavailableHint}>
+                            <span
+                                className={style.disable}
+                                role='button'
+                                aria-disabled='true'
+                                aria-label={`${t('graph.menu.clone')}: ${cloneUnavailableHint}`}
+                                tabIndex={0}
+                            >
+                                {t('graph.menu.clone')}
+                            </span>
+                        </Tooltip>
                     </Space>
                 );
             },
@@ -518,13 +518,13 @@ const Graph = () => {
                 onClick: immutable || !canManage
                     ? undefined : () => deleteGraph(item.name),
             },
-            graphCreateEnabled && {
+            {
                 key: 'clone',
                 disabled: true,
                 label: (
-                    <Tooltip title={t('graph.clone.unavailable')}>
+                    <Tooltip title={cloneUnavailableHint}>
                         <span
-                            aria-label={`${t('graph.menu.clone')}: ${t('graph.clone.unavailable')}`}
+                            aria-label={`${t('graph.menu.clone')}: ${cloneUnavailableHint}`}
                         >
                             {t('graph.menu.clone')}
                         </span>
@@ -612,6 +612,13 @@ const Graph = () => {
                                 {t('common.action.retry')}
                             </Button>
                         )}
+                    />
+                )}
+                {!graphCreateEnabled && (
+                    <Alert
+                        showIcon
+                        type='info'
+                        message={graphCreateUnavailableHint}
                     />
                 )}
                 {listType === 'image'

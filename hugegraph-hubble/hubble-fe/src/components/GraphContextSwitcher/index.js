@@ -64,11 +64,14 @@ const getRecords = response => {
     return response.data?.records ?? [];
 };
 
-const errorKind = error => {
-    const status = error?.status ?? error?.response?.data?.status
-                   ?? error?.response?.status;
-    return status === 403 ? 'forbidden' : true;
-};
+const errorStatus = error => error?.status ?? error?.response?.data?.status
+                     ?? error?.response?.status;
+
+const errorKind = error => (
+    errorStatus(error) === 403 ? 'forbidden' : true
+);
+
+const unavailableGraphSpace = error => [403, 404].includes(errorStatus(error));
 
 const GraphContextSwitcher = () => {
     const {t} = useTranslation();
@@ -157,7 +160,7 @@ const GraphContextSwitcher = () => {
             .catch(error => {
                 if (!cancelled) {
                     const kind = errorKind(error);
-                    if (pdEnabled && kind === 'forbidden') {
+                    if (pdEnabled && unavailableGraphSpace(error)) {
                         clearWorkbenchGraphContext(localStorage);
                         setContext({});
                         setGraphs([]);

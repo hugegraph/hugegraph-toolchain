@@ -268,8 +268,33 @@ public class HugeClient implements Closeable {
         return this.compatibility.supportsDefaultRole();
     }
 
+    public boolean supportsGraphSpace() {
+        return this.compatibility.supportsGraphSpace();
+    }
+
+    public boolean supportsGraphCreate() {
+        return ServerCompatibility.supportsGraphCreate(
+               this.version.getApiVersion());
+    }
+
+    public boolean supportsCypher() {
+        return this.compatibility.supportsCypher();
+    }
+
     public boolean supportsPersonalProfileUpdate() {
         return this.compatibility.supportsPersonalProfileUpdate();
+    }
+
+    public boolean isServerAuthEnabled() {
+        try {
+            this.graphs.listGraph();
+            return false;
+        } catch (ServerException e) {
+            if (e.status() == 401) {
+                return true;
+            }
+            throw e;
+        }
     }
 
     public User findUserByName(String name) {

@@ -29,6 +29,7 @@ import org.apache.hugegraph.util.VersionUtil;
 public final class ServerCompatibility {
 
     private static final String GRAPHSPACE_MIN_VERSION = "1.7.0";
+    private static final String GRAPH_CREATE_MIN_API_VERSION = "0.67";
     private static final String DEFAULT_ROLE_MIN_API_VERSION = "0.72";
 
     private ServerCompatibility() {
@@ -54,12 +55,16 @@ public final class ServerCompatibility {
     }
 
     private static boolean supportsDefaultRoleApi(String apiVersion) {
+        return supportsApi(apiVersion, DEFAULT_ROLE_MIN_API_VERSION);
+    }
+
+    private static boolean supportsApi(String apiVersion,
+                                       String minimumVersion) {
         if (apiVersion == null || apiVersion.trim().isEmpty()) {
             return false;
         }
         try {
-            return VersionUtil.gte(apiVersion.trim(),
-                                   DEFAULT_ROLE_MIN_API_VERSION);
+            return VersionUtil.gte(apiVersion.trim(), minimumVersion);
         } catch (RuntimeException ignored) {
             return false;
         }
@@ -67,6 +72,14 @@ public final class ServerCompatibility {
 
     public static boolean supportsGraphSpace(String coreVersion) {
         return profile(coreVersion).supportsGraphSpace();
+    }
+
+    public static boolean supportsCypher(String coreVersion) {
+        return profile(coreVersion).supportsCypher();
+    }
+
+    public static boolean supportsGraphCreate(String apiVersion) {
+        return supportsApi(apiVersion, GRAPH_CREATE_MIN_API_VERSION);
     }
 
     public static boolean supportsDefaultRole(String coreVersion,
@@ -81,23 +94,29 @@ public final class ServerCompatibility {
     }
 
     public enum Profile {
-        LEGACY(false, false, false),
-        GRAPHSPACE(true, false, false),
-        MODERN(true, true, true);
+        LEGACY(false, false, false, false),
+        GRAPHSPACE(true, true, false, false),
+        MODERN(true, true, true, true);
 
         private final boolean graphSpace;
+        private final boolean cypher;
         private final boolean defaultRole;
         private final boolean personalProfileUpdate;
 
-        Profile(boolean graphSpace, boolean defaultRole,
+        Profile(boolean graphSpace, boolean cypher, boolean defaultRole,
                 boolean personalProfileUpdate) {
             this.graphSpace = graphSpace;
+            this.cypher = cypher;
             this.defaultRole = defaultRole;
             this.personalProfileUpdate = personalProfileUpdate;
         }
 
         public boolean supportsGraphSpace() {
             return this.graphSpace;
+        }
+
+        public boolean supportsCypher() {
+            return this.cypher;
         }
 
         public boolean supportsDefaultRole() {
