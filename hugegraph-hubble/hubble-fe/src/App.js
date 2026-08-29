@@ -28,6 +28,7 @@ import {setConfig} from './utils/config';
 import {useEffect, useState} from 'react';
 
 const CONFIG_RETRY_DELAY_MS = 2000;
+const CONFIG_REVALIDATE_DELAY_MS = 30_000;
 
 function App() {
     const [configReady, setConfigReady] = useState(false);
@@ -36,6 +37,7 @@ function App() {
 
     useEffect(() => {
         let active = true;
+        let hasSafeConfig = false;
         let retryTimer;
         const loadConfig = () => {
             api.config.getConfig().then(response => {
@@ -43,19 +45,27 @@ function App() {
                     throw new Error('invalid_hubble_config');
                 }
                 if (active) {
+                    hasSafeConfig = true;
                     setConfig(response.data);
                     setConfigRevision(value => value + 1);
                     setConfigReady(true);
                     setConfigError(false);
-                    if (response.data.server_capabilities_verified === false) {
+                    const unverified = response.data
+                        .server_capabilities_verified === false;
+                    const delay = unverified
+                        ? CONFIG_RETRY_DELAY_MS : CONFIG_REVALIDATE_DELAY_MS;
+                    retryTimer = window.setTimeout(loadConfig, delay);
+                }
+            }).catch(() => {
+                if (active) {
+                    if (hasSafeConfig) {
                         retryTimer = window.setTimeout(
                             loadConfig, CONFIG_RETRY_DELAY_MS
                         );
                     }
-                }
-            }).catch(() => {
-                if (active) {
-                    setConfigError(true);
+                    else {
+                        setConfigError(true);
+                    }
                 }
             });
         };

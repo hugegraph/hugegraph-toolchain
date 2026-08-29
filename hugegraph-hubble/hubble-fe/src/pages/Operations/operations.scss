@@ -184,6 +184,16 @@
     text-align: right;
 }
 
+.operations-source-summary {
+    min-width: 0;
+    margin-left: auto;
+    overflow: hidden;
+    color: var(--workbench-color-text-tertiary);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .operations-source-strip.is-detailed .operations-source {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -335,6 +345,14 @@
 
     .operations-health {
         grid-column: 2;
+        min-width: 0;
+        flex-wrap: wrap;
+        row-gap: 2px;
+        white-space: normal;
+
+        .operations-health-stale {
+            white-space: nowrap;
+        }
     }
 }
 

@@ -259,7 +259,10 @@ public class LiveOperationsCollector implements OperationsCollector {
                                                               now);
                 this.mergeNodes(nodes, topology.getNodes());
                 facts.putAll(topology.getFacts());
-                pdStatus = available(topology.getStatus(), now,
+                pdStatus = available(this.moreSevereStatus(
+                                     topology.getStatus(),
+                                     this.nodeStatus(topology.getNodes(), "PD")),
+                                     now,
                                      topology.getReason());
                 clusterParsed = true;
             } catch (MalformedUpstreamException e) {
@@ -272,6 +275,9 @@ public class LiveOperationsCollector implements OperationsCollector {
                                                               stores, now);
                 this.mergeNodes(nodes, topology.getNodes());
                 facts.putAll(topology.getFacts());
+                storesStatus = available(this.nodeStatus(
+                                         topology.getNodes(), "STORE"), now);
+                this.reconcileStoreFacts(nodes, facts);
                 storesParsed = true;
             } catch (MalformedUpstreamException e) {
                 storesStatus = malformed(now);
@@ -289,6 +295,56 @@ public class LiveOperationsCollector implements OperationsCollector {
         }
         sources.put("pd", pdStatus);
         sources.put("stores", storesStatus);
+    }
+
+    private String nodeStatus(List<Node> nodes, String type) {
+        long total = nodes.stream()
+                          .filter(node -> type.equals(node.getType()))
+                          .count();
+        long up = nodes.stream()
+                       .filter(node -> type.equals(node.getType()))
+                       .filter(node -> "UP".equals(node.getStatus()))
+                       .count();
+        long down = nodes.stream()
+                         .filter(node -> type.equals(node.getType()))
+                         .filter(node -> "DOWN".equals(node.getStatus()))
+                         .count();
+        if (total == 0L) {
+            return "UNKNOWN";
+        }
+        if (up == total) {
+            return "UP";
+        }
+        if (down == total) {
+            return "DOWN";
+        }
+        return "DEGRADED";
+    }
+
+    private String moreSevereStatus(String first, String second) {
+        if ("DOWN".equals(first) || "DOWN".equals(second)) {
+            return "DOWN";
+        }
+        if ("DEGRADED".equals(first) || "DEGRADED".equals(second)) {
+            return "DEGRADED";
+        }
+        if ("UNKNOWN".equals(first) || "UNKNOWN".equals(second)) {
+            return "UNKNOWN";
+        }
+        return "UP";
+    }
+
+    private void reconcileStoreFacts(List<Node> nodes,
+                                     Map<String, Long> facts) {
+        long stores = nodes.stream()
+                           .filter(node -> "STORE".equals(node.getType()))
+                           .count();
+        long storesUp = nodes.stream()
+                             .filter(node -> "STORE".equals(node.getType()))
+                             .filter(node -> "UP".equals(node.getStatus()))
+                             .count();
+        facts.put("stores", stores);
+        facts.put("stores_up", storesUp);
     }
 
     private void mergeNodes(List<Node> nodes, List<Node> additions) {

@@ -65,6 +65,21 @@ const displayHealthStatus = (status, t) => (
     status === 'DEGRADED' ? t('operations.status_degraded') : status
 );
 
+const sourceHealthSummary = (source, t) => {
+    const status = source.status ?? 'UNKNOWN';
+    const availability = source.availability ?? 'UNSUPPORTED';
+    if (availability === 'UNSUPPORTED') {
+        return t('operations.source_health_not_applicable');
+    }
+    if (status === 'UP' && availability === 'AVAILABLE') {
+        return t('operations.source_health_normal');
+    }
+    if (status === 'DOWN' || ['UNAVAILABLE', 'MALFORMED'].includes(availability)) {
+        return t('operations.source_health_unavailable');
+    }
+    return t('operations.source_health_partial');
+};
+
 const HealthStatus = ({status = 'UNKNOWN', reason, stale = false, size = 'normal'}) => {
     const {t} = useTranslation();
     const normalized = STATUS_ICON[status] ? status : 'UNKNOWN';
@@ -124,36 +139,78 @@ const SourceStrip = ({sources = {}, detailed = false,
                     i18n.language,
                     t('operations.unavailable')
                 ) : null;
-                const showLastSuccess = detailed || source.stale
-                    || source.status !== 'UP' || source.availability !== 'AVAILABLE';
+                const availability = t(`operations.availability_${(
+                    source.availability ?? 'UNSUPPORTED'
+                ).toLowerCase()}`, {
+                    defaultValue: source.availability ?? 'UNSUPPORTED',
+                });
+                const healthSummary = sourceHealthSummary(source, t);
+                const lastSuccess = source.last_success_at ? formatObservedAt(
+                    source.last_success_at,
+                    i18n.language,
+                    t('operations.unavailable')
+                ) : null;
+                const sourceDetails = [
+                    healthSummary,
+                    `${t('operations.source_topology_status')}: ${
+                        displayHealthStatus(source.status ?? 'UNKNOWN', t)
+                    }`,
+                    `${t('operations.source_collection_status')}: ${availability}`,
+                    observed ? `${t('operations.observed_at')}: ${observed}` : null,
+                    source.stale ? t('operations.stale') : null,
+                    source.reason ? formatReason(source.reason, t) : null,
+                    lastSuccess
+                        ? `${t('operations.last_success')}: ${lastSuccess}` : null,
+                ].filter(Boolean).join(' · ');
+                const sourceLabel = displayNodeType(name === 'stores'
+                    ? 'STORE' : name.toUpperCase());
+                const sourceSummary = `${sourceLabel} ${
+                    displayHealthStatus(source.status ?? 'UNKNOWN', t)
+                } · ${sourceDetails}`;
                 return (
-                    <div className='operations-source' key={name}>
-                        <strong>
-                            {displayNodeType(name === 'stores'
-                                ? 'STORE' : name.toUpperCase())}
-                        </strong>
-                        <HealthStatus
-                            status={source.status}
-                            reason={source.reason}
-                        />
-                        <span className='operations-source-state'>
-                            {t(`operations.availability_${(
-                                source.availability ?? 'UNSUPPORTED'
-                            ).toLowerCase()}`, {defaultValue: source.availability ?? 'UNSUPPORTED'})}
-                            {detailed && observed
-                                ? ` · ${t('operations.observed_at')}: ${observed}`
-                                : (age ? ` · ${age}` : '')}
-                            {source.stale ? ` · ${t('operations.stale')}` : ''}
-                            {source.reason ? ` · ${formatReason(source.reason, t)}` : ''}
-                            {showLastSuccess && source.last_success_at
-                                ? ` · ${t('operations.last_success')}: ${formatObservedAt(
-                                    source.last_success_at,
-                                    i18n.language,
-                                    t('operations.unavailable')
-                                )}`
-                                : ''}
-                        </span>
-                    </div>
+                    <Tooltip key={name} title={detailed ? null : sourceDetails}>
+                        <div
+                            className='operations-source'
+                            tabIndex={detailed ? undefined : 0}
+                            aria-label={detailed ? undefined : sourceSummary}
+                        >
+                            <strong>{sourceLabel}</strong>
+                            <HealthStatus
+                                status={source.status}
+                                reason={detailed ? source.reason : undefined}
+                            />
+                            {!detailed && (
+                                <span className='operations-source-summary'>
+                                    {healthSummary}
+                                    {age ? ` · ${age}` : ''}
+                                    {source.stale
+                                        ? ` · ${t('operations.stale')}` : ''}
+                                </span>
+                            )}
+                            {detailed && (
+                                <span className='operations-source-state'>
+                                    {healthSummary}
+                                    {` · ${t('operations.source_topology_status')}: ${
+                                        displayHealthStatus(
+                                            source.status ?? 'UNKNOWN', t
+                                        )
+                                    }`}
+                                    {` · ${t('operations.source_collection_status')}: ${
+                                        availability
+                                    }`}
+                                    {observed
+                                        ? ` · ${t('operations.observed_at')}: ${observed}`
+                                        : (age ? ` · ${age}` : '')}
+                                    {source.stale ? ` · ${t('operations.stale')}` : ''}
+                                    {source.reason
+                                        ? ` · ${formatReason(source.reason, t)}` : ''}
+                                    {lastSuccess
+                                        ? ` · ${t('operations.last_success')}: ${lastSuccess}`
+                                        : ''}
+                                </span>
+                            )}
+                        </div>
+                    </Tooltip>
                 );
             })}
         </section>

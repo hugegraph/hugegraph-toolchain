@@ -122,3 +122,95 @@ test('revalidates fail-closed server capabilities until verified', async () => {
         .toHaveAttribute('data-auth-enabled', 'false');
     jest.useRealTimers();
 });
+
+test('continues revalidation after a transient retry failure', async () => {
+    jest.useFakeTimers();
+    api.config.getConfig
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {
+                pd_enabled: true,
+                auth_enabled: true,
+                server_capabilities_verified: false,
+            },
+        })
+        .mockRejectedValueOnce(new Error('temporarily unavailable'))
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {
+                pd_enabled: true,
+                auth_enabled: false,
+                server_capabilities_verified: true,
+            },
+        });
+
+    render(
+        <MemoryRouter
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <App />
+        </MemoryRouter>
+    );
+    expect(await screen.findByTestId('app-route')).toHaveAttribute(
+        'data-auth-enabled', 'true'
+    );
+
+    await act(async () => {
+        jest.advanceTimersByTime(2000);
+    });
+    await waitFor(() => expect(api.config.getConfig).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('app-route')).toHaveAttribute(
+        'data-auth-enabled', 'true'
+    );
+
+    await act(async () => {
+        jest.advanceTimersByTime(2000);
+    });
+    await waitFor(() => expect(api.config.getConfig).toHaveBeenCalledTimes(3));
+    expect(screen.getByTestId('app-route')).toHaveAttribute(
+        'data-auth-enabled', 'false'
+    );
+    jest.useRealTimers();
+});
+
+test('periodically revalidates a verified authentication mode', async () => {
+    jest.useFakeTimers();
+    api.config.getConfig
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {
+                pd_enabled: true,
+                auth_enabled: false,
+                server_capabilities_verified: true,
+            },
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {
+                pd_enabled: true,
+                auth_enabled: true,
+                server_capabilities_verified: true,
+            },
+        });
+
+    render(
+        <MemoryRouter
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <App />
+        </MemoryRouter>
+    );
+    expect(await screen.findByTestId('app-route')).toHaveAttribute(
+        'data-auth-enabled', 'false'
+    );
+
+    await act(async () => {
+        jest.advanceTimersByTime(30_000);
+    });
+    await waitFor(() => expect(api.config.getConfig).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('app-route')).toHaveAttribute(
+        'data-auth-enabled', 'true'
+    );
+    jest.useRealTimers();
+});

@@ -111,6 +111,7 @@ const Schema = () => {
     const {canManage, canWrite} = useGraphspaceAccess(graphspace);
     const {context: authContext} = useAuthContext();
     const username = authContext?.username;
+    const anonymous = authContext?.mode === 'NON_AUTH';
     const templateWriteEnabled = pdMode && canWrite;
     const workbenchContext = readWorkbenchGraphContext();
     const currentGraph = workbenchContext.graphspace === graphspace
@@ -124,8 +125,8 @@ const Schema = () => {
     const listKey = JSON.stringify([graphspace, query, current]);
 
     const canEditTemplate = useCallback(row => (
-        canManage || (canWrite && row.creator === username)
-    ), [canManage, canWrite, username]);
+        canManage || (canWrite && (anonymous || row.creator === username))
+    ), [anonymous, canManage, canWrite, username]);
 
     const editSchema = useCallback(data => {
         if (!canEditTemplate(data)) {

@@ -239,6 +239,31 @@ it('lets read-write users manage only their own saved templates', async () => {
         .not.toBeInTheDocument();
 });
 
+it('lets anonymous PD users manage saved templates', async () => {
+    mockAccess = {canManage: false, canWrite: true};
+    mockAuthContext = {context: {mode: 'NON_AUTH'}};
+    api.manage.getGraphSpace.mockResolvedValue({
+        status: 200,
+        data: {nickname: 'Space'},
+    });
+    api.manage.getSchemaList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{name: 'anonymous_schema', creator: null}],
+            total: 1,
+        },
+    });
+
+    render(<Schema />);
+
+    expect(await screen.findByRole('button', {name: 'Create template'}))
+        .toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Edit anonymous_schema'}))
+        .toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Delete anonymous_schema'}))
+        .toBeInTheDocument();
+});
+
 it('links a non-PD read-only library without graph context to the graph overview', async () => {
     mockGraphspace = 'DEFAULT';
     mockPdEnabled = false;
