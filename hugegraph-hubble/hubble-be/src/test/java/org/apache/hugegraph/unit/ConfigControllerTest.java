@@ -35,6 +35,61 @@ import org.apache.hugegraph.service.auth.AuthModeService;
 public class ConfigControllerTest {
 
     @Test
+    public void testPdConfigMarksSuccessfulAuthProbeVerified() {
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        HugeClient client = Mockito.mock(HugeClient.class);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(client.isServerAuthEnabled()).thenReturn(false);
+        Mockito.when(authMode.update(false)).thenReturn(false);
+
+        ConfigController controller = new ConfigController() {
+            @Override
+            protected HugeClient createUnauthClient() {
+                return client;
+            }
+        };
+        ReflectionTestUtils.setField(controller, "config", config);
+        ReflectionTestUtils.setField(controller, "hugeClientPoolService",
+                                     new HugeClientPoolService());
+        ReflectionTestUtils.setField(controller, "authModeService", authMode);
+
+        Map<String, Object> result = controller.getConfig();
+
+        Assert.assertEquals(Map.of("pd_enabled", true,
+                                   "server_capabilities_verified", true,
+                                   "auth_enabled", false,
+                                   "graph_create_enabled", true,
+                                   "cypher_enabled", true), result);
+        Mockito.verify(client).close();
+    }
+
+    @Test
+    public void testPdConfigRetriesAfterAuthProbeFailure() {
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        ConfigController controller = new ConfigController() {
+            @Override
+            protected HugeClient createUnauthClient() {
+                throw new IllegalStateException("server unavailable");
+            }
+        };
+        ReflectionTestUtils.setField(controller, "config", config);
+        ReflectionTestUtils.setField(controller, "hugeClientPoolService",
+                                     new HugeClientPoolService());
+        ReflectionTestUtils.setField(controller, "authModeService", authMode);
+
+        Map<String, Object> result = controller.getConfig();
+
+        Assert.assertEquals(Map.of("pd_enabled", true,
+                                   "server_capabilities_verified", false,
+                                   "auth_enabled", true,
+                                   "graph_create_enabled", true,
+                                   "cypher_enabled", true), result);
+    }
+
+    @Test
     public void testBootstrapConfigDoesNotExposeBackendUrl() {
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);

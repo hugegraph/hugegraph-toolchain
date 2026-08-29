@@ -312,7 +312,7 @@ test('temporarily expands a user-collapsed sidebar and restores it after leaving
             .toHaveAttribute('aria-expanded', 'true');
 
         fireEvent.mouseLeave(navigation);
-        act(() => jest.advanceTimersByTime(999));
+        act(() => jest.advanceTimersByTime(499));
         expect(sider).not.toHaveClass('ant-layout-sider-collapsed');
         act(() => jest.advanceTimersByTime(1));
         expect(sider).toHaveClass('ant-layout-sider-collapsed');

@@ -212,9 +212,10 @@ const EditLayer = ({
         else {
             setDetail({});
             form.resetFields();
+            form.setFieldsValue({user_name: data.user_name});
             setLoading(false);
         }
-    }, [visible, data.id, form, op, t]);
+    }, [visible, data.id, data.user_name, form, op, t]);
 
     if (op !== 'detail' && !allowedOperations[op]) {
         return null;

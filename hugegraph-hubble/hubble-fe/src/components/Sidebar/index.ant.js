@@ -228,7 +228,7 @@ const Sidebar = () => {
             setTemporaryExpanded(false);
             setOpenKeys([]);
             temporaryCollapseTimerRef.current = null;
-        }, 1000);
+        }, 500);
     }, [clearTemporaryCollapseTimer, collapsed, narrow, temporaryExpanded]);
     const renderedCollapsed = collapsed && !temporaryExpanded;
     const toggleLabel = temporaryExpanded && collapsed
