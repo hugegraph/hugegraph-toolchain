@@ -49,6 +49,7 @@ import {
     metricIssueReason,
     ratioPercent,
     selectAttentionNodes,
+    selectAttentionSources,
 } from './topology';
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
 import {operationsReturnState} from './navigation';
@@ -188,6 +189,7 @@ const Overview = () => {
     );
     const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
     const attentionNodes = selectAttentionNodes(nodes);
+    const attentionSources = selectAttentionSources(data?.sources);
     const facts = data?.facts ?? {};
     const pdLeader = facts.pd_leader ?? nodes.find(node => (
         node.type === 'PD' && node.role === 'LEADER'
@@ -477,14 +479,44 @@ const Overview = () => {
                     {nodes.length > 0 && (
                         <section
                             className='operations-surface operations-attention'
-                            aria-label={t('operations.attention_nodes')}
+                            aria-label={t('operations.attention_items')}
                         >
                             <div className='operations-attention-heading'>
-                                <h3>{t('operations.attention_nodes')}</h3>
+                                <h3>{t('operations.attention_items')}</h3>
                                 <Link to='/operations/nodes'>
                                     {t('operations.view_all_nodes')} <RightOutlined />
                                 </Link>
                             </div>
+                            {attentionSources.map(source => {
+                                const type = source.name === 'stores'
+                                    ? 'STORE' : source.name.toUpperCase();
+                                return (
+                                    <Alert
+                                        className='operations-source-attention'
+                                        key={source.name}
+                                        type='warning'
+                                        showIcon
+                                        message={t('operations.source_attention', {
+                                            source: displayNodeType(type),
+                                        })}
+                                        description={t(
+                                            `operations.reason_${source.reason}`,
+                                            {
+                                                defaultValue: source.reason
+                                                    ? source.reason.replaceAll('_', ' ')
+                                                    : t('operations.status_degraded_help'),
+                                            }
+                                        )}
+                                        action={(
+                                            <Link to={`/operations/nodes?type=${type}`}>
+                                                {t('operations.view_source_nodes', {
+                                                    source: displayNodeType(type),
+                                                })}
+                                            </Link>
+                                        )}
+                                    />
+                                );
+                            })}
                             {attentionNodes.length > 0 ? (
                                 <Table
                                     rowKey='id'
@@ -493,7 +525,13 @@ const Overview = () => {
                                     pagination={false}
                                     size='small'
                                 />
-                            ) : <p>{t('operations.all_nodes_healthy')}</p>}
+                            ) : (
+                                <p className='operations-nodes-healthy'>
+                                    {attentionSources.length > 0
+                                        ? t('operations.nodes_healthy_source_attention')
+                                        : t('operations.all_nodes_healthy')}
+                                </p>
+                            )}
                         </section>
                     )}
                 </>

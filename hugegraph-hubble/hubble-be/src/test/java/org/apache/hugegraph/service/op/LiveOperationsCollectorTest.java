@@ -191,6 +191,7 @@ public class LiveOperationsCollectorTest {
         Assert.assertEquals("AVAILABLE", pdSource.getAvailability());
         Assert.assertTrue(pdSource.isFresh());
         Assert.assertEquals("DEGRADED", pdSource.getStatus());
+        Assert.assertEquals("cluster_not_ready", pdSource.getReason());
         Assert.assertEquals("DEGRADED", snapshot.getStatus());
         long pdCount = snapshot.getNodes().stream()
                                .filter(node -> "PD".equals(node.getType()))
@@ -199,6 +200,30 @@ public class LiveOperationsCollectorTest {
         Assert.assertTrue(snapshot.getNodes().stream()
                                   .filter(node -> "PD".equals(node.getType()))
                                   .allMatch(node -> "UP".equals(node.getStatus())));
+    }
+
+    @Test
+    public void testPdNotReadyReasonSurvivesMetricsFailure() throws IOException {
+        String notReady = cluster().replace("Cluster_OK", "Cluster_Not_Ready");
+        HttpServer pd = HttpServer.create(new InetSocketAddress(0), 0);
+        String storePayload = stores().replace(
+                "PD_TEST_PORT", String.valueOf(pd.getAddress().getPort()));
+        context(pd, "/v1/cluster", 200, notReady);
+        context(pd, "/v1/stores", 200, storePayload);
+        context(pd, "/actuator/prometheus", 500, "unavailable");
+        pd.start();
+        Snapshot snapshot;
+        try {
+            snapshot = collector(true, pd).collect(serverClient(), true);
+        } finally {
+            pd.stop(0);
+        }
+
+        OperationsModels.SourceStatus source =
+                snapshot.getSources().get("pd");
+        Assert.assertEquals("PARTIAL", source.getAvailability());
+        Assert.assertEquals("DEGRADED", source.getStatus());
+        Assert.assertEquals("cluster_not_ready", source.getReason());
     }
 
     @Test

@@ -439,6 +439,14 @@
     p { margin-bottom: 0; color: var(--workbench-color-text-secondary); }
 }
 
+.operations-source-attention {
+    margin-bottom: 12px;
+}
+
+.operations-nodes-healthy {
+    padding-top: 2px;
+}
+
 .operations-attention-heading {
     display: flex;
     align-items: center;

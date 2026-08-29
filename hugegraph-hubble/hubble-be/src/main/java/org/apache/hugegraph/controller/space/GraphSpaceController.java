@@ -178,6 +178,8 @@ public class GraphSpaceController extends BaseController {
         HugeClient client = this.requireGraphSpaceAdministrator();
         // Create GraphSpace
         applyResourceDefaults(graphSpaceEntity);
+        graphSpaceEntity.setAuth(this.authMode == null ||
+                                 this.authMode.enabled());
 
         graphSpaceService.create(client, graphSpaceEntity.convertGraphSpace());
 

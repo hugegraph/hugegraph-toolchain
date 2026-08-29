@@ -19,6 +19,7 @@
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {EditLayer} from './EditLayer';
 import * as api from '../../api';
+import {isAuthEnabled} from '../../utils/config';
 
 jest.mock('react-i18next', () => ({
     initReactI18next: {type: '3rdParty', init: jest.fn()},
@@ -34,10 +35,16 @@ jest.mock('../../api', () => ({
     },
 }));
 
+jest.mock('../../utils/config', () => ({
+    isAuthEnabled: jest.fn(),
+}));
+
 beforeEach(() => {
     jest.clearAllMocks();
+    isAuthEnabled.mockReturnValue(true);
     api.auth.getUserList.mockReturnValue(new Promise(() => {}));
     api.manage.addGraphSpace.mockResolvedValue({status: 200});
+    api.manage.updateGraphSpace.mockResolvedValue({status: 200});
     window.matchMedia = jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
@@ -69,13 +76,13 @@ test('reserves enough label width for long localized labels', () => {
     expect(controlColumn).toHaveStyle({flex: '1 1 0'});
 });
 
-test('exposes the authentication switch to assistive technology', () => {
+test('does not expose per-GraphSpace authentication controls', () => {
     render(
         <EditLayer visible detail={{}} onCancel={jest.fn()} refresh={jest.fn()} />
     );
 
-    expect(screen.getByRole('switch', {name: 'graphspace.form.auth'}))
-        .toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText('graphspace.form.auth')).not.toBeInTheDocument();
 });
 
 test('creates a GraphSpace with visible resource defaults', async () => {
@@ -102,7 +109,7 @@ test('creates a GraphSpace with visible resource defaults', async () => {
     expect(values).toMatchObject({
         name: 'demo_space',
         nickname: 'DemoSpaceDisplayName',
-        auth: false,
+        auth: true,
         description: '',
     });
     expect(values).toMatchObject({
@@ -113,6 +120,47 @@ test('creates a GraphSpace with visible resource defaults', async () => {
         compute_memory_limit: 128,
         storage_limit: 1000000,
     });
+});
+
+test('creates an anonymous-mode GraphSpace with authentication disabled', async () => {
+    isAuthEnabled.mockReturnValue(false);
+    render(
+        <EditLayer visible detail={{}} onCancel={jest.fn()} refresh={jest.fn()} />
+    );
+    fireEvent.change(screen.getByPlaceholderText('graphspace.form.id_placeholder'), {
+        target: {value: 'anonymous_space'},
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.create'}));
+
+    await waitFor(() => expect(api.manage.addGraphSpace).toHaveBeenCalled());
+    expect(api.manage.addGraphSpace.mock.calls[0][0].auth).toBe(false);
+});
+
+test('preserves existing GraphSpace authentication while editing', async () => {
+    api.manage.getGraphSpace.mockResolvedValue({
+        status: 200,
+        data: {
+            name: 'legacy_space',
+            nickname: 'LegacySpace',
+            auth: false,
+        },
+    });
+    render(
+        <EditLayer
+            visible
+            detail={{name: 'legacy_space'}}
+            onCancel={jest.fn()}
+            refresh={jest.fn()}
+        />
+    );
+
+    await waitFor(() => expect(
+        screen.getByPlaceholderText('graphspace.form.id_placeholder')
+    ).toHaveValue('legacy_space'));
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
+
+    await waitFor(() => expect(api.manage.updateGraphSpace).toHaveBeenCalled());
+    expect(api.manage.updateGraphSpace.mock.calls[0][1].auth).toBe(false);
 });
 
 test('creates without an alias and never copies the GraphSpace name into nickname', async () => {

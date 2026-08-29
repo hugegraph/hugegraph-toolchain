@@ -113,7 +113,7 @@ public class GraphSpaceServiceTest {
     }
 
     @Test
-    public void testAccessibleGraphSpacesHonorAuthorization() {
+    public void testAccessibleGraphSpacesHonorDefaultAndCustomRoles() {
         GraphSpaceManager manager = Mockito.mock(GraphSpaceManager.class);
         AuthManager auth = Mockito.mock(AuthManager.class);
         Map<String, GraphSpace> spaces = new HashMap<>();
@@ -121,6 +121,7 @@ public class GraphSpaceServiceTest {
         spaces.put("admin", graphSpace("admin", true, "20260712"));
         spaces.put("analyst", graphSpace("analyst", true, "20260712"));
         spaces.put("observer", graphSpace("observer", true, "20260712"));
+        spaces.put("custom", graphSpace("custom", true, "20260712"));
         spaces.put("denied", graphSpace("denied", true, "20260712"));
 
         Mockito.when(this.client.graphSpace()).thenReturn(manager);
@@ -129,7 +130,7 @@ public class GraphSpaceServiceTest {
         Mockito.when(manager.listGraphSpace())
                .thenReturn(java.util.Arrays.asList("public", "admin",
                                                    "analyst", "observer",
-                                                   "denied"));
+                                                   "custom", "denied"));
         Mockito.when(manager.getGraphSpace(Mockito.anyString()))
                .thenAnswer(invocation -> spaces.get(invocation.getArgument(0)));
         Mockito.when(auth.isSpaceAdmin("admin")).thenReturn(true);
@@ -137,6 +138,7 @@ public class GraphSpaceServiceTest {
                .thenReturn(true);
         Mockito.when(auth.checkDefaultRole("observer", "observer"))
                .thenReturn(true);
+        Mockito.when(auth.isSpaceMember("custom")).thenReturn(true);
         Mockito.when(this.graphsService.listGraphNames(
                              Mockito.eq(this.client), Mockito.anyString(),
                              Mockito.eq("")))
@@ -145,16 +147,20 @@ public class GraphSpaceServiceTest {
         List<Map<String, Object>> response =
                 this.service.queryAccessibleGs(this.client, "", "");
 
-        Assert.assertEquals(java.util.Arrays.asList("admin", "analyst",
-                                                    "observer", "public"),
+        Assert.assertEquals(java.util.Arrays.asList(
+                                    "admin", "analyst", "custom",
+                                    "observer", "public"),
                             response.stream().map(item -> item.get("name"))
                                     .collect(java.util.stream.Collectors
                                                       .toList()));
         Assert.assertTrue((Boolean) response.get(0).get("authed"));
         Assert.assertFalse((Boolean) response.get(0).get("default"));
         Assert.assertEquals(java.util.Arrays.asList(
-                                    "admin", "analyst", "observer", "public"),
+                                    "admin", "analyst", "custom",
+                                    "observer", "public"),
                             this.service.listAccessible(this.client));
+        Mockito.verify(auth, Mockito.times(2)).isSpaceMember("custom");
+        Mockito.verify(auth, Mockito.times(2)).isSpaceMember("denied");
         Mockito.verify(auth, Mockito.never())
                .checkDefaultRole(Mockito.anyString(), Mockito.eq("observer"),
                                  Mockito.anyString());

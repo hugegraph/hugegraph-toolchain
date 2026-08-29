@@ -289,7 +289,18 @@ public class GraphSpaceUserService extends AuthService {
         SpacePresetState previous = null;
         try {
             if (!wasMember) {
-                client.auth().addSpaceMember(username, graphSpace);
+                try {
+                    client.auth().addSpaceMember(username, graphSpace);
+                } catch (RuntimeException e) {
+                    String detail = e.getMessage();
+                    if (detail != null &&
+                        detail.toLowerCase()
+                              .contains("user or group is not exist")) {
+                        throw new ParameterizedException(
+                                  "auth.account.not-exist", username);
+                    }
+                    throw e;
+                }
             }
             User account = userId == null ?
                            client.findUserByName(username) :
@@ -473,10 +484,13 @@ public class GraphSpaceUserService extends AuthService {
             return client.auth().listSpaceMember(graphSpace)
                          .contains(username);
         }
-        return client.graphSpace().checkDefaultRole(
-                       graphSpace, username, "analyst") ||
-               client.graphSpace().checkDefaultRole(
-                       graphSpace, username, "observer");
+        if (client.graphSpace().checkDefaultRole(
+                graphSpace, username, "analyst") ||
+            client.graphSpace().checkDefaultRole(
+                graphSpace, username, "observer")) {
+            return true;
+        }
+        return client.auth().listSpaceMember(graphSpace).contains(username);
     }
 
     private void clearDefaultRoles(HugeClient client, String graphSpace,

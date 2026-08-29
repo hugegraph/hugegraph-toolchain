@@ -418,7 +418,8 @@ const Graph = () => {
                                     {t('graph.menu.clear_graph')}
                                 </GraphRowAction>
                             )}
-                        {(row.graphspace === 'neizhianli' || !canManage)
+                        {(row.graphspace === 'neizhianli' || !canManage
+                          || !graphCreateEnabled)
                             ? <span className={style.disable}>{t('common.action.delete')}</span>
                             : (
                                 <GraphRowAction onAction={deleteGraph} graph={row.name}>
@@ -511,11 +512,11 @@ const Graph = () => {
             {
                 key: 'delete',
                 danger: true,
-                disabled: immutable || !canManage,
-                label: immutable || !canManage
+                disabled: immutable || !canManage || !graphCreateEnabled,
+                label: immutable || !canManage || !graphCreateEnabled
                     ? <span className={style.disable}>{t('common.action.delete')}</span>
                     : t('common.action.delete'),
-                onClick: immutable || !canManage
+                onClick: immutable || !canManage || !graphCreateEnabled
                     ? undefined : () => deleteGraph(item.name),
             },
             {

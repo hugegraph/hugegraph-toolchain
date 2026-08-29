@@ -20,6 +20,7 @@ import {
     Alert,
     PageHeader,
     Button,
+    Dropdown,
     Space,
     Table,
     message,
@@ -28,6 +29,7 @@ import {
     Tag,
     Tabs,
 } from 'antd';
+import {MoreOutlined} from '@ant-design/icons';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import TableHeader from '../../components/TableHeader';
@@ -51,7 +53,7 @@ const RowAction = ({onAction, row, children}) => {
     return <Button type='link' onClick={handleClick}>{children}</Button>;
 };
 
-const GlobalAccounts = () => {
+const GlobalAccounts = ({onAssignMember}) => {
     const {t} = useTranslation();
     const {context} = useAuthContext();
     const accountActions = context?.actions?.accounts ?? [];
@@ -85,11 +87,13 @@ const GlobalAccounts = () => {
         setEditLayerVisible(true);
     }, []);
 
-    const showAuth = useCallback(row => {
-        setDetail(row);
-        setOp('auth');
-        setEditLayerVisible(true);
-    }, []);
+    const showMembership = useCallback(row => {
+        onAssignMember?.({
+            user_id: row.id,
+            user_name: row.user_name,
+            graphspace: getPresetSpaces(row)[0],
+        });
+    }, [onAssignMember]);
 
     const showAdd = useCallback(() => {
         setDetail({});
@@ -104,6 +108,21 @@ const GlobalAccounts = () => {
     const handleHideLayer = useCallback(() => {
         setEditLayerVisible(false);
     }, []);
+
+    const handleCreated = useCallback(account => {
+        if (!canGrantAuthorization || !onAssignMember || account.is_superadmin) {
+            return;
+        }
+        Modal.confirm({
+            title: t('account.created.title'),
+            content: t('account.created.description', {
+                name: account.user_name,
+            }),
+            okText: t('account.created.assign'),
+            cancelText: t('account.created.done'),
+            onOk: () => onAssignMember(account),
+        });
+    }, [canGrantAuthorization, onAssignMember, t]);
 
     const handleDelete = useCallback(row => {
         Modal.confirm({
@@ -179,33 +198,62 @@ const GlobalAccounts = () => {
         },
         {
             title: t('common.operation'),
-            width: hasRowMutations ? 280 : 100,
-            fixed: 'right',
+            width: hasRowMutations ? 170 : 100,
             align: 'center',
-            render: row => (
-                <Space>
-                    <RowAction onAction={showDetail} row={row}>
-                        {t('common.action.detail')}
-                    </RowAction>
-                    {canUpdateAccount && (
-                        <RowAction onAction={showEdit} row={row}>
-                            {t('common.action.edit')}
+            render: row => {
+                const menuItems = [
+                    canUpdateAccount && {
+                        key: 'edit',
+                        label: t('common.action.edit'),
+                    },
+                    canGrantAuthorization
+                    && onAssignMember
+                    && getAccountPreset(row) !== PERMISSION_PRESETS.SUPER_ADMIN && {
+                        key: 'membership',
+                        label: t('account.action.manage_membership'),
+                    },
+                    canDeleteAccount
+                    && row.user_name !== 'admin'
+                    && row.user_name !== context?.username && {
+                        key: 'delete',
+                        danger: true,
+                        label: t('common.action.delete'),
+                    },
+                ].filter(Boolean);
+                const handleMenu = ({key}) => {
+                    if (key === 'edit') {
+                        showEdit(row);
+                    }
+                    else if (key === 'membership') {
+                        showMembership(row);
+                    }
+                    else if (key === 'delete') {
+                        handleDelete(row);
+                    }
+                };
+
+                return (
+                    <Space size={4}>
+                        <RowAction onAction={showDetail} row={row}>
+                            {t('common.action.detail')}
                         </RowAction>
-                    )}
-                    {canGrantAuthorization && (
-                        <RowAction onAction={showAuth} row={row}>
-                            {t('common.action.assign_permission')}
-                        </RowAction>
-                    )}
-                    {canDeleteAccount
-                        && row.user_name !== 'admin'
-                        && row.user_name !== context?.username && (
-                        <RowAction onAction={handleDelete} row={row}>
-                            {t('common.action.delete')}
-                        </RowAction>
-                    )}
-                </Space>
-            ),
+                        {menuItems.length > 0 && (
+                            <Dropdown
+                                menu={{items: menuItems, onClick: handleMenu}}
+                                trigger={['click']}
+                            >
+                                <Button
+                                    type='link'
+                                    aria-label={t('account.action.more')}
+                                    icon={<MoreOutlined />}
+                                >
+                                    {t('account.action.more')}
+                                </Button>
+                            </Dropdown>
+                        )}
+                    </Space>
+                );
+            },
         },
     ];
 
@@ -293,10 +341,10 @@ const GlobalAccounts = () => {
                 data={detail}
                 onCancel={handleHideLayer}
                 refresh={handleRefresh}
+                onCreated={handleCreated}
                 allowedOperations={{
                     create: canCreateAccount,
                     edit: canUpdateAccount,
-                    auth: canGrantAuthorization,
                 }}
             />
         </>
@@ -313,6 +361,13 @@ const Account = () => {
         ...(actions.roles ?? []),
         ...(actions.authorizations ?? []),
     ].includes('read');
+    const [activeTab, setActiveTab] = useState('global');
+    const [pendingMember, setPendingMember] = useState(null);
+    const assignMember = useCallback(account => {
+        setPendingMember(account);
+        setActiveTab('scoped');
+    }, []);
+    const clearPendingMember = useCallback(() => setPendingMember(null), []);
     const refreshPermissionContext = useCallback(
         () => Promise.resolve(refreshPermissions?.()).catch(() => undefined),
         [refreshPermissions]
@@ -322,16 +377,23 @@ const Account = () => {
     if (canReadGlobalAccounts && canReadScopedAccess) {
         content = (
             <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
                 items={[
                     {
                         key: 'global',
                         label: t('account.space_access.global_tab'),
-                        children: <GlobalAccounts />,
+                        children: <GlobalAccounts onAssignMember={assignMember} />,
                     },
                     {
                         key: 'scoped',
                         label: t('account.space_access.scoped_tab'),
-                        children: <SpaceAccess />,
+                        children: (
+                            <SpaceAccess
+                                pendingAccount={pendingMember}
+                                onPendingAccountHandled={clearPendingMember}
+                            />
+                        ),
                     },
                 ]}
             />

@@ -186,7 +186,7 @@
     "title": "Graph Management",
     "view_mode": "Graph list view",
     "create": "New Graph",
-    "server_upgrade_hint": "This Server version is too old for some features. Please upgrade to the latest version.",
+    "server_upgrade_hint": "This Server version is too old for some features. Please upgrade to the latest version",
     "search_placeholder": "Search by graph name",
     "unavailable": "Graphs are unavailable. Check the server connection and retry.",
     "set_default_confirm": "Confirm changing the default graph?",
@@ -373,6 +373,16 @@
       "retry": "Retry accounts"
     },
     "create": "Create Account",
+    "action": {
+      "manage_membership": "Manage GraphSpace Membership",
+      "more": "More"
+    },
+    "created": {
+      "title": "Account created",
+      "description": "Account {{name}} was created. Assign GraphSpace membership now?",
+      "assign": "Assign access",
+      "done": "Do it later"
+    },
     "delete_confirm": "Confirm deleting account {{name}}?",
     "col": {
       "id": "Account ID",
@@ -423,7 +433,7 @@
       "name_placeholder": "Can be changed after creation",
       "is_superadmin": "Super Admin",
       "level": "Account Level",
-      "is_superadmin_help": "Super administrators can manage every GraphSpace and account. Grant this only to trusted users",
+      "is_superadmin_help": "Super administrators can manage every GraphSpace and account. After turning this off, assign scoped access under GraphSpace Members",
       "remark": "Remark",
       "remark_help": "Optional context about the account purpose, team, or owner",
       "remark_placeholder": "Enter account remark",
@@ -438,9 +448,10 @@
       "graphspaces_help": "Select the GraphSpaces covered by this preset"
     },
     "space_access": {
-      "global_tab": "Global Accounts",
-      "scoped_tab": "GraphSpace Access",
+      "global_tab": "Accounts",
+      "scoped_tab": "GraphSpace Members",
       "graphspace": "GraphSpace",
+      "description": "Select a GraphSpace, then grant an existing account read-only, read-write, or administrator access. Removing a member does not delete the account",
       "no_spaces": "No GraphSpaces are available for this account.",
       "load_error": "Unable to load access data for this GraphSpace.",
       "tabs": {
@@ -454,7 +465,13 @@
         "dialog": "GraphSpace Member",
         "id": "Account ID",
         "name": "Account Name",
+        "existing_account": "Existing Account ID",
+        "account_not_found": "This account does not exist. Create it under Accounts before assigning access.",
+        "account_check_failed": "Could not verify this account. Check the connection and retry.",
         "roles": "Roles",
+        "replace": "Replace with preset",
+        "custom_title": "This account uses legacy or custom access",
+        "custom_description": "Existing access remains unchanged until you select a preset and confirm the replacement",
         "remove_confirm": "Remove this member from the GraphSpace?",
         "preset_unavailable": "The selected permission preset is not available on this GraphSpace."
       },
@@ -1278,7 +1295,11 @@
     "logical_relationship": "Logical service relationship, not network traffic",
     "topology_label": "Server, PD, and Store service topology",
     "attention_nodes": "Nodes needing attention",
+    "attention_items": "Items needing attention",
     "all_nodes_healthy": "All discovered nodes are healthy",
+    "nodes_healthy_source_attention": "All nodes are healthy; the source or cluster state above is a separate signal.",
+    "source_attention": "{{source}} source needs attention",
+    "view_source_nodes": "View {{source}} nodes",
     "view_nodes": "View nodes",
     "view_all_nodes": "View all nodes",
     "tier": "tier",
@@ -1346,8 +1367,14 @@
     "reason_refresh_failed": "Refresh failed",
     "reason_malformed_response": "Malformed response",
     "reason_unsupported_version": "Unsupported service version",
-    "reason_unsupported_version_help": "Upgrade HugeGraph to a version that provides this metric.",
+    "reason_unsupported_version_help": "Upgrade HugeGraph to a version that provides this metric",
     "reason_deployment_mode_unsupported": "Unsupported by the current deployment mode",
+    "reason_cluster_warn": "PD reports a cluster warning. Node health and cluster state are separate signals; inspect the PD nodes and logs.",
+    "reason_cluster_not_ready": "PD reports Cluster_Not_Ready. Nodes may already be back online; refresh first, then check PD logs and initial-store-count if it persists.",
+    "reason_cluster_offline": "PD reports the cluster offline. Check PD nodes, Raft state, and logs.",
+    "reason_cluster_fault": "PD reports a cluster fault. Check PD nodes, Raft state, and logs.",
+    "reason_cluster_state_missing": "The PD response did not include cluster state. Check the PD version and response logs.",
+    "reason_cluster_state_unknown": "PD reported an unrecognized cluster state. Check the PD version and logs.",
     "metric_labels": {
       "basic": "Memory & process",
       "mem_total": "Total memory",

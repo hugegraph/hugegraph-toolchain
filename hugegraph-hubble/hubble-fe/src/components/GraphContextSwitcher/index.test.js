@@ -189,13 +189,11 @@ describe('GraphContextSwitcher', () => {
         });
         renderSwitcher('/gremlin/deleted_space/old_graph');
 
-        await waitFor(() => {
-            expect(screen.getByRole('combobox', {name: 'workbench.context.graphspace'}))
-                .toHaveValue('');
-        });
+        await screen.findByText('/navigation');
+        expect(screen.getByRole('combobox', {name: 'workbench.context.graphspace'}))
+            .toHaveValue('');
         expect(screen.getByRole('combobox', {name: 'workbench.context.graph'}))
             .not.toHaveValue('old_graph');
-        expect(screen.getByText('/navigation')).toBeInTheDocument();
         expect(localStorage.getItem('hubble_workbench_graph_context')).toBeNull();
     });
 

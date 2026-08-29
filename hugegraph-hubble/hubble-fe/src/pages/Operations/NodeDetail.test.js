@@ -102,7 +102,7 @@ test('focuses standalone Server details on applicable sources and metric cards',
     const system = screen.getByRole('heading', {name: 'System'}).closest('section');
     const heap = within(system).getByRole('progressbar', {name: 'Heap memory usage'});
     expect(heap).toHaveAttribute('aria-valuenow', '50');
-    expect(within(system).getByText(/512 MB \/ 1 GiB/)).toBeInTheDocument();
+    expect(within(system).getByText(/512 MB \/ 1 GB/)).toBeInTheDocument();
     expect(within(system).getByText(/256 MB \/ Unavailable/)).toBeInTheDocument();
     expect(within(system).getByText(/Committed:.*768 MB/)).toBeInTheDocument();
     expect(within(system).queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
@@ -342,7 +342,7 @@ test('renders each metric group from its own metric status', async () => {
         .toBeInTheDocument();
     fireEvent.mouseOver(within(raft).getByText('Unsupported'));
     expect(await screen.findByText(
-        'Upgrade HugeGraph to a version that provides this metric.'
+        'Upgrade HugeGraph to a version that provides this metric'
     )).toBeInTheDocument();
 
     const backend = screen.getByRole('heading', {name: 'Backend'}).closest('section');
@@ -428,5 +428,5 @@ test('presents native metric labels, units and capacity instead of raw keys', as
     expect(capacity.some(item => item.getAttribute('aria-valuenow') === '98')).toBe(true);
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.getByText('98%')).toBeInTheDocument();
-    expect(screen.getByText(/222.6 GiB \/ 228.3 GiB/)).toBeInTheDocument();
+    expect(screen.getByText(/222.6 GB \/ 228.3 GB/)).toBeInTheDocument();
 });

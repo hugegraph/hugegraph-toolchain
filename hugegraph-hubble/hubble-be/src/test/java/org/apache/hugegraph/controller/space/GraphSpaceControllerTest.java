@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -236,6 +237,38 @@ public class GraphSpaceControllerTest {
         Assert.assertEquals(6, graphSpace.getComputeCpuLimit());
         Assert.assertEquals(7, graphSpace.getComputeMemoryLimit());
         Assert.assertEquals(8, graphSpace.getStorageLimit());
+    }
+
+    @Test
+    public void testCreateUsesHubbleAuthenticationMode() throws Exception {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        UserService userService = Mockito.mock(UserService.class);
+        GraphSpaceService graphSpaceService = Mockito.mock(
+                                                GraphSpaceService.class);
+        TestGraphSpaceController controller = controller(
+                                              client, userService,
+                                              graphSpaceService);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(authMode.enabled()).thenReturn(true);
+        Mockito.when(userService.isSuperAdmin(client)).thenReturn(true);
+        ReflectionTestUtils.setField(controller, "authMode", authMode);
+
+        GraphSpaceEntity graphSpace = new GraphSpaceEntity();
+        graphSpace.setName("secured");
+        graphSpace.setAuth(false);
+        Mockito.when(graphSpaceService.getWithAdmins(client, "secured"))
+               .thenReturn(graphSpace);
+        Mockito.when(graphSpaceService.toView(graphSpace))
+               .thenReturn(java.util.Collections.singletonMap("name",
+                                                               "secured"));
+
+        controller.add(graphSpace);
+
+        ArgumentCaptor<GraphSpace> created =
+                ArgumentCaptor.forClass(GraphSpace.class);
+        Mockito.verify(graphSpaceService).create(Mockito.eq(client),
+                                                 created.capture());
+        Assert.assertTrue(created.getValue().isAuth());
     }
 
     @Test

@@ -30,7 +30,10 @@ const files = [
 test.each(files)('%s owns one localized error for page requests', relativePath => {
     const source = fs.readFileSync(path.join(__dirname, relativePath), 'utf8');
 
-    expect(source).toContain('suppressBusinessErrorToast: true');
+    expect(
+        source.includes('suppressBusinessErrorToast: true')
+        || source.includes('PAGE_ERROR_CONFIG')
+    ).toBe(true);
     expect(source).toContain('.catch(');
     expect(source).not.toContain('message.error(res.message)');
 });

@@ -56,6 +56,22 @@ const selectAttentionNodes = (nodes = [], limit = 5) => {
         .slice(0, limit);
 };
 
+const selectAttentionSources = (sources = {}) => {
+    if (!sources || typeof sources !== 'object') {
+        return [];
+    }
+    return Object.entries(sources)
+        .filter(([, source]) => {
+            if (!source || source.availability === 'UNSUPPORTED') {
+                return false;
+            }
+            return source.status && source.status !== 'UP'
+                || source.availability && source.availability !== 'AVAILABLE'
+                || source.stale === true;
+        })
+        .map(([name, source]) => ({name, ...source}));
+};
+
 const selectTierNodes = (nodes = [], type, limit = 3) => {
     const tier = nodes
         .filter(node => node.type === type)
@@ -100,7 +116,7 @@ const isBigNumber = value => value !== null
     && typeof value.toNumber === 'function';
 
 const formatBytes = value => {
-    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB'];
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
     if (value === null || value === undefined || value === '') {
         return null;
     }
@@ -177,6 +193,7 @@ const formatObservedAge = (value, locale, unavailable, now = Date.now()) => {
 export {
     selectTierNodes,
     selectAttentionNodes,
+    selectAttentionSources,
     hasStaleMetrics,
     hasMetricIssues,
     metricIssueReason,

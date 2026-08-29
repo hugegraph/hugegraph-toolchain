@@ -224,10 +224,15 @@ public abstract class BaseController {
             return this.authClient(graphSpace, graph);
         }
 
+        HugeClient bearerClient = this.authClient(graphSpace, graph);
+        if (!bearerClient.requiresBasicGremlinAuth()) {
+            return bearerClient;
+        }
+
         HttpServletRequest request = this.getRequest();
         HttpSession session = request.getSession(false);
         if (session == null) {
-            return this.authClient(graphSpace, graph);
+            return bearerClient;
         }
 
         String username = (String) session.getAttribute(Constant.USERNAME_KEY);
@@ -235,7 +240,7 @@ public abstract class BaseController {
         String password = this.validSessionPassword(session);
         if (!StringUtils.hasText(username) || !StringUtils.hasText(token) ||
             !StringUtils.hasText(password)) {
-            return this.authClient(graphSpace, graph);
+            return bearerClient;
         }
 
         Object existing = request.getAttribute("hugeClient");

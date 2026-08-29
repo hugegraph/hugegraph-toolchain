@@ -81,10 +81,8 @@ const getPresetSpaces = account => {
         : [];
 };
 
-const getAccountPresetLabelKey = (account, permissionPresetsSupported) => {
-    if (!permissionPresetsSupported
-        && !account?.is_superadmin
-        && getPresetSpaces(account).length === 0) {
+const getAccountPresetLabelKey = account => {
+    if (!account?.is_superadmin && getPresetSpaces(account).length === 0) {
         return 'unassigned';
     }
     return getAccountPreset(account) ?? 'mixed';
