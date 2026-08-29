@@ -23,10 +23,8 @@ on:
 
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
-  # Server PR #3159 declares the GraphSpace default-role contract as API 0.72.
-  # TODO: After #3159 merges, switch these values to the stable upstream branch.
-  HUGEGRAPH_SERVER_GIT_URL: https://github.com/hugegraph/hugegraph.git
-  HUGEGRAPH_SERVER_BRANCH: cx/bump-server-api-version
+  HUGEGRAPH_SERVER_GIT_URL: https://github.com/apache/hugegraph.git
+  HUGEGRAPH_SERVER_BRANCH: master
 
 jobs:
   hubble-ci:
@@ -89,7 +87,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
-      - name: Resolve HugeGraph Server branch
+      - name: Resolve HugeGraph Server revision
         id: server-ref
         run: |
           SERVER_COMMIT="$(git ls-remote "$HUGEGRAPH_SERVER_GIT_URL" \
