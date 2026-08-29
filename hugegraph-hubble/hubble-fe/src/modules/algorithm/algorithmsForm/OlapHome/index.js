@@ -163,16 +163,12 @@ const OlapFormHome = props => {
     const shouldDisableForm = isVermeer
         ? graphStatus !== GRAPH_LOAD_STATUS.LOADED
         : computerAvailable !== true;
-    const capabilityTitle = isVermeer
-        ? 'analysis.algorithm.vermeer_unavailable_title'
-        : computerAvailable === false
-            ? 'analysis.algorithm.computer_unavailable_title'
-            : 'analysis.algorithm.computer_environment_title';
-    const capabilityDescription = isVermeer
-        ? 'analysis.algorithm.vermeer_unavailable_description'
-        : computerAvailable === false
-            ? 'analysis.algorithm.computer_unavailable_description'
-            : 'analysis.algorithm.computer_environment_description';
+    const capabilityTitle = computerAvailable === false
+        ? 'analysis.algorithm.computer_unavailable_title'
+        : 'analysis.algorithm.computer_environment_title';
+    const capabilityDescription = computerAvailable === false
+        ? 'analysis.algorithm.computer_unavailable_description'
+        : 'analysis.algorithm.computer_environment_description';
 
     return (
         <div>
@@ -181,15 +177,17 @@ const OlapFormHome = props => {
                     <Tooltip title={shouldDisableForm ? t(TEXT_PATH.ALGORITHM_COMMON + '.query_tooltip') : ''}>
                         <div className={c.algorithmCatagery}>{OLAP}</div>
                     </Tooltip>
-                    <Alert
-                        showIcon
-                        type={shouldDisableForm ? 'warning' : 'info'}
-                        message={t(capabilityTitle)}
-                        description={t(capabilityDescription)}
-                    />
+                    {!isVermeer && (
+                        <Alert
+                            showIcon
+                            type={shouldDisableForm ? 'warning' : 'info'}
+                            message={t(capabilityTitle)}
+                            description={t(capabilityDescription)}
+                        />
+                    )}
                 </>
             )}
-            {!isVermeer && computerAvailable === true && visibleGroups.map(group => (
+            {(isVermeer || computerAvailable === true) && visibleGroups.map(group => (
                 <div key={group.key}>
                     <div className={c.algorithmGoal}>
                         {t(`analysis.algorithm.group.${group.key}`)}

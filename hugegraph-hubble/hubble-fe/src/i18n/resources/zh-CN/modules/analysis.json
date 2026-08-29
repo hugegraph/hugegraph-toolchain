@@ -482,8 +482,6 @@
       "computer_environment_description": "这些全图算法通过 HugeGraph Computer 异步执行。提交任务前需先配置计算环境；部署要求 Kubernetes 时还需完成对应集群配置",
       "computer_unavailable_title": "HugeGraph Computer 暂不可用",
       "computer_unavailable_description": "当前图无法连接 HugeGraph Computer。请完成 Computer 与 Kubernetes 环境配置后再运行批量算法",
-      "vermeer_unavailable_title": "当前无法运行 Vermeer 计算",
-      "vermeer_unavailable_description": "当前 Hubble 版本无法安全提交 Vermeer 计算任务。请改用已配置的 HugeGraph Computer，或升级 Vermeer 集成后再运行批量算法",
       "task_submit_success": "{{name}} 算法任务提交成功",
       "common": {
         "instance_num": "实例数",
