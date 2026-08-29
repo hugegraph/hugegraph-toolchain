@@ -61,6 +61,13 @@ const NODE_TYPE_LABELS = {
 
 const displayNodeType = type => NODE_TYPE_LABELS[type] ?? type ?? '—';
 
+const displayTopologyNodeName = node => {
+    if (node?.type !== 'SERVER') {
+        return node?.name;
+    }
+    return node.name?.replace(/^HugeGraph Server\b/, 'Server');
+};
+
 const displayHealthStatus = (status, t) => (
     status === 'DEGRADED' ? t('operations.status_degraded') : status
 );
@@ -269,6 +276,7 @@ const nodeRoleLabel = (node, t) => {
 
 const TierNode = ({node, returnState}) => {
     const {t} = useTranslation();
+    const name = displayTopologyNodeName(node);
     return (
         <Link
             className={[
@@ -279,12 +287,12 @@ const TierNode = ({node, returnState}) => {
             ].filter(Boolean).join(' ')}
             to={`/operations/nodes/${node.id}`}
             state={returnState}
-            aria-label={`${node.type} ${node.name} ${nodeRoleLabel(node, t)} ${
+            aria-label={`${node.type} ${name} ${nodeRoleLabel(node, t)} ${
                 displayHealthStatus(node.status, t)}`}
         >
             <TierIcon type={node.type} />
             <span className='operations-node-copy'>
-                <strong>{node.name}</strong>
+                <strong>{name}</strong>
                 <span>
                     {node.type === 'PD' && node.role === 'LEADER' && (
                         <CrownOutlined

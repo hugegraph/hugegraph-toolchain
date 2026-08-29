@@ -48,6 +48,7 @@ import org.springframework.stereotype.Service;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.HugeClientPoolService;
 import org.apache.hugegraph.service.op.OperationsModels.Node;
 import org.apache.hugegraph.service.op.OperationsModels.MetricStatus;
 import org.apache.hugegraph.service.op.OperationsModels.Snapshot;
@@ -78,9 +79,11 @@ public class LiveOperationsCollector implements OperationsCollector {
     private final ExecutorService storeExecutor;
     private final int storeDeadlineMillis;
     private final Set<String> storeAllowedTargets;
+    private final ServerClientProvider serverClients;
 
     @Autowired
-    public LiveOperationsCollector(HugeConfig config, ObjectMapper mapper) {
+    public LiveOperationsCollector(HugeConfig config, ObjectMapper mapper,
+                                   HugeClientPoolService clientPool) {
         this(config.get(HubbleOptions.PD_ENABLED),
              pdBase(config.get(HubbleOptions.SERVER_PROTOCOL),
                     config.get(HubbleOptions.PD_SERVER)),
@@ -98,7 +101,8 @@ public class LiveOperationsCollector implements OperationsCollector {
              config.get(HubbleOptions.OPERATIONS_STORE_THREADS),
              config.get(HubbleOptions.OPERATIONS_STORE_DEADLINE),
              new java.util.LinkedHashSet<>(config.get(
-                     HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS)));
+                     HubbleOptions.OPERATIONS_STORE_ALLOWED_TARGETS)),
+             serverClients(clientPool));
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -108,7 +112,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                             OperationsPayloadParser parser, Clock clock) {
         this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
              storePassword, serverIdentity, http, parser, clock, 16, 5000,
-             defaultStoreAllowedTargets());
+             defaultStoreAllowedTargets(), null);
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -119,7 +123,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                             int storeThreads, int storeDeadlineMillis) {
         this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
              storePassword, serverIdentity, http, parser, clock, storeThreads,
-             storeDeadlineMillis, defaultStoreAllowedTargets());
+             storeDeadlineMillis, defaultStoreAllowedTargets(), null);
     }
 
     LiveOperationsCollector(boolean pdEnabled, String pdBase,
@@ -129,6 +133,19 @@ public class LiveOperationsCollector implements OperationsCollector {
                             OperationsPayloadParser parser, Clock clock,
                             int storeThreads, int storeDeadlineMillis,
                             Set<String> storeAllowedTargets) {
+        this(pdEnabled, pdBase, pdUsername, pdPassword, storeUsername,
+             storePassword, serverIdentity, http, parser, clock, storeThreads,
+             storeDeadlineMillis, storeAllowedTargets, null);
+    }
+
+    LiveOperationsCollector(boolean pdEnabled, String pdBase,
+                            String pdUsername, String pdPassword,
+                            String storeUsername, String storePassword,
+                            String serverIdentity, OperationsHttpClient http,
+                            OperationsPayloadParser parser, Clock clock,
+                            int storeThreads, int storeDeadlineMillis,
+                            Set<String> storeAllowedTargets,
+                            ServerClientProvider serverClients) {
         if (storeThreads <= 0 || storeDeadlineMillis <= 0) {
             throw new IllegalArgumentException(
                       "Store metric collection limits must be positive");
@@ -140,6 +157,7 @@ public class LiveOperationsCollector implements OperationsCollector {
         this.storeUsername = storeUsername;
         this.storePassword = storePassword;
         this.serverIdentity = serverIdentity;
+        this.serverClients = serverClients;
         this.http = http;
         this.parser = parser;
         this.clock = clock;
@@ -192,43 +210,176 @@ public class LiveOperationsCollector implements OperationsCollector {
     private void collectServer(HugeClient client, boolean includeMetrics,
                                long now, Map<String, SourceStatus> sources,
                                List<Node> nodes) {
+        List<String> urls = this.discoveredServerURLs();
+        if (urls.isEmpty()) {
+            this.collectSingleServer(client, this.serverIdentity,
+                                     "HugeGraph Server", includeMetrics, now,
+                                     sources, nodes);
+            return;
+        }
+        int up = 0;
+        boolean partial = false;
+        String reason = null;
+        String authContext = client.getAuthContext();
+        List<Future<ServerResult>> futures;
         try {
-            String version = client.versionManager().getCoreVersion();
-            Map<String, Object> metrics = Collections.emptyMap();
-            Map<String, MetricStatus> metricStatuses = Collections.emptyMap();
-            String availability = "AVAILABLE";
-            String reason = null;
-            if (includeMetrics) {
-                metrics = new LinkedHashMap<>();
-                metricStatuses = new LinkedHashMap<>();
-                try {
-                    Map<String, Object> system = this.safeSystemMetrics(
-                                                 client.metrics().system());
-                    metrics.put("system", system);
-                    metricStatuses.put("system", availableMetric(now));
-                } catch (RuntimeException e) {
-                    availability = "PARTIAL";
-                    reason = metricReason(e);
-                    metricStatuses.put("system", metricStatus(e, now, false));
-                }
-                try {
-                    metrics.put("backend", this.safeBackendMetrics(
-                                client.metrics().backend()));
-                    metricStatuses.put("backend", availableMetric(now));
-                } catch (RuntimeException e) {
-                    availability = "PARTIAL";
-                    reason = mergeReason(reason, metricReason(e));
-                    metricStatuses.put("backend", metricStatus(e, now, false));
-                }
+            futures = this.storeExecutor.invokeAll(
+                    urls.stream().map(url ->
+                            (java.util.concurrent.Callable<ServerResult>) () ->
+                            this.collectDiscoveredServer(
+                                 url, authContext, includeMetrics, now))
+                        .collect(Collectors.toList()),
+                    this.storeDeadlineMillis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            sources.put("server", unavailable("upstream_interrupted", now));
+            return;
+        }
+        for (int i = 0; i < urls.size(); i++) {
+            ServerResult result;
+            String url = urls.get(i);
+            try {
+                result = futures.get(i).get();
+            } catch (CancellationException e) {
+                result = ServerResult.failure(url, now, "upstream_deadline");
+            } catch (ExecutionException e) {
+                result = ServerResult.failure(url, now,
+                                              "upstream_unavailable");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                result = ServerResult.failure(url, now,
+                                              "upstream_interrupted");
             }
-            String id = stableId("server", this.serverIdentity);
-            nodes.add(new Node(id, "SERVER", "HugeGraph Server", null,
-                               version, "UP", now, metrics, metricStatuses));
-            sources.put("server", new SourceStatus(availability, "UP", now,
-                                                    now, true, false, reason));
+            nodes.add(result.getNode());
+            if ("UP".equals(result.getNode().getStatus())) {
+                up++;
+            }
+            if (result.isPartial()) {
+                partial = true;
+                reason = mergeServerReason(reason, result.getReason());
+            }
+        }
+        String status = up == urls.size() ? "UP" :
+                        up == 0 ? "DOWN" : "DEGRADED";
+        String availability = up == 0 ? "UNAVAILABLE" :
+                              partial ? "PARTIAL" : "AVAILABLE";
+        sources.put("server", new SourceStatus(
+                    availability, status, now, up > 0 ? now : null,
+                    up > 0 && !partial, false, reason));
+    }
+
+    private ServerResult collectDiscoveredServer(String url,
+                                                  String authContext,
+                                                  boolean includeMetrics,
+                                                  long now) {
+        HugeClient server = null;
+        try {
+            server = this.serverClients.create(
+                     url, authContext,
+                     Math.max(1, this.storeDeadlineMillis / 1000));
+            return this.serverResult(
+                   server, url, serverName(url), includeMetrics, now);
+        } catch (RuntimeException e) {
+            return ServerResult.failure(url, now, metricReason(e));
+        } finally {
+            if (server != null) {
+                server.close();
+            }
+        }
+    }
+
+    private List<String> discoveredServerURLs() {
+        if (!this.pdEnabled || this.serverClients == null) {
+            return Collections.emptyList();
+        }
+        return this.serverClients.urls().stream()
+                .filter(url -> url != null && !url.trim().isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private static ServerClientProvider serverClients(
+            HugeClientPoolService clientPool) {
+        return new ServerClientProvider() {
+            @Override
+            public List<String> urls() {
+                return clientPool.discoveredServerURLs();
+            }
+
+            @Override
+            public HugeClient create(String url, String authContext,
+                                     int timeout) {
+                return clientPool.createDiscoveredServerClient(
+                       url, authContext, timeout);
+            }
+        };
+    }
+
+    private void collectSingleServer(HugeClient client, String identity,
+                                     String name, boolean includeMetrics,
+                                     long now,
+                                     Map<String, SourceStatus> sources,
+                                     List<Node> nodes) {
+        try {
+            ServerResult result = this.serverResult(client, identity, name,
+                                                    includeMetrics, now);
+            nodes.add(result.getNode());
+            sources.put("server", new SourceStatus(
+                        result.isPartial() ? "PARTIAL" : "AVAILABLE",
+                        "UP", now, now, !result.isPartial(), false,
+                        result.getReason()));
         } catch (RuntimeException e) {
             sources.put("server", unavailable("upstream_unavailable", now));
         }
+    }
+
+    private ServerResult serverResult(HugeClient client, String identity,
+                                      String name, boolean includeMetrics,
+                                      long now) {
+        String version = client.versionManager().getCoreVersion();
+        Map<String, Object> metrics = Collections.emptyMap();
+        Map<String, MetricStatus> metricStatuses = Collections.emptyMap();
+        boolean partial = false;
+        String reason = null;
+        if (includeMetrics) {
+            metrics = new LinkedHashMap<>();
+            metricStatuses = new LinkedHashMap<>();
+            try {
+                Map<String, Object> system = this.safeSystemMetrics(
+                                             client.metrics().system());
+                metrics.put("system", system);
+                metricStatuses.put("system", availableMetric(now));
+            } catch (RuntimeException e) {
+                partial = true;
+                reason = metricReason(e);
+                metricStatuses.put("system", metricStatus(e, now, false));
+            }
+            try {
+                metrics.put("backend", this.safeBackendMetrics(
+                            client.metrics().backend()));
+                metricStatuses.put("backend", availableMetric(now));
+            } catch (RuntimeException e) {
+                partial = true;
+                reason = mergeServerReason(reason, metricReason(e));
+                metricStatuses.put("backend", metricStatus(e, now, false));
+            }
+        }
+        Node node = new Node(stableId("server", identity), "SERVER", name,
+                             null, version, "UP", now, metrics,
+                             metricStatuses);
+        return new ServerResult(node, partial, reason);
+    }
+
+    private static String mergeServerReason(String current, String addition) {
+        if (current == null || current.equals(addition)) {
+            return addition;
+        }
+        return "server_metrics_partial";
+    }
+
+    private static String serverName(String url) {
+        return "HugeGraph Server " +
+               stableId("server", url).substring("server-".length());
     }
 
     private void collectPd(boolean includeMetrics, long now,
@@ -259,11 +410,8 @@ public class LiveOperationsCollector implements OperationsCollector {
                                                               now);
                 this.mergeNodes(nodes, topology.getNodes());
                 facts.putAll(topology.getFacts());
-                pdStatus = available(this.moreSevereStatus(
-                                     topology.getStatus(),
-                                     this.nodeStatus(topology.getNodes(), "PD")),
-                                     now,
-                                     topology.getReason());
+                pdStatus = available(this.nodeStatus(topology.getNodes(), "PD"),
+                                     now);
                 clusterParsed = true;
             } catch (MalformedUpstreamException e) {
                 pdStatus = malformed(now);
@@ -289,6 +437,9 @@ public class LiveOperationsCollector implements OperationsCollector {
         if (includeMetrics && storesParsed) {
             storesStatus = this.collectStoreMetrics(stores, now, storesStatus,
                                                      nodes);
+            storesStatus = withStatus(storesStatus,
+                                      this.nodeStatus(nodes, "STORE"));
+            this.reconcileStoreFacts(nodes, facts);
         } else if (includeMetrics) {
             this.applyStoreMetricStatus(nodes, this.metricStatus(storesStatus,
                                                                  now));
@@ -319,19 +470,6 @@ public class LiveOperationsCollector implements OperationsCollector {
             return "DOWN";
         }
         return "DEGRADED";
-    }
-
-    private String moreSevereStatus(String first, String second) {
-        if ("DOWN".equals(first) || "DOWN".equals(second)) {
-            return "DOWN";
-        }
-        if ("DEGRADED".equals(first) || "DEGRADED".equals(second)) {
-            return "DEGRADED";
-        }
-        if ("UNKNOWN".equals(first) || "UNKNOWN".equals(second)) {
-            return "UNKNOWN";
-        }
-        return "UP";
     }
 
     private void reconcileStoreFacts(List<Node> nodes,
@@ -576,8 +714,17 @@ public class LiveOperationsCollector implements OperationsCollector {
                 statuses.put(group, metricStatus(e, now, true));
             }
         }
-        return new StoreMetricResult(copyNode(job.getNode(), metrics, statuses),
-                                     successfulGroups, failureReason);
+        Node node = copyNode(job.getNode(), metrics, statuses);
+        if (successfulGroups == 0 && directStoreFailure(failureReason)) {
+            node = copyNodeWithStatus(node, "DOWN");
+        }
+        return new StoreMetricResult(node, successfulGroups, failureReason);
+    }
+
+    private static boolean directStoreFailure(String reason) {
+        return "upstream_unavailable".equals(reason) ||
+               "upstream_timeout".equals(reason) ||
+               "upstream_deadline".equals(reason);
     }
 
     private static StoreTarget storeTarget(String nodeId,
@@ -693,6 +840,21 @@ public class LiveOperationsCollector implements OperationsCollector {
         return new Node(node.getId(), node.getType(), node.getName(),
                         node.getRole(), node.getVersion(), node.getStatus(),
                         node.getObservedAt(), metrics, statuses);
+    }
+
+    private static Node copyNodeWithStatus(Node node, String status) {
+        return new Node(node.getId(), node.getType(), node.getName(),
+                        node.getRole(), node.getVersion(), status,
+                        node.getObservedAt(), node.getMetrics(),
+                        node.getMetricStatuses());
+    }
+
+    private static SourceStatus withStatus(SourceStatus source,
+                                           String status) {
+        return new SourceStatus(source.getAvailability(), status,
+                                source.getObservedAt(),
+                                source.getLastSuccessAt(), source.isFresh(),
+                                source.isStale(), source.getReason());
     }
 
     private String get(String path) {
@@ -833,6 +995,47 @@ public class LiveOperationsCollector implements OperationsCollector {
             return "upstream_rejected";
         }
         return "upstream_unavailable";
+    }
+
+    private static final class ServerResult {
+
+        private final Node node;
+        private final boolean partial;
+        private final String reason;
+
+        private ServerResult(Node node, boolean partial, String reason) {
+            this.node = node;
+            this.partial = partial;
+            this.reason = reason;
+        }
+
+        private Node getNode() {
+            return this.node;
+        }
+
+        private boolean isPartial() {
+            return this.partial;
+        }
+
+        private String getReason() {
+            return this.reason;
+        }
+
+        private static ServerResult failure(String url, long now,
+                                            String reason) {
+            Node node = new Node(stableId("server", url), "SERVER",
+                                 serverName(url), null, null, "DOWN", now,
+                                 Collections.emptyMap(),
+                                 Collections.emptyMap());
+            return new ServerResult(node, true, reason);
+        }
+    }
+
+    interface ServerClientProvider {
+
+        List<String> urls();
+
+        HugeClient create(String url, String authContext, int timeout);
     }
 
     private static final class StoreTarget {
