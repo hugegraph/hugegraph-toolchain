@@ -197,6 +197,29 @@ test('keeps the graph card actions including example datasets', async () => {
     expect(within(menu).getByText('graph.menu.clone')).toBeInTheDocument();
 });
 
+test('disables graph deletion when the server cannot manage graphs', async () => {
+    sessionStorage.setItem('hubble_config_', JSON.stringify({
+        pd_enabled: false,
+        graph_create_enabled: false,
+    }));
+
+    render(<Graph />);
+
+    const menu = await screen.findByTestId('graph-card-menu');
+    expect(within(menu).getByText('common.action.delete')
+        .closest('[role="menuitem"]')).toHaveAttribute(
+        'aria-disabled', 'true'
+    );
+
+    fireEvent.click(screen.getByLabelText('common.label.list_mode'));
+    await waitFor(() => {
+        expect(screen.getAllByText('common.action.delete')
+            .some(element => element.tagName === 'SPAN')).toBe(true);
+    });
+    expect(screen.queryByText('graph.delete_confirm.title'))
+        .not.toBeInTheDocument();
+});
+
 test('disables example dataset writes for the protected built-in graphspace', async () => {
     api.manage.getGraphList.mockResolvedValue({
         status: 200,

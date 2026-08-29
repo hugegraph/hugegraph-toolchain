@@ -97,6 +97,10 @@ const getSpaceMembers = (graphspace, params, config = {}) => {
     return request.get(scopedAuthPath(graphspace, 'users'), {...config, params});
 };
 
+const getSpaceAccount = (graphspace, id, config = {}) => {
+    return request.get(scopedAuthPath(graphspace, 'users', id), config);
+};
+
 const getSpaceAdmins = (graphspace, params, config = {}) => {
     return request.get(scopedAuthPath(graphspace, 'users/spaceadmin'), {...config, params});
 };
@@ -181,6 +185,7 @@ const deleteSpaceAccess = (graphspace, roleId, targetId, config) => {
 
 export {
     getSpaceMembers,
+    getSpaceAccount,
     getSpaceAdmins,
     setSpaceAdmin,
     removeSpaceAdmin,

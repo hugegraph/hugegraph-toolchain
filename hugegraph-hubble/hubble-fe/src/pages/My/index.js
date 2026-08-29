@@ -30,6 +30,8 @@ import {
     clearPersistedAlgorithmFormsForUser,
 } from '../../modules/algorithm/algorithmsForm/algorithmFormPersistence';
 
+const PASSWORD_CHANGED_LOGIN_PATH = '/login?notice=credential-updated';
+
 const My = () => {
     const {t} = useTranslation();
     const {context} = useAuthContext();
@@ -80,12 +82,11 @@ const My = () => {
             setLoading(true);
             const res = await api.auth.updatePwd(data.user_name, old_password, user_password);
             if (res.status === 200) {
-                message.success(t('my.edit.password_changed_relogin'));
                 user.beginLogoutTransition();
                 sessionStorage.removeItem('redirect');
                 clearPersistedAlgorithmFormsForUser();
                 user.clearLogin();
-                window.location.replace('/login');
+                window.location.replace(PASSWORD_CHANGED_LOGIN_PATH);
                 return;
             }
 
@@ -97,7 +98,7 @@ const My = () => {
         finally {
             setLoading(false);
         }
-    }, [data.user_name, form, t]);
+    }, [data.user_name, form]);
 
     const handleChange = useCallback(() => {
         setChangePass(true);

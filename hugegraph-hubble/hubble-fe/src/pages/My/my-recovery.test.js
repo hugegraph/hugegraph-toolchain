@@ -305,5 +305,7 @@ test('clears local auth and redirects only after the password update succeeds', 
     expect(user.beginLogoutTransition).toHaveBeenCalledTimes(1);
     expect(clearPersistedAlgorithmFormsForUser).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('redirect')).toBeNull();
-    expect(window.location.replace).toHaveBeenCalledWith('/login');
+    expect(sessionStorage.getItem('hubble.login_notice')).toBeNull();
+    expect(window.location.replace)
+        .toHaveBeenCalledWith('/login?notice=credential-updated');
 });

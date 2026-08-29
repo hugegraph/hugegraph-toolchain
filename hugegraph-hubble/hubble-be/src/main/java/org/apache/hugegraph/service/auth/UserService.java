@@ -238,7 +238,7 @@ public class UserService extends AuthService {
         User newUser = client.auth().createUser(user);
         boolean superAdminAttempted = false;
         try {
-            if (permissionPresets) {
+            if (permissionPresets && ue.getPermissionPreset() != null) {
                 this.graphSpaceUserService
                     .applyPermissionPresetsForNewAccount(
                         client, ue.getName(),
@@ -523,7 +523,10 @@ public class UserService extends AuthService {
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        return hasCurrentUserObserverRole(client, graphSpace);
+        if (hasCurrentUserObserverRole(client, graphSpace)) {
+            return true;
+        }
+        return client.auth().isSpaceMember(graphSpace);
     }
 
     private static boolean hasCurrentUserObserverRole(HugeClient client,
@@ -692,10 +695,6 @@ public class UserService extends AuthService {
         }
         String preset = user.getPermissionPreset();
         if (preset == null) {
-            if (create) {
-                throw new ParameterizedException(
-                          "auth.permission-preset.account-required");
-            }
             return;
         }
         if (!create && user.getPassword() != null &&
@@ -708,8 +707,17 @@ public class UserService extends AuthService {
             throw new ParameterizedException(
                       "auth.permission-preset.superadmin-mismatch");
         }
-        this.graphSpaceUserService.validatePermissionPresets(
-                client, user.getGraphspacePermissions(), preset);
+        boolean unassignedDemotion = !create &&
+                                     "GS_READ_ONLY".equals(preset) &&
+                                     (user.getGraphspacePermissions() == null ||
+                                      user.getGraphspacePermissions().isEmpty()) &&
+                                     user.hasSuperadmin() &&
+                                     !user.isSuperadmin() &&
+                                     this.isSuperAdmin(client, user.getId());
+        if (!unassignedDemotion) {
+            this.graphSpaceUserService.validatePermissionPresets(
+                    client, user.getGraphspacePermissions(), preset);
+        }
     }
 
     public void updatePersonal(HugeClient hugeClient, String username,

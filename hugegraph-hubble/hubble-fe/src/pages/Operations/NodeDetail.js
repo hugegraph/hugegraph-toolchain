@@ -58,7 +58,7 @@ const metricLabel = (key, t) => t(`operations.metric_labels.${key}`, {
 });
 
 const formatBytes = value => {
-    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let size = Number(value);
     if (!Number.isFinite(size)) {
         return null;
@@ -90,7 +90,7 @@ const formatUnitValue = (value, unit) => {
     }
     if (normalized === 'MB' && Math.abs(amount) >= 1024) {
         return `${new Intl.NumberFormat(undefined, {maximumFractionDigits: 1})
-            .format(amount / 1024)} GiB`;
+            .format(amount / 1024)} GB`;
     }
     return `${new Intl.NumberFormat(undefined, {maximumFractionDigits: 1}).format(amount)}`
         + `${normalized ? ` ${normalized}` : ''}`;

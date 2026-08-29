@@ -93,8 +93,9 @@ public class OperationsPayloadParser {
         this.putKilobytesAsBytes(facts, "data_size_bytes",
                                  cluster.get("dataSize"));
         this.putCapacityFacts(facts, storeNodes.values());
-        return new Topology(this.clusterStatus(this.text(cluster, "state")),
-                            nodes, facts);
+        String clusterState = this.text(cluster, "state");
+        return new Topology(this.clusterStatus(clusterState),
+                            this.clusterReason(clusterState), nodes, facts);
     }
 
     public Map<String, String> parseStoreHosts(String storesPayload) {
@@ -585,6 +586,36 @@ public class OperationsPayloadParser {
                 return "DOWN";
             default:
                 return "UNKNOWN";
+        }
+    }
+
+    private String clusterReason(String state) {
+        if (state == null) {
+            return "cluster_state_missing";
+        }
+        String value = state.toUpperCase(Locale.ROOT);
+        switch (value) {
+            case "CLUSTER_OK":
+            case "OK":
+            case "UP":
+                return null;
+            case "CLUSTER_WARN":
+            case "WARN":
+            case "WARNING":
+            case "DEGRADED":
+                return "cluster_warn";
+            case "CLUSTER_NOT_READY":
+            case "NOT_READY":
+                return "cluster_not_ready";
+            case "CLUSTER_OFFLINE":
+            case "OFFLINE":
+                return "cluster_offline";
+            case "CLUSTER_FAULT":
+            case "FAULT":
+            case "DOWN":
+                return "cluster_fault";
+            default:
+                return "cluster_state_unknown";
         }
     }
 

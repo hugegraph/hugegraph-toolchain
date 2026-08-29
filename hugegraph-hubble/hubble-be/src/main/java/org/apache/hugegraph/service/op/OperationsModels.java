@@ -160,18 +160,29 @@ public final class OperationsModels {
     public static final class Topology {
 
         private final String status;
+        private final String reason;
         private final List<Node> nodes;
         private final Map<String, Long> facts;
 
         public Topology(String status, List<Node> nodes,
                         Map<String, Long> facts) {
+            this(status, null, nodes, facts);
+        }
+
+        public Topology(String status, String reason, List<Node> nodes,
+                        Map<String, Long> facts) {
             this.status = status;
+            this.reason = reason;
             this.nodes = Collections.unmodifiableList(nodes);
             this.facts = Collections.unmodifiableMap(facts);
         }
 
         public String getStatus() {
             return this.status;
+        }
+
+        public String getReason() {
+            return this.reason;
         }
 
         public List<Node> getNodes() {

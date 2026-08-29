@@ -19,6 +19,7 @@
 import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {MemoryRouter} from 'react-router-dom';
+import {message} from 'antd';
 import Login from './index';
 import * as api from '../../api';
 import enPages from '../../i18n/resources/en-US/modules/pages.json';
@@ -237,4 +238,41 @@ describe('Login request errors', () => {
             .toHaveBeenCalledWith('/navigation'));
         expect(sessionStorage.getItem('redirect')).toBeNull();
     });
+});
+
+test('shows and consumes the password-change relogin notice', async () => {
+    window.matchMedia = jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+    }));
+    const success = jest.spyOn(message, 'success').mockImplementation(() => {});
+    const replaceState = jest.spyOn(window.history, 'replaceState')
+        .mockImplementation(() => {});
+
+    render(
+        <MemoryRouter
+            initialEntries={[
+                '/login?notice=credential-updated&redirect=%2Fnavigation',
+            ]}
+            future={{
+                v7_relativeSplatPath: true,
+                v7_startTransition: true,
+            }}
+        >
+            <Login />
+        </MemoryRouter>
+    );
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith(
+        'my.edit.password_changed_relogin'
+    ));
+    expect(replaceState).toHaveBeenCalledWith(
+        window.history.state,
+        '',
+        '/login?redirect=%2Fnavigation'
+    );
+    success.mockRestore();
+    replaceState.mockRestore();
 });

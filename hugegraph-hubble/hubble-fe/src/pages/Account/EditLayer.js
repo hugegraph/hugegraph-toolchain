@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Alert, Modal, Input, Form, Select, message, Spin} from 'antd';
+import {Alert, Modal, Input, Form, message, Spin, Switch} from 'antd';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
@@ -26,29 +26,20 @@ import FormHelpLabel from '../../components/FormHelpLabel';
 import {accountErrorMessage} from './accountError';
 import {useAuthContext} from '../../auth/AuthContext';
 import {
-    getAccountPreset,
     getAccountPresetLabelKey,
     getPresetSpaces,
     PERMISSION_PRESETS,
     toPermissionPayload,
 } from './permissionPresets';
-import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
+import {PAGE_ERROR_CONFIG} from './pagedRecords';
 
-const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true, auth: true};
-const PRESERVE_PERMISSIONS = 'PRESERVE_PERMISSIONS';
-const permissionPresetChanged = (prev, next) => prev.permission_preset !== next.permission_preset;
+const DEFAULT_ALLOWED_OPERATIONS = {create: true, edit: true};
 const toProfilePayload = values => ({
     user_name: values.user_name,
     user_nickname: values.user_nickname,
     user_password: values.user_password,
     user_description: values.user_description,
 });
-const sameSpaces = (left = [], right = []) => (
-    [...left].sort().join('\u0000') === [...right].sort().join('\u0000')
-);
-
-const loadAllGraphspaces = () => loadAllPages(api.manage.getGraphSpaceList);
-
 const HelpLabel = ({t, labelKey}) => (
     <FormHelpLabel
         label={t(labelKey)}
@@ -62,12 +53,12 @@ const EditLayer = ({
     data,
     op,
     refresh,
+    onCreated,
     allowedOperations = DEFAULT_ALLOWED_OPERATIONS,
 }) => {
     const {t} = useTranslation();
     const {context} = useAuthContext();
     const [form] = Form.useForm();
-    const [graphspaceList, setGraphspaceList] = useState([]);
     const [detail, setDetail] = useState({});
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -76,51 +67,47 @@ const EditLayer = ({
     const detailRequest = useRef(0);
     const permissionPresetsSupported = !context
         || context.capabilities?.includes('account_permission_presets');
-    const permissionFieldsVisible = permissionPresetsSupported
-        && ['create', 'edit'].includes(op);
-    const preservesMixedPermissions = op === 'edit'
-        && getAccountPreset(detail) === null;
-    const presetOptions = [
-        ...(preservesMixedPermissions ? [PRESERVE_PERMISSIONS] : []),
-        ...Object.values(PERMISSION_PRESETS),
-    ];
 
     const title = {
         'detail': t('account.form.title_detail'),
         'edit': t('account.form.title_edit'),
-        'auth': t('account.form.title_auth'),
         'create': t('account.form.title_create'),
     };
 
     const createUser = useCallback(values => {
-        const payload = permissionPresetsSupported
-            ? toPermissionPayload(values)
-            : toProfilePayload(values);
+        const profile = toProfilePayload(values);
+        const payload = values.is_superadmin
+            ? toPermissionPayload({
+                ...profile,
+                permission_preset: PERMISSION_PRESETS.SUPER_ADMIN,
+            })
+            : profile;
         return api.auth.addUser(payload, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.create_success'));
                 onCancel();
                 refresh();
+                onCreated?.({
+                    user_name: values.user_name,
+                    is_superadmin: values.is_superadmin,
+                });
                 return;
             }
             throw res;
         });
-    }, [onCancel, permissionPresetsSupported, refresh, t]);
+    }, [onCancel, onCreated, refresh, t]);
     const updateUser = useCallback(values => {
-        const initialPreset = getAccountPreset(detail) ?? PRESERVE_PERMISSIONS;
-        const permissionsChanged = permissionPresetsSupported
-                                   && (values.permission_preset !== initialPreset
-                                       || !sameSpaces(
-                                           values.graphspaces,
-                                           getPresetSpaces(detail)
-                                       ));
-        if (values.user_password && permissionsChanged) {
-            throw new Error(t('account.feedback.password_permission_separate'));
-        }
-        const payload = permissionsChanged
-                        && values.permission_preset !== PRESERVE_PERMISSIONS
-            ? toPermissionPayload(values)
-            : toProfilePayload(values);
+        const profile = toProfilePayload(values);
+        const superAdminChanged = permissionPresetsSupported
+            && Boolean(values.is_superadmin) !== Boolean(detail.is_superadmin);
+        const payload = superAdminChanged
+            ? toPermissionPayload({
+                ...profile,
+                permission_preset: values.is_superadmin
+                    ? PERMISSION_PRESETS.SUPER_ADMIN
+                    : PERMISSION_PRESETS.GS_READ_ONLY,
+            })
+            : profile;
         return api.auth.updateUser(data.id, payload, PAGE_ERROR_CONFIG).then(res => {
             if (res.status === 200) {
                 message.success(t('common.msg.update_success'));
@@ -132,25 +119,14 @@ const EditLayer = ({
 
             throw res;
         });
-    }, [onCancel, refresh, data.id, detail, permissionPresetsSupported, t]);
-
-    const updateUserAuth = useCallback(values => {
-        const payload = toPermissionPayload({
-            ...values,
-            permission_preset: PERMISSION_PRESETS.GS_ADMIN,
-        });
-        return api.auth.updateAdminspace(data.id, payload.adminSpaces, PAGE_ERROR_CONFIG).then(res => {
-            if (res.status === 200) {
-                message.success(t('common.msg.set_success'));
-                onCancel();
-                refresh();
-
-                return;
-            }
-
-            throw res;
-        });
-    }, [data.id, onCancel, refresh, t]);
+    }, [
+        data.id,
+        detail.is_superadmin,
+        onCancel,
+        permissionPresetsSupported,
+        refresh,
+        t,
+    ]);
 
     const onFinish = useCallback(async () => {
         if (submitPending.current || loading) {
@@ -170,9 +146,6 @@ const EditLayer = ({
                 await updateUser(values);
             }
 
-            if (op === 'auth') {
-                await updateUserAuth(values);
-            }
         }
         catch (error) {
             if (!error || !error.errorFields) {
@@ -187,13 +160,12 @@ const EditLayer = ({
             submitPending.current = false;
             setSubmitting(false);
         }
-    }, [createUser, form, loading, op, t, updateUser, updateUserAuth]);
+    }, [createUser, form, loading, op, t, updateUser]);
 
     useEffect(() => {
         if (!visible) {
             detailRequest.current += 1;
             setDetail({});
-            setGraphspaceList([]);
             setMutationError(null);
             form.resetFields();
             setLoading(false);
@@ -202,29 +174,6 @@ const EditLayer = ({
 
         const request = detailRequest.current + 1;
         detailRequest.current = request;
-        setGraphspaceList([]);
-        if (op !== 'detail' && (permissionPresetsSupported || op === 'auth')) {
-            loadAllGraphspaces().then(res => {
-                if (detailRequest.current !== request) {
-                    return;
-                }
-
-                if (res.status === 200) {
-                    setGraphspaceList(res.data.records.map(item => ({
-                        label: item.name,
-                        value: item.name,
-                    })));
-                    return;
-                }
-
-                message.error(t('common.msg.load_failed'));
-            }).catch(() => {
-                if (detailRequest.current === request) {
-                    message.error(t('common.msg.load_failed'));
-                }
-            });
-        }
-
         if (data.id) {
             setLoading(true);
             setDetail({});
@@ -236,13 +185,7 @@ const EditLayer = ({
 
                 if (res.status === 200) {
                     if (op !== 'detail') {
-                        form.setFieldsValue({
-                            ...res.data,
-                            permission_preset: getAccountPreset(res.data) ?? PRESERVE_PERMISSIONS,
-                            graphspaces: op === 'auth'
-                                ? (res.data?.adminSpaces ?? [])
-                                : getPresetSpaces(res.data),
-                        });
+                        form.setFieldsValue(res.data);
                     }
                     setDetail(res.data);
                     return;
@@ -270,7 +213,7 @@ const EditLayer = ({
             form.resetFields();
             setLoading(false);
         }
-    }, [visible, data.id, form, op, permissionPresetsSupported, t]);
+    }, [visible, data.id, form, op, t]);
 
     if (op !== 'detail' && !allowedOperations[op]) {
         return null;
@@ -334,22 +277,6 @@ const EditLayer = ({
                     width={600}
                 >
                     <Spin spinning={loading}>
-                        {!permissionPresetsSupported && ['create', 'edit'].includes(op) && (
-                            <Alert
-                                type='info'
-                                showIcon
-                                message={t(
-                                    op === 'create'
-                                        ? 'account.feedback.presets_unavailable'
-                                        : 'account.feedback.preset_edit_unavailable'
-                                )}
-                                description={t(
-                                    op === 'create'
-                                        ? 'account.feedback.presets_unavailable_help'
-                                        : 'account.feedback.preset_edit_unavailable_help'
-                                )}
-                            />
-                        )}
                         {mutationError && (
                             <Alert
                                 type='error'
@@ -397,81 +324,27 @@ const EditLayer = ({
                                             autoComplete="new-password"
                                         />
                                     </Form.Item>
-                                    {permissionFieldsVisible && (
-                                        <Form.Item
-                                            label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
-                                            name="permission_preset"
-                                            rules={[rules.required()]}
-                                        >
-                                            <Select
-                                                options={presetOptions.map(value => ({
-                                                    value,
-                                                    label: t(value === PRESERVE_PERMISSIONS
-                                                        ? 'account.permission_preset.preserve_mixed'
-                                                        : `account.permission_preset.${value}`),
-                                                }))}
-                                            />
-                                        </Form.Item>
-                                    )}
                                     <Form.Item
                                         label={<HelpLabel t={t} labelKey='account.form.remark' />}
                                         name="user_description"
                                     >
                                         <Input placeholder={t('account.form.remark_placeholder')} />
                                     </Form.Item>
-                                    {permissionFieldsVisible && (
+                                    {permissionPresetsSupported && (
                                         <Form.Item
-                                            noStyle
-                                            shouldUpdate={permissionPresetChanged}
-                                        >
-                                            {({getFieldValue}) => (
-                                                [
-                                                    PERMISSION_PRESETS.SUPER_ADMIN,
-                                                    PRESERVE_PERMISSIONS,
-                                                ].includes(
-                                                    getFieldValue('permission_preset')
-                                                )
-                                                    ? null
-                                                    : (
-                                                        <Form.Item
-                                                            label={(
-                                                                <HelpLabel
-                                                                    t={t}
-                                                                    labelKey='account.form.graphspaces'
-                                                                />
-                                                            )}
-                                                            name="graphspaces"
-                                                            rules={[rules.required()]}
-                                                        >
-                                                            <Select options={graphspaceList} mode="multiple" />
-                                                        </Form.Item>
-                                                    )
+                                            label={(
+                                                <HelpLabel
+                                                    t={t}
+                                                    labelKey='account.form.is_superadmin'
+                                                />
                                             )}
+                                            name="is_superadmin"
+                                            valuePropName="checked"
+                                            initialValue={false}
+                                        >
+                                            <Switch />
                                         </Form.Item>
                                     )}
-                                </>
-                            )}
-                            {op === 'auth' && (
-                                <>
-                                    <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.permission_preset' />}
-                                        name="permission_preset"
-                                        rules={[rules.required()]}
-                                    >
-                                        <Select
-                                            options={[PERMISSION_PRESETS.GS_ADMIN].map(value => ({
-                                                value,
-                                                label: t(`account.permission_preset.${value}`),
-                                            }))}
-                                        />
-                                    </Form.Item>
-                                    <Form.Item
-                                        label={<HelpLabel t={t} labelKey='account.form.graphspaces' />}
-                                        name="graphspaces"
-                                        rules={[rules.required()]}
-                                    >
-                                        <Select options={graphspaceList} mode="multiple" />
-                                    </Form.Item>
                                 </>
                             )}
                         </Form>

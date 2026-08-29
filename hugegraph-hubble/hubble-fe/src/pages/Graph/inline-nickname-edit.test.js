@@ -199,7 +199,8 @@ test('keeps a rejected PUT draft visible with an inline error', async () => {
     fireEvent.change(input, {target: {value: 'Keep draft'}});
     fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Nickname already exists');
+    expect(await screen.findByText('Nickname already exists'))
+        .toHaveAttribute('role', 'alert');
     expect(screen.getByRole('textbox', {name: 'graph.form.nickname'}))
         .toHaveValue('Keep draft');
     expect(screen.getAllByText('Nickname already exists')).toHaveLength(1);

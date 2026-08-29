@@ -41,6 +41,7 @@ public class BaseControllerGremlinClientTest {
     public void testGremlinClientUsesLegacyBasicCredentials() {
         HugeClient tokenClient = Mockito.mock(HugeClient.class);
         HugeClient basicClient = Mockito.mock(HugeClient.class);
+        Mockito.when(tokenClient.requiresBasicGremlinAuth()).thenReturn(true);
 
         MockHttpServletRequest request = this.requestWithAuth();
         request.setAttribute("hugeClient", tokenClient);
@@ -55,13 +56,16 @@ public class BaseControllerGremlinClientTest {
 
         Assert.assertSame(basicClient, client);
         Assert.assertSame(basicClient, request.getAttribute("hugeClient"));
-        Assert.assertFalse(controller.authClientCreated);
+        Assert.assertTrue(controller.authClientCreated);
+        Assert.assertEquals("DEFAULT", controller.graphSpace);
+        Assert.assertEquals("hugegraph", controller.graph);
         Mockito.verify(tokenClient).close();
     }
 
     @Test
     public void testGremlinClientFallsBackToAuthClientWithoutCredential() {
         HugeClient tokenClient = Mockito.mock(HugeClient.class);
+        Mockito.when(tokenClient.requiresBasicGremlinAuth()).thenReturn(true);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
@@ -79,6 +83,25 @@ public class BaseControllerGremlinClientTest {
         Assert.assertTrue(controller.authClientCreated);
         Assert.assertEquals("DEFAULT", controller.graphSpace);
         Assert.assertEquals("hugegraph", controller.graph);
+    }
+
+    @Test
+    public void testModernGremlinClientKeepsBearerWithCachedPassword() {
+        HugeClient tokenClient = Mockito.mock(HugeClient.class);
+        MockHttpServletRequest request = this.requestWithAuth();
+        request.setAttribute("hugeClient", tokenClient);
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+
+        TestController controller = new TestController();
+        controller.authClient = tokenClient;
+
+        HugeClient client = controller.gremlinClient("DEFAULT", "hugegraph");
+
+        Assert.assertSame(tokenClient, client);
+        Assert.assertSame(tokenClient, request.getAttribute("hugeClient"));
+        Mockito.verify(tokenClient, Mockito.never()).close();
+        Assert.assertNull(controller.basicClient);
     }
 
     @Test

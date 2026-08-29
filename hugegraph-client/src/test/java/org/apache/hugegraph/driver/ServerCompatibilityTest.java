@@ -63,5 +63,11 @@ public class ServerCompatibilityTest {
         Assert.assertEquals(ServerCompatibility.Profile.GRAPHSPACE,
                             ServerCompatibility.profile("1.7.0",
                                                         "not-a-version"));
+        Assert.assertFalse(ServerCompatibility.Profile.LEGACY
+                                              .requiresBasicGremlinAuth());
+        Assert.assertTrue(ServerCompatibility.Profile.GRAPHSPACE
+                                             .requiresBasicGremlinAuth());
+        Assert.assertFalse(ServerCompatibility.Profile.MODERN
+                                              .requiresBasicGremlinAuth());
     }
 }

@@ -94,21 +94,23 @@ public final class ServerCompatibility {
     }
 
     public enum Profile {
-        LEGACY(false, false, false, false),
-        GRAPHSPACE(true, true, false, false),
-        MODERN(true, true, true, true);
+        LEGACY(false, false, false, false, false),
+        GRAPHSPACE(true, true, false, false, true),
+        MODERN(true, true, true, true, false);
 
         private final boolean graphSpace;
         private final boolean cypher;
         private final boolean defaultRole;
         private final boolean personalProfileUpdate;
+        private final boolean basicGremlinAuth;
 
         Profile(boolean graphSpace, boolean cypher, boolean defaultRole,
-                boolean personalProfileUpdate) {
+                boolean personalProfileUpdate, boolean basicGremlinAuth) {
             this.graphSpace = graphSpace;
             this.cypher = cypher;
             this.defaultRole = defaultRole;
             this.personalProfileUpdate = personalProfileUpdate;
+            this.basicGremlinAuth = basicGremlinAuth;
         }
 
         public boolean supportsGraphSpace() {
@@ -125,6 +127,10 @@ public final class ServerCompatibility {
 
         public boolean supportsPersonalProfileUpdate() {
             return this.personalProfileUpdate;
+        }
+
+        public boolean requiresBasicGremlinAuth() {
+            return this.basicGremlinAuth;
         }
     }
 }

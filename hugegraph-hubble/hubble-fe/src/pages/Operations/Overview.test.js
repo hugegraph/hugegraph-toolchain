@@ -382,7 +382,7 @@ test('shows a bounded, failure-first list of nodes needing attention', async () 
 
     renderOverview();
 
-    const attention = await screen.findByRole('region', {name: 'Nodes needing attention'});
+    const attention = await screen.findByRole('region', {name: 'Items needing attention'});
     const rows = within(attention).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(5);
     expect(rows.map(row => row.textContent)).toEqual([
@@ -419,7 +419,7 @@ test('shows the recovery reason for unavailable Store metrics without stale copy
         renderOverview();
 
         const attention = await screen.findByRole('region', {
-            name: 'Nodes needing attention',
+            name: 'Items needing attention',
         });
         expect(within(attention).getByRole('img', {
             name: /operations\.store\.allowed_targets/,
@@ -449,7 +449,7 @@ test('keeps every failed source visible when the whole cluster is down', async (
     const sources = await screen.findByRole('region', {name: 'Source freshness'});
     expect(within(sources).getAllByText('DOWN')).toHaveLength(3);
     expect(within(sources).getAllByText('Unavailable')).toHaveLength(3);
-    expect(screen.getByRole('region', {name: 'Nodes needing attention'}))
+    expect(screen.getByRole('region', {name: 'Items needing attention'}))
         .toBeInTheDocument();
 });
 
@@ -494,6 +494,55 @@ test('shows a concise healthy state when no node needs attention', async () => {
     renderOverview();
 
     expect(await screen.findByText('All discovered nodes are healthy')).toBeInTheDocument();
+});
+
+test('explains PD cluster attention while keeping healthy nodes explicit', async () => {
+    getOverview.mockResolvedValue({
+        status: 'DEGRADED',
+        observed_at: 1000,
+        sources: {
+            server: {status: 'UP', availability: 'AVAILABLE'},
+            pd: {
+                status: 'DEGRADED',
+                availability: 'AVAILABLE',
+                reason: 'cluster_not_ready',
+            },
+            stores: {status: 'UP', availability: 'AVAILABLE'},
+        },
+        facts: {},
+        nodes: [
+            {id: 'pd-1', name: 'pd-1', type: 'PD', status: 'UP', role: 'LEADER'},
+            {
+                id: 'pd-2',
+                name: 'pd-2',
+                type: 'PD',
+                status: 'UP',
+                role: 'FOLLOWER',
+                metric_statuses: {
+                    system: {
+                        availability: 'UNSUPPORTED',
+                        reason: 'metrics_not_collected',
+                    },
+                },
+            },
+        ],
+    });
+
+    renderOverview();
+
+    const attention = await screen.findByRole('region', {
+        name: 'Items needing attention',
+    });
+    expect(within(attention).getByText('PD source needs attention'))
+        .toBeInTheDocument();
+    expect(within(attention).getByText(/PD reports Cluster_Not_Ready/))
+        .toBeInTheDocument();
+    expect(within(attention).getByRole('link', {name: 'View PD nodes'}))
+        .toHaveAttribute('href', '/operations/nodes?type=PD');
+    expect(within(attention).getByText(
+        'All nodes are healthy; the source or cluster state above is a separate signal.'
+    )).toBeInTheDocument();
+    expect(within(attention).queryByRole('table')).not.toBeInTheDocument();
 });
 
 test('switches between the topology and an accessible node list', async () => {
@@ -546,12 +595,12 @@ test('renders leader, capacity and attention facts in the visual hierarchy', asy
     expect(screen.getByText('1 Store is down')).toBeInTheDocument();
     expect(screen.getByText('PD Leader')).toBeInTheDocument();
     expect(screen.getByText('pd-1')).toBeInTheDocument();
-    expect(screen.getByText('14.6 GiB')).toBeInTheDocument();
-    expect(screen.getByText('38 GiB / 60 GiB (63%)')).toBeInTheDocument();
+    expect(screen.getByText('14.6 GB')).toBeInTheDocument();
+    expect(screen.getByText('38 GB / 60 GB (63%)')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', {name: 'Capacity'})).toHaveAttribute(
         'aria-valuenow', '63'
     );
-    const attention = screen.getByRole('region', {name: 'Nodes needing attention'});
+    const attention = screen.getByRole('region', {name: 'Items needing attention'});
     expect(within(attention).getByRole('table')).toBeInTheDocument();
     expect(within(attention).getByRole('columnheader', {name: 'Tier'}))
         .toBeInTheDocument();

@@ -22,7 +22,6 @@ import {
     Input,
     Select,
     message,
-    Switch,
     InputNumber,
     Space,
     Typography,
@@ -31,6 +30,7 @@ import {useState, useEffect, useMemo, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api/index';
 import FormHelpLabel from '../../components/FormHelpLabel';
+import {isAuthEnabled} from '../../utils/config';
 import {getResourceAlias} from '../../utils/displayName';
 
 const {Option} = Select;
@@ -55,10 +55,10 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
     const [form] = Form.useForm();
     const [userList, setUserList] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [existingAuth, setExistingAuth] = useState();
     const {t} = useTranslation();
 
     const defaultValues = {
-        auth: false,
         description: '',
         max_graph_number: 100,
         cpu_limit: 64,
@@ -95,11 +95,17 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
             };
 
             if (isDisabled) {
-                api.manage.updateGraphSpace(detail.name, values, PAGE_ERROR_CONFIG)
+                api.manage.updateGraphSpace(detail.name, {
+                    ...values,
+                    auth: existingAuth,
+                }, PAGE_ERROR_CONFIG)
                     .then(thenCallBack).catch(catchCallback);
             }
             else {
-                api.manage.addGraphSpace(values, PAGE_ERROR_CONFIG)
+                api.manage.addGraphSpace({
+                    ...values,
+                    auth: isAuthEnabled(),
+                }, PAGE_ERROR_CONFIG)
                     .then(thenCallBack).catch(catchCallback);
             }
         }).catch(error => {
@@ -107,7 +113,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                 message.error(t('common.msg.operation_failed'));
             }
         });
-    }, [detail.name, isDisabled, onCancel, refresh, form, t]);
+    }, [detail.name, existingAuth, isDisabled, onCancel, refresh, form, t]);
 
     const serviceValidator = (_, value) => {
         if (value === 'DEFAULT') {
@@ -150,6 +156,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
             return;
         }
         form.resetFields();
+        setExistingAuth(undefined);
 
         api.auth.getUserList(undefined, PAGE_ERROR_CONFIG).then(res => {
             if (res && res.status === 200) {
@@ -162,6 +169,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
         if (detail.name) {
             api.manage.getGraphSpace(detail.name, PAGE_ERROR_CONFIG).then(res => {
                 if (res.status === 200) {
+                    setExistingAuth(res.data.auth);
                     form.setFieldsValue({
                         ...res.data,
                         nickname: getResourceAlias(res.data.name, res.data.nickname),
@@ -186,6 +194,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                 : 'common.action.save')}
             loading={loading}
             onOk={onFinish}
+            okButtonProps={{disabled: isDisabled && existingAuth === undefined}}
             width={680}
             destroyOnClose
             maskClosable={false}
@@ -233,20 +242,6 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                     ]}
                 >
                     <Input placeholder={t('graphspace.form.name_placeholder')} />
-                </Form.Item>
-
-                <Form.Item
-                    label={<FormHelpLabel
-                        label={t('graphspace.form.auth')}
-                        help={t('graphspace.form.auth_help')}
-                    />}
-                    name="auth"
-                    valuePropName="checked"
-                >
-                    <Switch
-                        aria-label={t('graphspace.form.auth')}
-                        disabled={isDisabled}
-                    />
                 </Form.Item>
 
                 <Form.Item

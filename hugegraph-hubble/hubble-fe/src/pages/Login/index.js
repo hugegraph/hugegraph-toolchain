@@ -17,7 +17,7 @@
  */
 
 import {LockOutlined, UserOutlined} from '@ant-design/icons';
-import {Button, Form, Input} from 'antd';
+import {Button, Form, Input, message} from 'antd';
 import BrandLockup from '../../components/BrandLockup';
 import LanguageToggle from '../../components/LanguageToggle';
 import style from './index.module.scss';
@@ -31,6 +31,8 @@ import {useTranslation} from 'react-i18next';
 const LOGIN_PATH = '/login';
 const DEFAULT_AFTER_LOGIN = '/navigation';
 const UNSAFE_REDIRECT_RE = /[\x00-\x1F\x7F\\]/;
+const LOGIN_NOTICE_PARAM = 'notice';
+const PASSWORD_CHANGED_NOTICE = 'credential-updated';
 
 const getSafeRedirect = redirect => {
     if (!redirect || !redirect.startsWith('/') || UNSAFE_REDIRECT_RE.test(redirect)) {
@@ -53,6 +55,22 @@ const Login = () => {
     const [form] = Form.useForm();
     const location = useLocation();
     const {t} = useTranslation();
+
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        if (searchParams.get(LOGIN_NOTICE_PARAM) !== PASSWORD_CHANGED_NOTICE) {
+            return;
+        }
+
+        message.success(t('my.edit.password_changed_relogin'));
+        searchParams.delete(LOGIN_NOTICE_PARAM);
+        const nextSearch = searchParams.toString();
+        window.history.replaceState(
+            window.history.state,
+            '',
+            `${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash}`
+        );
+    }, [location.hash, location.pathname, location.search, t]);
 
     useEffect(() => {
         const queryRedirect = new URLSearchParams(location.search).get('redirect');

@@ -39,6 +39,10 @@ test.each([
 test('does not claim GraphSpace access without a supported preset or assignment', () => {
     expect(getAccountPresetLabelKey({adminSpaces: []}, false))
         .toBe('unassigned');
+    expect(getAccountPresetLabelKey({
+        permission_preset: PERMISSION_PRESETS.GS_READ_ONLY,
+        graphspace_permissions: [],
+    }, true)).toBe('unassigned');
     expect(getAccountPresetLabelKey({is_superadmin: true}, false))
         .toBe(PERMISSION_PRESETS.SUPER_ADMIN);
     expect(getAccountPresetLabelKey({adminSpaces: ['SPACE']}, false))

@@ -189,6 +189,18 @@ public class GraphSpaceUserServiceTest {
     }
 
     @Test
+    public void testModernCustomRoleAccessFallsBackToMembership() {
+        Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.singletonList("alice"));
+
+        Assert.assertTrue(this.service.hasGraphSpaceAccess(
+                          this.client, "team", "alice"));
+        Assert.assertFalse(this.service.hasGraphSpaceAccess(
+                           this.client, "team", "bob"));
+    }
+
+    @Test
     public void testModernRolePayloadRequiresPresetApi() {
         UserView user = new UserView(
                 "u-1", "alice",
@@ -464,6 +476,28 @@ public class GraphSpaceUserServiceTest {
 
         Mockito.verify(this.auth).delSpaceMember("alice", "team");
         Mockito.verify(this.auth, Mockito.never()).getUser("alice");
+    }
+
+    @Test
+    public void testApplyPresetExplainsMissingAccount() {
+        Mockito.when(this.auth.listSpaceMember("team"))
+               .thenReturn(Collections.emptyList());
+        Mockito.when(this.auth.addSpaceMember("missing", "team"))
+               .thenThrow(new RuntimeException(
+                       "The user or group is not exist"));
+
+        ParameterizedException error = null;
+        try {
+            this.service.applySpacePreset(this.client, "team", null,
+                                          "missing", "GS_READ_ONLY");
+        } catch (ParameterizedException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals("auth.account.not-exist", error.getMessage());
+        Mockito.verify(this.client, Mockito.never())
+               .findUserByName(Mockito.anyString());
     }
 
     @Test

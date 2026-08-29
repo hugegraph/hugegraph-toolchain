@@ -211,7 +211,10 @@ public class GraphSpaceService {
         if (client.auth().checkDefaultRole(graphSpace, "analyst")) {
             return true;
         }
-        return client.auth().checkDefaultRole(graphSpace, "observer");
+        if (client.auth().checkDefaultRole(graphSpace, "observer")) {
+            return true;
+        }
+        return client.auth().isSpaceMember(graphSpace);
     }
 
     private static boolean canCurrentUserAccess(HugeClient client,

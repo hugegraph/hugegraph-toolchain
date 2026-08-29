@@ -97,7 +97,7 @@ test('does not present a failed account request as an empty user table', async (
     expect(screen.getByRole('button', {name: 'common.action.detail'})).toBeInTheDocument();
 });
 
-test('labels administrators, space administrators, and regular users in the list', async () => {
+test('labels administrators, space administrators, and unassigned users', async () => {
     api.auth.getAllUserList.mockResolvedValue({
         status: 200,
         data: {
@@ -116,7 +116,7 @@ test('labels administrators, space administrators, and regular users in the list
         .toBeInTheDocument();
     expect(screen.getByText('account.permission_preset.GS_ADMIN'))
         .toBeInTheDocument();
-    expect(screen.getByText('account.permission_preset.GS_READ_ONLY'))
+    expect(screen.getByText('account.permission_preset.unassigned'))
         .toBeInTheDocument();
 });
 
@@ -201,9 +201,8 @@ test('super administrators retain all account management actions', async () => {
     expect(await screen.findByText('analyst')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'account.create'})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'common.action.detail'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'common.action.edit'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {
-        name: 'common.action.assign_permission',
-    })).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'common.action.delete'})).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'account.action.more'}));
+    expect(await screen.findByText('common.action.edit')).toBeInTheDocument();
+    expect(screen.getByText('account.action.manage_membership')).toBeInTheDocument();
+    expect(screen.getByText('common.action.delete')).toBeInTheDocument();
 });

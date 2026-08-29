@@ -285,6 +285,10 @@ public class HugeClient implements Closeable {
         return this.compatibility.supportsPersonalProfileUpdate();
     }
 
+    public boolean requiresBasicGremlinAuth() {
+        return this.compatibility.requiresBasicGremlinAuth();
+    }
+
     public boolean isServerAuthEnabled() {
         try {
             this.graphs.listGraph();

@@ -259,7 +259,8 @@ public class LiveOperationsCollector implements OperationsCollector {
                                                               now);
                 this.mergeNodes(nodes, topology.getNodes());
                 facts.putAll(topology.getFacts());
-                pdStatus = available(topology.getStatus(), now);
+                pdStatus = available(topology.getStatus(), now,
+                                     topology.getReason());
                 clusterParsed = true;
             } catch (MalformedUpstreamException e) {
                 pdStatus = malformed(now);
@@ -333,7 +334,8 @@ public class LiveOperationsCollector implements OperationsCollector {
         if (index < 0) {
             return new SourceStatus("PARTIAL", status.getStatus(), now,
                                     status.getLastSuccessAt(), false, false,
-                                    "pd_metrics_unmapped");
+                                    preferredReason(status,
+                                                    "pd_metrics_unmapped"));
         }
         Map<String, Object> system = null;
         MetricStatus selectedStatus;
@@ -374,9 +376,14 @@ public class LiveOperationsCollector implements OperationsCollector {
         if (failureReason != null) {
             return new SourceStatus("PARTIAL", status.getStatus(), now,
                                     status.getLastSuccessAt(), false, false,
-                                    failureReason);
+                                    preferredReason(status, failureReason));
         }
         return status;
+    }
+
+    private static String preferredReason(SourceStatus status,
+                                          String fallback) {
+        return status.getReason() == null ? fallback : status.getReason();
     }
 
     private int pdNodeIndex(List<Node> nodes) {
@@ -731,8 +738,13 @@ public class LiveOperationsCollector implements OperationsCollector {
     }
 
     private static SourceStatus available(String status, long now) {
+        return available(status, now, null);
+    }
+
+    private static SourceStatus available(String status, long now,
+                                          String reason) {
         return new SourceStatus("AVAILABLE", status, now, now, true, false,
-                                null);
+                                reason);
     }
 
     private static SourceStatus unavailable(String reason, long now) {

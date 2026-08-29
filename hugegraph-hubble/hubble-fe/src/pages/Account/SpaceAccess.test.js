@@ -40,6 +40,7 @@ jest.mock('../../auth/AuthContext', () => ({
 jest.mock('../../api', () => ({
     auth: {
         getSpaceMembers: jest.fn(),
+        getSpaceAccount: jest.fn(),
         getSpaceAdmins: jest.fn(),
         setSpaceAdmin: jest.fn(),
         removeSpaceAdmin: jest.fn(),
@@ -217,6 +218,10 @@ test('shows legacy role names without treating them as presets', async () => {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    api.auth.getSpaceAccount.mockResolvedValue({
+        status: 200,
+        data: {user_id: 'account-id', user_name: 'bob'},
+    });
     mockAuthContext = {
         context: {
             context_version: 'v1',
@@ -329,7 +334,7 @@ test('submits only the selected preset when adding a member', async () => {
     const comboboxes = screen.getAllByRole('combobox');
     fireEvent.mouseDown(comboboxes[comboboxes.length - 1]);
     fireEvent.click(screen.getByText('account.permission_preset.GS_READ_WRITE'));
-    fireEvent.click(screen.getByRole('button', {name: 'OK'}));
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
 
     await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
         'SPACE_A', 'bob', 'bob', 'GS_READ_WRITE', expect.any(Object)));
@@ -357,7 +362,7 @@ test('uses the preset API for GS admin', async () => {
     const comboboxes = screen.getAllByRole('combobox');
     fireEvent.mouseDown(comboboxes[comboboxes.length - 1]);
     fireEvent.click(screen.getByText('account.permission_preset.GS_ADMIN'));
-    fireEvent.click(screen.getByRole('button', {name: 'OK'}));
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
 
     await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
         'SPACE_A', 'bob', 'bob', 'GS_ADMIN', expect.any(Object)));
@@ -393,4 +398,134 @@ test('shows GraphSpace administrators through the preset model', async () => {
     expect(await screen.findByText('space-admin')).toBeInTheDocument();
     expect(screen.getByText('account.permission_preset.GS_ADMIN'))
         .toBeInTheDocument();
+});
+
+test('opens the scoped member flow with account and GraphSpace prefilled',
+    async () => {
+        const onHandled = jest.fn();
+        render(
+            <SpaceAccess
+                pendingAccount={{user_name: 'bob'}}
+                onPendingAccountHandled={onHandled}
+            />
+        );
+
+        expect(await screen.findByDisplayValue('bob')).toBeInTheDocument();
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByTitle('SPACE_A')).toBeInTheDocument();
+        expect(within(dialog).getByRole('combobox', {
+            name: 'account.space_access.graphspace',
+        })).toBeEnabled();
+        expect(onHandled).toHaveBeenCalledTimes(1);
+    });
+
+test('assigns an account to the GraphSpace selected in the dialog', async () => {
+    mockAuthContext.context.scopes = {
+        all_graphspaces: true,
+        admin_graphspaces: [],
+    };
+    api.manage.getGraphSpaceList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{name: 'SPACE_A'}, {name: 'SPACE_B'}],
+            total: 2,
+        },
+    });
+    api.auth.setSpacePreset.mockResolvedValue({status: 200});
+    const onHandled = jest.fn();
+    render(
+        <SpaceAccess
+            pendingAccount={{user_name: 'bob', graphspace: 'SPACE_B'}}
+            onPendingAccountHandled={onHandled}
+        />
+    );
+
+    expect(await screen.findByDisplayValue('bob')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByTitle('SPACE_B')).toBeInTheDocument();
+    const graphSpaceSelect = within(dialog).getByRole('combobox', {
+        name: 'account.space_access.graphspace',
+    });
+    fireEvent.mouseDown(graphSpaceSelect);
+    const graphSpaceOptions = await screen.findAllByText('SPACE_A');
+    fireEvent.click(graphSpaceOptions.find(option =>
+        option.classList.contains('ant-select-item-option-content')
+    ));
+    const roleSelects = within(dialog).getAllByRole('combobox');
+    fireEvent.mouseDown(roleSelects[roleSelects.length - 1]);
+    fireEvent.click(screen.getByText('account.permission_preset.GS_READ_ONLY'));
+    fireEvent.click(within(dialog).getByRole('button', {
+        name: 'common.action.save',
+    }));
+
+    await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
+        'SPACE_A', 'bob', 'bob', 'GS_READ_ONLY', expect.any(Object)
+    ));
+    expect(onHandled).toHaveBeenCalledTimes(1);
+});
+
+test('keeps the current GraphSpace fixed for member-list operations', async () => {
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByTitle('SPACE_A')).toBeInTheDocument();
+    expect(within(dialog).getByRole('combobox', {
+        name: 'account.space_access.graphspace',
+    })).toBeDisabled();
+});
+
+test('explains that an unknown account must be created first', async () => {
+    api.auth.getSpaceAccount.mockResolvedValue({
+        status: 400,
+        message: 'The user or group is not exist',
+    });
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+    const dialog = screen.getByRole('dialog');
+    const account = within(dialog).getByLabelText(
+        'account.space_access.member.existing_account'
+    );
+    fireEvent.change(account, {target: {value: 'missing-user'}});
+    fireEvent.blur(account);
+
+    expect(await within(dialog).findByText(
+        'account.space_access.member.account_not_found'
+    )).toBeInTheDocument();
+    expect(api.auth.getSpaceAccount).toHaveBeenCalledWith(
+        'SPACE_A', 'missing-user', expect.any(Object)
+    );
+    expect(api.auth.setSpacePreset).not.toHaveBeenCalled();
+});
+
+test('requires an explicit replacement for legacy custom access', async () => {
+    setResponses({
+        members: [{
+            user_id: 'alice',
+            user_name: 'alice',
+            roles: [{role_id: 'custom', role_name: 'analyst'}],
+        }],
+    });
+
+    render(<SpaceAccess />);
+
+    const row = (await screen.findAllByText('alice'))[0].closest('tr');
+    fireEvent.click(within(row).getByRole('button', {
+        name: 'common.action.edit',
+    }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+        'account.space_access.member.custom_title'
+    );
+    expect(screen.getByRole('button', {
+        name: 'account.space_access.member.replace',
+    })).toBeInTheDocument();
 });

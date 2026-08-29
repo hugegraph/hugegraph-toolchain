@@ -65,10 +65,20 @@ public class HugeClientCompatibilityTest {
                .thenReturn(Arrays.asList(bob, alice));
 
         Assert.assertFalse(this.client.supportsDefaultRole());
+        Assert.assertTrue(this.client.requiresBasicGremlinAuth());
         Assert.assertSame(alice, this.client.findUserByName("alice"));
         Assert.assertNull(this.client.findUserByName("missing"));
         Mockito.verify(this.auth, Mockito.never())
                .getUserByName(Mockito.anyString());
+    }
+
+    @Test
+    public void shouldKeepBearerGremlinAuthForModernServers() {
+        Whitebox.setInternalState(
+                this.client, "compatibility",
+                ServerCompatibility.Profile.MODERN);
+
+        Assert.assertFalse(this.client.requiresBasicGremlinAuth());
     }
 
     @Test

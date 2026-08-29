@@ -26,7 +26,6 @@ import {
     Select,
     Space,
     Table,
-    Tabs,
     Tag,
     Typography,
 } from 'antd';
@@ -39,9 +38,25 @@ import {PERMISSION_PRESETS} from './permissionPresets';
 import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
 
 const responseRecords = response => response?.data?.records ?? [];
+const errorDetail = value => {
+    const response = value?.response ?? value;
+    return response?.data?.message ?? response?.message;
+};
+const isMissingAccount = value => {
+    const detail = errorDetail(value);
+    if (typeof detail !== 'string') {
+        return false;
+    }
+    const normalized = detail.toLowerCase();
+    return normalized.includes('user or group is not exist')
+        || normalized.includes('account does not exist');
+};
 const showMutationError = (error, t) => {
-    const response = error?.response ?? error;
-    const detail = response?.data?.message ?? response?.message;
+    const detail = errorDetail(error);
+    if (isMissingAccount(error)) {
+        message.error(t('account.space_access.member.account_not_found'));
+        return;
+    }
     message.error(detail
         ? `${t('common.msg.operation_failed')} (${detail})`
         : t('common.msg.operation_failed'));
@@ -169,7 +184,7 @@ const ErrorAlert = ({error, retry, t}) => (error ? (
     />
 ) : null);
 
-const SpaceAccess = () => {
+const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
     const {t} = useTranslation();
     const {context} = useAuthContext();
     const contextVersion = context?.context_version;
@@ -285,22 +300,84 @@ const SpaceAccess = () => {
         }
     }, [refreshAll, submitting, t]);
 
-    const openMember = useCallback(row => {
+    const openMember = useCallback((row, graphSpaceSelectable = false) => {
+        const memberGraphSpace = graphSpaceSelectable
+            && spaces.includes(row?.graphspace)
+            ? row.graphspace
+            : graphSpace;
         memberForm.setFieldsValue({
             user_id: row?.user_id,
             username: row?.user_name,
             permission_preset: rolesPreset(row?.roles),
+            graphspace: memberGraphSpace,
         });
-        setMemberDialog(row ?? {});
-    }, [memberForm]);
+        setMemberDialog({
+            ...(row ?? {}),
+            graphSpaceSelectable,
+        });
+    }, [graphSpace, memberForm, spaces]);
+    useEffect(() => {
+        if (!pendingAccount || !graphSpace) {
+            return;
+        }
+        openMember(pendingAccount, true);
+        onPendingAccountHandled?.();
+    }, [
+        graphSpace,
+        onPendingAccountHandled,
+        openMember,
+        pendingAccount,
+        spaces,
+    ]);
     const closeMember = useCallback(() => {
         setMemberDialog(null);
         memberForm.resetFields();
     }, [memberForm]);
+    const validateExistingAccount = useCallback(async (_, value) => {
+        if (!value) {
+            return;
+        }
+        const targetSpace = memberForm.getFieldValue('graphspace');
+        if (!targetSpace) {
+            return;
+        }
+        let response;
+        try {
+            response = await api.auth.getSpaceAccount(
+                targetSpace, value, PAGE_ERROR_CONFIG
+            );
+        }
+        catch (error) {
+            if (isMissingAccount(error)) {
+                throw new Error(
+                    t('account.space_access.member.account_not_found')
+                );
+            }
+            throw new Error(
+                t('account.space_access.member.account_check_failed')
+            );
+        }
+        const account = response?.data;
+        if (response?.status !== 200) {
+            if (isMissingAccount(response)) {
+                throw new Error(
+                    t('account.space_access.member.account_not_found')
+                );
+            }
+            throw new Error(
+                t('account.space_access.member.account_check_failed')
+            );
+        }
+        if (!(account?.user_id ?? account?.id)) {
+            throw new Error(
+                t('account.space_access.member.account_not_found')
+            );
+        }
+    }, [memberForm, t]);
     const submitMember = useCallback(values => {
         runMutation(
             () => api.auth.setSpacePreset(
-                graphSpace,
+                values.graphspace,
                 values.user_id ?? values.username,
                 values.username,
                 values.permission_preset,
@@ -308,7 +385,7 @@ const SpaceAccess = () => {
             ),
             closeMember
         );
-    }, [closeMember, graphSpace, runMutation]);
+    }, [closeMember, runMutation]);
 
     const confirmDelete = useCallback((title, operation) => {
         Modal.confirm({
@@ -331,6 +408,11 @@ const SpaceAccess = () => {
         () => setSpacesRevision(value => value + 1), []
     );
     const submitMemberForm = useCallback(() => memberForm.submit(), [memberForm]);
+    const replacingCustomAccess = Boolean(
+        memberDialog?.user_id
+        && (memberDialog.roles ?? []).length > 0
+        && rolesPreset(memberDialog.roles) === null
+    );
 
     const memberColumns = [
         {title: t('account.space_access.member.id'), dataIndex: 'user_id'},
@@ -401,6 +483,9 @@ const SpaceAccess = () => {
 
     return (
         <>
+            <Typography.Paragraph type="secondary">
+                {t('account.space_access.description')}
+            </Typography.Paragraph>
             <Space align="center" wrap>
                 <Typography.Text strong>
                     {t('account.space_access.graphspace')}
@@ -414,19 +499,11 @@ const SpaceAccess = () => {
                     style={{minWidth: 240}}
                 />
             </Space>
-            <Tabs
-                items={[
-                    {
-                        key: 'members',
-                        label: t('account.space_access.tabs.members'),
-                        children: table(
-                            visibleMembers, memberColumns, 'user_id',
-                            t('account.space_access.member.add'),
-                            addMember, canAddMember
-                        ),
-                    },
-                ]}
-            />
+            {table(
+                visibleMembers, memberColumns, 'user_id',
+                t('account.space_access.member.add'),
+                addMember, canAddMember
+            )}
 
             <Modal
                 open={memberDialog !== null}
@@ -434,9 +511,36 @@ const SpaceAccess = () => {
                 onCancel={closeMember}
                 onOk={submitMemberForm}
                 confirmLoading={submitting}
+                okText={replacingCustomAccess
+                    ? t('account.space_access.member.replace')
+                    : t('common.action.save')}
                 destroyOnClose
             >
+                {replacingCustomAccess && (
+                    <Alert
+                        type="warning"
+                        showIcon
+                        message={t('account.space_access.member.custom_title')}
+                        description={t(
+                            'account.space_access.member.custom_description'
+                        )}
+                    />
+                )}
                 <Form form={memberForm} layout="vertical" onFinish={submitMember}>
+                    <Form.Item
+                        name="graphspace"
+                        label={t('account.space_access.graphspace')}
+                        rules={[{required: true}]}
+                    >
+                        <Select
+                            aria-label={t('account.space_access.graphspace')}
+                            disabled={!memberDialog?.graphSpaceSelectable}
+                            options={spaces.map(space => ({
+                                label: space,
+                                value: space,
+                            }))}
+                        />
+                    </Form.Item>
                     {memberDialog?.user_id ? (
                         <>
                             <Form.Item
@@ -453,8 +557,15 @@ const SpaceAccess = () => {
                     ) : (
                         <Form.Item
                             name="username"
-                            label={t('account.space_access.member.name')}
-                            rules={[{required: true}]}
+                            label={t(
+                                'account.space_access.member.existing_account'
+                            )}
+                            dependencies={['graphspace']}
+                            validateTrigger="onBlur"
+                            rules={[
+                                {required: true},
+                                {validator: validateExistingAccount},
+                            ]}
                         >
                             <Input />
                         </Form.Item>

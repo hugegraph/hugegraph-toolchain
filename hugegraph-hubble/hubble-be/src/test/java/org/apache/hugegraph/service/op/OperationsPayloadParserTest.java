@@ -103,10 +103,15 @@ public class OperationsPayloadParserTest {
     @Test
     public void testMapsExactClusterStates() {
         OperationsPayloadParser parser = new OperationsPayloadParser(MAPPER);
-        String[] states = {"Cluster_OK", "Cluster_Warn", "Cluster_Not_Ready",
-                           "Cluster_Offline", "Cluster_Fault", null, "Cluster_OKish"};
-        String[] expected = {"UP", "DEGRADED", "DEGRADED", "DEGRADED", "DOWN",
-                             "UNKNOWN", "UNKNOWN"};
+        String[] states = {"Cluster_OK", "Cluster_Warn", "DEGRADED",
+                           "Cluster_Not_Ready", "Cluster_Offline",
+                           "Cluster_Fault", null, "Cluster_OKish"};
+        String[] expected = {"UP", "DEGRADED", "DEGRADED", "DEGRADED",
+                             "DEGRADED", "DOWN", "UNKNOWN", "UNKNOWN"};
+        String[] reasons = {null, "cluster_warn", "cluster_warn",
+                            "cluster_not_ready",
+                            "cluster_offline", "cluster_fault",
+                            "cluster_state_missing", "cluster_state_unknown"};
         String stores = "{\"status\":0,\"data\":{\"stores\":[]}}";
 
         for (int i = 0; i < states.length; i++) {
@@ -115,7 +120,9 @@ public class OperationsPayloadParserTest {
                            state + "\",";
             String cluster = "{\"status\":0,\"data\":{" + field +
                              "\"pdList\":[]}}";
-            Assert.assertEquals(expected[i], parser.parseTopology(cluster, stores).getStatus());
+            Topology topology = parser.parseTopology(cluster, stores);
+            Assert.assertEquals(expected[i], topology.getStatus());
+            Assert.assertEquals(reasons[i], topology.getReason());
         }
     }
 
