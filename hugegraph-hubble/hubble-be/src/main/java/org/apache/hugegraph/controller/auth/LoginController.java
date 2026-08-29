@@ -87,13 +87,21 @@ public class LoginController extends BaseController {
         try {
             LoginResult result = this.authenticate(login, pdEnabled, address);
             Object user;
+            boolean requiresBasicGremlinAuth;
             if (!pdEnabled) {
                 user = currentUser(login.name());
+                try (HugeClient client =
+                             this.createLoginTokenClient(result.token())) {
+                    requiresBasicGremlinAuth =
+                            client.requiresBasicGremlinAuth();
+                }
             } else {
                 try (HugeClient client =
                              this.createLoginTokenClient(result.token())) {
                     client.assignGraph(PDHugeClientFactory.DEFAULT_GRAPHSPACE,
                                        null);
+                    requiresBasicGremlinAuth =
+                            client.requiresBasicGremlinAuth();
                     UserEntity entity = this.userService.getpersonal(
                             client, login.name());
                     user = entity;
@@ -107,10 +115,12 @@ public class LoginController extends BaseController {
             // HugeGraph 1.7's Gremlin HTTP channel only accepts Basic auth.
             // Keep the credential server-side for the session lifetime so
             // graph queries can use the same identity as REST requests.
-            this.setSession(Constant.PASSWORD_KEY, login.password());
-            this.setSession(Constant.PASSWORD_EXPIRE_AT_KEY,
-                            System.currentTimeMillis() +
-                            TOKEN_EXPIRE_SECONDS * 1000L);
+            if (requiresBasicGremlinAuth) {
+                this.setSession(Constant.PASSWORD_KEY, login.password());
+                this.setSession(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                System.currentTimeMillis() +
+                                TOKEN_EXPIRE_SECONDS * 1000L);
+            }
             return user;
         } catch (Throwable e) {
             this.clearAuthSession();

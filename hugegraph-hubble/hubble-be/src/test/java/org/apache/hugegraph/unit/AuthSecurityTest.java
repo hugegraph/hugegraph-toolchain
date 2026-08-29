@@ -825,6 +825,7 @@ public class AuthSecurityTest {
         RequestContextHolder.setRequestAttributes(
                 new ServletRequestAttributes(request));
         TestLoginController controller = new TestLoginController();
+        controller.basicGremlinAuth = true;
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
         setField(controller, "config", config);
@@ -844,6 +845,29 @@ public class AuthSecurityTest {
         Assert.assertTrue(((Number) request.getSession().getAttribute(
                            Constant.PASSWORD_EXPIRE_AT_KEY)).longValue() >
                           System.currentTimeMillis());
+    }
+
+    @Test
+    public void testModernLoginDoesNotRetainPassword() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request));
+        TestLoginController controller = new TestLoginController();
+        HugeConfig config = Mockito.mock(HugeConfig.class);
+        Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        setField(controller, "config", config);
+        Login login = new Login();
+        login.name("admin");
+        login.password("pa");
+
+        controller.login(login);
+
+        Assert.assertEquals("server-token", request.getSession().getAttribute(
+                            Constant.TOKEN_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_EXPIRE_AT_KEY));
     }
 
     @Test
@@ -1033,6 +1057,7 @@ public class AuthSecurityTest {
         private HugeClient userClient;
         private String validationToken;
         private LoginAttemptGuard attemptGuard;
+        private boolean basicGremlinAuth;
 
         private TestLoginController() {
             this.attemptGuard = Mockito.mock(LoginAttemptGuard.class);
@@ -1080,7 +1105,10 @@ public class AuthSecurityTest {
         @Override
         protected HugeClient createLoginTokenClient(String token) {
             if (this.userClient == null) {
-                return super.createLoginTokenClient(token);
+                HugeClient client = Mockito.mock(HugeClient.class);
+                Mockito.when(client.requiresBasicGremlinAuth())
+                       .thenReturn(this.basicGremlinAuth);
+                return client;
             }
             this.validationToken = token;
             return this.userClient;
