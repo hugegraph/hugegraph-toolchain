@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -79,6 +80,46 @@ public class LiveOperationsCollectorTest {
         collector.collect(client, false);
 
         Mockito.verify(client, Mockito.never()).metrics();
+    }
+
+    @Test
+    public void testPdModeCollectsEveryDiscoveredServer()
+           throws IOException {
+        HttpServer pd = pdServer(200, cluster(), 200, stores());
+        LiveOperationsCollector.ServerClientProvider servers =
+                new LiveOperationsCollector.ServerClientProvider() {
+            @Override
+            public java.util.List<String> urls() {
+                return Arrays.asList("http://server-a:8080",
+                                     "http://server-b:8080");
+            }
+
+            @Override
+            public HugeClient create(String url, String authContext,
+                                     int timeout) {
+                return serverClient();
+            }
+        };
+        HugeClient requestClient = serverClient();
+        Mockito.when(requestClient.getAuthContext()).thenReturn("Bearer token");
+        LiveOperationsCollector collector = collector(true, pd, servers);
+
+        Snapshot snapshot;
+        try {
+            snapshot = collector.collect(requestClient, false);
+        } finally {
+            collector.close();
+            pd.stop(0);
+        }
+
+        Assert.assertEquals(2L, snapshot.getNodes().stream()
+                                .filter(node -> "SERVER".equals(node.getType()))
+                                .count());
+        Assert.assertEquals("UP", snapshot.getSources().get("server")
+                                          .getStatus());
+        Assert.assertEquals("AVAILABLE",
+                            snapshot.getSources().get("server")
+                                    .getAvailability());
     }
 
     @Test
@@ -162,7 +203,8 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
-    public void testPdDegradedStatusMakesOverallSnapshotDegraded() throws IOException {
+    public void testClusterWarningDoesNotOverrideHealthyPdNodes()
+           throws IOException {
         String degraded = cluster().replace("Cluster_OK", "Cluster_Warn");
         HttpServer pd = pdServer(200, degraded, 200, stores());
         Snapshot snapshot;
@@ -172,12 +214,13 @@ public class LiveOperationsCollectorTest {
             pd.stop(0);
         }
 
-        Assert.assertEquals("DEGRADED", snapshot.getStatus());
-        Assert.assertEquals("DEGRADED", snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("UP", snapshot.getStatus());
+        Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
     }
 
     @Test
-    public void testPdNotReadyKeepsPdNodesUpAndOverallDegraded() throws IOException {
+    public void testPdNotReadyKeepsPdSourceAlignedWithNodes()
+           throws IOException {
         String notReady = cluster().replace("Cluster_OK", "Cluster_Not_Ready");
         HttpServer pd = pdServer(200, notReady, 200, stores());
         Snapshot snapshot;
@@ -190,9 +233,9 @@ public class LiveOperationsCollectorTest {
         OperationsModels.SourceStatus pdSource = snapshot.getSources().get("pd");
         Assert.assertEquals("AVAILABLE", pdSource.getAvailability());
         Assert.assertTrue(pdSource.isFresh());
-        Assert.assertEquals("DEGRADED", pdSource.getStatus());
-        Assert.assertEquals("cluster_not_ready", pdSource.getReason());
-        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        Assert.assertEquals("UP", pdSource.getStatus());
+        Assert.assertNull(pdSource.getReason());
+        Assert.assertEquals("UP", snapshot.getStatus());
         long pdCount = snapshot.getNodes().stream()
                                .filter(node -> "PD".equals(node.getType()))
                                .count();
@@ -260,7 +303,8 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
-    public void testPdNotReadyReasonSurvivesMetricsFailure() throws IOException {
+    public void testPdMetricsFailureDoesNotChangeHealthyNodeStatus()
+           throws IOException {
         String notReady = cluster().replace("Cluster_OK", "Cluster_Not_Ready");
         HttpServer pd = HttpServer.create(new InetSocketAddress(0), 0);
         String storePayload = stores().replace(
@@ -279,12 +323,13 @@ public class LiveOperationsCollectorTest {
         OperationsModels.SourceStatus source =
                 snapshot.getSources().get("pd");
         Assert.assertEquals("PARTIAL", source.getAvailability());
-        Assert.assertEquals("DEGRADED", source.getStatus());
-        Assert.assertEquals("cluster_not_ready", source.getReason());
+        Assert.assertEquals("UP", source.getStatus());
+        Assert.assertEquals("upstream_rejected", source.getReason());
     }
 
     @Test
-    public void testPdUnknownStatusMakesOverallSnapshotDegraded() throws IOException {
+    public void testUnknownClusterStateDoesNotOverrideHealthyPdNodes()
+           throws IOException {
         String unknown = cluster().replace("Cluster_OK", "Cluster_Starting");
         HttpServer pd = pdServer(200, unknown, 200, stores());
         Snapshot snapshot;
@@ -294,8 +339,8 @@ public class LiveOperationsCollectorTest {
             pd.stop(0);
         }
 
-        Assert.assertEquals("DEGRADED", snapshot.getStatus());
-        Assert.assertEquals("UNKNOWN", snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("UP", snapshot.getStatus());
+        Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
     }
 
     @Test
@@ -305,7 +350,7 @@ public class LiveOperationsCollectorTest {
 
         Snapshot snapshot = collector.collect(serverClient(), false);
 
-        Assert.assertEquals("DEGRADED", snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
         Assert.assertEquals(0, http.leaderRequests());
     }
 
@@ -352,6 +397,34 @@ public class LiveOperationsCollectorTest {
                 .findFirst().orElseThrow(AssertionError::new);
         Assert.assertTrue(pdNode.getMetrics().containsKey("system"));
         Assert.assertEquals(Long.valueOf(2000L), pdNode.getObservedAt());
+    }
+
+    @Test
+    public void testDirectMetricFailureOverridesStaleStoreRegistration() {
+        RecordingHttpClient http = new RecordingHttpClient(
+                storesWithDifferentRestAddresses(),
+                targets("127.0.0.1:8520", "127.0.0.1:9520"));
+        http.unavailableAuthority("127.0.0.1:9520");
+        LiveOperationsCollector collector = collector(http, 4, 1000);
+        Snapshot snapshot;
+        try {
+            snapshot = collector.collect(serverClient(), true);
+        } finally {
+            collector.close();
+        }
+
+        Assert.assertEquals("UP",
+                            snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals("DEGRADED",
+                            snapshot.getSources().get("stores").getStatus());
+        Assert.assertEquals(Long.valueOf(2L),
+                            snapshot.getFacts().get("stores"));
+        Assert.assertEquals(Long.valueOf(1L),
+                            snapshot.getFacts().get("stores_up"));
+        Assert.assertEquals(1L, snapshot.getNodes().stream()
+                .filter(node -> "STORE".equals(node.getType()))
+                .filter(node -> "DOWN".equals(node.getStatus()))
+                .count());
     }
 
     @Test
@@ -818,6 +891,18 @@ public class LiveOperationsCollectorTest {
                         "http://127.0.0.1:" + pd.getAddress().getPort()));
     }
 
+    private static LiveOperationsCollector collector(
+            boolean pdEnabled, HttpServer pd,
+            LiveOperationsCollector.ServerClientProvider servers) {
+        String pdBase = "http://127.0.0.1:" + pd.getAddress().getPort();
+        return new LiveOperationsCollector(
+                pdEnabled, pdBase, "hubble", "secret", "store-hubble",
+                "store-secret", "server-under-test",
+                new OperationsHttpClient(1000, 1000, 8192),
+                new OperationsPayloadParser(new ObjectMapper()), CLOCK,
+                16, 5000, Collections.singleton(pdBase), servers);
+    }
+
     private static LiveOperationsCollector collector(RecordingHttpClient http,
                                                       int threads,
                                                       int deadlineMillis) {
@@ -992,6 +1077,7 @@ public class LiveOperationsCollectorTest {
         private final Set<String> metricAuthorities;
         private volatile long delayMillis;
         private volatile String delayAuthority;
+        private volatile String unavailableAuthority;
 
         private RecordingHttpClient(String stores, String targets) {
             super(1000, 1000, 8192);
@@ -1036,7 +1122,11 @@ public class LiveOperationsCollectorTest {
                 return "process_uptime_seconds{hg=\"pd\"} 12\n";
             }
             this.metrics.incrementAndGet();
-            this.metricAuthorities.add(OperationsHttpClient.authority(target));
+            String authority = OperationsHttpClient.authority(target);
+            this.metricAuthorities.add(authority);
+            if (authority.equals(this.unavailableAuthority)) {
+                throw new UpstreamRequestException("upstream_unavailable");
+            }
             int current = this.active.incrementAndGet();
             this.maximum.accumulateAndGet(current, Math::max);
             try {
@@ -1067,6 +1157,10 @@ public class LiveOperationsCollectorTest {
         private void delayAuthority(String authority, long delayMillis) {
             this.delayAuthority = authority;
             this.delayMillis = delayMillis;
+        }
+
+        private void unavailableAuthority(String authority) {
+            this.unavailableAuthority = authority;
         }
 
         private int metricRequests() {

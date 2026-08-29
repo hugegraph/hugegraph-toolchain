@@ -32,7 +32,7 @@ test('localizes the topology accessible name', async () => {
         </MemoryRouter>
     );
 
-    expect(screen.getByLabelText('Server、PD 与 Store 服务拓扑')).toBeInTheDocument();
+    expect(screen.getByLabelText('HugeGraph 集群拓扑')).toBeInTheDocument();
     expect(screen.queryByLabelText('Server PD Store topology')).not.toBeInTheDocument();
 });
 
@@ -73,7 +73,12 @@ test('uses semantic tier icons and keeps the PD leader on the visual axis', () =
     render(
         <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
             <ClusterTopology nodes={[
-                {id: 'server-1', name: 'server-1', type: 'SERVER', status: 'UP'},
+                {
+                    id: 'server-1',
+                    name: 'HugeGraph Server 123abc',
+                    type: 'SERVER',
+                    status: 'UP',
+                },
                 {id: 'pd-2', name: 'pd-2', type: 'PD', status: 'UP', role: 'FOLLOWER'},
                 {id: 'pd-1', name: 'pd-1', type: 'PD', status: 'UP', role: 'LEADER'},
                 {id: 'store-1', name: 'store-1', type: 'STORE', status: 'UP'},
@@ -83,6 +88,8 @@ test('uses semantic tier icons and keeps the PD leader on the visual axis', () =
     );
 
     expect(screen.getByLabelText('SERVER icon')).toBeInTheDocument();
+    expect(screen.getByText('Server 123abc')).toBeInTheDocument();
+    expect(screen.queryByText('HugeGraph Server 123abc')).not.toBeInTheDocument();
     expect(screen.getAllByLabelText('PD icon')).toHaveLength(2);
     expect(screen.getByLabelText('STORE icon')).toBeInTheDocument();
     expect(screen.getByText('pd-1').closest('a')).toHaveClass('is-axis-node');

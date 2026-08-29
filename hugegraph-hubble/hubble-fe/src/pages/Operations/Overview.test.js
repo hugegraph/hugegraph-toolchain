@@ -355,7 +355,8 @@ test('uses explicit Chinese topology labels and a compact monitoring tool status
     renderOverview();
 
     expect(await screen.findByRole('radio', {name: '拓扑图'})).toBeInTheDocument();
-    expect(screen.getByRole('heading', {name: '服务拓扑图'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'HugeGraph 集群拓扑'}))
+        .toBeInTheDocument();
     expect(screen.getByRole('link', {name: 'Server 层'})).toBeInTheDocument();
     const tools = document.querySelector('.operations-header-tools');
     expect(tools).not.toHaveTextContent('Dashboard 不可用');

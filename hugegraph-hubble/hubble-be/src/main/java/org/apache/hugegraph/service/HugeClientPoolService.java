@@ -117,6 +117,16 @@ public final class HugeClientPoolService {
         return getOrCreate(null, graphSpace, graph, token);
     }
 
+    public List<String> discoveredServerURLs() {
+        return new ArrayList<>(this.allAvailableURLs(null, null));
+    }
+
+    public HugeClient createDiscoveredServerClient(String url,
+                                                   String authContext,
+                                                   int timeout) {
+        return this.create(url, null, null, authContext, null, null, timeout);
+    }
+
     public HugeClient getOrCreate(String url, String graphSpace, String graph,
             String token) {
         // 去掉缓存，固定每个 request 分配一个 client
