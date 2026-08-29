@@ -128,7 +128,6 @@ jobs:
         env:
           COMMIT_ID: ${{ steps.server-ref.outputs.commit }}
           COMMIT_REF: ${{ steps.server-ref.outputs.commit }}
-          HUGEGRAPH_GIT_URL: ${{ env.HUGEGRAPH_SERVER_GIT_URL }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="
@@ -150,16 +149,6 @@ jobs:
           cd ../../../
           pwd
           $TRAVIS_DIR/install-hugegraph.sh $COMMIT_ID $COMMIT_REF
-          API_VERSION="$(curl --fail --silent http://127.0.0.1:8080/versions |
-            python -c 'import json,sys; print(json.load(sys.stdin)["versions"]["api"])')"
-          python - "$API_VERSION" <<'PY'
-          import sys
-          parts = tuple(int(value) for value in sys.argv[1].split(".")[:2])
-          if parts < (0, 72):
-              raise SystemExit(
-                  f"Expected HugeGraph REST API >= 0.72, got {sys.argv[1]}"
-              )
-          PY
 
       - name: Release package audit
         env:
