@@ -262,6 +262,25 @@ public class OperationsPayloadParserTest {
         Assert.assertFalse(metrics.toString().contains("secret"));
     }
 
+    @Test
+    public void testParsesUnlabelledPdPrometheusMetrics() {
+        OperationsPayloadParser parser = new OperationsPayloadParser(MAPPER);
+        String payload = "process_uptime_seconds 12\n" +
+                         "system_cpu_count 2\n" +
+                         "jvm_threads_live_threads 8\n" +
+                         "process_cpu_usage 0.1\n" +
+                         "system_cpu_usage 0.2\n" +
+                         "process_uptime_seconds_total 99\n";
+
+        Map<String, Object> metrics = parser.parsePdPrometheusMetrics(payload);
+
+        Assert.assertEquals(12D, metrics.get("uptime_seconds"));
+        Assert.assertEquals(2D, metrics.get("cpu_count"));
+        Assert.assertEquals(8D, metrics.get("threads_live"));
+        Assert.assertEquals(0.1D, metrics.get("process_cpu_usage"));
+        Assert.assertEquals(0.2D, metrics.get("system_cpu_usage"));
+    }
+
     @Test(expected = MalformedUpstreamException.class)
     public void testRejectsPrometheusWithoutRecognizedMetrics() {
         OperationsPayloadParser parser = new OperationsPayloadParser(MAPPER);

@@ -337,7 +337,7 @@ public class GraphsController extends BaseController {
         String targetGraphSpace = graphCloneEntity.getGraphSpace() == null ?
                                   graphspace :
                                   graphCloneEntity.getGraphSpace();
-        this.requireGraphSpaceAccess(client, targetGraphSpace);
+        this.requireGraphSpaceWrite(client, targetGraphSpace);
         return this.graphsService.clone(
                 client, graphCloneEntity.convertMap(graphspace, graph));
     }

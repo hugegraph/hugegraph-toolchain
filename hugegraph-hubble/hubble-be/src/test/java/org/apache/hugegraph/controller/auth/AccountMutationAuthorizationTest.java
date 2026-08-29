@@ -324,6 +324,23 @@ public class AccountMutationAuthorizationTest {
     }
 
     @Test
+    public void testEditingOwnPasswordClearsCachedSessionCredentials() {
+        TestUserController controller = accountController("admin", "ADMIN");
+        UserEntity current = account("canonical-id", "admin", true);
+        Mockito.when(this.authorizationService.get(this.client,
+                                                   "canonical-id"))
+               .thenReturn(current);
+        UserEntity update = new UserEntity();
+        update.setPassword("new-password");
+
+        controller.update("canonical-id", update);
+
+        Mockito.verify(this.authorizationService)
+               .update(this.client, update);
+        Assert.assertTrue(controller.authSessionCleared());
+    }
+
+    @Test
     public void testDeleteUsesFetchedCanonicalUserId() {
         TestUserController controller = accountController("admin", "ADMIN");
         UserEntity current = account("canonical-id", "bob", false);

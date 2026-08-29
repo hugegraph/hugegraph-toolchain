@@ -97,7 +97,7 @@ const EditLayer = ({
             throw res;
         });
     }, [onCancel, onCreated, refresh, t]);
-    const updateUser = useCallback(values => {
+    const updateUser = useCallback(async values => {
         const profile = toProfilePayload(values);
         const superAdminChanged = permissionPresetsSupported
             && Boolean(values.is_superadmin) !== Boolean(detail.is_superadmin);
@@ -109,17 +109,29 @@ const EditLayer = ({
                     : PERMISSION_PRESETS.GS_READ_ONLY,
             })
             : profile;
-        return api.auth.updateUser(data.id, payload, PAGE_ERROR_CONFIG).then(res => {
-            if (res.status === 200) {
-                message.success(t('common.msg.update_success'));
-                onCancel();
-                refresh();
-
-                return;
+        const requestUpdate = async update => {
+            const response = await api.auth.updateUser(
+                data.id, update, PAGE_ERROR_CONFIG
+            );
+            if (response.status !== 200) {
+                throw response;
             }
-
-            throw res;
-        });
+        };
+        if (superAdminChanged && profile.user_password) {
+            await requestUpdate(toPermissionPayload({
+                user_name: profile.user_name,
+                permission_preset: values.is_superadmin
+                    ? PERMISSION_PRESETS.SUPER_ADMIN
+                    : PERMISSION_PRESETS.GS_READ_ONLY,
+            }));
+            await requestUpdate(profile);
+        }
+        else {
+            await requestUpdate(payload);
+        }
+        message.success(t('common.msg.update_success'));
+        onCancel();
+        refresh();
     }, [
         data.id,
         detail.is_superadmin,

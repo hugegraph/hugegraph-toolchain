@@ -95,10 +95,12 @@ const GlobalAccounts = ({
     }, []);
 
     const showMembership = useCallback(row => {
+        const graphspaces = getPresetSpaces(row);
         onAssignMember?.({
             user_id: row.id,
             user_name: row.user_name,
-            graphspace: getPresetSpaces(row)[0],
+            graphspace: graphspaces[0],
+            graphspaces,
         });
     }, [onAssignMember]);
 

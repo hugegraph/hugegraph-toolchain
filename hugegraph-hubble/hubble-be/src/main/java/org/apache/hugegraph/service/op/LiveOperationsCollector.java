@@ -38,6 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -210,7 +211,14 @@ public class LiveOperationsCollector implements OperationsCollector {
     private void collectServer(HugeClient client, boolean includeMetrics,
                                long now, Map<String, SourceStatus> sources,
                                List<Node> nodes) {
-        List<String> urls = this.discoveredServerURLs();
+        long started = System.nanoTime();
+        List<String> urls;
+        try {
+            urls = this.discoveredServerURLs();
+        } catch (RuntimeException e) {
+            sources.put("server", unavailable(metricReason(e), now));
+            return;
+        }
         if (urls.isEmpty()) {
             this.collectSingleServer(client, this.serverIdentity,
                                      "HugeGraph Server", includeMetrics, now,
@@ -222,6 +230,10 @@ public class LiveOperationsCollector implements OperationsCollector {
         String reason = null;
         String authContext = client.getAuthContext();
         List<Future<ServerResult>> futures;
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(
+                             System.nanoTime() - started);
+        long remainingMillis = Math.max(
+                               1L, this.storeDeadlineMillis - elapsedMillis);
         try {
             futures = this.storeExecutor.invokeAll(
                     urls.stream().map(url ->
@@ -229,7 +241,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                             this.collectDiscoveredServer(
                                  url, authContext, includeMetrics, now))
                         .collect(Collectors.toList()),
-                    this.storeDeadlineMillis, TimeUnit.MILLISECONDS);
+                    remainingMillis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             sources.put("server", unavailable("upstream_interrupted", now));
@@ -292,10 +304,25 @@ public class LiveOperationsCollector implements OperationsCollector {
         if (!this.pdEnabled || this.serverClients == null) {
             return Collections.emptyList();
         }
-        return this.serverClients.urls().stream()
-                .filter(url -> url != null && !url.trim().isEmpty())
-                .distinct()
-                .collect(Collectors.toList());
+        Future<List<String>> discovery = this.storeExecutor.submit(() ->
+                this.serverClients.urls().stream()
+                    .filter(url -> url != null && !url.trim().isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList()));
+        try {
+            return discovery.get(this.storeDeadlineMillis,
+                                 TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            discovery.cancel(true);
+            throw new UpstreamRequestException("upstream_deadline", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            discovery.cancel(true);
+            throw new UpstreamRequestException("upstream_interrupted", e);
+        } catch (ExecutionException e) {
+            throw new UpstreamRequestException("upstream_unavailable",
+                                               e.getCause());
+        }
     }
 
     private static ServerClientProvider serverClients(
@@ -659,7 +686,12 @@ public class LiveOperationsCollector implements OperationsCollector {
                     result = StoreMetricResult.failure(
                              job, "upstream_unavailable", now);
                 }
-                nodes.set(job.getNodeIndex(), result.getNode());
+                Node node = result.getNode();
+                if (result.getSuccessfulGroups() == 0 &&
+                    directStoreFailure(result.getFailureReason())) {
+                    node = copyNodeWithStatus(node, "DOWN");
+                }
+                nodes.set(job.getNodeIndex(), node);
                 successfulGroups += result.getSuccessfulGroups();
                 if (result.getFailureReason() != null) {
                     partial = true;
@@ -714,11 +746,8 @@ public class LiveOperationsCollector implements OperationsCollector {
                 statuses.put(group, metricStatus(e, now, true));
             }
         }
-        Node node = copyNode(job.getNode(), metrics, statuses);
-        if (successfulGroups == 0 && directStoreFailure(failureReason)) {
-            node = copyNodeWithStatus(node, "DOWN");
-        }
-        return new StoreMetricResult(node, successfulGroups, failureReason);
+        return new StoreMetricResult(copyNode(job.getNode(), metrics, statuses),
+                                     successfulGroups, failureReason);
     }
 
     private static boolean directStoreFailure(String reason) {
@@ -988,8 +1017,10 @@ public class LiveOperationsCollector implements OperationsCollector {
             return "malformed_response";
         }
         String message = error.getMessage();
-        if ("upstream_timeout".equals(message)) {
-            return "upstream_timeout";
+        if ("upstream_timeout".equals(message) ||
+            "upstream_deadline".equals(message) ||
+            "upstream_interrupted".equals(message)) {
+            return message;
         }
         if (message != null && message.startsWith("upstream_http_status_")) {
             return "upstream_rejected";

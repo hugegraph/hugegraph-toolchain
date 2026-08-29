@@ -87,6 +87,8 @@ test('shows a retry surface when configuration bootstrap fails', async () => {
 
 test('revalidates fail-closed server capabilities until verified', async () => {
     jest.useFakeTimers();
+    sessionStorage.setItem('user_', JSON.stringify({user_name: 'admin'}));
+    localStorage.setItem('user', 'admin');
     api.config.getConfig
         .mockResolvedValueOnce({
             status: 200,
@@ -127,6 +129,8 @@ test('revalidates fail-closed server capabilities until verified', async () => {
         });
     expect(screen.getByTestId('app-route'))
         .toHaveAttribute('data-auth-enabled', 'false');
+    expect(sessionStorage.getItem('user_')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
     jest.useRealTimers();
 });
 

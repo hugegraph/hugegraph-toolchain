@@ -51,10 +51,10 @@ import org.apache.hugegraph.service.op.OperationsModels.SourceStatus;
 public class DefaultOperationsDataService implements OperationsDataService {
 
     private static final Set<String> PD_FACTS = Set.of(
-            "graphs", "partitions", "replicas", "stores", "stores_up",
-            "data_size_bytes");
+            "graphs", "partitions", "replicas", "data_size_bytes");
     private static final Set<String> STORE_FACTS = Set.of(
-            "capacity_total_bytes", "capacity_used_bytes");
+            "stores", "stores_up", "capacity_total_bytes",
+            "capacity_used_bytes");
 
     private final OperationsCollector collector;
     private final long ttlMillis;

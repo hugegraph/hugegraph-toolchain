@@ -271,8 +271,8 @@ public class GraphsControllerCanonicalTest {
         }
 
         @Override
-        protected void requireGraphSpaceAccess(HugeClient client,
-                                               String graphSpace) {
+        protected void requireGraphSpaceWrite(HugeClient client,
+                                              String graphSpace) {
             this.checkedGraphSpace = graphSpace;
         }
     }

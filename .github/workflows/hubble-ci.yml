@@ -112,6 +112,7 @@ jobs:
           yarn install --frozen-lockfile --network-timeout 600000 --prefer-offline --ignore-engines
           yarn lint
           yarn i18n:check
+          yarn test --watchAll=false --runInBand
           node --test ../hubble-dist/assembly/travis/ui_auth.test.js
 
       - name: Install Playwright Chromium

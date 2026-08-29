@@ -85,8 +85,8 @@ public class ConfigControllerTest {
         Assert.assertEquals(Map.of("pd_enabled", true,
                                    "server_capabilities_verified", false,
                                    "auth_enabled", true,
-                                   "graph_create_enabled", true,
-                                   "cypher_enabled", true), result);
+                                   "graph_create_enabled", false,
+                                   "cypher_enabled", false), result);
     }
 
     @Test

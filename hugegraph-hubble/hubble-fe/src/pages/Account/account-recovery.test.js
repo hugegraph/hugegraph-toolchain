@@ -66,7 +66,7 @@ jest.mock('./SpaceAccess', () => props => (
             </button>
         )}
         {props.pendingAccount && (
-            <span>
+            <span data-testid="pending-account">
                 pending {props.pendingAccount.user_name}
                 {' '}
                 {props.pendingAccount.graphspaces.join(',')}
@@ -240,6 +240,32 @@ test('super administrators retain all account management actions', async () => {
     expect(await screen.findByText('common.action.edit')).toBeInTheDocument();
     expect(screen.getByText('account.action.manage_membership')).toBeInTheDocument();
     expect(screen.getByText('common.action.delete')).toBeInTheDocument();
+});
+
+test('preserves every GraphSpace when managing an account membership', async () => {
+    api.auth.getAllUserList.mockResolvedValue({
+        status: 200,
+        data: {
+            records: [{
+                id: 'analyst-id',
+                user_name: 'analyst',
+                graphspace_permissions: [
+                    {graphspace: 'SPACE_A', permission_preset: 'GS_READ_ONLY'},
+                    {graphspace: 'SPACE_B', permission_preset: 'GS_READ_ONLY'},
+                ],
+            }],
+            total: 1,
+        },
+    });
+
+    render(<Account />);
+
+    expect(await screen.findByText('analyst')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'account.action.more'}));
+    await userEvent.click(screen.getByText('account.action.manage_membership'));
+
+    expect(await screen.findByTestId('pending-account'))
+        .toHaveTextContent('pending analyst SPACE_A,SPACE_B');
 });
 
 test('returns a guided account creation to the selected GraphSpaces', async () => {
