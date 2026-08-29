@@ -477,6 +477,13 @@
       },
       "placeholder": "Algorithm Query",
       "run": "Run",
+      "run_shortcut": "Run (⌘/Ctrl + Enter)",
+      "computer_environment_title": "HugeGraph Computer environment required",
+      "computer_environment_description": "These whole-graph algorithms run asynchronously through HugeGraph Computer. Configure its compute environment, including Kubernetes when required by the deployment, before submitting a task",
+      "computer_unavailable_title": "HugeGraph Computer unavailable",
+      "computer_unavailable_description": "This graph cannot reach HugeGraph Computer. Configure Computer and its Kubernetes environment before running batch algorithms",
+      "vermeer_unavailable_title": "Vermeer computation is unavailable",
+      "vermeer_unavailable_description": "This Hubble version cannot securely submit Vermeer compute tasks. Configure HugeGraph Computer or upgrade the Vermeer integration before running batch algorithms",
       "task_submit_success": "{{name}} task submitted successfully",
       "common": {
         "instance_num": "Instance Count",
@@ -560,7 +567,7 @@
       },
       "mode": {
         "OLTP": "Interactive exploration",
-        "OLAP": "Batch analysis (async)"
+        "OLAP": "Cluster batch computation"
       },
       "capacity_item": {
         "tooltip": "Maximum number of vertices visited during traversal"
@@ -879,6 +886,7 @@
       "result_title": "Task result",
       "result_context": "{{graphspace}} / {{graph}} / Task {{taskId}}",
       "result_back": "Back to async tasks",
+      "result_open_full": "Open full result",
       "delete_failed": "Delete failed",
       "abort_failed": "Abort failed",
       "delete_confirm_title": "Delete Task",
@@ -930,7 +938,8 @@
         "aborting": "Aborting",
         "delete": "Delete",
         "check_result": "View Result",
-        "check_reason": "View Reason"
+        "check_reason": "View Reason",
+        "collapse_result": "Hide Result"
       }
     },
     "topbar": {

@@ -19,6 +19,7 @@ package org.apache.hugegraph.driver;
 
 import java.util.Arrays;
 
+import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.structure.auth.TokenPayload;
 import org.apache.hugegraph.structure.auth.User;
@@ -79,6 +80,18 @@ public class HugeClientCompatibilityTest {
                 ServerCompatibility.Profile.MODERN);
 
         Assert.assertFalse(this.client.requiresBasicGremlinAuth());
+    }
+
+    @Test
+    public void shouldInitializeAndResetComputerWithGraphScope() {
+        RestClient restClient = Mockito.mock(RestClient.class);
+        Whitebox.setInternalState(this.client, "apiVersionChecked", true);
+
+        this.client.initManagers(restClient, "DEFAULT", "hugegraph");
+        Assert.assertNotNull(this.client.computer());
+
+        this.client.initManagers(restClient, "DEFAULT", null);
+        Assert.assertNull(this.client.computer());
     }
 
     @Test

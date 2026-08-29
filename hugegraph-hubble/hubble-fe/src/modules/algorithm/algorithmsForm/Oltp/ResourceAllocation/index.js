@@ -120,6 +120,8 @@ const ResourceAllocation = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={resourceAllocationForm}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}

@@ -121,6 +121,8 @@ const Paths = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={pathsForm}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}
@@ -148,7 +150,8 @@ const Paths = props => {
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
-                    rules={[{required: true}, {validator: maxDepthValidator}]}
+                    initialValue={3}
+                    rules={[{validator: maxDepthValidator}]}
                     tooltip={t('analysis.algorithm.oltp.common.max_steps')}
                 >
                     <InputNumber />

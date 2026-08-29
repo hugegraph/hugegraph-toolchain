@@ -229,6 +229,8 @@ const Egonet = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={egonetForm}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}
@@ -261,7 +263,8 @@ const Egonet = props => {
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
-                    rules={[{required: true}, {validator: positiveIntegerValidator}]}
+                    initialValue={3}
+                    rules={[{validator: positiveIntegerValidator}]}
                     tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <InputNumber />

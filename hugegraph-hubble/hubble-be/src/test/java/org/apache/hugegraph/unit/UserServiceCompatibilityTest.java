@@ -67,7 +67,7 @@ public class UserServiceCompatibilityTest {
         Mockito.when(this.client.graphSpace()).thenReturn(this.graphSpace);
         Mockito.when(this.client.graphs()).thenReturn(this.graphs);
         Mockito.when(this.auth.createUser(Mockito.any(User.class)))
-               .thenReturn(new User());
+               .thenReturn(user("created-id"));
         Mockito.when(this.auth.listSuperAdmin())
                .thenReturn(java.util.Collections.emptyList());
         this.service = new UserService();
@@ -80,11 +80,13 @@ public class UserServiceCompatibilityTest {
     public void testStandaloneUserCreationOmitsPdOnlyNickname() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
 
-        this.service.add(this.client, userEntity("display-name"));
+        UserEntity created =
+                this.service.add(this.client, userEntity("display-name"));
 
         ArgumentCaptor<User> request = ArgumentCaptor.forClass(User.class);
         Mockito.verify(this.auth).createUser(request.capture());
         Assert.assertNull(request.getValue().nickname());
+        Assert.assertEquals("created-id", created.getId());
     }
 
     @Test

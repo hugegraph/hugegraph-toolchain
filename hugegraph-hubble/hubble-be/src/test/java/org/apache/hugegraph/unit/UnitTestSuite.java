@@ -27,6 +27,7 @@ import org.apache.hugegraph.controller.schema.SchemaControllerSecurityTest;
 import org.apache.hugegraph.controller.space.GraphSpaceControllerTest;
 import org.apache.hugegraph.controller.space.SchemaTemplateControllerSecurityTest;
 import org.apache.hugegraph.handler.ResponseAdvisorStatusTest;
+import org.apache.hugegraph.service.algorithm.OlapAlgoServiceTest;
 import org.apache.hugegraph.service.load.IngestTransactionIntegrationTest;
 import org.apache.hugegraph.service.auth.AuthContextServiceTest;
 import org.apache.hugegraph.service.auth.AuthModeServiceTest;
@@ -74,6 +75,7 @@ import org.junit.runners.Suite;
     LangChainControllerSecurityTest.class,
     LegacyFacadeRemovalTest.class,
     MessageSourceHandlerTest.class,
+    OlapAlgoServiceTest.class,
     SchemaControllerSecurityTest.class,
     SchemaTemplateControllerSecurityTest.class,
     GroovySchemaCompatibilityTest.class,

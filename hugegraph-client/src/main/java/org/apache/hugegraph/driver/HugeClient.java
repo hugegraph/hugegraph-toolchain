@@ -192,6 +192,7 @@ public class HugeClient implements Closeable {
             this.traverser = new TraverserManager(client, this.graph);
             this.variable = new VariablesManager(client, graphSpace, graph);
             this.job = new JobManager(client, graphSpace, graph);
+            this.computer = new ComputerManager(client, graphSpace, graph);
             this.task = new TaskManager(client, graphSpace, graph);
         } else {
             /*
@@ -205,6 +206,7 @@ public class HugeClient implements Closeable {
             this.traverser = null;
             this.variable = null;
             this.job = null;
+            this.computer = null;
             this.task = null;
         }
     }

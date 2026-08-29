@@ -59,11 +59,13 @@ public class ConfigController {
         Map<String, Object> capabilities = new HashMap<>();
         boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
         if (pdEnabled) {
+            capabilities.put("server_capabilities_verified", true);
             capabilities.put("auth_enabled", this.authModeService.enabled());
             capabilities.put("graph_create_enabled", true);
             capabilities.put("cypher_enabled", true);
             return capabilities;
         }
+        capabilities.put("server_capabilities_verified", false);
         capabilities.put("auth_enabled", true);
         capabilities.put("graph_create_enabled", false);
         capabilities.put("cypher_enabled", false);
@@ -78,6 +80,7 @@ public class ConfigController {
             capabilities.put("graph_create_enabled",
                              client.supportsGraphCreate());
             capabilities.put("cypher_enabled", client.supportsCypher());
+            capabilities.put("server_capabilities_verified", true);
             return capabilities;
         } catch (RuntimeException ignored) {
             // Keep bootstrap resilient when the Server is temporarily unavailable.

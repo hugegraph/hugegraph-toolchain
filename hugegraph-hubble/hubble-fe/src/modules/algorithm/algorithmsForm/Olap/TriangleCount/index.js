@@ -133,6 +133,8 @@ const TriangleCount = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}

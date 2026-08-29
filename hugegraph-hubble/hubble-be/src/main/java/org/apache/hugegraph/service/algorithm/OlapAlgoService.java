@@ -22,6 +22,7 @@ import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.algorithm.OlapEntity;
 import org.apache.hugegraph.entity.query.OlapView;
+import org.apache.hugegraph.exception.ServerCapabilityUnavailableException;
 import org.apache.hugegraph.service.query.ExecuteHistoryService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,16 @@ public class OlapAlgoService {
     @Autowired
     private ExecuteHistoryService historyService;
 
+    public boolean computerAvailable(HugeClient client) {
+        try {
+            client.computer().list(1L);
+            return true;
+        } catch (RuntimeException e) {
+            log.debug("HugeGraph Computer is unavailable: {}", e.getMessage());
+            return false;
+        }
+    }
+
     public OlapView olapView(HugeClient client, String graphspace, OlapEntity body) {
         Map<String, Object> params = body.getParams();
         if (!"DEFAULT".equals(graphspace)) {
@@ -48,7 +59,19 @@ public class OlapAlgoService {
             params.put("k8s.worker_memory", "5Gi");
             params.putAll(body.getParams());
         }
-        long taskid = client.computer().create(body.getAlgorithm(), body.getWorker(), params);
+        long taskid;
+        try {
+            taskid = client.computer().create(body.getAlgorithm(),
+                                              body.getWorker(), params);
+        } catch (RuntimeException e) {
+            String detail = e.getMessage();
+            if (detail == null || detail.trim().isEmpty() ||
+                "request_failure".equals(detail)) {
+                throw new ServerCapabilityUnavailableException(
+                        "server.capability.computer.unavailable", e);
+            }
+            throw e;
+        }
         return OlapView.builder().taskId(taskid).build();
     }
 }

@@ -170,6 +170,13 @@ const postOlapInfo =  (graphspace, graph, data) => {
     });
 };
 
+const getOlapCapability = (graphspace, graph, config = {}) => {
+    return request.get(
+        `/graphspaces/${graphspace}/graphs/${graph}/algorithms/olap/capability`,
+        config
+    );
+};
+
 const runOltpInfo =  (graphspace, graph, data) => {
     return runAlgorithmRequest(() => {
         return request.post(
@@ -226,6 +233,7 @@ export {
     fetchManageTaskList,
     addFavoriate,
     postOlapInfo,
+    getOlapCapability,
     runOltpInfo,
     runOlapVermeer,
     fetchAsyncTaskResult,

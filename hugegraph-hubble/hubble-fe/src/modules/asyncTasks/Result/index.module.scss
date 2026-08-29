@@ -68,6 +68,18 @@
     overflow-wrap: anywhere;
 }
 
+.inlineResultBody {
+    max-height: 420px;
+    min-height: 112px;
+    padding: var(--workbench-space-4);
+    overflow: auto;
+    border: 1px solid var(--workbench-color-border);
+    border-radius: var(--workbench-radius-lg);
+    background: var(--workbench-color-surface);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 900px) {
     .resultHeader {
         flex-direction: column;

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {render, screen} from '@testing-library/react';
+import {act, render, screen, waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import App from './App';
 import * as api from './api';
@@ -69,4 +69,45 @@ test('shows a retry surface when configuration bootstrap fails', async () => {
         'Unable to load Hubble configuration.'
     );
     expect(screen.getByRole('button', {name: 'Retry'})).toBeInTheDocument();
+});
+
+test('revalidates fail-closed server capabilities until verified', async () => {
+    jest.useFakeTimers();
+    api.config.getConfig
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {
+                pd_enabled: false,
+                auth_enabled: true,
+                server_capabilities_verified: false,
+            },
+        })
+        .mockResolvedValueOnce({
+            status: 200,
+            data: {
+                pd_enabled: false,
+                auth_enabled: false,
+                server_capabilities_verified: true,
+            },
+        });
+
+    render(
+        <MemoryRouter
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <App />
+        </MemoryRouter>
+    );
+    expect(await screen.findByTestId('app-route')).toBeInTheDocument();
+
+    await act(async () => {
+        jest.advanceTimersByTime(2000);
+    });
+    await waitFor(() => expect(api.config.getConfig).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(sessionStorage.getItem('hubble_config_')))
+        .toMatchObject({
+            auth_enabled: false,
+            server_capabilities_verified: true,
+        });
+    jest.useRealTimers();
 });

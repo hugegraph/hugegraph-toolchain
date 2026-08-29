@@ -146,6 +146,8 @@ const CustomizedPaths = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 onFinish={onFormFinish}
                 className={s.oltpForms}
@@ -157,7 +159,8 @@ const CustomizedPaths = props => {
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
-                    rules={[{required: true}, {validator: integerValidator}]}
+                    initialValue={3}
+                    rules={[{validator: integerValidator}]}
                     tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <InputNumber />

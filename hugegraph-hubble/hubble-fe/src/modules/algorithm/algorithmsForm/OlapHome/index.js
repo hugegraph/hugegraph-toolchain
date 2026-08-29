@@ -20,8 +20,9 @@
  * @file Olap图算法表单列表
  */
 
-import React, {useContext} from 'react';
-import {Collapse, Tooltip} from 'antd';
+import React, {useContext, useEffect, useState} from 'react';
+import {Alert, Collapse, Tooltip} from 'antd';
+import * as api from '../../../../api';
 import GraphAnalysisContext from '../../../Context';
 import _ from 'lodash';
 import {
@@ -44,6 +45,8 @@ const OlapFormHome = props => {
         currentAlgorithm,
         updateCurrentAlgorithm,
         canRunLouvain,
+        graphSpace,
+        graph,
     } =  props;
     const {ALGORITHM_NAME, ALGORITHM_MODE} = useTranslatedConstants();
     const {t} = useTranslation();
@@ -99,6 +102,32 @@ const OlapFormHome = props => {
 
     const {OLAP} = ALGORITHM_MODE;
     const {isVermeer, graphStatus} = useContext(GraphAnalysisContext);
+    const [computerAvailable, setComputerAvailable] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (isVermeer || !graphSpace || !graph) {
+            setComputerAvailable(null);
+            return undefined;
+        }
+        setComputerAvailable(null);
+        api.analysis.getOlapCapability(graphSpace, graph, {
+            suppressBusinessErrorToast: true,
+        }).then(response => {
+            if (!cancelled) {
+                setComputerAvailable(
+                    response?.status === 200 && response?.data?.available === true
+                );
+            }
+        }).catch(() => {
+            if (!cancelled) {
+                setComputerAvailable(false);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [graph, graphSpace, isVermeer]);
 
     const getSearchedList = (arr, value) => {
         return arr.filter(item => isAlgorithmNameMatched(item, value, t));
@@ -131,16 +160,36 @@ const OlapFormHome = props => {
         ),
     })).filter(group => !_.isEmpty(group.items));
     const isEmptyBasicOlap = _.isEmpty(visibleGroups);
-    const shouldDisableForm = isVermeer && graphStatus !== GRAPH_LOAD_STATUS.LOADED;
+    const shouldDisableForm = isVermeer
+        ? graphStatus !== GRAPH_LOAD_STATUS.LOADED
+        : computerAvailable !== true;
+    const capabilityTitle = isVermeer
+        ? 'analysis.algorithm.vermeer_unavailable_title'
+        : computerAvailable === false
+            ? 'analysis.algorithm.computer_unavailable_title'
+            : 'analysis.algorithm.computer_environment_title';
+    const capabilityDescription = isVermeer
+        ? 'analysis.algorithm.vermeer_unavailable_description'
+        : computerAvailable === false
+            ? 'analysis.algorithm.computer_unavailable_description'
+            : 'analysis.algorithm.computer_environment_description';
 
     return (
         <div>
             {!isEmptyBasicOlap && (
-                <Tooltip title={shouldDisableForm ? t(TEXT_PATH.ALGORITHM_COMMON + '.query_tooltip') : ''}>
-                    <div className={c.algorithmCatagery}>{OLAP}</div>
-                </Tooltip>
+                <>
+                    <Tooltip title={shouldDisableForm ? t(TEXT_PATH.ALGORITHM_COMMON + '.query_tooltip') : ''}>
+                        <div className={c.algorithmCatagery}>{OLAP}</div>
+                    </Tooltip>
+                    <Alert
+                        showIcon
+                        type={shouldDisableForm ? 'warning' : 'info'}
+                        message={t(capabilityTitle)}
+                        description={t(capabilityDescription)}
+                    />
+                </>
             )}
-            {visibleGroups.map(group => (
+            {!isVermeer && computerAvailable === true && visibleGroups.map(group => (
                 <div key={group.key}>
                     <div className={c.algorithmGoal}>
                         {t(`analysis.algorithm.group.${group.key}`)}

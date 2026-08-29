@@ -29,14 +29,13 @@ import ReactJsonView from 'react-json-view';
 import convertStringToJSON from '../../../utils/convertStringToJSON';
 import c from './index.module.scss';
 
-const AsyncTaskResult = () => {
+export const AsyncTaskResultContent = ({
+    graphspace,
+    graph,
+    taskId,
+    compact = false,
+}) => {
     const {t} = useTranslation();
-    const {
-        graphspace,
-        graph,
-        taskId,
-    } = useParams();
-
     const [asyncTaskResultJson, setAsyncTaskResultJson] = useState();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -90,6 +89,48 @@ const AsyncTaskResult = () => {
                       && asyncTaskResultJson !== 'null';
 
     return (
+        <div className={compact ? c.inlineResultBody : c.resultBody}>
+            {error && (
+                <Alert
+                    showIcon
+                    type='error'
+                    message={t('analysis.async_task.result_load_failed')}
+                    action={(
+                        <Button size='small' onClick={getResult}>
+                            {t('analysis.async_task.retry_result')}
+                        </Button>
+                    )}
+                />
+            )}
+            {loading && <Spin tip={t('analysis.async_task.result_loading')} />}
+            {!loading && !error && (
+                !hasResult ? (
+                    <Empty description={t('analysis.async_task.no_result')} />
+                ) : resultForJSON === null ? (
+                    asyncTaskResultJson
+                ) : (
+                    <ReactJsonView
+                        src={resultForJSON}
+                        name={false}
+                        displayObjectSize={false}
+                        displayDataTypes={false}
+                        groupArraysAfterLength={50}
+                    />
+                )
+            )}
+        </div>
+    );
+};
+
+const AsyncTaskResult = () => {
+    const {t} = useTranslation();
+    const {
+        graphspace,
+        graph,
+        taskId,
+    } = useParams();
+
+    return (
         <div className={c.pageCanvas}>
             <section className={c.asyncTaskResult}>
                 <header className={c.resultHeader}>
@@ -107,36 +148,11 @@ const AsyncTaskResult = () => {
                         {t('analysis.async_task.result_back')}
                     </Link>
                 </header>
-                <div className={c.resultBody}>
-                    {error && (
-                        <Alert
-                            showIcon
-                            type='error'
-                            message={t('analysis.async_task.result_load_failed')}
-                            action={(
-                                <Button size='small' onClick={getResult}>
-                                    {t('analysis.async_task.retry_result')}
-                                </Button>
-                            )}
-                        />
-                    )}
-                    {loading && <Spin tip={t('analysis.async_task.result_loading')} />}
-                    {!loading && !error && (
-                        !hasResult ? (
-                            <Empty description={t('analysis.async_task.no_result')} />
-                        ) : resultForJSON === null ? (
-                            asyncTaskResultJson
-                        ) : (
-                            <ReactJsonView
-                                src={resultForJSON}
-                                name={false}
-                                displayObjectSize={false}
-                                displayDataTypes={false}
-                                groupArraysAfterLength={50}
-                            />
-                        )
-                    )}
-                </div>
+                <AsyncTaskResultContent
+                    graphspace={graphspace}
+                    graph={graph}
+                    taskId={taskId}
+                />
             </section>
         </div>
     );

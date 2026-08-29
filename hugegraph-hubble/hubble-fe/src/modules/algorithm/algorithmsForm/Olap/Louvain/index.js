@@ -172,6 +172,8 @@ const Louvain = props => {
             forceRender
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 onFinish={onFormFinish}
                 onValuesChange={debouncedRunAvailability}

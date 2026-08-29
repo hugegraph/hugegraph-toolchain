@@ -142,6 +142,8 @@ const ClosenessCentralityVermeer = props => {
             forceRender
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 disabled={graphStatus !== LOADED}
                 onFinish={onFormFinish}

@@ -88,8 +88,9 @@ const EditLayer = ({
                 onCancel();
                 refresh();
                 onCreated?.({
+                    user_id: res.data?.id,
                     user_name: values.user_name,
-                    is_superadmin: values.is_superadmin,
+                    is_superadmin: Boolean(values.is_superadmin),
                 });
                 return;
             }

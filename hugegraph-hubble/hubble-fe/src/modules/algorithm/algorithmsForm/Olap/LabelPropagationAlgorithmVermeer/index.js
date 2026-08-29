@@ -143,6 +143,8 @@ const LabelPropagationAlgorithmVermeer = props => {
             forceRender
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 disabled={graphStatus !== LOADED}
                 onFinish={onFormFinish}

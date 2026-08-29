@@ -33,7 +33,8 @@ const MaxDepthItem = props => {
         <Form.Item
             label='max_depth'
             name='max_depth'
-            rules={[{required: true}, {validator: validator}]}
+            initialValue={3}
+            rules={[{validator: validator}]}
             tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
         >
             <InputNumber />
