@@ -219,7 +219,7 @@ public class UserService extends AuthService {
         return userEntity;
     }
 
-    public void add(HugeClient client, UserEntity ue) {
+    public UserEntity add(HugeClient client, UserEntity ue) {
         boolean permissionPresets = isPdEnabled() &&
                                     client.supportsDefaultRole();
         this.validatePermissionMutation(client, ue, true,
@@ -254,6 +254,7 @@ public class UserService extends AuthService {
                                     superAdminAttempted, error);
             throw error;
         }
+        return this.convert(client, newUser);
     }
 
     private void rollbackNewAccount(HugeClient client, User user,

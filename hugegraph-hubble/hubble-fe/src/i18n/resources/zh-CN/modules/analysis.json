@@ -477,6 +477,13 @@
       },
       "placeholder": "算法查询",
       "run": "运行",
+      "run_shortcut": "运行（⌘/Ctrl + Enter）",
+      "computer_environment_title": "需要 HugeGraph Computer 计算环境",
+      "computer_environment_description": "这些全图算法通过 HugeGraph Computer 异步执行。提交任务前需先配置计算环境；部署要求 Kubernetes 时还需完成对应集群配置",
+      "computer_unavailable_title": "HugeGraph Computer 暂不可用",
+      "computer_unavailable_description": "当前图无法连接 HugeGraph Computer。请完成 Computer 与 Kubernetes 环境配置后再运行批量算法",
+      "vermeer_unavailable_title": "当前无法运行 Vermeer 计算",
+      "vermeer_unavailable_description": "当前 Hubble 版本无法安全提交 Vermeer 计算任务。请改用已配置的 HugeGraph Computer，或升级 Vermeer 集成后再运行批量算法",
       "task_submit_success": "{{name}} 算法任务提交成功",
       "common": {
         "instance_num": "实例数",
@@ -560,7 +567,7 @@
       },
       "mode": {
         "OLTP": "交互式探索",
-        "OLAP": "异步批量分析"
+        "OLAP": "集群批量计算"
       },
       "capacity_item": {
         "tooltip": "遍历过程中最大的访问的顶点数目"
@@ -879,6 +886,7 @@
       "result_title": "任务结果",
       "result_context": "{{graphspace}} / {{graph}} / 任务 {{taskId}}",
       "result_back": "返回异步任务",
+      "result_open_full": "查看完整结果",
       "delete_failed": "删除失败",
       "abort_failed": "终止失败",
       "delete_confirm_title": "删除任务",
@@ -930,7 +938,8 @@
         "aborting": "终止中",
         "delete": "删除",
         "check_result": "查看结果",
-        "check_reason": "查看原因"
+        "check_reason": "查看原因",
+        "collapse_result": "收起结果"
       }
     },
     "topbar": {

@@ -87,6 +87,56 @@ test('persists and restores parameters per graph and algorithm', async () => {
     await waitFor(() => expect(screen.getByLabelText('source')).toHaveValue('1:alice'));
 });
 
+test('submits with Cmd/Ctrl+Enter', async () => {
+    const onFinish = jest.fn();
+    const {container} = render(
+        <Form onFinish={onFinish}>
+            <Form.Item name='source' initialValue='1:marko'>
+                <Input />
+            </Form.Item>
+        </Form>
+    );
+    const form = container.querySelector('form');
+
+    fireEvent.keyDown(form, {key: 'Enter', metaKey: true});
+    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(form, {key: 'Enter', ctrlKey: true});
+    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(2));
+});
+
+test.each([
+    ['plain Enter', {key: 'Enter'}],
+    ['Alt modifier', {key: 'Enter', metaKey: true, altKey: true}],
+    ['Shift modifier', {key: 'Enter', metaKey: true, shiftKey: true}],
+    ['composition', {key: 'Enter', metaKey: true, isComposing: true}],
+    ['repeat', {key: 'Enter', metaKey: true, repeat: true}],
+])('ignores shortcut during %s', async (name, event) => {
+    const onFinish = jest.fn();
+    const {container} = render(<Form onFinish={onFinish} />);
+
+    fireEvent.keyDown(container.querySelector('form'), event);
+
+    await Promise.resolve();
+    expect(onFinish).not.toHaveBeenCalled();
+});
+
+test.each([
+    ['disabled', {isDisabled: true}],
+    ['loading', {isRunning: true}],
+])('does not submit while the run action is %s', async (name, state) => {
+    const onFinish = jest.fn();
+    const {container} = render(<Form {...state} onFinish={onFinish} />);
+
+    fireEvent.keyDown(container.querySelector('form'), {
+        key: 'Enter',
+        metaKey: true,
+    });
+
+    await Promise.resolve();
+    expect(onFinish).not.toHaveBeenCalled();
+});
+
 const algorithmSourceFiles = directory => fs.readdirSync(directory, {withFileTypes: true})
     .flatMap(entry => {
         const entryPath = path.join(directory, entry.name);
@@ -182,12 +232,40 @@ test('renders examples through real shared and OLAP resource field components', 
         </GraphAnalysisContext.Provider>
     );
 
-    expect(screen.getByLabelText('max_depth'))
-        .toHaveAttribute('placeholder', 'For example: 10');
+    expect(screen.getByLabelText('max_depth')).toHaveValue('3');
     expect(screen.getByLabelText('k8s.computer_cpu'))
         .toHaveAttribute('placeholder', 'For example: 2');
     expect(screen.getByLabelText('k8s.worker_request_memory'))
         .toHaveAttribute('placeholder', 'For example: 1Gi');
+});
+
+test('defaults optional max_depth parameters to 3', () => {
+    const algorithmRoot = path.resolve(__dirname, '..');
+    const requiredFields = [];
+    const fieldsWithoutDefault = [];
+
+    algorithmSourceFiles(algorithmRoot).forEach(file => {
+        const source = fs.readFileSync(file, 'utf8');
+        const itemBlocks = source.match(/<Form\.Item\b[\s\S]*?<\/Form\.Item>/g) || [];
+
+        itemBlocks.forEach(block => {
+            if (!/name\s*=\s*['"]max_depth['"]/.test(block)) {
+                return;
+            }
+            const isRequired = /required\s*:\s*true/.test(block);
+            const hasDefault = /initialValue\s*=\s*\{3\}/.test(block)
+                || /max_depth\s*:\s*3/.test(source);
+            if (isRequired) {
+                requiredFields.push(path.relative(algorithmRoot, file));
+            }
+            if (!hasDefault) {
+                fieldsWithoutDefault.push(path.relative(algorithmRoot, file));
+            }
+        });
+    });
+
+    expect(requiredFields).toEqual([]);
+    expect(fieldsWithoutDefault).toEqual([]);
 });
 
 test('resets an existing form when the next graph has no saved draft', async () => {

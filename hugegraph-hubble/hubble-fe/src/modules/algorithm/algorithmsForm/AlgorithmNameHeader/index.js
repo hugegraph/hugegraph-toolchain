@@ -120,7 +120,11 @@ const AlgorithmNameHeader = props => {
             return (
                 <Tooltip
                     placement="rightTop"
-                    title={<span style={{color: '#000'}}>{t('analysis.algorithm.run')}</span>}
+                    title={(
+                        <span style={{color: '#000'}}>
+                            {t('analysis.algorithm.run_shortcut')}
+                        </span>
+                    )}
                     color={'#fff'}
                 >
                     <Button

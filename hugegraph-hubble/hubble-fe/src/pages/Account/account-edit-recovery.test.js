@@ -85,8 +85,19 @@ beforeEach(() => {
 test('creates a non-elevated account when preset API is unavailable',
     async () => {
         mockAuthContext = {capabilities: ['accounts_manage']};
-        api.auth.addUser.mockResolvedValue({status: 200});
-        render(<EditLayer {...props} data={{}} op='create' />);
+        const onCreated = jest.fn();
+        api.auth.addUser.mockResolvedValue({
+            status: 200,
+            data: {id: 'user-42'},
+        });
+        render(
+            <EditLayer
+                {...props}
+                data={{}}
+                op='create'
+                onCreated={onCreated}
+            />
+        );
         await act(async () => undefined);
 
         expect(screen.queryByText('account.form.permission_preset'))
@@ -111,6 +122,11 @@ test('creates a non-elevated account when preset API is unavailable',
         expect(payload).not.toHaveProperty('graphspace_permissions');
         expect(payload).not.toHaveProperty('adminSpaces');
         expect(payload).not.toHaveProperty('is_superadmin');
+        expect(onCreated).toHaveBeenCalledWith({
+            user_id: 'user-42',
+            user_name: 'alice',
+            is_superadmin: false,
+        });
     });
 
 test('keeps global super administrator identity in account creation', async () => {

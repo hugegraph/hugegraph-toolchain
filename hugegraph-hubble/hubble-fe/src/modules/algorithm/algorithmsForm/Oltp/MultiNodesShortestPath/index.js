@@ -229,6 +229,8 @@ const MultiNodesShortestPath = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}
@@ -241,8 +243,9 @@ const MultiNodesShortestPath = props => {
                 <Form.Item
                     name='max_depth'
                     label="max_depth"
+                    initialValue={3}
                     tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
-                    rules={[{required: true}, {validator: positiveIntegerValidator}]}
+                    rules={[{validator: positiveIntegerValidator}]}
                 >
                     <InputNumber />
                 </Form.Item>

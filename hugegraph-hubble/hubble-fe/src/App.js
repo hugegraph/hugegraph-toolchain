@@ -27,29 +27,40 @@ import * as api from './api';
 import {setConfig} from './utils/config';
 import {useEffect, useState} from 'react';
 
+const CONFIG_RETRY_DELAY_MS = 2000;
+
 function App() {
     const [configReady, setConfigReady] = useState(false);
     const [configError, setConfigError] = useState(false);
 
     useEffect(() => {
         let active = true;
-        api.config.getConfig()
-            .then(response => {
+        let retryTimer;
+        const loadConfig = () => {
+            api.config.getConfig().then(response => {
                 if (response?.status !== 200 || !response.data) {
                     throw new Error('invalid_hubble_config');
                 }
                 if (active) {
                     setConfig(response.data);
                     setConfigReady(true);
+                    setConfigError(false);
+                    if (response.data.server_capabilities_verified === false) {
+                        retryTimer = window.setTimeout(
+                            loadConfig, CONFIG_RETRY_DELAY_MS
+                        );
+                    }
                 }
-            })
-            .catch(() => {
+            }).catch(() => {
                 if (active) {
                     setConfigError(true);
                 }
             });
+        };
+        loadConfig();
         return () => {
             active = false;
+            window.clearTimeout(retryTimer);
         };
     }, []);
 

@@ -18,6 +18,9 @@
 
 package org.apache.hugegraph.controller.algorithm;
 
+import java.util.Collections;
+import java.util.Map;
+
 import lombok.extern.log4j.Log4j2;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.controller.BaseController;
@@ -26,6 +29,7 @@ import org.apache.hugegraph.entity.algorithm.OlapEntity;
 import org.apache.hugegraph.entity.query.OlapView;
 import org.apache.hugegraph.service.algorithm.OlapAlgoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,6 +43,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class OlapAlgoController extends BaseController {
     @Autowired
     private OlapAlgoService service;
+
+    @GetMapping("capability")
+    public Map<String, Boolean> capability(
+            @PathVariable("graphspace") String graphspace,
+            @PathVariable("graph") String graph) {
+        HugeClient client = this.authClient(graphspace, graph);
+        return Collections.singletonMap(
+                "available", this.service.computerAvailable(client));
+    }
 
     @PostMapping
     public OlapView olapView(@PathVariable("graphspace") String graphspace,

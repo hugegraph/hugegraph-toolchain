@@ -124,6 +124,8 @@ const Crosspoints = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={crosspointsForm}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}
@@ -167,7 +169,8 @@ const Crosspoints = props => {
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
-                    rules={[{required: true}, {validator: maxDepthValidator}]}
+                    initialValue={3}
+                    rules={[{validator: maxDepthValidator}]}
                     tooltip={t('analysis.algorithm.max_depth_item.tooltip')}
                 >
                     <InputNumber />

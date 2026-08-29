@@ -104,6 +104,8 @@ const AlgorithmFormHome = props => {
                 currentAlgorithm={currentAlgorithm}
                 updateCurrentAlgorithm={updateCurrentAlgorithm}
                 canRunLouvain={canRunLouvain}
+                graphSpace={graphSpace}
+                graph={graph}
             />
         </div>
     );

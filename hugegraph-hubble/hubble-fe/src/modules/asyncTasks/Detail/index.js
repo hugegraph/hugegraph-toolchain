@@ -20,7 +20,8 @@
  * @file 任务管理 table页面
  */
 
-import React, {useState, useCallback, useContext} from 'react';
+import React, {useState, useCallback, useContext, useEffect} from 'react';
+import {Link} from 'react-router-dom';
 import {Table, Tag, Spin, message, Button, Typography, Modal} from 'antd';
 import GraphAnalysisContext from '../../Context';
 import {CloseOutlined} from '@ant-design/icons';
@@ -36,16 +37,22 @@ import {
 import {intersection, size} from 'lodash-es';
 import {format} from 'date-fns';
 import {useTranslation} from 'react-i18next';
+import {AsyncTaskResultContent} from '../Result';
 import c from './index.module.scss';
 const {Text} = Typography;
 
 const {FAILED, SUCCESS, DELETING, CANCELLING} = Async_Taskt_Status;
 
-const TaskAction = ({onAction, args, children}) => {
+const TaskAction = ({onAction, args, children, ...buttonProps}) => {
     const handleClick = useCallback(() => onAction(...args), [args, onAction]);
 
     return (
-        <Button type='link' style={{margin: '10px'}} onClick={handleClick}>
+        <Button
+            type='link'
+            style={{margin: '10px'}}
+            onClick={handleClick}
+            {...buttonProps}
+        >
             {children}
         </Button>
     );
@@ -65,6 +72,7 @@ const AsyncTaskDetail = props => {
     const {graphSpace: currentGraphSpace, graph: currentGraph, isVermeer} = useContext(GraphAnalysisContext);
     const {records: asyncManageTaskDataRecords, total: asyncManageTaskDataTotal} = asyncManageTaskData || {};
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+    const [expandedTaskId, setExpandedTaskId] = useState();
     const {
         taskTypeNames,
         taskStatusNames,
@@ -123,10 +131,27 @@ const AsyncTaskDetail = props => {
         return res;
     };
 
-    const viewResult = useCallback(
-        (text, rowData, index) => {
-            window.open(`/asyncTasks/result/${currentGraphSpace}/${currentGraph}/${rowData.id}`);
-        }, [currentGraph, currentGraphSpace]);
+    const toggleResult = useCallback(taskId => {
+        setExpandedTaskId(current => (
+            current === taskId ? undefined : taskId
+        ));
+    }, []);
+
+    useEffect(() => {
+        setExpandedTaskId(undefined);
+    }, [currentGraph, currentGraphSpace, page, pageSize]);
+
+    useEffect(() => {
+        if (expandedTaskId === undefined) {
+            return;
+        }
+        const stillVisible = asyncManageTaskDataRecords?.some(
+            task => task.id === expandedTaskId
+        );
+        if (!stillVisible) {
+            setExpandedTaskId(undefined);
+        }
+    }, [asyncManageTaskDataRecords, expandedTaskId]);
 
     const deleteTaskByIds = useCallback(
         taskIdArr => {
@@ -248,6 +273,7 @@ const AsyncTaskDetail = props => {
                 const {'task_status': status, 'task_type': type, id: taskId}  = rowData;
                 const allowCheckResTypeArr = ['gremlin', 'computer-dis', 'cypher'];
                 const isAllowCheckRes = status === SUCCESS && allowCheckResTypeArr.includes(type);
+                const isResultExpanded = expandedTaskId === taskId;
                 const allowAbortStatusArr = ['scheduling', 'scheduled', 'queued', 'running', 'restoring'];
                 const isAllowAbort = allowAbortStatusArr.includes(status);
                 const {
@@ -260,17 +286,26 @@ const AsyncTaskDetail = props => {
                 return (
                     <div style={{whiteSpace: 'nowrap'}}>
                         {status === FAILED && (
-                            <a
-                                style={{margin: '10px'}}
-                                href={`/asyncTasks/result/${currentGraphSpace}/${currentGraph}/${taskId}`}
+                            <TaskAction
+                                onAction={toggleResult}
+                                args={[taskId]}
+                                aria-expanded={isResultExpanded}
+                                aria-controls={`async-task-result-${taskId}`}
                             >
                                 {reason}
-                            </a>
+                            </TaskAction>
 
                         )}
                         {isAllowCheckRes && (
-                            <TaskAction onAction={viewResult} args={[result, rowData, index]}>
-                                {resultText}
+                            <TaskAction
+                                onAction={toggleResult}
+                                args={[taskId]}
+                                aria-expanded={isResultExpanded}
+                                aria-controls={`async-task-result-${taskId}`}
+                            >
+                                {isResultExpanded
+                                    ? t('analysis.async_task.action.collapse_result')
+                                    : resultText}
                             </TaskAction>
                         )}
                         {!isAllowAbort && (
@@ -325,6 +360,44 @@ const AsyncTaskDetail = props => {
                 columns={columns}
                 dataSource={asyncManageTaskDataRecords}
                 onChange={onPageChange}
+                expandable={{
+                    expandedRowKeys: expandedTaskId === undefined
+                        ? [] : [expandedTaskId],
+                    onExpand: (expanded, rowData) => {
+                        setExpandedTaskId(expanded ? rowData.id : undefined);
+                    },
+                    rowExpandable: rowData => {
+                        const resultTypes = [
+                            'gremlin',
+                            'computer-dis',
+                            'cypher',
+                        ];
+                        return rowData.task_status === FAILED
+                               || (rowData.task_status === SUCCESS
+                                   && resultTypes.includes(rowData.task_type));
+                    },
+                    expandedRowRender: rowData => (
+                        <div
+                            id={`async-task-result-${rowData.id}`}
+                            className={c.inlineResult}
+                        >
+                            <div className={c.inlineResultHeader}>
+                                <strong>
+                                    {t('analysis.async_task.result_title')}
+                                </strong>
+                                <Link to={`/asyncTasks/result/${currentGraphSpace}/${currentGraph}/${rowData.id}`}>
+                                    {t('analysis.async_task.result_open_full')}
+                                </Link>
+                            </div>
+                            <AsyncTaskResultContent
+                                compact
+                                graphspace={currentGraphSpace}
+                                graph={currentGraph}
+                                taskId={rowData.id}
+                            />
+                        </div>
+                    ),
+                }}
                 pagination={{
                     position: ['bottomRight'],
                     total: asyncManageTaskDataTotal,

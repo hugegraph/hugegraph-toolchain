@@ -140,6 +140,9 @@ const PersistentForm = props => {
     const [fallbackForm] = AntForm.useForm();
     const {
         form = fallbackForm,
+        isDisabled = false,
+        isRunning = false,
+        onKeyDown,
         onValuesChange,
         ...formProps
     } = props;
@@ -166,10 +169,27 @@ const PersistentForm = props => {
         [onValuesChange, storageKey]
     );
 
+    const handleKeyDown = useCallback(
+        event => {
+            onKeyDown?.(event);
+            if (event.defaultPrevented || event.key !== 'Enter'
+                || (!event.metaKey && !event.ctrlKey)
+                || event.altKey || event.shiftKey
+                || event.nativeEvent?.isComposing || event.repeat
+                || isDisabled || isRunning) {
+                return;
+            }
+            event.preventDefault();
+            form.submit();
+        },
+        [form, isDisabled, isRunning, onKeyDown]
+    );
+
     return (
         <AntForm
             {...formProps}
             form={form}
+            onKeyDown={handleKeyDown}
             onValuesChange={handleValuesChange}
         />
     );

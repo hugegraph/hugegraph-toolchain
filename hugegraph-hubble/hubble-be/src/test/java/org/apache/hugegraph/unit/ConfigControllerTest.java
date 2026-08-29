@@ -57,6 +57,7 @@ public class ConfigControllerTest {
         Map<String, Object> result = controller.getConfig();
 
         Assert.assertEquals(Map.of("pd_enabled", false,
+                                   "server_capabilities_verified", true,
                                    "auth_enabled", false,
                                    "graph_create_enabled", false,
                                    "cypher_enabled", false), result);
@@ -89,6 +90,7 @@ public class ConfigControllerTest {
         Map<String, Object> result = controller.getConfig();
 
         Assert.assertEquals(Map.of("pd_enabled", false,
+                                   "server_capabilities_verified", true,
                                    "auth_enabled", true,
                                    "graph_create_enabled", true,
                                    "cypher_enabled", false), result);
@@ -114,6 +116,7 @@ public class ConfigControllerTest {
         Map<String, Object> result = controller.getConfig();
 
         Assert.assertEquals(Map.of("pd_enabled", false,
+                                   "server_capabilities_verified", false,
                                    "auth_enabled", true,
                                    "graph_create_enabled", false,
                                    "cypher_enabled", false), result);

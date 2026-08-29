@@ -41,7 +41,7 @@ const {RANK_API} = ALGORITHM_NAME;
 const initialValue = {
     alpha: 0.85,
     max_degree: 10000,
-    max_depth: 5,
+    max_depth: 3,
     limit: 100,
     max_diff: 0.0001,
     sorted: true,
@@ -137,6 +137,8 @@ const RankApi = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}

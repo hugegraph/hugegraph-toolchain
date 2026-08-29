@@ -52,3 +52,17 @@ test('algorithm panels forward only the collapse control contract', () => {
 
     expect(offenders).toEqual([]);
 });
+
+test('max_depth defaults stay optional', () => {
+    const offenders = collectJavaScript(__dirname).flatMap(file => {
+        const source = fs.readFileSync(file, 'utf8');
+        const fields = source.match(
+            /name=['"]max_depth['"][\s\S]*?<\/Form\.Item>/gu
+        ) ?? [];
+        return fields.some(field => field.includes('required: true'))
+            ? [path.relative(__dirname, file)]
+            : [];
+    });
+
+    expect(offenders).toEqual([]);
+});

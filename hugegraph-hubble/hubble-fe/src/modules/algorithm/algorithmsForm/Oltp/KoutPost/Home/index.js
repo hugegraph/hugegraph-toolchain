@@ -155,6 +155,8 @@ const KoutPost = props => {
             }
         >
             <Form
+                isDisabled={!isEnableRun}
+                isRunning={isRequiring}
                 form={form}
                 onFinish={onFormFinish}
                 onValuesChange={_.debounce(onFormValuesChange, 300)}
@@ -172,7 +174,8 @@ const KoutPost = props => {
                 <Form.Item
                     label='max_depth'
                     name='max_depth'
-                    rules={[{required: true}, {validator: positiveIntegerValidator}]}
+                    initialValue={3}
+                    rules={[{validator: positiveIntegerValidator}]}
                     tooltip={t('analysis.algorithm.form.step.max_depth')}
                 >
                     <Input />

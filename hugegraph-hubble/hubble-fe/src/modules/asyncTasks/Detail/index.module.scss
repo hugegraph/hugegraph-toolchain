@@ -45,4 +45,16 @@
     .clearSelection {
         color: inherit;
     }
+
+    .inlineResult {
+        padding: var(--workbench-space-3) var(--workbench-space-4);
+    }
+
+    .inlineResultHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--workbench-space-3);
+        margin-bottom: var(--workbench-space-2);
+    }
 }
