@@ -109,12 +109,26 @@ it('shows a same-level Text2GQL preview with no executable control', () => {
     expect(screen.queryByRole('button', {name: /run|execute/i})).not.toBeInTheDocument();
 });
 
+it('hides Cypher when capability is absent', () => {
+    render(
+        <QueryBar
+            activeTab='Gremlin'
+            onTabsChange={jest.fn()}
+            codeEditorContent=''
+            setCodeEditorContent={jest.fn()}
+        />
+    );
+
+    expect(screen.queryByRole('tab', {name: 'Cypher'})).not.toBeInTheDocument();
+});
+
 it('does not transfer an open favorite popover when query tabs change', () => {
     const ControlledQueryBar = () => {
         const [activeTab, setActiveTab] = useState('Gremlin');
         return (
             <QueryBar
                 activeTab={activeTab}
+                cypherEnabled
                 onTabsChange={setActiveTab}
                 codeEditorContent='g.V()'
                 setCodeEditorContent={jest.fn()}
@@ -137,6 +151,7 @@ it('matches the editor placeholder to the active query language without promotio
         return (
             <QueryBar
                 activeTab={activeTab}
+                cypherEnabled
                 onTabsChange={setActiveTab}
                 codeEditorContent=''
                 setCodeEditorContent={jest.fn()}

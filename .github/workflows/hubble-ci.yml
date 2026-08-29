@@ -24,8 +24,9 @@ on:
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
   # Server PR #3159 declares the GraphSpace default-role contract as API 0.72.
-  HUGEGRAPH_SERVER_COMMIT: 52035dad9ee8d6b666329ca0d03950c773d3e1eb
-  HUGEGRAPH_SERVER_FETCH_REF: refs/pull/3159/head
+  # TODO: After #3159 merges, switch these values to the stable upstream branch.
+  HUGEGRAPH_SERVER_GIT_URL: https://github.com/hugegraph/hugegraph.git
+  HUGEGRAPH_SERVER_BRANCH: cx/bump-server-api-version
 
 jobs:
   hubble-ci:
@@ -88,11 +89,22 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
+      - name: Resolve HugeGraph Server branch
+        id: server-ref
+        run: |
+          SERVER_COMMIT="$(git ls-remote "$HUGEGRAPH_SERVER_GIT_URL" \
+            "refs/heads/$HUGEGRAPH_SERVER_BRANCH" | cut -f1)"
+          if [[ -z "$SERVER_COMMIT" ]]; then
+            echo "Unable to resolve HugeGraph Server branch" >&2
+            exit 1
+          fi
+          echo "commit=$SERVER_COMMIT" >> "$GITHUB_OUTPUT"
+
       - name: Cache HugeGraph Server
         uses: actions/cache@v6
         with:
-          path: ~/hugegraph-cache-${{ env.HUGEGRAPH_SERVER_COMMIT }}
-          key: ${{ runner.os }}-hugegraph-server-${{ env.HUGEGRAPH_SERVER_COMMIT }}
+          path: ~/hugegraph-cache-${{ steps.server-ref.outputs.commit }}
+          key: ${{ runner.os }}-hugegraph-server-${{ steps.server-ref.outputs.commit }}
 
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
@@ -116,8 +128,9 @@ jobs:
 
       - name: Prepare env and service
         env:
-          COMMIT_ID: ${{ env.HUGEGRAPH_SERVER_COMMIT }}
-          COMMIT_REF: ${{ env.HUGEGRAPH_SERVER_FETCH_REF }}
+          COMMIT_ID: ${{ steps.server-ref.outputs.commit }}
+          COMMIT_REF: ${{ steps.server-ref.outputs.commit }}
+          HUGEGRAPH_GIT_URL: ${{ env.HUGEGRAPH_SERVER_GIT_URL }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="

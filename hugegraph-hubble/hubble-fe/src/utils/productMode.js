@@ -65,8 +65,6 @@ const getTaskGraphspaceOptions = (pdEnabled, graphspaces = []) => {
     }));
 };
 
-const isGraphCreateEnabled = () => true;
-
 const isGraphDefaultMutationEnabled = pdEnabled => pdEnabled;
 
 export {
@@ -74,7 +72,6 @@ export {
     getGraphspacePath,
     getManageNavItems,
     getTaskGraphspaceOptions,
-    isGraphCreateEnabled,
     isGraphDefaultMutationEnabled,
     isPdOnlyPath,
     shouldUseNonPdDefaultGraphspace,

@@ -104,6 +104,13 @@ public class LoginController extends BaseController {
             this.getRequest().changeSessionId();
             this.setUser(login.name());
             this.setToken(result.token());
+            // HugeGraph 1.7's Gremlin HTTP channel only accepts Basic auth.
+            // Keep the credential server-side for the session lifetime so
+            // graph queries can use the same identity as REST requests.
+            this.setSession(Constant.PASSWORD_KEY, login.password());
+            this.setSession(Constant.PASSWORD_EXPIRE_AT_KEY,
+                            System.currentTimeMillis() +
+                            TOKEN_EXPIRE_SECONDS * 1000L);
             return user;
         } catch (Throwable e) {
             this.clearAuthSession();

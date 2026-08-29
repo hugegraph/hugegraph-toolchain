@@ -18,8 +18,10 @@
 
 package org.apache.hugegraph.service.auth;
 
-import org.apache.hugegraph.config.HugeConfig;
-import org.apache.hugegraph.options.HubbleOptions;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.service.HugeClientPoolService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,20 +30,50 @@ import org.springframework.stereotype.Service;
  * not infer mode from sessions or PD settings.
  */
 @Service
-public final class AuthModeService {
+public class AuthModeService {
 
-    private final HugeConfig config;
+    private static final int PROBE_TIMEOUT_SECONDS = 3;
+    private static final long CACHE_NANOS = TimeUnit.SECONDS.toNanos(30L);
+
+    private final HugeClientPoolService hugeClientPoolService;
+    private volatile Boolean serverAuthEnabled;
+    private volatile long detectedAt;
 
     @Autowired
-    public AuthModeService(HugeConfig config) {
-        this.config = config;
+    public AuthModeService(HugeClientPoolService hugeClientPoolService) {
+        this.hugeClientPoolService = hugeClientPoolService;
     }
 
     public boolean enabled() {
-        return !Boolean.FALSE.equals(this.config.get(HubbleOptions.AUTH_ENABLED));
+        Boolean cached = this.serverAuthEnabled;
+        long now = System.nanoTime();
+        if (cached != null && now - this.detectedAt < CACHE_NANOS) {
+            return cached;
+        }
+        try (HugeClient client = this.createUnauthClient()) {
+            return this.update(client.isServerAuthEnabled(), now);
+        } catch (RuntimeException ignored) {
+            // Fail closed while Server state is unavailable.
+            return this.update(true, now);
+        }
     }
 
     public boolean anonymous() {
         return !this.enabled();
+    }
+
+    public boolean update(boolean enabled) {
+        return this.update(enabled, System.nanoTime());
+    }
+
+    private boolean update(boolean enabled, long detectedAt) {
+        this.serverAuthEnabled = enabled;
+        this.detectedAt = detectedAt;
+        return enabled;
+    }
+
+    protected HugeClient createUnauthClient() {
+        return this.hugeClientPoolService.createUnauthClient(
+               PROBE_TIMEOUT_SECONDS);
     }
 }

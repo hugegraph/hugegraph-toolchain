@@ -26,10 +26,11 @@ import org.apache.hugegraph.controller.langchain.LangChainControllerSecurityTest
 import org.apache.hugegraph.controller.schema.SchemaControllerSecurityTest;
 import org.apache.hugegraph.controller.space.GraphSpaceControllerTest;
 import org.apache.hugegraph.controller.space.SchemaTemplateControllerSecurityTest;
-import org.apache.hugegraph.config.HubbleConfigEnvironmentTest;
 import org.apache.hugegraph.handler.ResponseAdvisorStatusTest;
 import org.apache.hugegraph.service.load.IngestTransactionIntegrationTest;
 import org.apache.hugegraph.service.auth.AuthContextServiceTest;
+import org.apache.hugegraph.service.auth.AuthModeServiceTest;
+import org.apache.hugegraph.service.auth.GraphSpaceUserServiceTest;
 import org.apache.hugegraph.service.space.GraphSpaceServiceTest;
 import org.apache.hugegraph.service.op.DefaultOperationsDataServiceTest;
 import org.apache.hugegraph.service.op.LiveOperationsCollectorTest;
@@ -44,12 +45,14 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     AccountMutationAuthorizationTest.class,
     AuthContextServiceTest.class,
+    AuthModeServiceTest.class,
     AuthSecurityTest.class,
     AppTypeTest.class,
     AuthzRouteRegistrationTest.class,
     BusinessAssertTest.class,
     BaseControllerGremlinClientTest.class,
     ConsolePrintTest.class,
+    ConfigControllerTest.class,
     EmptyCatchTest.class,
     FileMappingSchemaTest.class,
     FileUploadControllerTest.class,
@@ -61,10 +64,10 @@ import org.junit.runners.Suite;
     GraphSpaceAuthMutationAuthorizationTest.class,
     GraphSpaceAuthOwnershipTest.class,
     GraphSpaceServiceTest.class,
+    GraphSpaceUserServiceTest.class,
     GraphsControllerCanonicalTest.class,
     GremlinUtilTest.class,
     GremlinHistoryFailureTest.class,
-    HubbleConfigEnvironmentTest.class,
     HubbleOptionsTest.class,
     IngestControllerTest.class,
     IngestTransactionIntegrationTest.class,

@@ -122,9 +122,8 @@ public class OperationsControllerTest {
                                              OperationsDataService.class);
         OperationsController controller = new OperationsController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(!anonymous);
-        AuthModeService authMode = new AuthModeService(config);
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(authMode.anonymous()).thenReturn(anonymous);
         ReflectionTestUtils.setField(controller, "authMode", authMode);
         ReflectionTestUtils.setField(controller, "userService", userService);
         ReflectionTestUtils.setField(controller, "dataService", dataService);

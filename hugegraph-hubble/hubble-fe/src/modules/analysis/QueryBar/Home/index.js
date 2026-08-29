@@ -42,6 +42,7 @@ const QueryBar = props => {
         onTabsChange,
         onExecute,
         isExecuting,
+        cypherEnabled = false,
     } = args;
 
     const [isEmptyQuery, setIsEmptyQuery] = useState(() => !codeEditorContent);
@@ -132,11 +133,11 @@ const QueryBar = props => {
             key: GREMLIN,
             children: renderEditor('gremlin'),
         },
-        {
+        ...(cypherEnabled ? [{
             label: t('analysis.query.cypher_tab'),
             key: CYPHER,
             children: renderEditor('cypher'),
-        },
+        }] : []),
         {
             label: (
                 <span>

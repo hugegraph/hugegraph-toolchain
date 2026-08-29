@@ -187,10 +187,8 @@ public class AuthSecurityTest {
     @Test
     public void testAnonymousModeBlocksAuthManagementButAllowsContext() {
         LoginInterceptor interceptor = new LoginInterceptor();
-        HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(false);
-        AuthModeService mode = new AuthModeService(config);
+        AuthModeService mode = Mockito.mock(AuthModeService.class);
+        Mockito.when(mode.anonymous()).thenReturn(true);
         ReflectionTestUtils.setField(interceptor, "authMode", mode);
 
         MockHttpServletRequest users = new MockHttpServletRequest("GET", "/api/v1.3/auth/users");
@@ -246,8 +244,9 @@ public class AuthSecurityTest {
                 new ServletRequestAttributes(request));
         TestBaseController controller = new TestBaseController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED)).thenReturn(false);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
+        AuthModeService mode = Mockito.mock(AuthModeService.class);
+        Mockito.when(mode.anonymous()).thenReturn(true);
         GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
         HugeClient client = Mockito.mock(HugeClient.class);
         Mockito.when(spaces.requirePublicSpace(client, "protected"))
@@ -255,7 +254,7 @@ public class AuthSecurityTest {
                                                 "unavailable"));
         ReflectionTestUtils.setField(controller, "config", config);
         ReflectionTestUtils.setField(controller, "authMode",
-                                     new AuthModeService(config));
+                                     mode);
         ReflectionTestUtils.setField(controller, "graphSpaceAccessService",
                                      spaces);
 
@@ -396,6 +395,9 @@ public class AuthSecurityTest {
                                             "/api/v1.3/graphspaces/space1");
         request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
         request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.PASSWORD_KEY, "secret");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          System.currentTimeMillis() + 10000L);
 
         Assert.assertTrue(interceptor.preHandle(request,
                                                 new MockHttpServletResponse(),
@@ -449,6 +451,27 @@ public class AuthSecurityTest {
         Assert.assertEquals("graph1", interceptor.graph);
         Assert.assertEquals("token", interceptor.token);
         Mockito.verify(spaces).requireAccessibleSpace(null, "space1");
+    }
+
+    @Test
+    public void testCustomInterceptorKeepsBearerForRestWithLegacyPassword()
+           throws Exception {
+        TestCustomInterceptor interceptor = new TestCustomInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                                            "GET",
+                                            "/api/v1.3/auth/users/getpersonal");
+        request.getSession().setAttribute(Constant.TOKEN_KEY, "token");
+        request.getSession().setAttribute(Constant.USERNAME_KEY, "admin");
+        request.getSession().setAttribute(Constant.PASSWORD_KEY, "secret");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          System.currentTimeMillis() + 10000L);
+
+        Assert.assertTrue(interceptor.preHandle(request,
+                                                new MockHttpServletResponse(),
+                                                null));
+
+        Assert.assertEquals(1, interceptor.authClients);
+        Assert.assertEquals("token", interceptor.token);
     }
 
     @Test
@@ -513,11 +536,10 @@ public class AuthSecurityTest {
     public void testAnonymousClientUsesGraphSpaceScope() throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
         HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(false);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED))
                .thenReturn(true);
-        AuthModeService mode = new AuthModeService(config);
+        AuthModeService mode = Mockito.mock(AuthModeService.class);
+        Mockito.when(mode.anonymous()).thenReturn(true);
         ReflectionTestUtils.setField(interceptor, "authMode", mode);
         ReflectionTestUtils.setField(interceptor, "config", config);
         GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
@@ -537,12 +559,12 @@ public class AuthSecurityTest {
            throws Exception {
         TestCustomInterceptor interceptor = new TestCustomInterceptor();
         HugeConfig config = Mockito.mock(HugeConfig.class);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(false);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED))
                .thenReturn(true);
+        AuthModeService mode = Mockito.mock(AuthModeService.class);
+        Mockito.when(mode.anonymous()).thenReturn(true);
         ReflectionTestUtils.setField(interceptor, "authMode",
-                                     new AuthModeService(config));
+                                     mode);
         ReflectionTestUtils.setField(interceptor, "config", config);
         GraphSpaceService spaces = Mockito.mock(GraphSpaceService.class);
         Mockito.doThrow(new ExternalException(HttpStatus.NOT_FOUND.value(),
@@ -745,6 +767,9 @@ public class AuthSecurityTest {
 
         Assert.assertNull(request.getSession().getAttribute(Constant.TOKEN_KEY));
         Assert.assertNull(request.getSession().getAttribute(Constant.USERNAME_KEY));
+        Assert.assertNull(request.getSession().getAttribute(Constant.PASSWORD_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_EXPIRE_AT_KEY));
     }
 
     @Test
@@ -814,9 +839,11 @@ public class AuthSecurityTest {
                             Constant.USERNAME_KEY));
         Assert.assertEquals("server-token", request.getSession().getAttribute(
                             Constant.TOKEN_KEY));
-        Assert.assertNull(request.getSession().getAttribute("auth_password"));
-        Assert.assertNull(request.getSession().getAttribute(
-                          "auth_password_expire_at"));
+        Assert.assertEquals("pa", request.getSession().getAttribute(
+                            Constant.PASSWORD_KEY));
+        Assert.assertTrue(((Number) request.getSession().getAttribute(
+                           Constant.PASSWORD_EXPIRE_AT_KEY)).longValue() >
+                          System.currentTimeMillis());
     }
 
     @Test

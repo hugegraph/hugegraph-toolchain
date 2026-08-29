@@ -2,12 +2,12 @@
 
 ## Authentication and connection boundary
 
-The `1.8/master` path is the source of truth. Backend configuration exposes
-one `auth.enabled` switch and one connection resolver. The resolver chooses
-either a direct server URL or an address discovered from PD; callers must not
-reimplement `usePD` or infer connection state from page-local flags. In PD mode
-the server address returned by discovery is authoritative, so a manual server
-URL is not required.
+The `1.8/master` path is the source of truth. The backend detects authentication
+mode from HugeGraph Server and uses one connection resolver. The resolver
+chooses either a direct server URL or an address discovered from PD; callers
+must not reimplement `usePD` or infer connection state from page-local flags.
+In PD mode the server address returned by discovery is authoritative, so a
+manual server URL is not required.
 
 Use the unauthenticated HugeGraph client for anonymous mode. Do not manufacture
 an empty token or an administrator session. Anonymous mode has no account

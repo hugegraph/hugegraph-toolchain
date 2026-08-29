@@ -33,6 +33,11 @@ test.each([
     }, true, true, true],
     [{mode: 'NON_PD', role: 'USER', scopes: {}}, false, false, true],
     [{mode: 'NON_PD', role: 'SUPERADMIN', scopes: {}}, false, true, true],
+    [{
+        mode: 'NON_AUTH',
+        role: 'ANONYMOUS',
+        scopes: {all_graphspaces: true},
+    }, true, false, true],
     [{mode: 'NON_AUTH', role: 'ANONYMOUS', scopes: {}}, false, true, true],
 ])(
     'resolves graphspace access for %#',

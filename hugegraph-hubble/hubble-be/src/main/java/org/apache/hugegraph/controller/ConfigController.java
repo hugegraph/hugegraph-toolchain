@@ -23,7 +23,10 @@ import java.util.Map;
 
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.config.HugeConfig;
+import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.HugeClientPoolService;
+import org.apache.hugegraph.service.auth.AuthModeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,14 +36,57 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(Constant.API_VERSION + "config")
 public class ConfigController {
 
+    private static final int CAPABILITY_PROBE_TIMEOUT_SECONDS = 3;
+
     @Autowired
     private HugeConfig config;
+
+    @Autowired(required = false)
+    private HugeClientPoolService hugeClientPoolService;
+
+    @Autowired
+    private AuthModeService authModeService;
 
     @GetMapping
     public Map<String, Object> getConfig() {
         Map<String, Object> result = new HashMap<>();
         result.put("pd_enabled", config.get(HubbleOptions.PD_ENABLED));
-        result.put("auth_enabled", config.get(HubbleOptions.AUTH_ENABLED));
+        result.putAll(this.serverCapabilities());
         return result;
+    }
+
+    private Map<String, Object> serverCapabilities() {
+        Map<String, Object> capabilities = new HashMap<>();
+        boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
+        if (pdEnabled) {
+            capabilities.put("auth_enabled", this.authModeService.enabled());
+            capabilities.put("graph_create_enabled", true);
+            capabilities.put("cypher_enabled", true);
+            return capabilities;
+        }
+        capabilities.put("auth_enabled", true);
+        capabilities.put("graph_create_enabled", false);
+        capabilities.put("cypher_enabled", false);
+        if (hugeClientPoolService == null) {
+            return capabilities;
+        }
+
+        try (HugeClient client = this.createUnauthClient()) {
+            capabilities.put("auth_enabled",
+                             this.authModeService.update(
+                             client.isServerAuthEnabled()));
+            capabilities.put("graph_create_enabled",
+                             client.supportsGraphCreate());
+            capabilities.put("cypher_enabled", client.supportsCypher());
+            return capabilities;
+        } catch (RuntimeException ignored) {
+            // Keep bootstrap resilient when the Server is temporarily unavailable.
+            return capabilities;
+        }
+    }
+
+    protected HugeClient createUnauthClient() {
+        return this.hugeClientPoolService.createUnauthClient(
+               CAPABILITY_PROBE_TIMEOUT_SECONDS);
     }
 }

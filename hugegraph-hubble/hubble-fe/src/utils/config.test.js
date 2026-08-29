@@ -16,38 +16,27 @@
  * under the License.
  */
 
-const CONFIG_KEY = 'hubble_config_';
-
-const setConfig = config => {
-    sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-};
-
-const getConfig = () => {
-    const str = sessionStorage.getItem(CONFIG_KEY);
-    return str ? JSON.parse(str) : {pd_enabled: true};
-};
-
-const isPdEnabled = () => {
-    return getConfig().pd_enabled;
-};
-
-const isAuthEnabled = () => {
-    return getConfig().auth_enabled !== false;
-};
-
-const isGraphCreateEnabled = () => {
-    return getConfig().graph_create_enabled === true;
-};
-
-const isCypherEnabled = () => {
-    return getConfig().cypher_enabled === true;
-};
-
-export {
-    setConfig,
-    getConfig,
-    isPdEnabled,
-    isAuthEnabled,
-    isGraphCreateEnabled,
+import {
     isCypherEnabled,
-};
+    isGraphCreateEnabled,
+    setConfig,
+} from './config';
+
+beforeEach(() => {
+    sessionStorage.clear();
+});
+
+test('keeps unknown server capabilities disabled', () => {
+    expect(isGraphCreateEnabled()).toBe(false);
+    expect(isCypherEnabled()).toBe(false);
+});
+
+test('uses explicit server capability flags', () => {
+    setConfig({
+        graph_create_enabled: true,
+        cypher_enabled: false,
+    });
+
+    expect(isGraphCreateEnabled()).toBe(true);
+    expect(isCypherEnabled()).toBe(false);
+});

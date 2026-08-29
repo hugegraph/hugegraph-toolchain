@@ -96,7 +96,10 @@ beforeAll(installMatchMedia);
 beforeEach(() => {
     jest.clearAllMocks();
     installMatchMedia();
-    sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true}));
+    sessionStorage.setItem('hubble_config_', JSON.stringify({
+        pd_enabled: true,
+        graph_create_enabled: true,
+    }));
     mockAuthContext = {
         context: {role: 'SUPERADMIN', scopes: {all_graphspaces: true}},
     };

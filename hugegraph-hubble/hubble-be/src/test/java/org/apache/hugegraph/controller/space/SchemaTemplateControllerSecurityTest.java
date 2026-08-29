@@ -142,10 +142,11 @@ public class SchemaTemplateControllerSecurityTest {
         TestController controller = new TestController();
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
-        Mockito.when(config.get(HubbleOptions.AUTH_ENABLED))
-               .thenReturn(authEnabled);
         controller.config = config;
-        controller.setAuthMode(new AuthModeService(config));
+        AuthModeService authMode = Mockito.mock(AuthModeService.class);
+        Mockito.when(authMode.enabled()).thenReturn(authEnabled);
+        Mockito.when(authMode.anonymous()).thenReturn(!authEnabled);
+        controller.setAuthMode(authMode);
         controller.schemaTemplateService =
                 Mockito.mock(SchemaTemplateService.class);
         return controller;
