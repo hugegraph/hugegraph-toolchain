@@ -317,6 +317,48 @@ test('updates a password without resubmitting unchanged permissions', async () =
     expect(payload).not.toHaveProperty('graphspace_permissions');
 });
 
+test('separates simultaneous password and super administrator changes', async () => {
+    mockAuthContext = {
+        capabilities: ['accounts_manage', 'account_permission_presets'],
+    };
+    api.auth.getUserInfo.mockResolvedValue({
+        status: 200,
+        data: {
+            user_name: 'alice',
+            is_superadmin: false,
+            permission_preset: 'GS_READ_ONLY',
+            graphspace_permissions: [],
+        },
+    });
+    api.auth.updateUser.mockResolvedValue({status: 200});
+
+    render(<EditLayer {...props} data={{id: 'alice'}} op='edit' />);
+
+    await screen.findByDisplayValue('alice');
+    fireEvent.change(screen.getByPlaceholderText(
+        'account.form.default_password_placeholder'
+    ), {target: {value: 'new-password'}});
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(document.querySelector(
+        '.ant-modal-footer .ant-btn-primary'
+    ));
+
+    await waitFor(() => expect(api.auth.updateUser).toHaveBeenCalledTimes(2));
+    expect(api.auth.updateUser.mock.calls[0][1]).toEqual(expect.objectContaining({
+        user_name: 'alice',
+        permission_preset: 'SUPER_ADMIN',
+        is_superadmin: true,
+    }));
+    expect(api.auth.updateUser.mock.calls[0][1])
+        .not.toHaveProperty('user_password');
+    expect(api.auth.updateUser.mock.calls[1][1]).toEqual(expect.objectContaining({
+        user_name: 'alice',
+        user_password: 'new-password',
+    }));
+    expect(api.auth.updateUser.mock.calls[1][1])
+        .not.toHaveProperty('permission_preset');
+});
+
 test('keeps GraphSpace membership out of the account profile form', async () => {
     mockAuthContext = {
         capabilities: ['accounts_manage', 'account_permission_presets'],

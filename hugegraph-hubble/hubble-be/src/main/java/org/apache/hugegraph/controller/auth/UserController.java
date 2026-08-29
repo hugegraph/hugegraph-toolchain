@@ -115,6 +115,11 @@ public class UserController extends BaseController {
         }
         this.checkAccountGrantScope(client, current.getName(), userEntity);
         userService.update(client, userEntity);
+        if (Objects.equals(this.getUser(), current.getName()) &&
+            userEntity.getPassword() != null &&
+            !userEntity.getPassword().isEmpty()) {
+            this.clearAuthSession();
+        }
     }
 
     @DeleteMapping("{id}")

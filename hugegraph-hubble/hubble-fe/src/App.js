@@ -25,6 +25,7 @@ import Layout from './layout.ant';
 import {AuthContextProvider} from './auth/AuthContext';
 import * as api from './api';
 import {setConfig} from './utils/config';
+import {clearLogin} from './utils/user';
 import {useEffect, useState} from 'react';
 
 const CONFIG_RETRY_DELAY_MS = 2000;
@@ -45,6 +46,7 @@ function App() {
         let active = true;
         let hasSafeConfig = false;
         let mountedConfigSignature;
+        let mountedAuthEnabled;
         let retryTimer;
         const loadConfig = () => {
             api.config.getConfig().then(response => {
@@ -54,6 +56,17 @@ function App() {
                 if (active) {
                     hasSafeConfig = true;
                     const nextSignature = routeConfigSignature(response.data);
+                    const nextAuthEnabled
+                            = response.data.auth_enabled !== false;
+                    const verified
+                            = response.data.server_capabilities_verified !== false;
+                    if (verified && mountedAuthEnabled !== false
+                        && !nextAuthEnabled) {
+                        clearLogin();
+                    }
+                    if (verified) {
+                        mountedAuthEnabled = nextAuthEnabled;
+                    }
                     setConfig(response.data);
                     if (nextSignature !== mountedConfigSignature) {
                         mountedConfigSignature = nextSignature;

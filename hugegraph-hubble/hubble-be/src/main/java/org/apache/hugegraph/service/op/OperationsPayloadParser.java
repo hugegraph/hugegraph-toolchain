@@ -219,15 +219,15 @@ public class OperationsPayloadParser {
             if (value == null) {
                 continue;
             }
-            if (line.startsWith("process_uptime_seconds{")) {
+            if (prometheusMetric(line, "process_uptime_seconds")) {
                 result.put("uptime_seconds", value);
-            } else if (line.startsWith("system_cpu_count{")) {
+            } else if (prometheusMetric(line, "system_cpu_count")) {
                 result.put("cpu_count", value);
-            } else if (line.startsWith("jvm_threads_live_threads{")) {
+            } else if (prometheusMetric(line, "jvm_threads_live_threads")) {
                 result.put("threads_live", value);
-            } else if (line.startsWith("process_cpu_usage{")) {
+            } else if (prometheusMetric(line, "process_cpu_usage")) {
                 result.put("process_cpu_usage", value);
-            } else if (line.startsWith("system_cpu_usage{")) {
+            } else if (prometheusMetric(line, "system_cpu_usage")) {
                 result.put("system_cpu_usage", value);
             } else if (line.startsWith("jvm_memory_used_bytes{") &&
                        line.contains("area=\"heap\"")) {
@@ -249,6 +249,14 @@ public class OperationsPayloadParser {
             throw new MalformedUpstreamException("pd_prometheus");
         }
         return result;
+    }
+
+    private static boolean prometheusMetric(String line, String name) {
+        if (!line.startsWith(name) || line.length() == name.length()) {
+            return false;
+        }
+        char boundary = line.charAt(name.length());
+        return boundary == '{' || Character.isWhitespace(boundary);
     }
 
     private JsonNode data(String payload, String source) {

@@ -191,11 +191,16 @@ public abstract class BaseController {
 
     protected HugeClient requireGraphSpaceWrite(String graphSpace) {
         HugeClient client = this.authClient(null, null);
+        this.requireGraphSpaceWrite(client, graphSpace);
+        client.assignGraph(graphSpace, null);
+        return client;
+    }
+
+    protected void requireGraphSpaceWrite(HugeClient client,
+                                          String graphSpace) {
         this.requireGraphSpaceAccess(client, graphSpace);
         this.authContextService.requireGraphSpaceWrite(
                 client, this.getUser(), graphSpace);
-        client.assignGraph(graphSpace, null);
-        return client;
     }
 
     protected HugeClient requireGraphSpaceAuthorizationAdmin(

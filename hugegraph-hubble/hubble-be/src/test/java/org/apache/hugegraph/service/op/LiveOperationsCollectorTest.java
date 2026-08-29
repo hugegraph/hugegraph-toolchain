@@ -123,6 +123,49 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
+    public void testPdServerDiscoveryUsesOperationsDeadline()
+           throws IOException {
+        HttpServer pd = pdServer(200, cluster(), 200, stores());
+        LiveOperationsCollector.ServerClientProvider servers =
+                new LiveOperationsCollector.ServerClientProvider() {
+            @Override
+            public java.util.List<String> urls() {
+                try {
+                    Thread.sleep(10000L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+                return Collections.emptyList();
+            }
+
+            @Override
+            public HugeClient create(String url, String authContext,
+                                     int timeout) {
+                throw new AssertionError("Server probe must not start");
+            }
+        };
+        LiveOperationsCollector collector = collector(true, pd, servers, 50);
+
+        long started = System.nanoTime();
+        Snapshot snapshot;
+        try {
+            snapshot = collector.collect(serverClient(), false);
+        } finally {
+            collector.close();
+            pd.stop(0);
+        }
+        long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+
+        Assert.assertTrue(elapsed < 3000L);
+        Assert.assertEquals("UNAVAILABLE",
+                            snapshot.getSources().get("server")
+                                    .getAvailability());
+        Assert.assertEquals("upstream_deadline",
+                            snapshot.getSources().get("server").getReason());
+    }
+
+    @Test
     public void testNonPdModeIsDownWhenOnlySupportedSourceFails() {
         Snapshot snapshot = collector(false, null).collect(
                             unavailableServerClient(), false);
@@ -821,6 +864,10 @@ public class LiveOperationsCollectorTest {
                                     .getAvailability());
         Assert.assertEquals("upstream_deadline",
                             snapshot.getSources().get("stores").getReason());
+        Assert.assertEquals("DOWN",
+                            snapshot.getSources().get("stores").getStatus());
+        Assert.assertEquals(Long.valueOf(0L),
+                            snapshot.getFacts().get("stores_up"));
         Assert.assertEquals(0, http.activeRequests());
     }
 
@@ -850,6 +897,14 @@ public class LiveOperationsCollectorTest {
                 .filter(node -> "upstream_deadline".equals(
                         node.getMetricStatuses().get("system").getReason()))
                 .count());
+        Assert.assertEquals(1L, snapshot.getNodes().stream()
+                .filter(node -> "STORE".equals(node.getType()))
+                .filter(node -> "DOWN".equals(node.getStatus()))
+                .count());
+        Assert.assertEquals("DEGRADED",
+                            snapshot.getSources().get("stores").getStatus());
+        Assert.assertEquals(Long.valueOf(1L),
+                            snapshot.getFacts().get("stores_up"));
     }
 
     @Test
@@ -894,13 +949,20 @@ public class LiveOperationsCollectorTest {
     private static LiveOperationsCollector collector(
             boolean pdEnabled, HttpServer pd,
             LiveOperationsCollector.ServerClientProvider servers) {
+        return collector(pdEnabled, pd, servers, 5000);
+    }
+
+    private static LiveOperationsCollector collector(
+            boolean pdEnabled, HttpServer pd,
+            LiveOperationsCollector.ServerClientProvider servers,
+            int deadlineMillis) {
         String pdBase = "http://127.0.0.1:" + pd.getAddress().getPort();
         return new LiveOperationsCollector(
                 pdEnabled, pdBase, "hubble", "secret", "store-hubble",
                 "store-secret", "server-under-test",
                 new OperationsHttpClient(1000, 1000, 8192),
                 new OperationsPayloadParser(new ObjectMapper()), CLOCK,
-                16, 5000, Collections.singleton(pdBase), servers);
+                16, deadlineMillis, Collections.singleton(pdBase), servers);
     }
 
     private static LiveOperationsCollector collector(RecordingHttpClient http,

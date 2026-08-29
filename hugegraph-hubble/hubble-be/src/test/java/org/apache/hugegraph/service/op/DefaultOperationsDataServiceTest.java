@@ -275,6 +275,29 @@ public class DefaultOperationsDataServiceTest {
 
     @SuppressWarnings("unchecked")
     @Test
+    public void testPdFailureKeepsFreshStoreCounts() {
+        AtomicInteger calls = new AtomicInteger();
+        OperationsCollector collector = (client, metrics) ->
+                calls.getAndIncrement() == 0 ?
+                factSnapshot("AVAILABLE", "AVAILABLE", 100L, 1000L, 3L, 3L) :
+                factSnapshot("UNAVAILABLE", "AVAILABLE", null, 2000L, 2L, 2L);
+        DefaultOperationsDataService service = new DefaultOperationsDataService(
+                collector, 5, CLOCK);
+        Set<String> capabilities = Set.of(
+                OperationsCapabilityService.HEALTH_READ,
+                OperationsCapabilityService.TOPOLOGY_READ);
+
+        service.overview(client("token-a"), capabilities, false);
+        Map<String, Object> result = service.overview(client("token-a"),
+                                                      capabilities, true);
+
+        Map<String, Long> facts = (Map<String, Long>) result.get("facts");
+        Assert.assertEquals(Long.valueOf(2L), facts.get("stores"));
+        Assert.assertEquals(Long.valueOf(2L), facts.get("stores_up"));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
     public void testStoreFailureKeepsFreshPdFacts() {
         AtomicInteger calls = new AtomicInteger();
         OperationsCollector collector = (client, metrics) ->
@@ -552,6 +575,14 @@ public class DefaultOperationsDataServiceTest {
     private static Snapshot factSnapshot(String pdAvailability,
                                          String storesAvailability,
                                          Long dataSize, Long capacity) {
+        return factSnapshot(pdAvailability, storesAvailability, dataSize,
+                            capacity, 3L, 3L);
+    }
+
+    private static Snapshot factSnapshot(String pdAvailability,
+                                         String storesAvailability,
+                                         Long dataSize, Long capacity,
+                                         Long stores, Long storesUp) {
         Map<String, SourceStatus> sources = new LinkedHashMap<>();
         sources.put("pd", factSource(pdAvailability));
         sources.put("stores", factSource(storesAvailability));
@@ -562,6 +593,12 @@ public class DefaultOperationsDataServiceTest {
         if (capacity != null) {
             facts.put("capacity_total_bytes", capacity);
             facts.put("capacity_used_bytes", capacity / 2L);
+        }
+        if (stores != null) {
+            facts.put("stores", stores);
+        }
+        if (storesUp != null) {
+            facts.put("stores_up", storesUp);
         }
         String status = "AVAILABLE".equals(pdAvailability) &&
                         "AVAILABLE".equals(storesAvailability) ?
