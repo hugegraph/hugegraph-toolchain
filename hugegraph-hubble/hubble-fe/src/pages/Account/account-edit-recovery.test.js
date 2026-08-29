@@ -411,6 +411,19 @@ test('requires an explicit password when creating an account', async () => {
     )).toBeRequired();
 });
 
+test('prefills a guided account creation with the requested account ID', () => {
+    render(
+        <EditLayer
+            {...props}
+            data={{user_name: 'guided_user'}}
+            op='create'
+        />
+    );
+
+    expect(screen.getByPlaceholderText('account.form.id_placeholder'))
+        .toHaveValue('guided_user');
+});
+
 test('keeps a specific account creation error visible in the form', async () => {
     api.auth.addUser.mockResolvedValue({
         status: 400,

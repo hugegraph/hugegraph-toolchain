@@ -59,11 +59,23 @@ public class ConfigController {
         Map<String, Object> capabilities = new HashMap<>();
         boolean pdEnabled = config.get(HubbleOptions.PD_ENABLED);
         if (pdEnabled) {
-            capabilities.put("server_capabilities_verified", true);
-            capabilities.put("auth_enabled", this.authModeService.enabled());
+            capabilities.put("server_capabilities_verified", false);
+            capabilities.put("auth_enabled", true);
             capabilities.put("graph_create_enabled", true);
             capabilities.put("cypher_enabled", true);
-            return capabilities;
+            if (hugeClientPoolService == null) {
+                return capabilities;
+            }
+            try (HugeClient client = this.createUnauthClient()) {
+                capabilities.put("auth_enabled",
+                                 this.authModeService.update(
+                                 client.isServerAuthEnabled()));
+                capabilities.put("server_capabilities_verified", true);
+                return capabilities;
+            } catch (RuntimeException ignored) {
+                // Let the frontend retry after transient Server failures.
+                return capabilities;
+            }
         }
         capabilities.put("server_capabilities_verified", false);
         capabilities.put("auth_enabled", true);

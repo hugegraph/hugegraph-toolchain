@@ -32,6 +32,7 @@ const CONFIG_RETRY_DELAY_MS = 2000;
 function App() {
     const [configReady, setConfigReady] = useState(false);
     const [configError, setConfigError] = useState(false);
+    const [configRevision, setConfigRevision] = useState(0);
 
     useEffect(() => {
         let active = true;
@@ -43,6 +44,7 @@ function App() {
                 }
                 if (active) {
                     setConfig(response.data);
+                    setConfigRevision(value => value + 1);
                     setConfigReady(true);
                     setConfigError(false);
                     if (response.data.server_capabilities_verified === false) {
@@ -79,7 +81,7 @@ function App() {
     }
     return (
         <div>
-            <AuthContextProvider>
+            <AuthContextProvider key={configRevision}>
                 <Route element={<Layout />} />
             </AuthContextProvider>
         </div>

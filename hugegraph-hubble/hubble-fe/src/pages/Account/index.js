@@ -53,7 +53,11 @@ const RowAction = ({onAction, row, children}) => {
     return <Button type='link' onClick={handleClick}>{children}</Button>;
 };
 
-const GlobalAccounts = ({onAssignMember}) => {
+const GlobalAccounts = ({
+    onAssignMember,
+    onPendingCreateHandled,
+    pendingCreate,
+}) => {
     const {t} = useTranslation();
     const {context} = useAuthContext();
     const accountActions = context?.actions?.accounts ?? [];
@@ -66,6 +70,7 @@ const GlobalAccounts = ({onAssignMember}) => {
         || context.capabilities?.includes('account_permission_presets');
     const hasRowMutations = canUpdateAccount || canDeleteAccount || canGrantAuthorization;
     const [editLayerVisible, setEditLayerVisible] = useState(false);
+    const [creationContext, setCreationContext] = useState(null);
     const [op, setOp] = useState('detail');
     const [detail, setDetail] = useState({});
     const [data, setData] = useState([]);
@@ -76,12 +81,14 @@ const GlobalAccounts = ({onAssignMember}) => {
     const [pagination, setPagination] = useState({toatal: 0, current: 1, pageSize: 10});
 
     const showDetail = useCallback(row => {
+        setCreationContext(null);
         setDetail(row);
         setOp('detail');
         setEditLayerVisible(true);
     }, []);
 
     const showEdit = useCallback(row => {
+        setCreationContext(null);
         setDetail(row);
         setOp('edit');
         setEditLayerVisible(true);
@@ -96,6 +103,7 @@ const GlobalAccounts = ({onAssignMember}) => {
     }, [onAssignMember]);
 
     const showAdd = useCallback(() => {
+        setCreationContext(null);
         setDetail({});
         setOp('create');
         setEditLayerVisible(true);
@@ -110,6 +118,15 @@ const GlobalAccounts = ({onAssignMember}) => {
     }, []);
 
     const handleCreated = useCallback(account => {
+        if (creationContext) {
+            setCreationContext(null);
+            onAssignMember?.({
+                ...account,
+                graphspaces: creationContext.graphspaces,
+                permission_preset: creationContext.permission_preset,
+            });
+            return;
+        }
         if (!canGrantAuthorization || !onAssignMember || account.is_superadmin) {
             return;
         }
@@ -122,7 +139,18 @@ const GlobalAccounts = ({onAssignMember}) => {
             cancelText: t('account.created.done'),
             onOk: () => onAssignMember(account),
         });
-    }, [canGrantAuthorization, onAssignMember, t]);
+    }, [canGrantAuthorization, creationContext, onAssignMember, t]);
+
+    useEffect(() => {
+        if (!pendingCreate || !canCreateAccount) {
+            return;
+        }
+        setCreationContext(pendingCreate);
+        setDetail({user_name: pendingCreate.user_name});
+        setOp('create');
+        setEditLayerVisible(true);
+        onPendingCreateHandled?.();
+    }, [canCreateAccount, onPendingCreateHandled, pendingCreate]);
 
     const handleDelete = useCallback(row => {
         Modal.confirm({
@@ -356,6 +384,7 @@ const Account = () => {
     const {context, refresh: refreshPermissions} = useAuthContext();
     const actions = context?.actions ?? {};
     const canReadGlobalAccounts = (actions.accounts ?? []).includes('read');
+    const canCreateGlobalAccount = (actions.accounts ?? []).includes('create');
     const canReadScopedAccess = [
         ...(actions.members ?? []),
         ...(actions.roles ?? []),
@@ -363,11 +392,17 @@ const Account = () => {
     ].includes('read');
     const [activeTab, setActiveTab] = useState('global');
     const [pendingMember, setPendingMember] = useState(null);
+    const [pendingCreate, setPendingCreate] = useState(null);
     const assignMember = useCallback(account => {
         setPendingMember(account);
         setActiveTab('scoped');
     }, []);
     const clearPendingMember = useCallback(() => setPendingMember(null), []);
+    const createAccount = useCallback(request => {
+        setPendingCreate(request);
+        setActiveTab('global');
+    }, []);
+    const clearPendingCreate = useCallback(() => setPendingCreate(null), []);
     const refreshPermissionContext = useCallback(
         () => Promise.resolve(refreshPermissions?.()).catch(() => undefined),
         [refreshPermissions]
@@ -383,7 +418,13 @@ const Account = () => {
                     {
                         key: 'global',
                         label: t('account.space_access.global_tab'),
-                        children: <GlobalAccounts onAssignMember={assignMember} />,
+                        children: (
+                            <GlobalAccounts
+                                onAssignMember={assignMember}
+                                pendingCreate={pendingCreate}
+                                onPendingCreateHandled={clearPendingCreate}
+                            />
+                        ),
                     },
                     {
                         key: 'scoped',
@@ -392,6 +433,9 @@ const Account = () => {
                             <SpaceAccess
                                 pendingAccount={pendingMember}
                                 onPendingAccountHandled={clearPendingMember}
+                                onCreateAccount={canCreateGlobalAccount
+                                    ? createAccount
+                                    : undefined}
                             />
                         ),
                     },

@@ -28,7 +28,14 @@ jest.mock('./api', () => ({
 }));
 
 jest.mock('./routes', () => ({element}) => (
-    <div data-testid="app-route">{element}</div>
+    <div
+        data-testid="app-route"
+        data-auth-enabled={String(
+            jest.requireActual('./utils/config').isAuthEnabled()
+        )}
+    >
+        {element}
+    </div>
 ));
 
 jest.mock('./layout.ant', () => () => <div>Hubble layout</div>);
@@ -99,6 +106,8 @@ test('revalidates fail-closed server capabilities until verified', async () => {
         </MemoryRouter>
     );
     expect(await screen.findByTestId('app-route')).toBeInTheDocument();
+    expect(screen.getByTestId('app-route'))
+        .toHaveAttribute('data-auth-enabled', 'true');
 
     await act(async () => {
         jest.advanceTimersByTime(2000);
@@ -109,5 +118,7 @@ test('revalidates fail-closed server capabilities until verified', async () => {
             auth_enabled: false,
             server_capabilities_verified: true,
         });
+    expect(screen.getByTestId('app-route'))
+        .toHaveAttribute('data-auth-enabled', 'false');
     jest.useRealTimers();
 });

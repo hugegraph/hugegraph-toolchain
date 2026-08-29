@@ -80,6 +80,39 @@ public class GraphSpaceUserServiceTest {
     }
 
     @Test
+    public void testGetUserResolvesUniqueAccountIdToRealId() {
+        User account = new User();
+        account.setId("user-42");
+        account.name("alice@example.com");
+        Mockito.when(this.client.findUserByName("alice@example.com"))
+               .thenReturn(account);
+        Mockito.when(this.belongService.list(
+                         this.client, "team", null, "user-42"))
+               .thenReturn(Collections.emptyList());
+
+        UserView result = this.service.getUserByAccountId(
+                this.client, "team", "alice@example.com");
+
+        Assert.assertEquals("user-42", result.getId());
+        Assert.assertEquals("alice@example.com", result.getName());
+    }
+
+    @Test
+    public void testGetUserDoesNotHideConnectionFailure() {
+        RuntimeException failure = new RuntimeException("connection timeout");
+        Mockito.when(this.client.findUserByName("alice")).thenThrow(failure);
+
+        Throwable actual = Assert.assertThrows(
+                RuntimeException.class,
+                () -> this.service.getUserByAccountId(
+                        this.client, "team", "alice"));
+
+        Assert.assertSame(failure, actual);
+        Mockito.verify(this.auth, Mockito.never())
+               .getUser(Mockito.anyString());
+    }
+
+    @Test
     public void testGraphSpacePresetRequiresAtLeastOneGraphSpace() {
         for (String preset : Arrays.asList(
                 "GS_READ_ONLY", "GS_READ_WRITE", "GS_ADMIN")) {

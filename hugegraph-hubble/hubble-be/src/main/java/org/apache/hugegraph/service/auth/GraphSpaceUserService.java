@@ -85,6 +85,19 @@ public class GraphSpaceUserService extends AuthService {
 
     public UserView getUser(HugeClient client, String graphSpace,
                             String userId) {
+        User account = client.auth().getUser(userId);
+        return this.buildUserView(client, graphSpace, userId, account);
+    }
+
+    public UserView getUserByAccountId(HugeClient client, String graphSpace,
+                                       String accountId) {
+        User account = this.resolveAccountId(client, accountId);
+        String userId = account.id().toString();
+        return this.buildUserView(client, graphSpace, userId, account);
+    }
+
+    private UserView buildUserView(HugeClient client, String graphSpace,
+                                   String userId, User account) {
         List<BelongEntity> belongs = this.belongService.list(
                 client, graphSpace, null, userId);
         UserView user = new UserView(null, null,
@@ -95,10 +108,9 @@ public class GraphSpaceUserService extends AuthService {
             user.addRole(new RoleEntity(belong.getRoleId(),
                                         belong.getRoleName()));
         });
-        User account = client.auth().getUser(userId);
         if (account != null) {
             if (user.getId() == null) {
-                user.setId(account.id().toString());
+                user.setId(userId);
                 user.setName(account.name());
             }
             if (client.supportsDefaultRole()) {
@@ -109,6 +121,28 @@ public class GraphSpaceUserService extends AuthService {
             }
         }
         return user;
+    }
+
+    private User resolveAccountId(HugeClient client, String accountId) {
+        try {
+            // HugeGraph's "name" is the unique account ID; nickname may repeat.
+            User account = client.findUserByName(accountId);
+            if (account != null) {
+                return account;
+            }
+        } catch (RuntimeException e) {
+            if (!missingAccount(e)) {
+                throw e;
+            }
+        }
+        throw new ParameterizedException("auth.account.not-exist", accountId);
+    }
+
+    private static boolean missingAccount(RuntimeException error) {
+        String detail = error.getMessage();
+        return detail != null &&
+               detail.toLowerCase().contains("user") &&
+               detail.toLowerCase().contains("not exist");
     }
 
     public IPage<UserView> queryPage(HugeClient client, String graphSpace,

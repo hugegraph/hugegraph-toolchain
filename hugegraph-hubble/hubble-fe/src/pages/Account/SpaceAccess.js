@@ -38,11 +38,17 @@ import {PERMISSION_PRESETS} from './permissionPresets';
 import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
 
 const responseRecords = response => response?.data?.records ?? [];
+const errorStatus = value => (
+    value?.response?.data?.status ?? value?.response?.status ?? value?.status
+);
 const errorDetail = value => {
     const response = value?.response ?? value;
     return response?.data?.message ?? response?.message;
 };
 const isMissingAccount = value => {
+    if (errorStatus(value) === 400) {
+        return true;
+    }
     const detail = errorDetail(value);
     if (typeof detail !== 'string') {
         return false;
@@ -184,7 +190,11 @@ const ErrorAlert = ({error, retry, t}) => (error ? (
     />
 ) : null);
 
-const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
+const SpaceAccess = ({
+    onCreateAccount,
+    onPendingAccountHandled,
+    pendingAccount,
+}) => {
     const {t} = useTranslation();
     const {context} = useAuthContext();
     const contextVersion = context?.context_version;
@@ -199,8 +209,14 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
     const [spacesRevision, setSpacesRevision] = useState(0);
     const spacesRequest = useRef(null);
     const [memberDialog, setMemberDialog] = useState(null);
+    const [missingAccountId, setMissingAccountId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [memberForm] = Form.useForm();
+    const accountNotFoundMessage = useCallback(() => t(
+        onCreateAccount
+            ? 'account.space_access.member.account_not_found'
+            : 'account.space_access.member.account_not_found_contact_admin'
+    ), [onCreateAccount, t]);
 
     const scopedSpaces = useMemo(
         () => scopes.admin_graphspaces ?? [],
@@ -305,12 +321,20 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
             && spaces.includes(row?.graphspace)
             ? row.graphspace
             : graphSpace;
+        const requestedSpaces = graphSpaceSelectable
+            && Array.isArray(row?.graphspaces)
+            ? row.graphspaces.filter(space => spaces.includes(space))
+            : [memberGraphSpace].filter(Boolean);
         memberForm.setFieldsValue({
             user_id: row?.user_id,
-            username: row?.user_name,
-            permission_preset: rolesPreset(row?.roles),
-            graphspace: memberGraphSpace,
+            account_id: row?.user_name,
+            permission_preset: row?.permission_preset
+                ?? rolesPreset(row?.roles),
+            graphspace: graphSpaceSelectable
+                ? requestedSpaces
+                : memberGraphSpace,
         });
+        setMissingAccountId(null);
         setMemberDialog({
             ...(row ?? {}),
             graphSpaceSelectable,
@@ -331,13 +355,18 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
     ]);
     const closeMember = useCallback(() => {
         setMemberDialog(null);
+        setMissingAccountId(null);
         memberForm.resetFields();
     }, [memberForm]);
     const validateExistingAccount = useCallback(async (_, value) => {
+        setMissingAccountId(null);
         if (!value) {
             return;
         }
-        const targetSpace = memberForm.getFieldValue('graphspace');
+        const graphSpaceValue = memberForm.getFieldValue('graphspace');
+        const targetSpace = Array.isArray(graphSpaceValue)
+            ? graphSpaceValue[0]
+            : graphSpaceValue;
         if (!targetSpace) {
             return;
         }
@@ -349,9 +378,8 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
         }
         catch (error) {
             if (isMissingAccount(error)) {
-                throw new Error(
-                    t('account.space_access.member.account_not_found')
-                );
+                setMissingAccountId(value);
+                throw new Error(accountNotFoundMessage());
             }
             throw new Error(
                 t('account.space_access.member.account_check_failed')
@@ -360,32 +388,69 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
         const account = response?.data;
         if (response?.status !== 200) {
             if (isMissingAccount(response)) {
-                throw new Error(
-                    t('account.space_access.member.account_not_found')
-                );
+                setMissingAccountId(value);
+                throw new Error(accountNotFoundMessage());
             }
             throw new Error(
                 t('account.space_access.member.account_check_failed')
             );
         }
         if (!(account?.user_id ?? account?.id)) {
-            throw new Error(
-                t('account.space_access.member.account_not_found')
-            );
+            setMissingAccountId(value);
+            throw new Error(accountNotFoundMessage());
         }
-    }, [memberForm, t]);
+        memberForm.setFieldValue('user_id', account.user_id ?? account.id);
+    }, [accountNotFoundMessage, memberForm, t]);
+    const startAccountCreation = useCallback(() => {
+        if (!missingAccountId || !onCreateAccount) {
+            return;
+        }
+        const graphSpaceValue = memberForm.getFieldValue('graphspace');
+        const graphspaces = Array.isArray(graphSpaceValue)
+            ? graphSpaceValue
+            : [graphSpaceValue].filter(Boolean);
+        const request = {
+            graphspaces,
+            permission_preset: memberForm.getFieldValue('permission_preset'),
+            user_name: missingAccountId,
+        };
+        closeMember();
+        onCreateAccount(request);
+    }, [closeMember, memberForm, missingAccountId, onCreateAccount]);
     const submitMember = useCallback(values => {
+        const graphSpaces = Array.isArray(values.graphspace)
+            ? values.graphspace
+            : [values.graphspace];
         runMutation(
-            () => api.auth.setSpacePreset(
-                values.graphspace,
-                values.user_id ?? values.username,
-                values.username,
-                values.permission_preset,
-                PAGE_ERROR_CONFIG
-            ),
+            async () => {
+                const results = await Promise.allSettled(
+                    graphSpaces.map(space => api.auth.setSpacePreset(
+                        space,
+                        values.user_id ?? values.account_id,
+                        values.account_id,
+                        values.permission_preset,
+                        PAGE_ERROR_CONFIG
+                    ))
+                );
+                const failedSpaces = graphSpaces.filter((_, index) => {
+                    const result = results[index];
+                    return result.status === 'rejected'
+                           || result.value?.status !== 200;
+                });
+                if (failedSpaces.length > 0) {
+                    refreshAll();
+                    const options = {
+                        success: graphSpaces.length - failedSpaces.length,
+                        total: graphSpaces.length,
+                        spaces: failedSpaces.join(', '),
+                    };
+                    throw new Error(t('account.space_access.member.batch_failed', options));
+                }
+                return {status: 200};
+            },
             closeMember
         );
-    }, [closeMember, runMutation]);
+    }, [closeMember, refreshAll, runMutation, t]);
 
     const confirmDelete = useCallback((title, operation) => {
         Modal.confirm({
@@ -415,8 +480,7 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
     );
 
     const memberColumns = [
-        {title: t('account.space_access.member.id'), dataIndex: 'user_id'},
-        {title: t('account.space_access.member.name'), dataIndex: 'user_name'},
+        {title: t('account.space_access.member.id'), dataIndex: 'user_name'},
         {
             title: t('account.space_access.member.roles'),
             dataIndex: 'roles',
@@ -535,6 +599,9 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
                         <Select
                             aria-label={t('account.space_access.graphspace')}
                             disabled={!memberDialog?.graphSpaceSelectable}
+                            mode={memberDialog?.graphSpaceSelectable
+                                ? 'multiple'
+                                : undefined}
                             options={spaces.map(space => ({
                                 label: space,
                                 value: space,
@@ -544,31 +611,47 @@ const SpaceAccess = ({pendingAccount, onPendingAccountHandled}) => {
                     {memberDialog?.user_id ? (
                         <>
                             <Form.Item
-                                name="user_id"
+                                name="account_id"
                                 label={t('account.space_access.member.id')}
                                 rules={[{required: true}]}
                             >
                                 <Input disabled />
                             </Form.Item>
-                            <Form.Item name="username" hidden>
+                            <Form.Item name="user_id" hidden>
                                 <Input />
                             </Form.Item>
                         </>
                     ) : (
-                        <Form.Item
-                            name="username"
-                            label={t(
-                                'account.space_access.member.existing_account'
-                            )}
-                            dependencies={['graphspace']}
-                            validateTrigger="onBlur"
-                            rules={[
-                                {required: true},
-                                {validator: validateExistingAccount},
-                            ]}
-                        >
-                            <Input />
-                        </Form.Item>
+                        <>
+                            <Form.Item
+                                name="account_id"
+                                label={t(
+                                    'account.space_access.member.existing_account'
+                                )}
+                                dependencies={['graphspace']}
+                                extra={missingAccountId && onCreateAccount ? (
+                                    <Button
+                                        type="link"
+                                        size="small"
+                                        onClick={startAccountCreation}
+                                    >
+                                        {t(
+                                            'account.space_access.member.create_account'
+                                        )}
+                                    </Button>
+                                ) : null}
+                                validateTrigger="onBlur"
+                                rules={[
+                                    {required: true},
+                                    {validator: validateExistingAccount},
+                                ]}
+                            >
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="user_id" hidden>
+                                <Input />
+                            </Form.Item>
+                        </>
                     )}
                     <Form.Item
                         name="permission_preset"
