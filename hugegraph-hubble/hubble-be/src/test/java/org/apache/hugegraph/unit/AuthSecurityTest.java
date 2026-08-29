@@ -931,6 +931,10 @@ public class AuthSecurityTest {
         Mockito.verify(userClient).close();
         Assert.assertEquals("server-token", request.getSession().getAttribute(
                             Constant.TOKEN_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_KEY));
+        Assert.assertNull(request.getSession().getAttribute(
+                          Constant.PASSWORD_EXPIRE_AT_KEY));
     }
 
     @Test
