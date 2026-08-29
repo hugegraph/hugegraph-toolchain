@@ -20,6 +20,12 @@ Hubble brings graph exploration, schema preparation, asynchronous analysis, and 
 
 ![HugeGraph Hubble workbench](./hugegraph-hubble/docs/images/showcase/home-workbench.jpg)
 
+### Distributed Operations
+
+The cluster overview keeps service topology, node health, source status, and capacity facts in one operational view.
+
+![HugeGraph Hubble cluster overview](./hugegraph-hubble/docs/images/showcase/operations-overview.jpg)
+
 **Quick Navigation**: [Architecture](#architecture-overview) | [Quick Start](#quick-start) | [Modules](#module-overview) | [Build](#build--development) | [Docker](#docker) | [Related Projects](#related-projects)
 
 ## Related Projects
