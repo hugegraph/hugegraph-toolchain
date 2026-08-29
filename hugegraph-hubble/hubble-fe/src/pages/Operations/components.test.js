@@ -53,12 +53,11 @@ test('localizes the standalone deployment reason code', async () => {
         />
     );
 
-    expect(screen.getByText(/当前部署模式不支持/)).toBeInTheDocument();
-    expect(screen.queryByText(/deployment mode unsupported/)).not.toBeInTheDocument();
-    const statusInfo = screen.getAllByRole('img', {name: /当前无法确认/})
-        .find(element => element.getAttribute('aria-label').includes('当前部署模式不支持'));
-    expect(statusInfo).toHaveAccessibleName(/当前部署模式不支持/);
-    expect(statusInfo).not.toHaveAccessibleName(/观测时间|最近成功/);
+    expect(screen.queryByText(/当前部署模式不支持/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/PD.*当前部署不适用.*当前部署模式不支持/))
+        .toHaveAccessibleName(/当前部署模式不支持/);
+    expect(screen.queryByText(/deployment mode unsupported/))
+        .not.toBeInTheDocument();
 });
 
 test('uses a concise Attention label and explains the degraded state', () => {

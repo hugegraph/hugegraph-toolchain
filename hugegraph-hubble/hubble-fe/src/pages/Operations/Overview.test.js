@@ -80,8 +80,10 @@ test('keeps unknown and partial source states explicit', async () => {
     expect(await screen.findByText('Attention')).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', {name: 'Overview view'}))
         .toBeInTheDocument();
-    expect(screen.getByText('Malformed')).toBeInTheDocument();
-    expect(screen.getByText('Unsupported')).toBeInTheDocument();
+    expect(screen.getByLabelText(/PD.*Abnormal - Unavailable.*Malformed/))
+        .toBeInTheDocument();
+    expect(screen.getByLabelText(/Store.*Not applicable in this deployment/))
+        .toBeInTheDocument();
     expect(screen.getByText(/stale/i)).toBeInTheDocument();
 });
 
@@ -448,7 +450,8 @@ test('keeps every failed source visible when the whole cluster is down', async (
 
     const sources = await screen.findByRole('region', {name: 'Source freshness'});
     expect(within(sources).getAllByText('DOWN')).toHaveLength(3);
-    expect(within(sources).getAllByText('Unavailable')).toHaveLength(3);
+    expect(within(sources).getAllByLabelText(/Abnormal - Unavailable/))
+        .toHaveLength(3);
     expect(screen.getByRole('region', {name: 'Items needing attention'}))
         .toBeInTheDocument();
 });
@@ -478,8 +481,10 @@ test('keeps healthy freshness compact but preserves stale-source recovery contex
     renderOverview();
 
     const sources = await screen.findByRole('region', {name: 'Source freshness'});
-    expect(within(sources).getAllByText(/Last success/)).toHaveLength(1);
+    expect(within(sources).queryByText(/Last success/)).not.toBeInTheDocument();
     expect(within(sources).getByText(/Stale/)).toBeInTheDocument();
+    expect(within(sources).getByLabelText(/Stale.*Last success/))
+        .toBeInTheDocument();
 });
 
 test('shows a concise healthy state when no node needs attention', async () => {

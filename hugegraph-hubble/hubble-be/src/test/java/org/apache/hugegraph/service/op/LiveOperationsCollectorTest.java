@@ -203,6 +203,63 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
+    public void testOfflinePdDegradesPdSourceWhileClusterHasQuorum()
+           throws IOException {
+        String cluster = "{\"status\":0,\"data\":{" +
+                         "\"state\":\"Cluster_OK\"," +
+                         "\"pdList\":[" +
+                         "{\"restUrl\":\"http://pd-1:8620\"," +
+                         "\"state\":\"Up\",\"role\":\"Leader\"}," +
+                         "{\"raftUrl\":\"pd-2:8610\"," +
+                         "\"state\":\"Offline\",\"role\":\"Follower\"}]," +
+                         "\"pdLeader\":{\"restUrl\":\"http://pd-1:8620\"," +
+                         "\"state\":\"Up\",\"role\":\"Leader\"}}}";
+        HttpServer pd = pdServer(200, cluster, 200, stores());
+        Snapshot snapshot;
+        try {
+            snapshot = collector(true, pd).collect(serverClient(), false);
+        } finally {
+            pd.stop(0);
+        }
+
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        Assert.assertEquals("DEGRADED",
+                            snapshot.getSources().get("pd").getStatus());
+        Assert.assertEquals(1L, snapshot.getNodes().stream()
+                .filter(node -> "PD".equals(node.getType()))
+                .filter(node -> "DOWN".equals(node.getStatus()))
+                .count());
+    }
+
+    @Test
+    public void testOfflineStoreDegradesStoreSource() throws IOException {
+        String stores = "{\"status\":0,\"data\":{\"stores\":[" +
+                        "{\"storeId\":\"1\",\"address\":\"store-1:8500\"," +
+                        "\"state\":\"Up\"}," +
+                        "{\"storeId\":\"2\",\"address\":\"store-2:8500\"," +
+                        "\"state\":\"Offline\"}]}}";
+        HttpServer pd = pdServer(200, cluster(), 200, stores);
+        Snapshot snapshot;
+        try {
+            snapshot = collector(true, pd).collect(serverClient(), false);
+        } finally {
+            pd.stop(0);
+        }
+
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        Assert.assertEquals("DEGRADED",
+                            snapshot.getSources().get("stores").getStatus());
+        Assert.assertEquals(Long.valueOf(2L),
+                            snapshot.getFacts().get("stores"));
+        Assert.assertEquals(Long.valueOf(1L),
+                            snapshot.getFacts().get("stores_up"));
+        Assert.assertEquals(1L, snapshot.getNodes().stream()
+                .filter(node -> "STORE".equals(node.getType()))
+                .filter(node -> "DOWN".equals(node.getStatus()))
+                .count());
+    }
+
+    @Test
     public void testPdNotReadyReasonSurvivesMetricsFailure() throws IOException {
         String notReady = cluster().replace("Cluster_OK", "Cluster_Not_Ready");
         HttpServer pd = HttpServer.create(new InetSocketAddress(0), 0);
