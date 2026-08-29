@@ -16,7 +16,13 @@
  * under the License.
  */
 
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import App from './App';
 import * as api from './api';
@@ -35,6 +41,7 @@ jest.mock('./routes', () => ({element}) => (
         )}
     >
         {element}
+        <input aria-label="unsaved draft" />
     </div>
 ));
 
@@ -212,5 +219,39 @@ test('periodically revalidates a verified authentication mode', async () => {
     expect(screen.getByTestId('app-route')).toHaveAttribute(
         'data-auth-enabled', 'true'
     );
+    jest.useRealTimers();
+});
+
+test('preserves route state when periodic configuration is unchanged', async () => {
+    jest.useFakeTimers();
+    const config = {
+        pd_enabled: true,
+        auth_enabled: true,
+        graph_create_enabled: true,
+        cypher_enabled: true,
+        server_capabilities_verified: true,
+    };
+    api.config.getConfig
+        .mockResolvedValueOnce({status: 200, data: config})
+        .mockResolvedValueOnce({status: 200, data: {...config}});
+
+    render(
+        <MemoryRouter
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <App />
+        </MemoryRouter>
+    );
+    const draft = await screen.findByRole('textbox', {
+        name: 'unsaved draft',
+    });
+    fireEvent.change(draft, {target: {value: 'keep me'}});
+
+    await act(async () => {
+        jest.advanceTimersByTime(30_000);
+    });
+    await waitFor(() => expect(api.config.getConfig).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('textbox', {name: 'unsaved draft'}))
+        .toHaveValue('keep me');
     jest.useRealTimers();
 });

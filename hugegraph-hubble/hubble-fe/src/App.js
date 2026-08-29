@@ -29,6 +29,12 @@ import {useEffect, useState} from 'react';
 
 const CONFIG_RETRY_DELAY_MS = 2000;
 const CONFIG_REVALIDATE_DELAY_MS = 30_000;
+const routeConfigSignature = config => JSON.stringify([
+    config.auth_enabled !== false,
+    config.pd_enabled === true,
+    config.graph_create_enabled === true,
+    config.cypher_enabled === true,
+]);
 
 function App() {
     const [configReady, setConfigReady] = useState(false);
@@ -38,6 +44,7 @@ function App() {
     useEffect(() => {
         let active = true;
         let hasSafeConfig = false;
+        let mountedConfigSignature;
         let retryTimer;
         const loadConfig = () => {
             api.config.getConfig().then(response => {
@@ -46,8 +53,12 @@ function App() {
                 }
                 if (active) {
                     hasSafeConfig = true;
+                    const nextSignature = routeConfigSignature(response.data);
                     setConfig(response.data);
-                    setConfigRevision(value => value + 1);
+                    if (nextSignature !== mountedConfigSignature) {
+                        mountedConfigSignature = nextSignature;
+                        setConfigRevision(value => value + 1);
+                    }
                     setConfigReady(true);
                     setConfigError(false);
                     const unverified = response.data
