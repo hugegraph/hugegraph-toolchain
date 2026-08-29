@@ -482,8 +482,6 @@
       "computer_environment_description": "These whole-graph algorithms run asynchronously through HugeGraph Computer. Configure its compute environment, including Kubernetes when required by the deployment, before submitting a task",
       "computer_unavailable_title": "HugeGraph Computer unavailable",
       "computer_unavailable_description": "This graph cannot reach HugeGraph Computer. Configure Computer and its Kubernetes environment before running batch algorithms",
-      "vermeer_unavailable_title": "Vermeer computation is unavailable",
-      "vermeer_unavailable_description": "This Hubble version cannot securely submit Vermeer compute tasks. Configure HugeGraph Computer or upgrade the Vermeer integration before running batch algorithms",
       "task_submit_success": "{{name}} task submitted successfully",
       "common": {
         "instance_num": "Instance Count",

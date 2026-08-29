@@ -61,9 +61,12 @@ jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: key => key}),
 }));
 
-const renderHome = () => render(
+const renderHome = (context = {
+    isVermeer: false,
+    graphStatus: 'LOADED',
+}) => render(
     <GraphAnalysisContext.Provider
-        value={{isVermeer: false, graphStatus: 'LOADED'}}
+        value={context}
     >
         <OlapFormHome
             graphSpace="DEFAULT"
@@ -76,6 +79,10 @@ const renderHome = () => render(
         />
     </GraphAnalysisContext.Provider>
 );
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
 
 test('does not render runnable Computer algorithms when capability is unavailable',
     async () => {
@@ -108,4 +115,14 @@ test('renders Computer algorithms only after capability succeeds', async () => {
         'hugegraph',
         {suppressBusinessErrorToast: true}
     );
+});
+
+test('renders Vermeer algorithms without probing Computer', () => {
+    renderHome({isVermeer: true, graphStatus: 'LOADED'});
+
+    expect(screen.getAllByTestId('olap-item').length).toBeGreaterThan(0);
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    expect(screen.queryByText(
+        'analysis.algorithm.vermeer_unavailable_title'
+    )).not.toBeInTheDocument();
 });
