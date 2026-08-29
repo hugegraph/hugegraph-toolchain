@@ -7,27 +7,47 @@
 hugegraph-hubble is a graph management and analysis platform that provides features:
 graph data load, schema management, graph relationship analysis, and graphical display.
 
+## Product Tour
+
+### Graph Data Workbench
+
+Start from one workspace for graph discovery, import, query, account management, and cluster operations.
+
+![Hubble graph data workbench](docs/images/showcase/home-workbench.jpg)
+
+### GQL Traversal
+
+Run Gremlin queries and inspect their graph, table, or JSON results without leaving the workbench.
+
+![Hubble GQL traversal and graph visualization](docs/images/showcase/gql-traversal.jpg)
+
+### Schema Templates
+
+Prepare reusable schemas before configuring data sources and import tasks.
+
+![Hubble schema template management](docs/images/showcase/schema-templates.jpg)
+
+### Asynchronous Tasks
+
+Track asynchronous queries and algorithms, then expand compact results inline.
+
+![Hubble asynchronous task results](docs/images/showcase/async-tasks.jpg)
+
 ## Authentication, connections, and compatibility
 
-Hubble uses one capability-driven connection boundary for `1.8/master`.
-Authentication mode is detected from the connected HugeGraph Server; Hubble
-does not maintain a separate authentication switch. Account and permission
-entry points are hidden when Server allows anonymous access. Connection
-switching always goes through the backend resolver. In PD mode, a valid server
-address returned by discovery is sufficient; a manually configured server URL
-is not required.
+Hubble uses one capability-driven connection boundary for `1.8/master`. Authentication mode is detected from the connected HugeGraph Server; Hubble does not maintain a separate authentication switch. Account and permission entry points are hidden when Server allows anonymous access. Connection switching always goes through the backend resolver. In PD mode, a valid server address returned by discovery is sufficient; a manually configured server URL is not required.
 
-The UI presents four stable permission meanings: super administrator, GraphSpace
-read-only, GraphSpace read-write, and GraphSpace administrator. The last one
-means member management plus read/write within that GraphSpace; low-level
-`role`, `target`, `access`, and `belong` fields are not exposed.
+The UI presents four stable permission meanings: super administrator, GraphSpace read-only, GraphSpace read-write, and GraphSpace administrator. The last one means member management plus read/write within that GraphSpace; low-level `role`, `target`, `access`, and `belong` fields are not exposed.
 
-The compatibility boundary is deliberately small. Server 1.7 uses a thin
-legacy-response fallback. Server 1.5 standalone is limited to core graph,
-schema, data, and Gremlin operations; GraphSpace management is reported as
-unsupported. Version checks stay in the client adapter/resolver rather than
-being scattered through controllers or pages. See
-[`AGENTS.md`](AGENTS.md) for the support matrix and verification rules.
+The compatibility boundary is deliberately small:
+
+| HugeGraph Server / PD | Deployment | Hubble compatibility | Scope and limitations |
+|---|---|---|---|
+| Server 1.5.x | Standalone, normally without authentication | Minimum compatibility | Basic graph, schema, data, and Gremlin workflows only. GraphSpace, account permissions, PD/Store topology, cluster operations, and newer algorithms are unavailable. |
+| Server 1.7.x with matching PD/Store 1.7.x | Standalone or distributed | Minimum compatibility through legacy adapters | Core management and query workflows remain usable, but legacy REST/Gremlin authentication, permission semantics, metrics, and algorithm capabilities may provide a reduced experience. |
+| Server, PD, and Store 1.8.x or later | Distributed deployment recommended | Full and recommended experience | Current GraphSpace, account permission presets, cluster operations, async tasks, and algorithm capability handling are designed and validated against this generation. |
+
+Use matching Server, PD, and Store minor versions in a distributed cluster. **Server/PD 1.8 or later is strongly recommended for the best Hubble experience.** Support for 1.5 and 1.7 is intentionally limited to minimum usability and does not imply feature parity with the current release. Version checks stay in the client adapter/resolver rather than being scattered through controllers or pages. See [`AGENTS.md`](AGENTS.md) for verification rules.
 
 ## Local development feedback loop
 
