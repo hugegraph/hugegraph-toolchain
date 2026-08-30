@@ -32,6 +32,7 @@ import org.apache.hugegraph.service.load.IngestTransactionIntegrationTest;
 import org.apache.hugegraph.service.auth.AuthContextServiceTest;
 import org.apache.hugegraph.service.auth.AuthModeServiceTest;
 import org.apache.hugegraph.service.auth.GraphSpaceUserServiceTest;
+import org.apache.hugegraph.service.auth.StandaloneAccountPermissionServiceTest;
 import org.apache.hugegraph.service.space.GraphSpaceServiceTest;
 import org.apache.hugegraph.service.op.DefaultOperationsDataServiceTest;
 import org.apache.hugegraph.service.op.LiveOperationsCollectorTest;
@@ -66,6 +67,7 @@ import org.junit.runners.Suite;
     GraphSpaceAuthOwnershipTest.class,
     GraphSpaceServiceTest.class,
     GraphSpaceUserServiceTest.class,
+    StandaloneAccountPermissionServiceTest.class,
     GraphsControllerCanonicalTest.class,
     GremlinUtilTest.class,
     GremlinHistoryFailureTest.class,

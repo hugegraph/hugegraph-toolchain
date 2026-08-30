@@ -67,6 +67,7 @@ const EditLayer = ({
     const detailRequest = useRef(0);
     const permissionPresetsSupported = !context
         || context.capabilities?.includes('account_permission_presets');
+    const standalone = context?.mode === 'NON_PD';
 
     const title = {
         'detail': t('account.form.title_detail'),
@@ -252,19 +253,28 @@ const EditLayer = ({
                                 label={t('account.form.permission_preset')}
                                 className={style.item}
                             >
-                                {t(`account.permission_preset.${getAccountPresetLabelKey(
-                                    detail, permissionPresetsSupported
-                                )}`)}
+                                {t(`account.permission_preset.${
+                                    standalone
+                                    && detail.permission_preset
+                                    === PERMISSION_PRESETS.GS_READ_WRITE
+                                        ? PERMISSION_PRESETS.GS_READ_WRITE
+                                        : getAccountPresetLabelKey(
+                                            detail,
+                                            permissionPresetsSupported
+                                        )
+                                }`)}
                             </Form.Item>
                             <Form.Item label={t('account.form.remark')} className={style.item}>
                                 {detail.user_description}
                             </Form.Item>
-                            <Form.Item
-                                label={t('account.form.graphspaces')}
-                                className={style.item}
-                            >
-                                {getPresetSpaces(detail).join(', ')}
-                            </Form.Item>
+                            {!standalone && (
+                                <Form.Item
+                                    label={t('account.form.graphspaces')}
+                                    className={style.item}
+                                >
+                                    {getPresetSpaces(detail).join(', ')}
+                                </Form.Item>
+                            )}
                             <Form.Item label={t('account.col.create_time')} className={style.item}>
                                 {detail.user_create}
                             </Form.Item>

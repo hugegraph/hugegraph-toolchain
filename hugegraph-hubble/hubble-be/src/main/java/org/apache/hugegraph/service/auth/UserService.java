@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -71,6 +72,8 @@ public class UserService extends AuthService {
     private HugeConfig config;
     @Autowired
     private GraphSpaceUserService graphSpaceUserService;
+    @Autowired
+    private StandaloneAccountPermissionService standalonePermissions;
 
     private boolean isPdEnabled() {
         return config.get(HubbleOptions.PD_ENABLED);
@@ -83,12 +86,17 @@ public class UserService extends AuthService {
         List<UserEntity> ues = new ArrayList<>(users.size());
         Map<String, Integer> countMap = new HashMap<>();
         Map<String, List<String>> spaceMap = new HashMap<>();
+        Set<String> standaloneReadWrite = isPdEnabled() ?
+                                          new HashSet<>() :
+                                          this.standalonePermissions
+                                              .readWriteUsers(hugeClient);
         users.forEach(u -> {
             UserEntity ue = convert(hugeClient, u);
             if (isPdEnabled()) {
                 ue.setSuperadmin(isSuperAdmin(hugeClient, ue.getId()));
             } else {
                 ue.setSuperadmin(isStandaloneAdmin(ue.getName()));
+                this.populateStandalonePermission(ue, standaloneReadWrite);
             }
             ues.add(ue);
         });
@@ -139,8 +147,12 @@ public class UserService extends AuthService {
             this.populatePermissionPresets(hugeClient, page.getRecords());
             return page;
         } else {
+            Set<String> standaloneReadWrite =
+                    this.standalonePermissions.readWriteUsers(hugeClient);
             for (UserEntity user : results) {
                 user.setSuperadmin(isStandaloneAdmin(user.getName()));
+                this.populateStandalonePermission(user,
+                                                  standaloneReadWrite);
             }
         }
         return PageUtil.page(results, pageNo, pageSize);
@@ -181,6 +193,7 @@ public class UserService extends AuthService {
             userEntity.setAdminSpaces(new ArrayList<>());
             userEntity.setSpacenum(0);
             userEntity.setResSpaces(new ArrayList<>());
+            this.populateStandalonePermission(hugeClient, userEntity);
         }
         return userEntity;
     }
@@ -249,6 +262,9 @@ public class UserService extends AuthService {
                 superAdminAttempted = true;
                 client.auth().addSuperAdmin(ue.getName());
             }
+            if (!isPdEnabled()) {
+                this.standalonePermissions.assignReadWrite(client, newUser);
+            }
         } catch (RuntimeException error) {
             this.rollbackNewAccount(client, newUser, ue.getName(),
                                     superAdminAttempted, error);
@@ -279,6 +295,21 @@ public class UserService extends AuthService {
         }
     }
 
+    private void populateStandalonePermission(HugeClient client,
+                                              UserEntity user) {
+        if (!user.isSuperadmin() &&
+            this.standalonePermissions.hasReadWrite(client, user.getId())) {
+            user.setPermissionPreset("GS_READ_WRITE");
+        }
+    }
+
+    private void populateStandalonePermission(UserEntity user,
+                                              Set<String> readWriteUsers) {
+        if (!user.isSuperadmin() && readWriteUsers.contains(user.getId())) {
+            user.setPermissionPreset("GS_READ_WRITE");
+        }
+    }
+
     public String addbatch(HugeClient client, MultipartFile csvFile) {
         File file = multipartFileToFile(csvFile);
         try {
@@ -292,6 +323,9 @@ public class UserService extends AuthService {
             for (Map<String, String> entry : resultList) {
                 if (!CREATE_SUCCESS.equals(entry.get("result"))) {
                     failedList.add(entry.get("user_name"));
+                } else if (!isPdEnabled()) {
+                    User user = client.findUserByName(entry.get("user_name"));
+                    this.standalonePermissions.assignReadWrite(client, user);
                 }
             }
             if (!failedList.isEmpty()) {
