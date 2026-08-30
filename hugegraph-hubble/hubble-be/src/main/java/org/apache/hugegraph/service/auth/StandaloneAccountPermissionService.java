@@ -130,6 +130,7 @@ public class StandaloneAccountPermissionService {
         Target target = new Target();
         target.name(ROLE_NAME);
         target.graph(ALL_GRAPHS);
+        target.url("");
         Map<String, Object> resource = new HashMap<>();
         resource.put("type", HugeResourceType.ALL.toString());
         resource.put("label", "*");
