@@ -37,6 +37,24 @@ div.add_card {
     cursor: pointer;
     height: 100%;
 
+    :global {
+        .ant-card-head-wrapper {
+            align-items: flex-start;
+            column-gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .ant-card-head-title {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .ant-card-extra {
+            flex: 0 0 auto;
+            margin-left: auto;
+        }
+    }
+
     .card_content {
         height: 144px;
         font-size: 12px;
@@ -44,6 +62,31 @@ div.add_card {
     &:hover {
         border-color: #1890ff;
     }
+}
+
+@media (max-width: 420px) {
+    .card {
+        :global {
+            .ant-card-head-wrapper {
+                row-gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .ant-card-head-title {
+                flex-basis: 100%;
+            }
+        }
+    }
+}
+
+.card_title {
+    min-width: 0;
+    width: 100%;
+}
+
+.card_title_text {
+    display: block;
+    max-width: 100%;
 }
 
 .tooltip {

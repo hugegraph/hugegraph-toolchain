@@ -190,6 +190,11 @@ const Overview = () => {
     const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
     const attentionNodes = selectAttentionNodes(nodes);
     const attentionSources = selectAttentionSources(data?.sources);
+    const clusterReason = data?.reason?.startsWith('cluster_')
+        ? data.reason : null;
+    const showAttention = nodes.length > 0
+        || attentionSources.length > 0
+        || clusterReason;
     const facts = data?.facts ?? {};
     const pdLeader = facts.pd_leader ?? nodes.find(node => (
         node.type === 'PD' && node.role === 'LEADER'
@@ -388,14 +393,11 @@ const Overview = () => {
                         <div className='operations-overview-grid'>
                             <section className='operations-topology-surface'>
                                 <div className='operations-section-heading'>
-                                    <div>
-                                        <h3>
-                                            {view === 'topology'
-                                                ? t('operations.topology')
-                                                : t('operations.node_list_view')}
-                                        </h3>
-                                        <span>{t('operations.logical_relationship')}</span>
-                                    </div>
+                                    <h3>
+                                        {view === 'topology'
+                                            ? t('operations.topology')
+                                            : t('operations.node_list_view')}
+                                    </h3>
                                 </div>
                                 {nodes.length === 0
                                     ? <Empty description={t('operations.empty_cluster')} />
@@ -476,7 +478,7 @@ const Overview = () => {
                         </div>
                         <SourceStrip sources={data?.sources} />
                     </section>
-                    {nodes.length > 0 && (
+                    {showAttention && (
                         <section
                             className='operations-surface operations-attention'
                             aria-label={t('operations.attention_items')}
@@ -487,6 +489,26 @@ const Overview = () => {
                                     {t('operations.view_all_nodes')} <RightOutlined />
                                 </Link>
                             </div>
+                            {clusterReason && (
+                                <Alert
+                                    className='operations-source-attention'
+                                    type='warning'
+                                    showIcon
+                                    message={t('operations.cluster_attention')}
+                                    description={t(
+                                        `operations.reason_${clusterReason}`,
+                                        {
+                                            defaultValue: clusterReason
+                                                .replaceAll('_', ' '),
+                                        }
+                                    )}
+                                    action={(
+                                        <Link to='/operations/nodes'>
+                                            {t('operations.view_all_nodes')}
+                                        </Link>
+                                    )}
+                                />
+                            )}
                             {attentionSources.map(source => {
                                 const type = source.name === 'stores'
                                     ? 'STORE' : source.name.toUpperCase();
@@ -527,7 +549,7 @@ const Overview = () => {
                                 />
                             ) : (
                                 <p className='operations-nodes-healthy'>
-                                    {attentionSources.length > 0
+                                    {(attentionSources.length > 0 || clusterReason)
                                         ? t('operations.nodes_healthy_source_attention')
                                         : t('operations.all_nodes_healthy')}
                                 </p>

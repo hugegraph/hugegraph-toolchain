@@ -278,8 +278,10 @@ public class DefaultOperationsDataService implements OperationsDataService {
         }
         String status = "DOWN".equals(current.getStatus()) ? "DOWN" :
                         "DEGRADED";
+        String reason = current.getReason() != null ? current.getReason() :
+                        "partial_refresh_failed";
         return new Snapshot(status, current.getObservedAt(), true,
-                            "partial_refresh_failed", sources, nodes, facts);
+                            reason, sources, nodes, facts);
     }
 
     private void mergeFailedFacts(Map<String, Long> current,

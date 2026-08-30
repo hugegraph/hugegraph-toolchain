@@ -36,6 +36,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.auth.UserEntity;
 import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.options.HubbleOptions;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 import org.apache.hugegraph.testutil.Assert;
 
 public class AuthContextServiceTest {
@@ -187,6 +188,27 @@ public class AuthContextServiceTest {
                 ForbiddenException.class,
                 () -> fixture.service.requireGraphSpaceWrite(
                       fixture.client, "alice", "space-a"));
+    }
+
+    @Test
+    public void testPdUserRetainsWriteAccessToPublicGraphSpace() {
+        Fixture fixture = new Fixture(true);
+        UserEntity user = user(false, Collections.emptyList());
+        Mockito.when(fixture.client.supportsDefaultRole()).thenReturn(true);
+        Mockito.when(fixture.users.getpersonal(fixture.client, "alice"))
+               .thenReturn(user);
+        Mockito.when(fixture.graphSpaces.listAnonymous(fixture.client))
+               .thenReturn(Collections.singletonList("public"));
+        Mockito.when(fixture.graphSpaces.isAuth(fixture.client, "public"))
+               .thenReturn(false);
+
+        Map<String, Object> context = fixture.service.context(fixture.client,
+                                                              "alice");
+
+        Assert.assertEquals(Collections.singletonList("public"),
+                            scopes(context).get("write_graphspaces"));
+        fixture.service.requireGraphSpaceWrite(fixture.client, "alice",
+                                               "public");
     }
 
     @Test
@@ -342,6 +364,8 @@ public class AuthContextServiceTest {
         private final UserService users = Mockito.mock(UserService.class);
         private final AuthModeService authMode =
                 Mockito.mock(AuthModeService.class);
+        private final GraphSpaceService graphSpaces =
+                Mockito.mock(GraphSpaceService.class);
         private final AuthContextService service;
 
         private Fixture(boolean pdEnabled) {
@@ -349,8 +373,14 @@ public class AuthContextServiceTest {
                    .thenReturn(pdEnabled);
             Mockito.when(this.client.supportsPersonalProfileUpdate())
                    .thenReturn(true);
+            Mockito.when(this.graphSpaces.listAnonymous(this.client))
+                   .thenReturn(Collections.emptyList());
+            Mockito.when(this.graphSpaces.isAuth(
+                         Mockito.eq(this.client), Mockito.anyString()))
+                   .thenReturn(true);
             this.service = new AuthContextService(this.config, this.users,
-                                                  this.authMode);
+                                                  this.authMode,
+                                                  this.graphSpaces);
         }
     }
 }

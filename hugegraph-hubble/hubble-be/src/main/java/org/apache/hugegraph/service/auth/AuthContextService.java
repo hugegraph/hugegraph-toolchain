@@ -42,6 +42,7 @@ import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.op.OperationsCapabilityService;
+import org.apache.hugegraph.service.space.GraphSpaceService;
 
 @Service
 public class AuthContextService {
@@ -85,13 +86,16 @@ public class AuthContextService {
     private final HugeConfig config;
     private final UserService users;
     private final AuthModeService authMode;
+    private final GraphSpaceService graphSpaces;
 
     @Autowired
     public AuthContextService(HugeConfig config, UserService users,
-                              AuthModeService authMode) {
+                              AuthModeService authMode,
+                              GraphSpaceService graphSpaces) {
         this.config = config;
         this.users = users;
         this.authMode = authMode;
+        this.graphSpaces = graphSpaces;
     }
 
     public Map<String, Object> context(HugeClient client, String username) {
@@ -123,8 +127,10 @@ public class AuthContextService {
         boolean profileUpdate =
                 client.supportsPersonalProfileUpdate();
         List<String> writeGraphSpaces = pdEnabled ?
-                                        writeGraphSpaces(user,
-                                                         permissionPresets) :
+                                        writeGraphSpaces(
+                                                user, permissionPresets,
+                                                this.graphSpaces
+                                                    .listAnonymous(client)) :
                                         Collections.emptyList();
         Set<String> capabilities = this.capabilities(pdEnabled, role,
                                                      permissionPresets);
@@ -156,11 +162,15 @@ public class AuthContextService {
             !client.supportsDefaultRole()) {
             return;
         }
+        if (!this.graphSpaces.isAuth(client, graphSpace)) {
+            return;
+        }
 
         UserEntity user = this.users.getpersonal(client, username);
         if (user.isSuperadmin() ||
             contains(user.getAdminSpaces(), graphSpace) ||
-            writeGraphSpaces(user, true).contains(graphSpace)) {
+            writeGraphSpaces(user, true,
+                             Collections.emptyList()).contains(graphSpace)) {
             return;
         }
         throw new ForbiddenException(
@@ -265,15 +275,22 @@ public class AuthContextService {
     }
 
     private static List<String> writeGraphSpaces(UserEntity user,
-                                                 boolean permissionPresets) {
+                                                 boolean permissionPresets,
+                                                 Collection<String> publicSpaces) {
         if (user.isSuperadmin()) {
             return Collections.emptyList();
         }
-        if (!permissionPresets) {
-            return sorted(user.getResSpaces());
-        }
 
         Set<String> values = new TreeSet<>();
+        if (publicSpaces != null) {
+            values.addAll(publicSpaces);
+        }
+        if (!permissionPresets) {
+            if (user.getResSpaces() != null) {
+                values.addAll(user.getResSpaces());
+            }
+            return Collections.unmodifiableList(new ArrayList<>(values));
+        }
         if (user.getGraphspacePermissions() != null) {
             for (Map<String, String> permission :
                  user.getGraphspacePermissions()) {

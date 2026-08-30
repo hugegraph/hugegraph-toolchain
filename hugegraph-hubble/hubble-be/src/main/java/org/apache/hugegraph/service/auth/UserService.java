@@ -631,17 +631,16 @@ public class UserService extends AuthService {
         String username = previous.name();
         boolean previousSuperAdmin = client.auth().listSuperAdmin().contains(username);
         try {
-            if (previousSuperAdmin && !userEntity.isSuperadmin()) {
-                client.auth().delSuperAdmin(username);
-            }
-            if (!previousSuperAdmin && userEntity.isSuperadmin()) {
-                client.auth().addSuperAdmin(username);
-            }
             client.auth().updateUser(user);
             this.graphSpaceUserService.applyPermissionPresets(
                     client, userEntity.getName(),
                     userEntity.getGraphspacePermissions(),
                     userEntity.getPermissionPreset());
+            if (!previousSuperAdmin && userEntity.isSuperadmin()) {
+                client.auth().addSuperAdmin(username);
+            } else if (previousSuperAdmin && !userEntity.isSuperadmin()) {
+                client.auth().delSuperAdmin(username);
+            }
         } catch (RuntimeException error) {
             this.restoreAccountProfile(client, previous, error);
             this.restoreSuperAdmin(client, username, previousSuperAdmin, error);

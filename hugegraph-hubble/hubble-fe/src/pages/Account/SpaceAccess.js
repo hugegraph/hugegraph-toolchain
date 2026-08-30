@@ -38,28 +38,27 @@ import {PERMISSION_PRESETS} from './permissionPresets';
 import {loadAllPages, PAGE_ERROR_CONFIG} from './pagedRecords';
 
 const responseRecords = response => response?.data?.records ?? [];
-const errorStatus = value => (
-    value?.response?.data?.status ?? value?.response?.status ?? value?.status
-);
 const errorDetail = value => {
     const response = value?.response ?? value;
     return response?.data?.message ?? response?.message;
 };
-const isMissingAccount = value => {
-    if (errorStatus(value) === 400) {
-        return true;
-    }
+const isMissingAccount = (value, t) => {
     const detail = errorDetail(value);
     if (typeof detail !== 'string') {
         return false;
     }
     const normalized = detail.toLowerCase();
+    const subject = t('account.space_access.member.missing_response_subject')
+        .toLowerCase();
+    const predicate = t('account.space_access.member.missing_response_predicate')
+        .toLowerCase();
     return normalized.includes('user or group is not exist')
-        || normalized.includes('account does not exist');
+        || normalized.includes('account does not exist')
+        || (normalized.includes(subject) && normalized.includes(predicate));
 };
 const showMutationError = (error, t) => {
     const detail = errorDetail(error);
-    if (isMissingAccount(error)) {
+    if (isMissingAccount(error, t)) {
         message.error(t('account.space_access.member.account_not_found'));
         return;
     }
@@ -208,6 +207,7 @@ const SpaceAccess = ({
     const [spacesError, setSpacesError] = useState(false);
     const [spacesRevision, setSpacesRevision] = useState(0);
     const spacesRequest = useRef(null);
+    const accountValidation = useRef(null);
     const [memberDialog, setMemberDialog] = useState(null);
     const [missingAccountId, setMissingAccountId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -354,12 +354,16 @@ const SpaceAccess = ({
         spaces,
     ]);
     const closeMember = useCallback(() => {
+        accountValidation.current = null;
         setMemberDialog(null);
         setMissingAccountId(null);
         memberForm.resetFields();
     }, [memberForm]);
     const validateExistingAccount = useCallback(async (_, value) => {
+        const validation = Symbol('account-validation');
+        accountValidation.current = validation;
         setMissingAccountId(null);
+        memberForm.setFieldValue('user_id', undefined);
         if (!value) {
             return;
         }
@@ -370,6 +374,8 @@ const SpaceAccess = ({
         if (!targetSpace) {
             return;
         }
+        const isCurrent = () => accountValidation.current === validation
+            && memberForm.getFieldValue('account_id') === value;
         let response;
         try {
             response = await api.auth.getSpaceAccount(
@@ -377,7 +383,10 @@ const SpaceAccess = ({
             );
         }
         catch (error) {
-            if (isMissingAccount(error)) {
+            if (!isCurrent()) {
+                return;
+            }
+            if (isMissingAccount(error, t)) {
                 setMissingAccountId(value);
                 throw new Error(accountNotFoundMessage());
             }
@@ -385,9 +394,12 @@ const SpaceAccess = ({
                 t('account.space_access.member.account_check_failed')
             );
         }
+        if (!isCurrent()) {
+            return;
+        }
         const account = response?.data;
         if (response?.status !== 200) {
-            if (isMissingAccount(response)) {
+            if (isMissingAccount(response, t)) {
                 setMissingAccountId(value);
                 throw new Error(accountNotFoundMessage());
             }
@@ -401,6 +413,11 @@ const SpaceAccess = ({
         }
         memberForm.setFieldValue('user_id', account.user_id ?? account.id);
     }, [accountNotFoundMessage, memberForm, t]);
+    const handleAccountIdChange = useCallback(() => {
+        accountValidation.current = null;
+        setMissingAccountId(null);
+        memberForm.setFieldValue('user_id', undefined);
+    }, [memberForm]);
     const startAccountCreation = useCallback(() => {
         if (!missingAccountId || !onCreateAccount) {
             return;
@@ -618,7 +635,7 @@ const SpaceAccess = ({
                                 <Input disabled />
                             </Form.Item>
                             <Form.Item name="user_id" hidden>
-                                <Input />
+                                <Input onChange={handleAccountIdChange} />
                             </Form.Item>
                         </>
                     ) : (

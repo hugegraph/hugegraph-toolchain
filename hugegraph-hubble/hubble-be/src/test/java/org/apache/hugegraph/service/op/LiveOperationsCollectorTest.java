@@ -123,6 +123,43 @@ public class LiveOperationsCollectorTest {
     }
 
     @Test
+    public void testPdModeDoesNotInventServerWhenDiscoveryIsEmpty()
+           throws IOException {
+        HttpServer pd = pdServer(200, cluster(), 200, stores());
+        LiveOperationsCollector.ServerClientProvider servers =
+                new LiveOperationsCollector.ServerClientProvider() {
+            @Override
+            public java.util.List<String> urls() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public HugeClient create(String url, String authContext,
+                                     int timeout) {
+                throw new AssertionError("Server probe must not start");
+            }
+        };
+        LiveOperationsCollector collector = collector(true, pd, servers);
+
+        Snapshot snapshot;
+        try {
+            snapshot = collector.collect(serverClient(), false);
+        } finally {
+            collector.close();
+            pd.stop(0);
+        }
+
+        Assert.assertFalse(snapshot.getNodes().stream()
+                                   .anyMatch(node -> "SERVER".equals(
+                                             node.getType())));
+        Assert.assertEquals("UNAVAILABLE",
+                            snapshot.getSources().get("server")
+                                    .getAvailability());
+        Assert.assertEquals("topology_fields_unavailable",
+                            snapshot.getSources().get("server").getReason());
+    }
+
+    @Test
     public void testPdServerDiscoveryUsesOperationsDeadline()
            throws IOException {
         HttpServer pd = pdServer(200, cluster(), 200, stores());
@@ -257,7 +294,8 @@ public class LiveOperationsCollectorTest {
             pd.stop(0);
         }
 
-        Assert.assertEquals("UP", snapshot.getStatus());
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        Assert.assertEquals("cluster_warn", snapshot.getReason());
         Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
     }
 
@@ -278,7 +316,8 @@ public class LiveOperationsCollectorTest {
         Assert.assertTrue(pdSource.isFresh());
         Assert.assertEquals("UP", pdSource.getStatus());
         Assert.assertNull(pdSource.getReason());
-        Assert.assertEquals("UP", snapshot.getStatus());
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        Assert.assertEquals("cluster_not_ready", snapshot.getReason());
         long pdCount = snapshot.getNodes().stream()
                                .filter(node -> "PD".equals(node.getType()))
                                .count();
@@ -382,7 +421,8 @@ public class LiveOperationsCollectorTest {
             pd.stop(0);
         }
 
-        Assert.assertEquals("UP", snapshot.getStatus());
+        Assert.assertEquals("DEGRADED", snapshot.getStatus());
+        Assert.assertEquals("cluster_state_unknown", snapshot.getReason());
         Assert.assertEquals("UP", snapshot.getSources().get("pd").getStatus());
     }
 

@@ -52,6 +52,13 @@ test('focuses standalone Server details on applicable sources and metric cards',
                     heap: {used: 512, max: 1024, committed: 768},
                     nonheap: {used: 256, max: 0, committed: 320},
                     thread: {count: 42, daemon: 20, peak: 56},
+                    garbage_collector: {
+                        g1_young_generation_count: 3,
+                        g1_young_generation_time: 12,
+                        g1_old_generation_count: 1,
+                        g1_old_generation_time: 4,
+                        time_unit: 'ms',
+                    },
                     process_cpu_usage: 0.125,
                     system_cpu_usage: 0.25,
                 },
@@ -107,23 +114,18 @@ test('focuses standalone Server details on applicable sources and metric cards',
     expect(within(system).getByText(/Committed:.*768 MB/)).toBeInTheDocument();
     expect(within(system).queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
 
-    const threads = within(system).getByRole('group', {name: 'Threads'});
-    expect(within(threads).getByText('Live')).toBeInTheDocument();
-    expect(within(threads).getByText('42')).toBeInTheDocument();
-    expect(within(threads).getByText('Daemon')).toBeInTheDocument();
-    expect(within(threads).getByText('20')).toBeInTheDocument();
-    expect(within(threads).getByText('Peak')).toBeInTheDocument();
-    expect(within(threads).getByText('56')).toBeInTheDocument();
-
-    expect(within(system).getByRole('group', {name: 'CPU and runtime'}))
-        .toHaveTextContent('12.5%');
-    expect(within(system).getByRole('group', {name: 'CPU and runtime'}))
-        .toHaveTextContent('25%');
-    expect(within(system).getByRole('group', {name: 'CPU and runtime'}))
-        .toHaveTextContent('1.5');
-    expect(within(system).getByRole('group', {name: 'CPU and runtime'}))
-        .toHaveTextContent('2m 9s');
-    expect(system.querySelectorAll('.ant-statistic').length).toBeGreaterThanOrEqual(7);
+    const runtime = within(system).getByRole('group', {name: 'CPU and runtime'});
+    expect(runtime).toHaveTextContent('12.5%');
+    expect(runtime).toHaveTextContent('25%');
+    expect(runtime).toHaveTextContent('1-minute system load1.5');
+    expect(runtime).not.toHaveTextContent('1.5%');
+    expect(runtime).toHaveTextContent('2m 9s');
+    expect(runtime).toHaveTextContent('Live threads42');
+    expect(runtime).not.toHaveTextContent('Daemon');
+    expect(runtime).not.toHaveTextContent('Peak');
+    expect(runtime).toHaveTextContent('GC count4');
+    expect(runtime).toHaveTextContent('GC time16 ms');
+    expect(system.querySelectorAll('.ant-statistic').length).toBeGreaterThanOrEqual(8);
 });
 
 afterEach(() => jest.clearAllMocks());
@@ -185,7 +187,7 @@ test('keeps null metrics safe and distinguishes unavailable groups', async () =>
     expect(within(identity).getByLabelText('STORE icon')).toBeInTheDocument();
     expect(within(identity).getByText('Store A')).toBeInTheDocument();
     expect(screen.getByRole('region', {name: 'Node metrics'})).toBeInTheDocument();
-    expect(screen.getByText(/Observed:/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Last observed:/).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', {name: 'Refresh'})).toHaveClass(
         'operations-refresh-button', 'ant-btn-text', 'ant-btn-circle'
     );
@@ -298,8 +300,8 @@ test('renders each metric group from its own metric status', async () => {
                 },
                 drive: {
                     availability: 'UNAVAILABLE',
-                    observed_at: 1000,
-                    last_success_at: 900,
+                    observed_at: 2000,
+                    last_success_at: 1000,
                     fresh: false,
                     stale: true,
                     reason: 'refresh_failed',
@@ -333,7 +335,14 @@ test('renders each metric group from its own metric status', async () => {
     expect(within(drive).getByText('Unavailable')).toBeInTheDocument();
     expect(within(drive).getByText('7')).toBeInTheDocument();
     expect(within(drive).getByText(/Stale/)).toBeInTheDocument();
-    expect(within(drive).getByText(/Last success/)).toBeInTheDocument();
+    expect(within(drive).getByText(/Last observed/)).toBeInTheDocument();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+    });
+    expect(drive).toHaveTextContent(formatter.format(new Date(1000)));
+    expect(drive).not.toHaveTextContent(formatter.format(new Date(2000)));
+    expect(within(drive).queryByText(/Last success/)).not.toBeInTheDocument();
 
     const raft = screen.getByRole('heading', {name: 'Raft'}).closest('section');
     expect(within(raft).getByText('Unsupported')).toBeInTheDocument();
@@ -345,12 +354,18 @@ test('renders each metric group from its own metric status', async () => {
         'Upgrade HugeGraph to a version that provides this metric'
     )).toBeInTheDocument();
 
-    const backend = screen.getByRole('heading', {name: 'Backend'}).closest('section');
+    const backend = screen.getByRole('heading', {
+        name: 'Storage & partitions',
+    }).closest('section');
     expect(within(backend).getByText('Available')).toBeInTheDocument();
     expect(within(backend).getByText('2')).toBeInTheDocument();
     expect(within(backend).queryByText('Refresh failed')).not.toBeInTheDocument();
+    expect(within(backend).getByLabelText('Fresh')).toBeInTheDocument();
+    expect(within(backend).queryByText('Fresh')).not.toBeInTheDocument();
+    expect(within(backend).getAllByText(/Last observed/)).toHaveLength(1);
+    expect(within(backend).queryByText(/Last success/)).not.toBeInTheDocument();
 
-    for (const name of ['System', 'Drive', 'Raft', 'Backend']) {
+    for (const name of ['System', 'Drive', 'Raft', 'Storage & partitions']) {
         const group = screen.getByRole('heading', {name}).closest('section');
         expect(group.querySelector('.operations-metric-header')).toBeInTheDocument();
         expect(within(group).getByRole('status')).toBeInTheDocument();
@@ -385,7 +400,8 @@ test('hides metric groups that do not apply to a PD node', async () => {
 
     expect(screen.queryByRole('heading', {name: 'Drive'})).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', {name: 'Raft'})).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', {name: 'Backend'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', {name: 'Storage & partitions'}))
+        .not.toBeInTheDocument();
     expect(screen.queryByText('Unsupported by this service version')).not.toBeInTheDocument();
 });
 
@@ -396,10 +412,21 @@ test('presents native metric labels, units and capacity instead of raw keys', as
             ...response.node,
             metrics: {
                 system: {
-                    basic: {mem_total: 64, mem_used: 46, uptime: 128889},
+                    basic: {
+                        mem_total: 64,
+                        mem_used: 46,
+                        uptime: 128889,
+                        systemload_average: 2.33,
+                    },
                     process_cpu_usage: 0.125,
                     uptime_seconds: 65,
-                    garbage_collector: {young_count: 3},
+                    garbage_collector: {
+                        young_count: 3,
+                        young_time: 8,
+                        old_count: 1,
+                        old_time: 2,
+                        time_unit: 'ms',
+                    },
                 },
                 drive: {
                     total_space: 233752,
@@ -407,7 +434,12 @@ test('presents native metric labels, units and capacity instead of raw keys', as
                     free_space: 5802,
                     size_unit: 'MB',
                 },
-                backend: {capacity_bytes: 4096, available_bytes: 1024},
+                backend: {
+                    capacity_bytes: 4096,
+                    available_bytes: 1024,
+                    partitions: 12,
+                    leaders: 3,
+                },
             },
         },
     });
@@ -415,13 +447,18 @@ test('presents native metric labels, units and capacity instead of raw keys', as
     renderDetail();
     await screen.findByRole('heading', {name: 'Store A'});
 
-    expect(screen.getByText(/Total memory:.*64 MB/)).toBeInTheDocument();
+    expect(screen.queryByText(/Total memory/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Used memory/)).not.toBeInTheDocument();
     const runtime = screen.getByRole('group', {name: 'CPU and runtime'});
     expect(runtime).toHaveTextContent('Uptime');
-    expect(runtime).toHaveTextContent('2m 9s');
+    expect(runtime).toHaveTextContent('1-minute system load');
+    expect(runtime).toHaveTextContent('2.33');
+    expect(runtime).not.toHaveTextContent('2.33%');
     expect(screen.getByText('12.5%')).toBeInTheDocument();
     expect(screen.getByText('1m 5s')).toBeInTheDocument();
-    expect(screen.getByText(/young count:.*3/i)).toBeInTheDocument();
+    expect(screen.queryByText('2m 9s')).not.toBeInTheDocument();
+    expect(runtime).toHaveTextContent('GC count4');
+    expect(runtime).toHaveTextContent('GC time10 ms');
     expect(screen.queryByText(/mem total/)).not.toBeInTheDocument();
     const capacity = screen.getAllByRole('progressbar', {name: 'Capacity usage'});
     expect(capacity.some(item => item.getAttribute('aria-valuenow') === '75')).toBe(true);
@@ -429,4 +466,78 @@ test('presents native metric labels, units and capacity instead of raw keys', as
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.getByText('98%')).toBeInTheDocument();
     expect(screen.getByText(/222.6 GB \/ 228.3 GB/)).toBeInTheDocument();
+    const drive = screen.getByRole('heading', {name: 'Drive'}).closest('section');
+    expect(within(drive).getByText('Available space')).toBeInTheDocument();
+    expect(within(drive).getByText('5.7 GB')).toBeInTheDocument();
+    expect(within(drive).queryByText('Free space')).not.toBeInTheDocument();
+    expect(within(drive).queryByText('Space unit')).not.toBeInTheDocument();
+    expect(within(drive).getByText('Available space')
+        .closest('.operations-statistic-card')).toBeInTheDocument();
+    const backend = screen.getByRole('heading', {
+        name: 'Storage & partitions',
+    }).closest('section');
+    expect(within(backend).getByText('Partition count')).toBeInTheDocument();
+    expect(within(backend).getByText('Leader partitions')).toBeInTheDocument();
+    expect(within(backend).queryByText('Total capacity')).not.toBeInTheDocument();
+    expect(within(backend).queryByText('Available capacity')).not.toBeInTheDocument();
+});
+
+test('uses concise Chinese names for Raft and Store storage metrics', async () => {
+    i18n.changeLanguage('zh-CN');
+    getNode.mockResolvedValue({
+        ...response,
+        node: {
+            ...response.node,
+            metrics: {
+                system: {},
+                drive: {total_space: 100, usable_space: 40, size_unit: 'MB'},
+                raft: {groups: 12, enabled_groups: 12},
+                backend: {
+                    capacity_bytes: 100,
+                    available_bytes: 40,
+                    partitions: 12,
+                    leaders: 3,
+                },
+            },
+            metric_statuses: {
+                system: {availability: 'AVAILABLE', observed_at: 1000},
+                drive: {availability: 'AVAILABLE', observed_at: 1000},
+                raft: {availability: 'AVAILABLE', observed_at: 1000},
+                backend: {availability: 'AVAILABLE', observed_at: 1000},
+            },
+        },
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', {name: 'Raft'}))
+        .toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: '存储与分区'}))
+        .toBeInTheDocument();
+    expect(screen.queryByText('Raft 共识')).not.toBeInTheDocument();
+});
+
+test('shows an empty state when a metric group only has hidden metadata', async () => {
+    getNode.mockResolvedValue({
+        ...response,
+        node: {
+            ...response.node,
+            metrics: {
+                system: {},
+                drive: {total_space: 100, free_space: 40, size_unit: 'MB'},
+            },
+            metric_statuses: {
+                system: {availability: 'AVAILABLE', observed_at: 1000},
+                drive: {availability: 'AVAILABLE', observed_at: 1000},
+            },
+        },
+    });
+
+    renderDetail();
+
+    const drive = (await screen.findByRole('heading', {name: 'Drive'}))
+        .closest('section');
+    expect(within(drive).getByRole('note')).toHaveTextContent('No metric data');
+    expect(drive.querySelector('.operations-group-statistics'))
+        .not.toBeInTheDocument();
 });

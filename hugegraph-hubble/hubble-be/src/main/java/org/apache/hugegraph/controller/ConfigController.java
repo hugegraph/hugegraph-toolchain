@@ -70,8 +70,9 @@ public class ConfigController {
                 capabilities.put("auth_enabled",
                                  this.authModeService.update(
                                  client.isServerAuthEnabled()));
-                capabilities.put("graph_create_enabled", true);
-                capabilities.put("cypher_enabled", true);
+                capabilities.put("graph_create_enabled",
+                                 client.supportsGraphCreate());
+                capabilities.put("cypher_enabled", client.supportsCypher());
                 capabilities.put("server_capabilities_verified", true);
                 return capabilities;
             } catch (RuntimeException ignored) {

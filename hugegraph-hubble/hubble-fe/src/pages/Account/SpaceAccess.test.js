@@ -30,7 +30,12 @@ import * as api from '../../api';
 let mockAuthContext;
 
 jest.mock('react-i18next', () => ({
-    useTranslation: () => ({t: key => key}),
+    useTranslation: () => ({
+        t: key => ({
+            'account.space_access.member.missing_response_subject': '账号',
+            'account.space_access.member.missing_response_predicate': '不存在',
+        }[key] ?? key),
+    }),
 }));
 
 jest.mock('../../auth/AuthContext', () => ({
@@ -565,6 +570,109 @@ test('tells a GraphSpace administrator to contact a global administrator', async
     expect(within(dialog).queryByRole('button', {
         name: 'account.space_access.member.create_account',
     })).not.toBeInTheDocument();
+});
+
+test('recognizes a localized missing-account response', async () => {
+    api.auth.getSpaceAccount.mockResolvedValue({
+        status: 400,
+        message: '账号 missing-user 不存在，请先创建账号再分配 GraphSpace 权限。',
+    });
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+    const dialog = screen.getByRole('dialog');
+    const account = within(dialog).getByLabelText(
+        'account.space_access.member.existing_account'
+    );
+    fireEvent.change(account, {target: {value: 'missing-user'}});
+    fireEvent.blur(account);
+
+    expect(await within(dialog).findByText(
+        'account.space_access.member.account_not_found_contact_admin'
+    )).toBeInTheDocument();
+});
+
+test('does not describe an unrelated bad request as a missing account', async () => {
+    api.auth.getSpaceAccount.mockResolvedValue({
+        status: 400,
+        message: 'Invalid permission preset',
+    });
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+    const dialog = screen.getByRole('dialog');
+    const account = within(dialog).getByLabelText(
+        'account.space_access.member.existing_account'
+    );
+    fireEvent.change(account, {target: {value: 'alice'}});
+    fireEvent.blur(account);
+
+    expect(await within(dialog).findByText(
+        'account.space_access.member.account_check_failed'
+    )).toBeInTheDocument();
+    expect(within(dialog).queryByText(
+        'account.space_access.member.account_not_found_contact_admin'
+    )).not.toBeInTheDocument();
+});
+
+test('ignores an older account lookup after the ID changes', async () => {
+    const older = deferred();
+    const current = deferred();
+    api.auth.getSpaceAccount.mockImplementation((_space, accountId) => (
+        accountId === 'older' ? older.promise : current.promise
+    ));
+    api.auth.setSpacePreset.mockResolvedValue({status: 200});
+    render(<SpaceAccess />);
+
+    await screen.findAllByText('alice');
+    fireEvent.click(screen.getByRole('button', {
+        name: 'account.space_access.member.add',
+    }));
+    const dialog = screen.getByRole('dialog');
+    const account = within(dialog).getByLabelText(
+        'account.space_access.member.existing_account'
+    );
+    fireEvent.change(account, {target: {value: 'older'}});
+    fireEvent.blur(account);
+    fireEvent.change(account, {target: {value: 'current'}});
+    fireEvent.blur(account);
+
+    await act(async () => current.resolve({
+        status: 200,
+        data: {user_id: 'current-id', user_name: 'current'},
+    }));
+    await act(async () => older.resolve({
+        status: 200,
+        data: {user_id: 'older-id', user_name: 'older'},
+    }));
+
+    const roleSelects = within(dialog).getAllByRole('combobox');
+    fireEvent.mouseDown(roleSelects[roleSelects.length - 1]);
+    fireEvent.click(screen.getByText('account.permission_preset.GS_READ_ONLY'));
+    fireEvent.click(within(dialog).getByRole('button', {
+        name: 'common.action.save',
+    }));
+
+    await waitFor(() => expect(api.auth.setSpacePreset).toHaveBeenCalledWith(
+        'SPACE_A',
+        'current-id',
+        'current',
+        'GS_READ_ONLY',
+        expect.any(Object)
+    ));
+    expect(api.auth.setSpacePreset).not.toHaveBeenCalledWith(
+        'SPACE_A',
+        'older-id',
+        expect.anything(),
+        expect.anything(),
+        expect.any(Object)
+    );
 });
 
 test('requires an explicit replacement for legacy custom access', async () => {
