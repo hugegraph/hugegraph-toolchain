@@ -167,6 +167,30 @@ test('treats a backend nickname echo as an unset alias', () => {
     expect(screen.getByTitle('space')).toBeInTheDocument();
 });
 
+test('keeps a long GraphSpace title accessible without a fixed text width', () => {
+    const displayName = 'A GraphSpace name that is much longer than its card';
+    const item = {
+        name: 'long-space', nickname: displayName, create_time: '2026-07-10',
+        auth: false, max_graph_number: 10, cpu_limit: 2, memory_limit: 4,
+        storage_limit: 100, storage_used: 0, storage_percent: 0,
+    };
+
+    render(
+        <GraphSpaceCard
+            item={item}
+            editGraphspace={jest.fn()}
+            deleteGraphspace={jest.fn()}
+            handleInit={jest.fn()}
+        />
+    );
+
+    const title = screen.getByRole('button', {name: displayName});
+    expect(title).toHaveAttribute('title', displayName);
+    expect(title).toHaveClass('card_title_text');
+    expect(title).not.toHaveStyle({maxWidth: '244px'});
+    expect(screen.getAllByText('graphspace.card.enter').length).toBeGreaterThan(0);
+});
+
 test('keeps public GraphSpace navigation but hides mutation actions for viewers', () => {
     const item = {
         name: 'public', nickname: 'Public', create_time: '2026-07-10',

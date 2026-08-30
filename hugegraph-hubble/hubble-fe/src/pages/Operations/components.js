@@ -136,13 +136,16 @@ const SourceStrip = ({sources = {}, detailed = false,
         >
             {sourceNames.map(name => {
                 const source = sources[name] ?? {};
-                const age = source.observed_at ? formatObservedAge(
-                    source.observed_at,
+                const lastObservedAt = source.stale
+                    ? source.last_success_at ?? source.observed_at
+                    : source.observed_at ?? source.last_success_at;
+                const age = lastObservedAt ? formatObservedAge(
+                    lastObservedAt,
                     i18n.language,
                     t('operations.unavailable')
                 ) : null;
-                const observed = source.observed_at ? formatObservedAt(
-                    source.observed_at,
+                const observed = lastObservedAt ? formatObservedAt(
+                    lastObservedAt,
                     i18n.language,
                     t('operations.unavailable')
                 ) : null;
@@ -152,22 +155,16 @@ const SourceStrip = ({sources = {}, detailed = false,
                     defaultValue: source.availability ?? 'UNSUPPORTED',
                 });
                 const healthSummary = sourceHealthSummary(source, t);
-                const lastSuccess = source.last_success_at ? formatObservedAt(
-                    source.last_success_at,
-                    i18n.language,
-                    t('operations.unavailable')
-                ) : null;
                 const sourceDetails = [
                     healthSummary,
                     `${t('operations.source_topology_status')}: ${
                         displayHealthStatus(source.status ?? 'UNKNOWN', t)
                     }`,
                     `${t('operations.source_collection_status')}: ${availability}`,
-                    observed ? `${t('operations.observed_at')}: ${observed}` : null,
+                    observed
+                        ? `${t('operations.last_observed')}: ${observed}` : null,
                     source.stale ? t('operations.stale') : null,
                     source.reason ? formatReason(source.reason, t) : null,
-                    lastSuccess
-                        ? `${t('operations.last_success')}: ${lastSuccess}` : null,
                 ].filter(Boolean).join(' · ');
                 const sourceLabel = displayNodeType(name === 'stores'
                     ? 'STORE' : name.toUpperCase());
@@ -206,14 +203,13 @@ const SourceStrip = ({sources = {}, detailed = false,
                                         availability
                                     }`}
                                     {observed
-                                        ? ` · ${t('operations.observed_at')}: ${observed}`
+                                        ? ` · ${t('operations.last_observed')}: ${
+                                            observed
+                                        }`
                                         : (age ? ` · ${age}` : '')}
                                     {source.stale ? ` · ${t('operations.stale')}` : ''}
                                     {source.reason
                                         ? ` · ${formatReason(source.reason, t)}` : ''}
-                                    {lastSuccess
-                                        ? ` · ${t('operations.last_success')}: ${lastSuccess}`
-                                        : ''}
                                 </span>
                             )}
                         </div>

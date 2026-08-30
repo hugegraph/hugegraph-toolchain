@@ -198,13 +198,19 @@ public class LiveOperationsCollector implements OperationsCollector {
         List<Node> nodes = new ArrayList<>();
         Map<String, Long> facts = new LinkedHashMap<>();
         this.collectServer(client, includeMetrics, now, sources, nodes);
+        String clusterReason = null;
         if (this.pdEnabled) {
-            this.collectPd(includeMetrics, now, sources, nodes, facts);
+            clusterReason = this.collectPd(includeMetrics, now, sources, nodes,
+                                           facts);
         } else {
             sources.put("pd", unsupported());
             sources.put("stores", unsupported());
         }
-        return new Snapshot(this.overallStatus(sources), now, false, null,
+        String status = this.overallStatus(sources);
+        if (clusterReason != null && "UP".equals(status)) {
+            status = "DEGRADED";
+        }
+        return new Snapshot(status, now, false, clusterReason,
                             sources, nodes, facts);
     }
 
@@ -220,6 +226,11 @@ public class LiveOperationsCollector implements OperationsCollector {
             return;
         }
         if (urls.isEmpty()) {
+            if (this.pdEnabled && this.serverClients != null) {
+                sources.put("server", unavailable(
+                            "topology_fields_unavailable", now));
+                return;
+            }
             this.collectSingleServer(client, this.serverIdentity,
                                      "HugeGraph Server", includeMetrics, now,
                                      sources, nodes);
@@ -409,11 +420,12 @@ public class LiveOperationsCollector implements OperationsCollector {
                stableId("server", url).substring("server-".length());
     }
 
-    private void collectPd(boolean includeMetrics, long now,
-                           Map<String, SourceStatus> sources,
-                           List<Node> nodes, Map<String, Long> facts) {
+    private String collectPd(boolean includeMetrics, long now,
+                             Map<String, SourceStatus> sources,
+                             List<Node> nodes, Map<String, Long> facts) {
         String cluster = null;
         String stores = null;
+        String clusterReason = null;
         SourceStatus pdStatus;
         SourceStatus storesStatus;
         try {
@@ -437,6 +449,7 @@ public class LiveOperationsCollector implements OperationsCollector {
                                                               now);
                 this.mergeNodes(nodes, topology.getNodes());
                 facts.putAll(topology.getFacts());
+                clusterReason = topology.getReason();
                 pdStatus = available(this.nodeStatus(topology.getNodes(), "PD"),
                                      now);
                 clusterParsed = true;
@@ -473,6 +486,7 @@ public class LiveOperationsCollector implements OperationsCollector {
         }
         sources.put("pd", pdStatus);
         sources.put("stores", storesStatus);
+        return clusterReason;
     }
 
     private String nodeStatus(List<Node> nodes, String type) {

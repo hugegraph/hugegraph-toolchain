@@ -644,10 +644,16 @@
 
 .operations-metric-status {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
     gap: 4px 10px;
     color: var(--workbench-color-text-secondary);
     font-size: 12px;
+}
+
+.operations-metric-fresh {
+    color: #237804;
+    font-size: 14px;
 }
 
 .operations-metric-empty {
@@ -699,8 +705,9 @@
 .operations-memory-usage {
     min-width: 0;
     padding: 12px 14px;
+    border: 1px solid var(--workbench-color-border);
     border-radius: var(--workbench-radius);
-    background: var(--workbench-color-canvas);
+    background: var(--workbench-color-surface);
 
     > div:first-child {
         display: flex;
@@ -726,7 +733,8 @@
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
     gap: 10px;
 
-    .ant-statistic {
+    .ant-statistic,
+    .operations-statistic-card {
         min-width: 0;
         padding: 10px 12px;
         border: 1px solid var(--workbench-color-border);
@@ -739,11 +747,27 @@
     }
 }
 
-.operations-system-details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 20px;
+.operations-group-statistics {
+    padding-top: 16px;
+}
+
+.operations-statistic-title {
+    display: block;
     color: var(--workbench-color-text-secondary);
+    font-size: 14px;
+    line-height: 22px;
+}
+
+.operations-statistic-value {
+    margin-top: 4px;
+    color: var(--workbench-color-text);
+    font-size: 20px;
+    line-height: 30px;
+
+    > div {
+        font-size: 14px;
+        line-height: 22px;
+    }
 }
 
 section.operations-metric-group .ant-descriptions-view .ant-descriptions-item-content {

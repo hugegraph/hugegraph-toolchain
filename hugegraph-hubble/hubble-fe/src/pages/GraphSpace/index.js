@@ -376,7 +376,7 @@ const GraphSpace = () => {
                                     )}
                                     {data.map(item => {
                                         return (
-                                            <Col span={8} key={item.name}>
+                                            <Col xs={24} lg={12} xxl={8} key={item.name}>
                                                 <GraphSpaceCard
                                                     item={item}
                                                     deleteGraphspace={deleteGraphspace}
@@ -390,7 +390,7 @@ const GraphSpace = () => {
                                         );
                                     })}
                                     {!loading && !listError && canCreateGraphspace && (
-                                        <Col span={8} key='add'>
+                                        <Col xs={24} lg={12} xxl={8} key='add'>
                                             <Card
                                                 className={style.add_card}
                                                 onClick={handleCreate}

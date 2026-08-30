@@ -118,17 +118,9 @@ const EditLayer = ({
             }
         };
         if (superAdminChanged && profile.user_password) {
-            await requestUpdate(toPermissionPayload({
-                user_name: profile.user_name,
-                permission_preset: values.is_superadmin
-                    ? PERMISSION_PRESETS.SUPER_ADMIN
-                    : PERMISSION_PRESETS.GS_READ_ONLY,
-            }));
-            await requestUpdate(profile);
+            throw new Error(t('account.feedback.password_permission_separate'));
         }
-        else {
-            await requestUpdate(payload);
-        }
+        await requestUpdate(payload);
         message.success(t('common.msg.update_success'));
         onCancel();
         refresh();

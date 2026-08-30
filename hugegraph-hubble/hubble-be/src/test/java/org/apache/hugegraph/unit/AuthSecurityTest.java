@@ -850,6 +850,10 @@ public class AuthSecurityTest {
     @Test
     public void testModernLoginDoesNotRetainPassword() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(Constant.PASSWORD_KEY,
+                                          "old-legacy-password");
+        request.getSession().setAttribute(Constant.PASSWORD_EXPIRE_AT_KEY,
+                                          Long.MAX_VALUE);
         RequestContextHolder.setRequestAttributes(
                 new ServletRequestAttributes(request));
         TestLoginController controller = new TestLoginController();

@@ -120,6 +120,9 @@ public class LoginController extends BaseController {
                 this.setSession(Constant.PASSWORD_EXPIRE_AT_KEY,
                                 System.currentTimeMillis() +
                                 TOKEN_EXPIRE_SECONDS * 1000L);
+            } else {
+                this.delSession(Constant.PASSWORD_KEY);
+                this.delSession(Constant.PASSWORD_EXPIRE_AT_KEY);
             }
             return user;
         } catch (Throwable e) {

@@ -60,6 +60,32 @@ test('localizes the standalone deployment reason code', async () => {
         .not.toBeInTheDocument();
 });
 
+test('uses the last successful data time for a stale source', () => {
+    render(
+        <SourceStrip
+            detailed
+            sources={{
+                stores: {
+                    status: 'UP',
+                    availability: 'PARTIAL',
+                    stale: true,
+                    observed_at: 2000,
+                    last_success_at: 1000,
+                },
+            }}
+            sourceNames={['stores']}
+        />
+    );
+
+    const source = screen.getByText('Store').closest('.operations-source');
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+    });
+    expect(source).toHaveTextContent(`Last observed: ${formatter.format(new Date(1000))}`);
+    expect(source).not.toHaveTextContent(formatter.format(new Date(2000)));
+});
+
 test('uses a concise Attention label and explains the degraded state', () => {
     render(<HealthStatus status='DEGRADED' reason='refresh_failed' />);
 

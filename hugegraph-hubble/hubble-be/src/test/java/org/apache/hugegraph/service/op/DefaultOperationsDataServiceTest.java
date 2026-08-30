@@ -248,6 +248,34 @@ public class DefaultOperationsDataServiceTest {
         Assert.assertTrue(backend.isStale());
     }
 
+    @Test
+    public void testPartialRefreshPreservesCurrentClusterReason() {
+        AtomicInteger calls = new AtomicInteger();
+        OperationsCollector collector = (client, metrics) -> {
+            if (calls.getAndIncrement() == 0) {
+                return fullSnapshot();
+            }
+            Snapshot partial = partialSnapshot();
+            return new Snapshot(partial.getStatus(), partial.getObservedAt(),
+                                false, "cluster_not_ready",
+                                partial.getSources(), partial.getNodes(),
+                                partial.getFacts());
+        };
+        DefaultOperationsDataService service = new DefaultOperationsDataService(
+                collector, 5, CLOCK);
+        HugeClient client = client("token-a");
+        Set<String> capabilities = Set.of(
+                OperationsCapabilityService.HEALTH_READ,
+                OperationsCapabilityService.TOPOLOGY_READ);
+
+        service.overview(client, capabilities, false);
+        Map<String, Object> result = service.overview(client, capabilities,
+                                                       true);
+
+        Assert.assertEquals("cluster_not_ready", result.get("reason"));
+        Assert.assertEquals(true, result.get("stale"));
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     public void testPdFailureKeepsFreshStoreCapacityFacts() {

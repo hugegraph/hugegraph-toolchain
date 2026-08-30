@@ -17,7 +17,7 @@
  */
 
 import {Alert, Button, Descriptions, Progress, Skeleton, Space, Statistic, Tooltip} from 'antd';
-import {ArrowLeftOutlined} from '@ant-design/icons';
+import {ArrowLeftOutlined, CheckCircleFilled} from '@ant-design/icons';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
@@ -44,6 +44,7 @@ const GROUPS_BY_TYPE = {
 const SOURCE_BY_TYPE = {SERVER: 'server', PD: 'pd', STORE: 'stores'};
 
 const EMPTY_STATE_BY_AVAILABILITY = {
+    AVAILABLE: 'metric_no_data',
     UNSUPPORTED: 'unsupported',
     MALFORMED: 'metric_malformed',
     UNAVAILABLE: 'unavailable',
@@ -53,9 +54,23 @@ const BYTE_KEYS = new Set([
     'capacity_bytes', 'available_bytes', 'heap_used_bytes', 'nonheap_used_bytes',
 ]);
 
+const HIDDEN_METRIC_KEYS = {
+    drive: new Set(['total_space', 'free_space', 'size_unit']),
+    backend: new Set(['capacity_bytes', 'available_bytes']),
+};
+
 const metricLabel = (key, t) => t(`operations.metric_labels.${key}`, {
     defaultValue: key.replaceAll('_', ' '),
 });
+
+const metricGroupName = (group, nodeType, t) => {
+    if (group === 'backend') {
+        return t(nodeType === 'STORE'
+            ? 'operations.metric_store_backend'
+            : 'operations.metric_server_backend');
+    }
+    return t(`operations.metric_${group}`);
+};
 
 const formatBytes = value => {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -117,9 +132,15 @@ const formatDisplayValue = (key, value, parentKey, values, unavailable) => {
         return `${new Intl.NumberFormat(undefined, {maximumFractionDigits: 1})
             .format(Number(value) * 100)}%`;
     }
-    const unit = parentKey === 'garbage_collector' && key.endsWith('_time')
-        ? values.time_unit : (['total_space', 'usable_space', 'free_space'].includes(key)
-            ? values.size_unit : '');
+    if (parentKey === 'garbage_collector' && key.endsWith('_time')) {
+        return formatMetricValue(
+            new Intl.NumberFormat(undefined, {maximumFractionDigits: 2})
+                .format(Number(value)),
+            values.time_unit
+        );
+    }
+    const unit = ['total_space', 'usable_space', 'free_space'].includes(key)
+        ? values.size_unit : '';
     if (unit) {
         return formatUnitValue(value, unit) ?? unavailable;
     }
@@ -185,30 +206,79 @@ const MemoryUsage = ({label, values, unavailable, t}) => {
     );
 };
 
+const MetricStatistics = ({entries, values}) => {
+    const {t} = useTranslation();
+    const unavailable = t('operations.unavailable');
+    return (
+        <div className='operations-system-statistics operations-group-statistics'>
+            {entries.map(([key, value]) => (
+                <div className='operations-statistic-card' key={key}>
+                    <span className='operations-statistic-title'>
+                        {metricLabel(key, t)}
+                    </span>
+                    <div className='operations-statistic-value'>
+                        {value !== null && typeof value === 'object'
+                            && !Array.isArray(value)
+                            ? Object.entries(value).map(([nestedKey, nestedValue]) => (
+                                <div key={nestedKey}>
+                                    {metricLabel(nestedKey, t)}: {' '}
+                                    {formatDisplayValue(
+                                        nestedKey, nestedValue, key, value, unavailable
+                                    )}
+                                </div>
+                            ))
+                            : formatDisplayValue(
+                                key, value, null, values, unavailable
+                            )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const sumMetricValues = (values, suffix) => {
+    const matching = Object.entries(values ?? {})
+        .filter(([key, value]) => key.endsWith(suffix) && Number.isFinite(Number(value)))
+        .map(([, value]) => Number(value));
+    return matching.length > 0
+        ? matching.reduce((total, value) => total + value, 0)
+        : null;
+};
+
 const SystemMetricContent = ({values = {}}) => {
     const {t} = useTranslation();
     const unavailable = t('operations.unavailable');
     const basic = values.basic && typeof values.basic === 'object' ? values.basic : {};
     const thread = values.thread && typeof values.thread === 'object' ? values.thread : {};
+    const garbageCollector = values.garbage_collector
+        && typeof values.garbage_collector === 'object'
+        ? values.garbage_collector : {};
+    const garbageCollectionCount = sumMetricValues(garbageCollector, '_count');
+    const garbageCollectionTime = sumMetricValues(garbageCollector, '_time');
     const runtimeStats = [
         ['process_cpu_usage', values.process_cpu_usage],
         ['system_cpu_usage', values.system_cpu_usage],
         ['systemload_average', values.systemload_average ?? basic.systemload_average],
         ['cpu_count', values.cpu_count ?? basic.processors],
-        ['uptime', basic.uptime],
-        ['uptime_seconds', values.uptime_seconds],
+        ['uptime_seconds', values.uptime_seconds
+            ?? (basic.uptime === undefined || basic.uptime === null
+                ? null : Number(basic.uptime) / 1000)],
+        ['threads_live', values.threads_live ?? thread.count],
+        ['heap_used_bytes', values.heap_used_bytes],
+        ['nonheap_used_bytes', values.nonheap_used_bytes],
+        ['garbage_collection_count', garbageCollectionCount],
+        ['garbage_collection_time', garbageCollectionTime],
     ].filter(([, value]) => value !== undefined && value !== null);
-    const threadStats = ['count', 'daemon', 'peak']
-        .filter(key => thread[key] !== undefined && thread[key] !== null);
     const memoryValues = [
         ['heap_usage', values.heap],
         ['nonheap_usage', values.nonheap],
     ].filter(([, value]) => value && typeof value === 'object');
-    const basicDetails = ['mem_total', 'mem_used']
-        .filter(key => basic[key] !== undefined && basic[key] !== null);
     const handledKeys = new Set([
         'basic', 'heap', 'nonheap', 'thread', 'process_cpu_usage',
         'system_cpu_usage', 'systemload_average', 'cpu_count', 'uptime_seconds',
+        'threads_live', 'heap_used_bytes', 'nonheap_used_bytes',
+        'garbage_collector',
     ]);
     const supplementalEntries = Object.entries(values)
         .filter(([key]) => !handledKeys.has(key));
@@ -242,60 +312,21 @@ const SystemMetricContent = ({values = {}}) => {
                         <Statistic
                             key={key}
                             title={metricLabel(key, t)}
-                            value={formatDisplayValue(key, value, null, values, unavailable)}
+                            value={formatDisplayValue(
+                                key,
+                                value,
+                                key === 'garbage_collection_time'
+                                    ? 'garbage_collector' : null,
+                                key === 'garbage_collection_time'
+                                    ? garbageCollector : values,
+                                unavailable
+                            )}
                         />
-                    ))}
-                </div>
-            )}
-            {threadStats.length > 0 && (
-                <div
-                    className='operations-system-statistics'
-                    role='group'
-                    aria-label={metricLabel('thread', t)}
-                >
-                    {threadStats.map(key => (
-                        <Statistic
-                            key={key}
-                            title={metricLabel(key, t)}
-                            value={thread[key]}
-                        />
-                    ))}
-                </div>
-            )}
-            {basicDetails.length > 0 && (
-                <div className='operations-system-details'>
-                    {basicDetails.map(key => (
-                        <div key={key}>
-                            {metricLabel(key, t)}: {' '}
-                            {formatDisplayValue(key, basic[key], 'basic', basic, unavailable)}
-                        </div>
                     ))}
                 </div>
             )}
             {supplementalEntries.length > 0 && (
-                <Descriptions
-                    className='operations-system-supplemental'
-                    layout='vertical'
-                    colon={false}
-                    column={{xxl: 3, xl: 2, lg: 2, md: 1, sm: 1, xs: 1}}
-                >
-                    {supplementalEntries.map(([key, value]) => (
-                        <Descriptions.Item key={key} label={metricLabel(key, t)}>
-                            {value !== null && typeof value === 'object' && !Array.isArray(value)
-                                ? Object.entries(value).map(([nestedKey, nestedValue]) => (
-                                    <div key={nestedKey}>
-                                        {metricLabel(nestedKey, t)}: {' '}
-                                        {formatDisplayValue(
-                                            nestedKey, nestedValue, key, value, unavailable
-                                        )}
-                                    </div>
-                                ))
-                                : formatDisplayValue(
-                                    key, value, null, values, unavailable
-                                )}
-                        </Descriptions.Item>
-                    ))}
-                </Descriptions>
+                <MetricStatistics entries={supplementalEntries} values={values} />
             )}
         </div>
     );
@@ -305,13 +336,16 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
     const {t, i18n} = useTranslation();
     const entries = values && typeof values === 'object' && !Array.isArray(values)
         ? Object.entries(values) : [];
+    const visibleEntries = entries.filter(([key]) =>
+        !HIDDEN_METRIC_KEYS[group]?.has(key)
+    );
     const availability = status.availability ?? 'UNSUPPORTED';
     const emptyState = EMPTY_STATE_BY_AVAILABILITY[availability] ?? 'unavailable';
-    const observed = status.observed_at ? formatObservedAt(
-        status.observed_at, i18n.language, t('operations.unavailable')
-    ) : null;
-    const lastSuccess = status.last_success_at ? formatObservedAt(
-        status.last_success_at, i18n.language, t('operations.unavailable')
+    const lastObservedAt = status.stale
+        ? status.last_success_at ?? status.observed_at
+        : status.observed_at ?? status.last_success_at;
+    const lastObserved = lastObservedAt ? formatObservedAt(
+        lastObservedAt, i18n.language, t('operations.unavailable')
     ) : null;
     const availabilityLabel = t(`operations.availability_${availability.toLowerCase()}`, {
         defaultValue: availability,
@@ -332,11 +366,20 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
             role='status'
             aria-label={availabilityLabel}
         >
-            {status.fresh && <span>{t('operations.fresh')}</span>}
+            {status.fresh && (
+                <Tooltip title={t('operations.fresh')}>
+                    <CheckCircleFilled
+                        className='operations-metric-fresh'
+                        role='img'
+                        aria-label={t('operations.fresh')}
+                    />
+                </Tooltip>
+            )}
             {status.stale && <span>{t('operations.stale')}</span>}
             {reasonLabel && <span>{reasonLabel}</span>}
-            {observed && <span>{t('operations.observed_at')}: {observed}</span>}
-            {lastSuccess && <span>{t('operations.last_success')}: {lastSuccess}</span>}
+            {lastObserved && (
+                <span>{t('operations.last_observed')}: {lastObserved}</span>
+            )}
         </div>
     );
     const metricHeader = (
@@ -353,7 +396,7 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
         </header>
     );
     const capacity = capacitySummary(values);
-    if (entries.length === 0) {
+    if (visibleEntries.length === 0 && !capacity) {
         return (
             <section className='operations-surface operations-metric-group'>
                 {metricHeader}
@@ -386,31 +429,9 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
                     />
                 </div>
             )}
-            {group === 'system' ? <SystemMetricContent values={values} /> : (
-                <Descriptions
-                    layout='vertical'
-                    colon={false}
-                    column={{xxl: 3, xl: 2, lg: 2, md: 1, sm: 1, xs: 1}}
-                >
-                    {entries.map(([key, value]) => (
-                        <Descriptions.Item key={key} label={metricLabel(key, t)}>
-                            {value !== null && typeof value === 'object' && !Array.isArray(value)
-                                ? Object.entries(value).map(([nestedKey, nestedValue]) => (
-                                    <div key={nestedKey}>
-                                        {metricLabel(nestedKey, t)}: {' '}
-                                        {formatDisplayValue(
-                                            nestedKey, nestedValue, key, value,
-                                            t('operations.unavailable')
-                                        )}
-                                    </div>
-                                ))
-                                : formatDisplayValue(
-                                    key, value, null, values, t('operations.unavailable')
-                                )}
-                        </Descriptions.Item>
-                    ))}
-                </Descriptions>
-            )}
+            {group === 'system'
+                ? <SystemMetricContent values={values} />
+                : <MetricStatistics entries={visibleEntries} values={values} />}
         </section>
     );
 };
@@ -541,7 +562,7 @@ const NodeDetail = () => {
                         <HealthStatus status={node.status} size='large' />
                     </section>
                     <div className='operations-overall-status'>
-                        <span>{t('operations.observed_at')}: {observed}</span>
+                        <span>{t('operations.last_observed')}: {observed}</span>
                         {data?.stale && <strong>{t('operations.stale')}</strong>}
                     </div>
                 </div>
@@ -587,7 +608,7 @@ const NodeDetail = () => {
                         <MetricGroup
                             key={group}
                             group={group}
-                            name={t(`operations.metric_${group}`)}
+                            name={metricGroupName(group, node.type, t)}
                             values={node.metrics?.[group]}
                             status={status}
                         />

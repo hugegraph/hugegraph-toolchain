@@ -35,12 +35,14 @@ import org.apache.hugegraph.service.auth.AuthModeService;
 public class ConfigControllerTest {
 
     @Test
-    public void testPdConfigMarksSuccessfulAuthProbeVerified() {
+    public void testPdConfigUsesDiscoveredServerCapabilities() {
         HugeConfig config = Mockito.mock(HugeConfig.class);
         Mockito.when(config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         HugeClient client = Mockito.mock(HugeClient.class);
         AuthModeService authMode = Mockito.mock(AuthModeService.class);
         Mockito.when(client.isServerAuthEnabled()).thenReturn(false);
+        Mockito.when(client.supportsGraphCreate()).thenReturn(false);
+        Mockito.when(client.supportsCypher()).thenReturn(true);
         Mockito.when(authMode.update(false)).thenReturn(false);
 
         ConfigController controller = new ConfigController() {
@@ -59,7 +61,7 @@ public class ConfigControllerTest {
         Assert.assertEquals(Map.of("pd_enabled", true,
                                    "server_capabilities_verified", true,
                                    "auth_enabled", false,
-                                   "graph_create_enabled", true,
+                                   "graph_create_enabled", false,
                                    "cypher_enabled", true), result);
         Mockito.verify(client).close();
     }

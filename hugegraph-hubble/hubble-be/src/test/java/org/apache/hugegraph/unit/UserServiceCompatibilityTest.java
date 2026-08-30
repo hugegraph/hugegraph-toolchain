@@ -430,13 +430,14 @@ public class UserServiceCompatibilityTest {
         account.setGraphspacePermissions(Collections.singletonList(
                 permission("team", "GS_READ_ONLY")));
 
+        ParameterizedException error = null;
         try {
             this.service.update(this.client, account);
-            Assert.fail("Expected combined update to be rejected");
-        } catch (ParameterizedException ignored) {
-            // Expected
+        } catch (ParameterizedException e) {
+            error = e;
         }
 
+        Assert.assertNotNull(error);
         Mockito.verify(this.auth, Mockito.never())
                .updateUser(Mockito.any(User.class));
         Mockito.verify(this.graphSpaceUsers, Mockito.never())
@@ -445,7 +446,7 @@ public class UserServiceCompatibilityTest {
     }
 
     @Test
-    public void testModernUserUpdateRollsBackProfileAndSuperAdmin() {
+    public void testModernUserUpdateKeepsSuperAdminWhenPresetFails() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(true);
         Mockito.when(this.client.supportsDefaultRole()).thenReturn(true);
         User previous = user("alice");
@@ -454,7 +455,7 @@ public class UserServiceCompatibilityTest {
         Mockito.when(this.auth.getUser("u-1")).thenReturn(previous);
         Mockito.when(this.auth.listSuperAdmin())
                .thenReturn(Collections.singletonList("alice"))
-               .thenReturn(Collections.emptyList());
+               .thenReturn(Collections.singletonList("alice"));
         UserEntity account = UserEntity.builder()
                                        .id("u-1")
                                        .name("alice")
@@ -477,8 +478,8 @@ public class UserServiceCompatibilityTest {
         }
 
         Assert.assertSame(failure, error);
-        Mockito.verify(this.auth).delSuperAdmin("alice");
-        Mockito.verify(this.auth).addSuperAdmin("alice");
+        Mockito.verify(this.auth, Mockito.never()).delSuperAdmin("alice");
+        Mockito.verify(this.auth, Mockito.never()).addSuperAdmin("alice");
         ArgumentCaptor<User> updates = ArgumentCaptor.forClass(User.class);
         Mockito.verify(this.auth, Mockito.times(2))
                .updateUser(updates.capture());
@@ -802,13 +803,15 @@ public class UserServiceCompatibilityTest {
 
         this.service.update(this.client, account);
 
-        Mockito.verify(this.auth).delSuperAdmin("alice");
         Mockito.verify(this.graphSpaceUsers, Mockito.never())
                .validatePermissionPresets(Mockito.any(), Mockito.any(),
                                           Mockito.any());
-        Mockito.verify(this.graphSpaceUsers).applyPermissionPresets(
-                this.client, "alice", Collections.emptyList(),
-                "GS_READ_ONLY");
+        org.mockito.InOrder order = Mockito.inOrder(this.auth,
+                                                    this.graphSpaceUsers);
+        order.verify(this.auth).updateUser(Mockito.any(User.class));
+        order.verify(this.graphSpaceUsers).applyPermissionPresets(
+              this.client, "alice", Collections.emptyList(), "GS_READ_ONLY");
+        order.verify(this.auth).delSuperAdmin("alice");
     }
 
     @Test

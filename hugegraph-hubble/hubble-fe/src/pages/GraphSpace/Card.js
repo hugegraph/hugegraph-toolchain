@@ -40,11 +40,12 @@ const TitleField = ({item, onClick, onKeyDown}) => {
         : getResourceDisplayName(item.name, item.nickname);
 
     return (
-        <>
+        <div className={style.card_title}>
             <Typography.Text
-                style={{maxWidth: 244}}
-                ellipsis={{ellipsis: true}}
+                className={style.card_title_text}
+                ellipsis={{tooltip: displayName}}
                 title={`${displayName}`}
+                aria-label={displayName}
                 onClick={onClick}
                 onKeyDown={onKeyDown}
                 role='button'
@@ -57,7 +58,7 @@ const TitleField = ({item, onClick, onKeyDown}) => {
                 )}
                 {item.create_time ? moment(item.create_time).format('YYYY-MM-DD') : '--'} {t('graphspace.card.created')}
             </div>
-        </>
+        </div>
     );
 };
 
@@ -150,7 +151,7 @@ const GraphSpaceCard = ({
                 backgroundImage: 'linear-gradient(180deg, '
                     + 'rgba(51,136,255,0.10) 0%, rgba(51,136,255,0.00) 100%)',
                 borderBottom: 0,
-                height: 93,
+                minHeight: 93,
                 paddingLeft: 20,
             }}
             bodyStyle={{

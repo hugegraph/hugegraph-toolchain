@@ -484,7 +484,7 @@ test('keeps healthy freshness compact but preserves stale-source recovery contex
     const sources = await screen.findByRole('region', {name: 'Source freshness'});
     expect(within(sources).queryByText(/Last success/)).not.toBeInTheDocument();
     expect(within(sources).getByText(/Stale/)).toBeInTheDocument();
-    expect(within(sources).getByLabelText(/Stale.*Last success/))
+    expect(within(sources).getByLabelText(/Last observed.*Stale/))
         .toBeInTheDocument();
 });
 
@@ -505,14 +505,11 @@ test('shows a concise healthy state when no node needs attention', async () => {
 test('explains PD cluster attention while keeping healthy nodes explicit', async () => {
     getOverview.mockResolvedValue({
         status: 'DEGRADED',
+        reason: 'cluster_not_ready',
         observed_at: 1000,
         sources: {
             server: {status: 'UP', availability: 'AVAILABLE'},
-            pd: {
-                status: 'DEGRADED',
-                availability: 'AVAILABLE',
-                reason: 'cluster_not_ready',
-            },
+            pd: {status: 'UP', availability: 'AVAILABLE'},
             stores: {status: 'UP', availability: 'AVAILABLE'},
         },
         facts: {},
@@ -539,16 +536,44 @@ test('explains PD cluster attention while keeping healthy nodes explicit', async
     const attention = await screen.findByRole('region', {
         name: 'Items needing attention',
     });
-    expect(within(attention).getByText('PD source needs attention'))
+    expect(within(attention).getByText('Cluster state needs attention'))
         .toBeInTheDocument();
     expect(within(attention).getByText(/PD reports Cluster_Not_Ready/))
         .toBeInTheDocument();
-    expect(within(attention).getByRole('link', {name: 'View PD nodes'}))
-        .toHaveAttribute('href', '/operations/nodes?type=PD');
+    expect(within(attention).getByRole('link', {name: 'View all nodes'}))
+        .toHaveAttribute('href', '/operations/nodes');
     expect(within(attention).getByText(
         'All nodes are healthy; the source or cluster state above is a separate signal.'
     )).toBeInTheDocument();
     expect(within(attention).queryByRole('table')).not.toBeInTheDocument();
+});
+
+test('shows failed sources even when discovery returned no nodes', async () => {
+    getOverview.mockResolvedValue({
+        status: 'DOWN',
+        observed_at: 1000,
+        sources: {
+            server: {
+                status: 'DOWN',
+                availability: 'UNAVAILABLE',
+                reason: 'upstream_unavailable',
+            },
+            pd: {status: 'UNSUPPORTED', availability: 'UNSUPPORTED'},
+            stores: {status: 'UNSUPPORTED', availability: 'UNSUPPORTED'},
+        },
+        facts: {},
+        nodes: [],
+    });
+
+    renderOverview();
+
+    const attention = await screen.findByRole('region', {
+        name: 'Items needing attention',
+    });
+    expect(within(attention).getByText('Server source needs attention'))
+        .toBeInTheDocument();
+    expect(within(attention).getByText('Upstream unavailable'))
+        .toBeInTheDocument();
 });
 
 test('switches between the topology and an accessible node list', async () => {
