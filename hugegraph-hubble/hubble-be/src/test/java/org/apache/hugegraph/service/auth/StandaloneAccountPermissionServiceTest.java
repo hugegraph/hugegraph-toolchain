@@ -116,6 +116,10 @@ public class StandaloneAccountPermissionServiceTest {
 
         Mockito.verify(auth, Mockito.times(4))
                .deleteAccess(Mockito.any());
+        ArgumentCaptor<Target> createdTarget =
+                ArgumentCaptor.forClass(Target.class);
+        Mockito.verify(auth).createTarget(createdTarget.capture());
+        Assert.assertEquals("", createdTarget.getValue().url());
         Mockito.verify(auth).deleteTarget("target-id");
         Mockito.verify(auth).deleteGroup("group-id");
     }
