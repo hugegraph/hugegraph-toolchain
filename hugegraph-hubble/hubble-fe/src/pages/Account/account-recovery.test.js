@@ -173,6 +173,42 @@ test('does not label an unassigned legacy account as GraphSpace read-only', asyn
         .not.toBeInTheDocument();
 });
 
+test('shows standalone accounts as read-write without GraphSpace resources',
+    async () => {
+        mockAuthContext.context = {
+            mode: 'NON_PD',
+            capabilities: [],
+            actions: {
+                accounts: ['create', 'read', 'update', 'delete'],
+                authorizations: [],
+            },
+        };
+        api.auth.getAllUserList.mockResolvedValue({
+            status: 200,
+            data: {
+                records: [{
+                    user_name: 'writer',
+                    permission_preset: 'GS_READ_WRITE',
+                }, {
+                    user_name: 'legacy',
+                }],
+                total: 2,
+            },
+        });
+
+        render(<Account />);
+
+        expect(await screen.findByText(
+            'account.permission_preset.GS_READ_WRITE'
+        )).toBeInTheDocument();
+        expect(screen.getByText('account.permission_preset.unassigned'))
+            .toBeInTheDocument();
+        expect(screen.queryByText('account.col.resource'))
+            .not.toBeInTheDocument();
+        expect(screen.queryByText('account.space_access.scoped_tab'))
+            .not.toBeInTheDocument();
+    });
+
 test('space administrators use scoped management without loading global accounts', async () => {
     mockCurrentUser = {
         id: 'space-admin',

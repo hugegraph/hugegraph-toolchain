@@ -42,6 +42,7 @@ import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.exception.UnauthorizedException;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.auth.GraphSpaceUserService;
+import org.apache.hugegraph.service.auth.StandaloneAccountPermissionService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.structure.auth.User;
 
@@ -53,6 +54,7 @@ public class UserServiceCompatibilityTest {
     private GraphSpaceManager graphSpace;
     private GraphsManager graphs;
     private GraphSpaceUserService graphSpaceUsers;
+    private StandaloneAccountPermissionService standalonePermissions;
     private UserService service;
 
     @Before
@@ -63,6 +65,8 @@ public class UserServiceCompatibilityTest {
         this.graphSpace = Mockito.mock(GraphSpaceManager.class);
         this.graphs = Mockito.mock(GraphsManager.class);
         this.graphSpaceUsers = Mockito.mock(GraphSpaceUserService.class);
+        this.standalonePermissions =
+                Mockito.mock(StandaloneAccountPermissionService.class);
         Mockito.when(this.client.auth()).thenReturn(this.auth);
         Mockito.when(this.client.graphSpace()).thenReturn(this.graphSpace);
         Mockito.when(this.client.graphs()).thenReturn(this.graphs);
@@ -74,12 +78,13 @@ public class UserServiceCompatibilityTest {
         ReflectionTestUtils.setField(this.service, "config", this.config);
         ReflectionTestUtils.setField(this.service, "graphSpaceUserService",
                                      this.graphSpaceUsers);
+        ReflectionTestUtils.setField(this.service, "standalonePermissions",
+                                     this.standalonePermissions);
     }
 
     @Test
     public void testStandaloneUserCreationOmitsPdOnlyNickname() {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
-
         UserEntity created =
                 this.service.add(this.client, userEntity("display-name"));
 
@@ -87,6 +92,8 @@ public class UserServiceCompatibilityTest {
         Mockito.verify(this.auth).createUser(request.capture());
         Assert.assertNull(request.getValue().nickname());
         Assert.assertEquals("created-id", created.getId());
+        Mockito.verify(this.standalonePermissions).assignReadWrite(
+                Mockito.eq(this.client), Mockito.any(User.class));
     }
 
     @Test
@@ -98,6 +105,29 @@ public class UserServiceCompatibilityTest {
         ArgumentCaptor<User> request = ArgumentCaptor.forClass(User.class);
         Mockito.verify(this.auth).createUser(request.capture());
         Assert.assertEquals("display-name", request.getValue().nickname());
+        Mockito.verifyZeroInteractions(this.standalonePermissions);
+    }
+
+    @Test
+    public void testStandaloneGrantFailureDeletesNewAccount() {
+        Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
+        User created = user("created-user");
+        Mockito.when(this.auth.createUser(Mockito.any(User.class)))
+               .thenReturn(created);
+        RuntimeException failure = new RuntimeException("grant failed");
+        Mockito.doThrow(failure).when(this.standalonePermissions)
+               .assignReadWrite(this.client, created);
+
+        RuntimeException error = null;
+        try {
+            this.service.add(this.client, userEntity("display-name"));
+        } catch (RuntimeException e) {
+            error = e;
+        }
+
+        Assert.assertNotNull(error);
+        Assert.assertSame(failure, error);
+        Mockito.verify(this.auth).deleteUser("created-user");
     }
 
     @Test
@@ -105,6 +135,8 @@ public class UserServiceCompatibilityTest {
         Mockito.when(this.config.get(HubbleOptions.PD_ENABLED)).thenReturn(false);
         Mockito.when(this.auth.listUsers())
                .thenReturn(Arrays.asList(user("admin"), user("hubbleuser")));
+        Mockito.when(this.standalonePermissions.readWriteUsers(this.client))
+               .thenReturn(Collections.singleton("hubbleuser"));
 
         @SuppressWarnings("unchecked")
         IPage<UserEntity> result = (IPage<UserEntity>)
@@ -112,6 +144,8 @@ public class UserServiceCompatibilityTest {
 
         Assert.assertTrue(result.getRecords().get(0).isSuperadmin());
         Assert.assertFalse(result.getRecords().get(1).isSuperadmin());
+        Assert.assertEquals("GS_READ_WRITE",
+                            result.getRecords().get(1).getPermissionPreset());
     }
 
     @Test

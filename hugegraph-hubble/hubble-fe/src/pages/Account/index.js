@@ -68,6 +68,7 @@ const GlobalAccounts = ({
     const canGrantAuthorization = authorizationActions.includes('grant');
     const permissionPresetsSupported = !context
         || context.capabilities?.includes('account_permission_presets');
+    const standalone = context?.mode === 'NON_PD';
     const hasRowMutations = canUpdateAccount || canDeleteAccount || canGrantAuthorization;
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [creationContext, setCreationContext] = useState(null);
@@ -201,9 +202,11 @@ const GlobalAccounts = ({
                 const preset = getAccountPreset(row);
                 const color = preset === PERMISSION_PRESETS.SUPER_ADMIN ? 'red'
                     : preset === PERMISSION_PRESETS.GS_ADMIN ? 'blue' : 'default';
-                const labelKey = getAccountPresetLabelKey(
-                    row, permissionPresetsSupported
-                );
+                const labelKey = standalone
+                                 && row.permission_preset
+                                 === PERMISSION_PRESETS.GS_READ_WRITE
+                    ? PERMISSION_PRESETS.GS_READ_WRITE
+                    : getAccountPresetLabelKey(row, permissionPresetsSupported);
                 return (
                     <Tag color={color}>
                         {t(`account.permission_preset.${labelKey}`)}
@@ -212,6 +215,7 @@ const GlobalAccounts = ({
             },
         },
         {
+            key: 'graphspaces',
             title: t('account.col.resource'),
             width: 120,
             render: row => (
@@ -285,7 +289,7 @@ const GlobalAccounts = ({
                 );
             },
         },
-    ];
+    ].filter(column => !standalone || column.key !== 'graphspaces');
 
     const rowKey = useCallback(item => item.user_name, []);
     const {current, pageSize} = pagination;
