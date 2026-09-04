@@ -24,16 +24,36 @@ import org.apache.hugegraph.structure.auth.AuthElement;
 public abstract class AuthAPI extends API {
 
     private static final String PATH = "graphspaces/%s/auth/%s";
+    private static final String LEGACY_PATH = "graphs/%s/auth/%s";
     private static final String USER_PATH = "auth/%s";
+
+    private final boolean legacyGraphScoped;
 
     public AuthAPI(RestClient client) {
         super(client);
+        this.legacyGraphScoped = false;
         this.path(USER_PATH, this.type());
     }
 
     public AuthAPI(RestClient client, String graphSpace) {
         super(client);
+        this.legacyGraphScoped = false;
         this.path(PATH, graphSpace, this.type());
+    }
+
+    public AuthAPI(RestClient client, String graphSpace, String graph) {
+        super(client);
+        this.legacyGraphScoped = !client.isSupportGs() &&
+                                 graph != null && !graph.isEmpty();
+        if (this.legacyGraphScoped) {
+            this.path(LEGACY_PATH, graph, this.type());
+        } else {
+            this.path(PATH, graphSpace, this.type());
+        }
+    }
+
+    protected boolean legacyGraphScoped() {
+        return this.legacyGraphScoped;
     }
 
     public static String formatEntityId(Object id) {
