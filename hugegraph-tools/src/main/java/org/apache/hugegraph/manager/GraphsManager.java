@@ -61,4 +61,12 @@ public class GraphsManager extends ToolManager {
     public GraphMode mode(String graph) {
         return this.client.graphs().mode(graph);
     }
+
+    public List<Map<String, Object>> listBackups(String graph) {
+        return this.client.graphs().listBackups(graph);
+    }
+
+    public Map<String, Object> getBackup(String graph, String backupId) {
+        return this.client.graphs().getBackup(graph, backupId);
+    }
 }

@@ -79,6 +79,10 @@ public class SubCommands {
         this.commands.put("schedule-backup", new ScheduleBackup());
         this.commands.put("dump", new DumpGraph());
         this.commands.put("restore", new Restore());
+        this.commands.put("snapshot-backup", new SnapshotBackup());
+        this.commands.put("snapshot-restore", new SnapshotRestore());
+        this.commands.put("snapshot-list", new SnapshotList());
+        this.commands.put("snapshot-get", new SnapshotGet());
         this.commands.put("migrate", new Migrate());
 
         this.commands.put("deploy", new Deploy());
@@ -239,6 +243,86 @@ public class SubCommands {
 
         public void types(List<HugeType> types) {
             this.types.types = types;
+        }
+    }
+
+    public static class SnapshotRepositoryCommand {
+        @Parameter(names = {"--repository"}, arity = 1, required = true,
+                   description = "Server-configured backup repository")
+        public String repository;
+
+        public String repository() {
+            return this.repository;
+        }
+    }
+
+    public static class SnapshotCommand extends SnapshotRepositoryCommand {
+
+        @Parameter(names = {"--request-id"}, arity = 1,
+                   description = "Idempotency key for retrying a request")
+        public String requestId;
+
+        public String requestId() {
+            return this.requestId;
+        }
+
+        @Parameter(names = {"--task-timeout"}, arity = 1,
+                   validateWith = {PositiveValidator.class},
+                   description = "Maximum seconds to wait for the snapshot task")
+        public int taskTimeout = 60;
+
+        public int taskTimeout() {
+            return this.taskTimeout;
+        }
+    }
+
+    @Parameters(commandDescription = "Create a physical RocksDB snapshot backup")
+    public static class SnapshotBackup extends SnapshotCommand {
+
+        @Parameter(names = {"--keep-num"}, arity = 1,
+                   validateWith = {NonNegativeValidator.class},
+                   description = "Number of latest snapshot versions to keep, " +
+                                 "0 means keep all")
+        public int keepNum = 0;
+
+        public int keepNum() {
+            return this.keepNum;
+        }
+    }
+
+    @Parameters(commandDescription = "Restore a Server-managed graph backup")
+    public static class SnapshotRestore extends SnapshotCommand {
+
+        @Parameter(names = {"--backup-id"}, arity = 1,
+                   description = "Snapshot version to restore, default is latest")
+        public String backupId;
+
+        @Parameter(names = {"--confirm"}, arity = 0, required = true,
+                   description = "Confirm maintenance restore request")
+        public boolean confirm;
+
+        public String backupId() {
+            return this.backupId;
+        }
+
+        public boolean confirm() {
+            return this.confirm;
+        }
+    }
+
+    @Parameters(commandDescription = "List Server-managed graph backup versions")
+    public static class SnapshotList extends SnapshotRepositoryCommand {
+    }
+
+    @Parameters(commandDescription = "Get a Server-managed graph backup version")
+    public static class SnapshotGet extends SnapshotRepositoryCommand {
+
+        @Parameter(names = {"--backup-id"}, arity = 1, required = true,
+                   description = "Backup version to inspect")
+        public String backupId;
+
+        public String backupId() {
+            return this.backupId;
         }
     }
 
@@ -721,7 +805,7 @@ public class SubCommands {
     public static class Timeout {
 
         @Parameter(names = {"--timeout"}, arity = 1,
-                   description = "Connection timeout")
+                   description = "HTTP connection timeout in seconds")
         public int timeout = 30;
     }
 
@@ -1240,6 +1324,25 @@ public class SubCommands {
             if (!file.exists() || !file.isDirectory()) {
                 throw new ParameterException(String.format(
                           "Invalid value of argument '%s': '%s'", name, value));
+            }
+        }
+    }
+
+    public static class NonNegativeValidator implements IParameterValidator {
+
+        @Override
+        public void validate(String name, String value) {
+            try {
+                int number = Integer.parseInt(value);
+                if (number < 0) {
+                    throw new ParameterException(
+                              "Parameter " + name +
+                              " should be non-negative, but got " + value);
+                }
+            } catch (NumberFormatException e) {
+                throw new ParameterException(
+                          "Parameter " + name + " should be an integer, " +
+                          "but got " + value);
             }
         }
     }

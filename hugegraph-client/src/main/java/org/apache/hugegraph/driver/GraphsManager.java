@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hugegraph.api.graphs.GraphBackupsAPI;
 import org.apache.hugegraph.api.graphs.GraphsAPI;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.structure.constant.GraphMode;
@@ -33,9 +34,13 @@ import org.apache.hugegraph.client.RestClient;
 public class GraphsManager {
 
     private final GraphsAPI graphsAPI;
+    private final RestClient client;
+    private final String graphSpace;
 
     public GraphsManager(RestClient client, String graphSpace) {
         this.graphsAPI = new GraphsAPI(client, graphSpace);
+        this.client = client;
+        this.graphSpace = graphSpace;
     }
 
     public Map<String, String> createGraph(String name, String config) {
@@ -132,7 +137,70 @@ public class GraphsManager {
         return this.graphsAPI.readMode(graph);
     }
 
+    /**
+     * @deprecated Use {@link #createBackup(String, String, int)}. Snapshot
+     *             capture is owned by the Server backup task.
+     */
+    @Deprecated
+    public Map<String, String> createSnapshot(String graph) {
+        return this.graphsAPI.createSnapshot(graph);
+    }
+
+    /**
+     * @deprecated Use {@link #restoreBackup(String, String, String, boolean)}.
+     *             Restore is owned by the Server backup task.
+     */
+    @Deprecated
+    public Map<String, String> resumeSnapshot(String graph) {
+        return this.graphsAPI.resumeSnapshot(graph);
+    }
+
     public String clone(String graph, Map<String, Object> body) {
         return this.graphsAPI.clone(graph, body);
+    }
+
+    public long createBackup(String graph, String repository, int keepNum) {
+        return this.createBackup(graph, repository, keepNum, null);
+    }
+
+    public long createBackup(String graph, String repository, int keepNum,
+                             String requestId) {
+        // The repository is resolved by Server. Tools must not access the
+        // Server data directory or implement file-level incremental logic.
+        return new GraphBackupsAPI(this.client, this.graphSpace, graph)
+               .create(repository, keepNum, requestId);
+    }
+
+    public long restoreBackup(String graph, String repository,
+                              String backupId, boolean confirm) {
+        return this.restoreBackup(graph, repository, backupId, confirm, null);
+    }
+
+    public long restoreBackup(String graph, String repository,
+                              String backupId, boolean confirm,
+                              String requestId) {
+        return new GraphBackupsAPI(this.client, this.graphSpace, graph)
+               .restore(repository, backupId, confirm, requestId);
+    }
+
+    public Map<String, Object> getBackup(String graph, String backupId) {
+        return new GraphBackupsAPI(this.client, this.graphSpace, graph)
+               .get(backupId);
+    }
+
+    public Map<String, Object> getBackup(String graph, String repository,
+                                         String backupId) {
+        return new GraphBackupsAPI(this.client, this.graphSpace, graph)
+                .get(repository, backupId);
+    }
+
+    public List<Map<String, Object>> listBackups(String graph) {
+        return new GraphBackupsAPI(this.client, this.graphSpace, graph).list();
+    }
+
+    public List<Map<String, Object>> listBackups(String graph,
+                                                 String repository) {
+        return new GraphBackupsAPI(this.client, this.graphSpace, graph)
+                .list(repository);
     }
 }

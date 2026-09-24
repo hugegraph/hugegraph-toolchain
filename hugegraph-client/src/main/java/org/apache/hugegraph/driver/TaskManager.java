@@ -71,4 +71,8 @@ public class TaskManager {
     public Task waitUntilTaskCompleted(long taskId, long seconds) {
         return this.taskAPI.waitUntilTaskSuccess(taskId, seconds);
     }
+
+    public Task waitUntilTaskCompletedWithRetry(long taskId, long seconds) {
+        return this.taskAPI.waitUntilTaskSuccessWithRetry(taskId, seconds);
+    }
 }

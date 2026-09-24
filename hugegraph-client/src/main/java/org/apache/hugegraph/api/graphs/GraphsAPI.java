@@ -43,11 +43,15 @@ public class GraphsAPI extends API {
     private static final String DELIMITER = "/";
     private static final String MODE = "mode";
     private static final String GRAPH_READ_MODE = "graph_read_mode";
+    private static final String SNAPSHOT_CREATE = "snapshot_create";
+    private static final String SNAPSHOT_RESUME = "snapshot_resume";
     private static final String CLEAR = "clear";
     private static final String CONFIRM_MESSAGE = "confirm_message";
     private static final String CLEARED = "cleared";
     private static final String RELOADED = "reloaded";
     private static final String UPDATED = "updated";
+    private static final String SNAPSHOT_CREATED = "snapshot_created";
+    private static final String SNAPSHOT_RESUMED = "snapshot_resumed";
     private static final String GRAPHS = "graphs";
     private static final String MANAGE = "manage";
     private static final String PATH = "graphspaces/%s/graphs";
@@ -90,6 +94,34 @@ public class GraphsAPI extends API {
     public Map<String, String> get(String name) {
         RestResult result = this.client.get(this.path(), name);
         return result.readObject(Map.class);
+    }
+
+    /**
+     * @deprecated Use the graph backups API. Physical snapshot capture is
+     *             performed by the Server backup task.
+     */
+    @Deprecated
+    public Map<String, String> createSnapshot(String name) {
+        RestResult result = this.client.put(joinPath(this.path(), name),
+                                            SNAPSHOT_CREATE,
+                                            Collections.emptyMap());
+        Map<String, String> response = result.readObject(Map.class);
+        this.checkSnapshotResponse(name, response, SNAPSHOT_CREATED);
+        return response;
+    }
+
+    /**
+     * @deprecated Use the graph backups API. Physical snapshot recovery is
+     *             performed by the Server backup task.
+     */
+    @Deprecated
+    public Map<String, String> resumeSnapshot(String name) {
+        RestResult result = this.client.put(joinPath(this.path(), name),
+                                            SNAPSHOT_RESUME,
+                                            Collections.emptyMap());
+        Map<String, String> response = result.readObject(Map.class);
+        this.checkSnapshotResponse(name, response, SNAPSHOT_RESUMED);
+        return response;
     }
 
     public List<String> list() {
@@ -249,6 +281,19 @@ public class GraphsAPI extends API {
         } catch (IllegalArgumentException e) {
             throw new InvalidResponseException("Invalid GraphReadMode value '%s'", value);
         }
+    }
+
+    private void checkSnapshotResponse(String graph,
+                                       Map<String, String> response,
+                                       String expected) {
+        E.checkState(response != null && response.size() == 1 &&
+                     response.containsKey(graph),
+                     "Snapshot response must contain graph '%s', but got %s",
+                     graph, response);
+        String status = response.get(graph);
+        E.checkState(expected.equals(status),
+                     "Snapshot status must be '%s', but got '%s'",
+                     expected, status);
     }
 
     public String clone(String graph, Map<String, Object> body) {

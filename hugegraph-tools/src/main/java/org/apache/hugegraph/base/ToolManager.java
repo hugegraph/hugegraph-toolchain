@@ -44,6 +44,10 @@ public class ToolManager {
         return this.client.graph().graph();
     }
 
+    protected int timeout() {
+        return this.client.timeout();
+    }
+
     @SuppressWarnings("unchecked")
     protected  <T> List<T> readList(String key, Class<T> clazz,
                                     String content) {

@@ -36,6 +36,10 @@ import org.apache.hugegraph.manager.DumpGraphManager;
 import org.apache.hugegraph.manager.GraphsManager;
 import org.apache.hugegraph.manager.GremlinManager;
 import org.apache.hugegraph.manager.RestoreManager;
+import org.apache.hugegraph.manager.SnapshotBackupManager;
+import org.apache.hugegraph.manager.SnapshotGetManager;
+import org.apache.hugegraph.manager.SnapshotListManager;
+import org.apache.hugegraph.manager.SnapshotRestoreManager;
 import org.apache.hugegraph.manager.TasksManager;
 import org.apache.hugegraph.structure.Task;
 import org.apache.hugegraph.structure.constant.GraphMode;
@@ -210,6 +214,32 @@ public class HugeGraphCommand {
                 restoreManager.mode(mode);
                 restoreManager.restore(restore.types());
                 break;
+            case "snapshot-backup": {
+                SubCommands.SnapshotBackup snapshotBackup =
+                        this.subCommand(subCmd);
+                SnapshotBackupManager snapshotManager = manager(SnapshotBackupManager.class);
+                snapshotManager.backup(snapshotBackup);
+                break;
+            }
+            case "snapshot-restore": {
+                SubCommands.SnapshotRestore snapshotRestore =
+                        this.subCommand(subCmd);
+                SnapshotRestoreManager snapshotManager = manager(SnapshotRestoreManager.class);
+                snapshotManager.restore(snapshotRestore);
+                break;
+            }
+            case "snapshot-list": {
+                SubCommands.SnapshotList snapshotList = this.subCommand(subCmd);
+                SnapshotListManager snapshotManager = manager(SnapshotListManager.class);
+                snapshotManager.list(snapshotList);
+                break;
+            }
+            case "snapshot-get": {
+                SubCommands.SnapshotGet snapshotGet = this.subCommand(subCmd);
+                SnapshotGetManager snapshotManager = manager(SnapshotGetManager.class);
+                snapshotManager.get(snapshotGet);
+                break;
+            }
             case "migrate":
                 SubCommands.Migrate migrate = this.subCommand(subCmd);
                 Printer.print("Migrate graph '%s' from '%s' to '%s' as '%s'",

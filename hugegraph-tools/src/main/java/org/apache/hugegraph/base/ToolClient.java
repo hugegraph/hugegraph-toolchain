@@ -39,8 +39,10 @@ public class ToolClient {
 
     private final HugeClient client;
     private final ObjectMapper mapper;
+    private final int timeout;
 
     public ToolClient(ConnectionInfo info) {
+        this.timeout = info.timeout;
         if (info.username == null) {
             info.username = "";
             info.password = "";
@@ -103,6 +105,10 @@ public class ToolClient {
 
     public ObjectMapper mapper() {
         return this.mapper;
+    }
+
+    public int timeout() {
+        return this.timeout;
     }
 
     public static String homePath() {

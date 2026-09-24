@@ -17,12 +17,14 @@
 
 package org.apache.hugegraph.api.task;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hugegraph.api.API;
 import org.apache.hugegraph.client.RestClient;
+import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.rest.RestResult;
 import org.apache.hugegraph.structure.Task;
@@ -145,6 +147,69 @@ public class TaskAPI extends API {
             // Stop querying this task info whatever
             this.removeFromCache(taskId);
         }
+    }
+
+    /**
+     * Wait for a task while tolerating temporary Server unavailability.
+     *
+     * This is used by operations whose execution can intentionally restart the
+     * Server, such as physical snapshot restore. It avoids TaskCache because a
+     * polling exception would otherwise terminate its scheduled worker.
+     */
+    public Task waitUntilTaskSuccessWithRetry(long taskId, long seconds) {
+        if (taskId == 0) {
+            return null;
+        }
+        long deadline = System.nanoTime() + seconds * 1000000000L;
+        while (true) {
+            Task task = null;
+            try {
+                task = this.get(taskId);
+            } catch (Exception e) {
+                if (!isRetryable(e)) {
+                    if (e instanceof RuntimeException) {
+                        throw (RuntimeException) e;
+                    }
+                    throw new ClientException("Failed to query task '%s'",
+                                              e, taskId);
+                }
+                // The Server may be restarting. Retry until the local deadline.
+            }
+            if (task != null) {
+                if (task.success()) {
+                    return task;
+                }
+                if (task.completed()) {
+                    throw new ClientException("Task '%s' is %s, result is '%s'",
+                                              taskId, task.status(), task.result());
+                }
+            }
+            if (System.nanoTime() >= deadline) {
+                String message = "Task '%s' not completed in %s seconds, " +
+                                 "it can still be queried by task-get API";
+                throw new ClientException(message, taskId, seconds);
+            }
+            try {
+                Thread.sleep(QUERY_INTERVAL);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ClientException("Interrupted while waiting for task '%s'",
+                                          taskId);
+            }
+        }
+    }
+
+    private static boolean isRetryable(Throwable error) {
+        if (error instanceof ServerException) {
+            int status = ((ServerException) error).status();
+            return status >= 500 && status < 600;
+        }
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof IOException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Task getFromCache(long taskId) {

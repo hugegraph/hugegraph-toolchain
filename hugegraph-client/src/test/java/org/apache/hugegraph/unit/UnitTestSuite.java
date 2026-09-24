@@ -35,6 +35,8 @@ import org.junit.runners.Suite;
         GraphSpaceAPITest.class,
         ManagerAPITest.class,
         GraphsAPITest.class,
+        GraphBackupsAPITest.class,
+        TaskRetryTest.class,
         PDHugeClientFactoryTest.class,
         HugeClientCompatibilityTest.class,
         ServerCompatibilityTest.class,
