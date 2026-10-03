@@ -84,6 +84,7 @@ public class VertexBuilderTest {
         configs.put("data-type", "vertex");
         configs.put("label", "person");
         configs.put("id", "name");
+        configs.putAll(HGEnvUtils.tlsOptions());
         HGOptions options = new HGOptions(configs);
         HGLoadContext context = new HGLoadContext(options);
         context.updateSchemaCache();
@@ -147,6 +148,7 @@ public class VertexBuilderTest {
         configs.put("token", "pa");
         configs.put("data-type", "vertex");
         configs.put("label", "software");
+        configs.putAll(HGEnvUtils.tlsOptions());
         HGOptions options = new HGOptions(configs);
         HGLoadContext context = new HGLoadContext(options);
         context.updateSchemaCache();

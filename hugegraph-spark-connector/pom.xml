@@ -189,7 +189,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>
-                        -Xmx512m -XX:ActiveProcessorCount=2
+                        -Xmx512m -XX:ActiveProcessorCount=2 -Dfile.encoding=UTF-8
                         --add-opens=java.base/java.lang=ALL-UNNAMED
                         --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
                         --add-opens=java.base/java.lang.reflect=ALL-UNNAMED

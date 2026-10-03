@@ -84,6 +84,40 @@ public class H2StartupTest {
         this.assertFreshDatabaseRestarts(false, true);
     }
 
+    @Test
+    public void testWrongEncryptedPasswordHasSafeValidationGuidance() throws Exception {
+        Path directory = Files.createTempDirectory("hubble-password-rejection-");
+        String url = "jdbc:h2:file:" + directory.resolve("metadata") + ";CIPHER=AES";
+        try {
+            try (Connection connection = DriverManager.getConnection(url, "sa", "file-secret login-secret");
+                 Statement statement = connection.createStatement()) {
+                statement.execute("CREATE TABLE HUBBLE_SCHEMA_VERSION (ID INT PRIMARY KEY, VERSION INT)");
+                statement.execute("INSERT INTO HUBBLE_SCHEMA_VERSION VALUES (1, 1)");
+            }
+            byte[] before = Files.readAllBytes(directory.resolve("metadata.mv.db"));
+            this.runner(url).withPropertyValues(
+                    "spring.datasource.password=wrong-file-secret login-secret").run(context -> {
+                        Throwable failure = context.getStartupFailure();
+                        Assert.assertNotNull(failure);
+                        while (failure.getCause() != null) {
+                            failure = failure.getCause();
+                        }
+                        Assert.assertTrue(failure instanceof IllegalArgumentException);
+                        Assert.assertEquals("Hubble metadata validation failed; verify database credentials " +
+                                            "and file access before choosing a new H2 database",
+                                            failure.getMessage());
+                    });
+            Assert.assertArrayEquals(before, Files.readAllBytes(directory.resolve("metadata.mv.db")));
+            Assert.assertFalse(Files.exists(directory.resolve("metadata.trace.db")));
+        } finally {
+            try (Stream<Path> files = Files.walk(directory)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
     private void assertFreshDatabaseRestarts(boolean shorthand, boolean encrypted) throws Exception {
         Path directory = Files.createTempDirectory(Path.of("target"), "hubble-startup-");
         String url = (shorthand ? "jdbc:h2:./" : "jdbc:h2:file:./") + directory.resolve("metadata") +

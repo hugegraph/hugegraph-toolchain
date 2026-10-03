@@ -95,6 +95,7 @@ public class EdgeBuilderTest {
         configs.put("label", "created");
         configs.put("source-name", "v1-name");
         configs.put("target-name", "name");
+        configs.putAll(HGEnvUtils.tlsOptions());
         HGOptions options = new HGOptions(configs);
         HGLoadContext context = new HGLoadContext(options);
         context.updateSchemaCache();
