@@ -61,13 +61,32 @@ public class LoadContextTest {
     public void testCloseIndirectClientWhenPrimaryCloseFails() throws Exception {
         RecordingClient client = allocate(RecordingClient.class);
         RecordingClient indirect = allocate(RecordingClient.class);
-        client.failClose = true;
+        client.closeFailure = "Primary close failed";
         LoadContext context = this.context(client, indirect);
         try {
             context.close();
             Assert.fail("Expected primary close failure");
         } catch (IllegalStateException expected) {
             Assert.assertEquals("Primary close failed", expected.getMessage());
+        }
+        Assert.assertEquals(1, client.closeCalls);
+        Assert.assertEquals(1, indirect.closeCalls);
+    }
+
+    @Test
+    public void testPreservePrimaryFailureWhenBothClosesFail() throws Exception {
+        RecordingClient client = allocate(RecordingClient.class);
+        RecordingClient indirect = allocate(RecordingClient.class);
+        client.closeFailure = "Primary close failed";
+        indirect.closeFailure = "Indirect close failed";
+        LoadContext context = this.context(client, indirect);
+        try {
+            context.close();
+            Assert.fail("Expected primary close failure");
+        } catch (IllegalStateException expected) {
+            Assert.assertEquals("Primary close failed", expected.getMessage());
+            Assert.assertEquals(1, expected.getSuppressed().length);
+            Assert.assertEquals("Indirect close failed", expected.getSuppressed()[0].getMessage());
         }
         Assert.assertEquals(1, client.closeCalls);
         Assert.assertEquals(1, indirect.closeCalls);
@@ -105,7 +124,7 @@ public class LoadContextTest {
     private static class RecordingClient extends HugeClient {
 
         private int closeCalls;
-        private boolean failClose;
+        private String closeFailure;
 
         private RecordingClient() {
             super((HugeClientBuilder) null);
@@ -114,8 +133,8 @@ public class LoadContextTest {
         @Override
         public void close() {
             this.closeCalls++;
-            if (this.failClose) {
-                throw new IllegalStateException("Primary close failed");
+            if (this.closeFailure != null) {
+                throw new IllegalStateException(this.closeFailure);
             }
         }
     }
