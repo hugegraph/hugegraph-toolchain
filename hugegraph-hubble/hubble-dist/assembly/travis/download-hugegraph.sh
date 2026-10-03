@@ -15,8 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-export LANG=zh_CN.UTF-8
-set -ev
+set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
     echo "Usage: $0 <commit-id> [fetch-ref]" >&2
@@ -24,38 +23,24 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 fi
 
 COMMIT_ID=$1
-COMMIT_REF=${2:-}
-HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
-GIT_DIR=hugegraph
-CACHE_DIR="${HOME}/hugegraph-cache-${COMMIT_ID}"
+export SERVER_FETCH_REF=${2:-${SERVER_FETCH_REF:-}}
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+TOOLCHAIN_ROOT=$(cd "$SCRIPT_DIR/../../../.." && pwd)
 
-mkdir -p "${CACHE_DIR}"
-CACHED_TARBALL=$(find "${CACHE_DIR}" -maxdepth 1 \
-                       -name "apache-hugegraph-*.tar.gz" -print -quit)
-
-if [[ -f "${CACHED_TARBALL}" ]]; then
-    echo "Found HugeGraph server tarball cached for commit ${COMMIT_ID}."
-    cp "${CACHED_TARBALL}" ./
-    exit 0
+# CI builds once before compiling Hubble, so the server and Maven dependencies
+# come from the same verified commit. Direct callers use the same installer.
+if [[ -n "${HUGEGRAPH_SERVER_ARCHIVE:-}" ]]; then
+    ARCHIVE=$HUGEGRAPH_SERVER_ARCHIVE
+else
+    BUILD_DIR=$(mktemp -d "${TMPDIR:-/tmp}/hubble-server-build.XXXXXX")
+    trap 'rm -rf -- "$BUILD_DIR"' EXIT
+    (cd "$BUILD_DIR" && bash \
+        "$TOOLCHAIN_ROOT/hugegraph-client/assembly/travis/install-hugegraph-from-source.sh" \
+        "$COMMIT_ID" --build-only)
+    ARCHIVES=("$BUILD_DIR"/hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
+    [[ ${#ARCHIVES[@]} -eq 1 && -f "${ARCHIVES[0]}" ]]
+    ARCHIVE=${ARCHIVES[0]}
 fi
 
-# download code and compile
-git clone --depth 150 $HUGEGRAPH_GIT_URL $GIT_DIR
-cd "${GIT_DIR}"
-if [[ -n "${COMMIT_REF}" ]]; then
-    git fetch --depth 1 origin "${COMMIT_REF}"
-fi
-git checkout "${COMMIT_ID}"
-ACTUAL_COMMIT_ID=$(git rev-parse HEAD)
-if [[ "${ACTUAL_COMMIT_ID}" != "${COMMIT_ID}" ]]; then
-    echo "HugeGraph checkout mismatch: expected ${COMMIT_ID}, got ${ACTUAL_COMMIT_ID}" >&2
-    exit 1
-fi
-mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp
-
-cd hugegraph-server
-TAR=$(echo apache-hugegraph-*.tar.gz)
-cp apache-hugegraph-*.tar.gz ../../
-cd ../../
-rm -rf "${GIT_DIR}"
-cp apache-hugegraph-*.tar.gz "${CACHE_DIR}"/
+[[ -f "$ARCHIVE" ]]
+cp "$ARCHIVE" ./

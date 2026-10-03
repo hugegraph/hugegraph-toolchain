@@ -58,15 +58,16 @@ cd hubble-fe
 yarn dev
 ```
 
-Run the backend incrementally with Java 11 and the Maven daemon:
+Run the backend incrementally with Java 17 and the Maven daemon:
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 11)
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 mvnd -pl hubble-be -DskipTests compile dependency:build-classpath \
   -Dmdep.outputFile=/tmp/hubble-be-classpath
 mkdir -p /tmp/hubble-dev-home
 cd hubble-be
 "$JAVA_HOME/bin/java" -Dfile.encoding=UTF-8 \
+  --add-opens=java.base/java.net=ALL-UNNAMED \
   -Dhubble.home.path=/tmp/hubble-dev-home \
   -cp "target/classes:$(</tmp/hubble-be-classpath)" \
   org.apache.hugegraph.HugeGraphHubble
@@ -237,3 +238,28 @@ The `hubble-fe` folder contains the frontend code, including all related source 
 The `hubble-be` folder contains the backend code, including all related source code for the backend.
 
 The `hubble-dist` folder contains files that can be directly used for deployment, generated after compiling and packaging both the frontend and backend code.
+
+## Java 17 and metadata storage
+
+Hubble 1.8 requires Java 17 and uses Spring Boot 3 with H2 2.x only.
+MySQL remains available as a Loader source, but is no longer a Hubble metadata database.
+The default metadata URL is `jdbc:h2:file:./data/hubble-v2;DB_CLOSE_ON_EXIT=FALSE`.
+Schema initialization is idempotent, and restarting with this same database retains metadata.
+
+Start with a new H2 database when upgrading. Existing Hubble databases are not
+migrated, deleted or rewritten automatically. Keep the old database and its matching
+Hubble release together if you need to access old metadata; do not point the new
+release at the old database. A database-open error must be resolved by configuring
+a new database path, not by deleting the old files.
+
+The packaged startup script opens `java.base/java.net` to the embedded Loader's
+Hive ORC reader, whose URI interning still uses reflection. Custom Java launch
+commands must include `--add-opens=java.base/java.net=ALL-UNNAMED` as shown above.
+This exception is limited to Hubble/Loader processes; no global JVM setting is needed.
+
+Packaging excludes metadata databases and other runtime files from the archive
+without deleting them from a previously run release directory. Docker images
+are populated from that archive in a fresh build-stage directory, rather than
+copying a release directory that may contain local runtime data. The distributable
+archive is under `target/`; packaging no longer creates a redundant release copy
+under `hubble-dist/`.

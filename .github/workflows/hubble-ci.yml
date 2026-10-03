@@ -23,8 +23,6 @@ on:
 
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
-  HUGEGRAPH_SERVER_GIT_URL: https://github.com/apache/hugegraph.git
-  HUGEGRAPH_SERVER_BRANCH: master
 
 jobs:
   hubble-ci:
@@ -87,22 +85,35 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
-      - name: Resolve HugeGraph Server revision
+      - name: Resolve locked Java 17 server baseline
         id: server-ref
-        run: |
-          SERVER_COMMIT="$(git ls-remote "$HUGEGRAPH_SERVER_GIT_URL" \
-            "refs/heads/$HUGEGRAPH_SERVER_BRANCH" | cut -f1)"
-          if [[ -z "$SERVER_COMMIT" ]]; then
-            echo "Unable to resolve HugeGraph Server branch" >&2
-            exit 1
-          fi
-          echo "commit=$SERVER_COMMIT" >> "$GITHUB_OUTPUT"
-
-      - name: Cache HugeGraph Server
-        uses: actions/cache@v6
+        uses: ./.github/actions/get-hugegraph-commit
         with:
-          path: ~/hugegraph-cache-${{ steps.server-ref.outputs.commit }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.server-ref.outputs.commit }}
+          repository: hugegraph/hugegraph
+          ref: codex/cypher-minimal-compat
+          expected-commit: 59ad5374b4bf90ec3ee7aa133b830e66788b51ec
+
+      - name: Install same-source candidate dependencies
+        env:
+          SERVER_COMMIT: ${{ steps.server-ref.outputs.commit_id }}
+          SERVER_REPOSITORY: hugegraph/hugegraph
+          SERVER_FETCH_REF: ${{ steps.server-ref.outputs.fetch_ref }}
+        run: |
+          candidate_repo=$(mktemp -d "$RUNNER_TEMP/hubble-candidate-m2.XXXXXX")
+          export MAVEN_ARGS="-Dmaven.repo.local=$candidate_repo"
+          printf 'MAVEN_ARGS=%s\n' "$MAVEN_ARGS" >> "$GITHUB_ENV"
+          server_build=$(mktemp -d "$RUNNER_TEMP/hubble-server-build.XXXXXX")
+          cd "$server_build"
+          bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-hugegraph-from-source.sh" \
+            "$SERVER_COMMIT" --build-only
+          archives=("$server_build"/hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
+          [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
+          printf 'HUGEGRAPH_SERVER_ARCHIVE=%s\n' "${archives[0]}" >> "$GITHUB_ENV"
+
+      - name: Test release archive isolation
+        run: |
+          python -m unittest discover -s "$TRAVIS_DIR" -p test_archive_hubble.py
+          bash -n "$TRAVIS_DIR/download-hugegraph.sh" "$TRAVIS_DIR/archive-hubble.sh"
 
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
@@ -122,13 +133,13 @@ jobs:
       - name: Compile
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
-          cd hugegraph-hubble && ls *
+          cd hugegraph-hubble
           mvn -e compile -Dmaven.javadoc.skip=true -ntp
 
       - name: Prepare env and service
         env:
-          COMMIT_ID: ${{ steps.server-ref.outputs.commit }}
-          COMMIT_REF: ${{ steps.server-ref.outputs.commit }}
+          COMMIT_ID: ${{ steps.server-ref.outputs.commit_id }}
+          COMMIT_REF: ${{ steps.server-ref.outputs.commit_id }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="
@@ -140,7 +151,7 @@ jobs:
           free -h || true
           echo "======================="
 
-          python -m pip install -r ${TRAVIS_DIR}/requirements.txt
+          python -m pip install -r "${TRAVIS_DIR}/requirements.txt"
           cd hugegraph-hubble
           mvn package -Dmaven.test.skip=true
           cd apache-hugegraph-hubble-*
@@ -149,13 +160,15 @@ jobs:
           ./stop-hubble.sh
           cd ../../../
           pwd
-          $TRAVIS_DIR/install-hugegraph.sh $COMMIT_ID $COMMIT_REF
+          "$TRAVIS_DIR/install-hugegraph.sh" "$COMMIT_ID" "$COMMIT_REF"
 
       - name: Release package audit
         env:
           GNUPGHOME: ${{ runner.temp }}/hubble-release-gate-gpghome
         run: |
-          HUBBLE_TARBALL="$(ls hugegraph-hubble/target/apache-hugegraph-hubble-*.tar.gz | head -n 1)"
+          archives=(hugegraph-hubble/target/apache-hugegraph-hubble-*.tar.gz)
+          [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
+          HUBBLE_TARBALL=${archives[0]}
           if [[ -z "${HUBBLE_TARBALL}" ]]; then
             echo "Hubble tarball not found" >&2
             exit 1
@@ -187,7 +200,9 @@ jobs:
       - name: API test
         run: |
           cd hugegraph-hubble
-          HUBBLE_TARBALL="$(ls target/apache-hugegraph-hubble-*.tar.gz | head -n 1)"
+          archives=(target/apache-hugegraph-hubble-*.tar.gz)
+          [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
+          HUBBLE_TARBALL=${archives[0]}
           HUBBLE_694_EVIDENCE_DIR=target/hubble-live-acceptance \
             hubble-dist/assembly/travis/verify-hubble-issue-694.sh \
             "${HUBBLE_TARBALL}" http://127.0.0.1:8080

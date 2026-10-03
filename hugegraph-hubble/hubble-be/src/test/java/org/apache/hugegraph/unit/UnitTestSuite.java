@@ -62,6 +62,7 @@ import org.junit.runners.Suite;
     GraphServiceImportTest.class,
     GraphMetricsControllerTest.class,
     HugeClientPoolServiceTest.class,
+    H2StartupTest.class,
     GraphSpaceControllerTest.class,
     GraphSpaceAuthMutationAuthorizationTest.class,
     GraphSpaceAuthOwnershipTest.class,

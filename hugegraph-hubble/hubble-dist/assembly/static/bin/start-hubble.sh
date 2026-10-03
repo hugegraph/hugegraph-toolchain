@@ -51,7 +51,8 @@ for jar in "${LIB_PATH}"/*.jar; do
     class_path=${class_path}:${jar}
 done
 
-JAVA_OPTS="-Xms512m -Dfile.encoding=UTF-8"
+# Hive ORC interns URI strings through reflection on Java 17.
+JAVA_OPTS="-Xms512m -Dfile.encoding=UTF-8 --add-opens=java.base/java.net=ALL-UNNAMED"
 JAVA_DEBUG_OPTS=""
 FOREGROUND="false"
 
