@@ -10,6 +10,7 @@ on:
       - hugegraph-loader/**
       - hugegraph-dist/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - hugegraph-dist/**
       - hugegraph-client/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
 
 jobs:
@@ -30,8 +32,9 @@ jobs:
       DB_PASS: root
       DB_DATABASE: load_test
     strategy:
+      fail-fast: false
       matrix:
-        JAVA_VERSION: ['17']
+        SERVER_BASELINE: [ 'candidate', 'release-1.7' ]
     services:
       mysql:
         image: mysql:8.0
@@ -47,14 +50,18 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
+      - name: Resolve locked Java 17 server baseline
         id: get-commit
         uses: ./.github/actions/get-hugegraph-commit
+        with:
+          repository: hugegraph/hugegraph
+          ref: codex/cypher-minimal-compat
+          expected-commit: 59ad5374b4bf90ec3ee7aa133b830e66788b51ec
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
-          java-version: ${{ matrix.JAVA_VERSION }}
+          java-version: '17'
           distribution: 'temurin'
           use-stage: ${{ env.USE_STAGE }}
 
@@ -64,22 +71,60 @@ jobs:
           path: ~/hadoop-3.3.6.tar.gz
           key: ${{ runner.os }}-hadoop-3.3.6
 
-      - name: Cache HugeGraph Server
-        uses: actions/cache@v6
+      - name: Isolate candidate Maven artifacts
+        run: |
+          candidate_repo=$(mktemp -d "$RUNNER_TEMP/java17-candidate-m2.XXXXXX")
+          printf 'MAVEN_ARGS=-Dmaven.repo.local=%s\n' "$candidate_repo" >> "$GITHUB_ENV"
+
+      - name: Install candidate dependencies for both server baselines
+        env:
+          SERVER_COMMIT: ${{ steps.get-commit.outputs.commit_id }}
+          SERVER_REPOSITORY: hugegraph/hugegraph
+          SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
+        run: bash hugegraph-client/assembly/travis/install-hugegraph-from-source.sh "$SERVER_COMMIT" --build-only
+
+      - name: Install legacy server JVM
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        id: legacy-java
+        uses: actions/setup-java@v5
         with:
-          path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}
+          java-version: '11'
+          distribution: 'temurin'
+          overwrite-settings: false
+
+      - name: Start official Server 1.7 with Java 11
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        env:
+          JAVA_HOME: ${{ steps.legacy-java.outputs.path }}
+        run: |
+          archive="$RUNNER_TEMP/apache-hugegraph-incubating-1.7.0.tar.gz"
+          curl --fail --location --retry 3 \
+            https://github.com/apache/hugegraph/releases/download/1.7.0/apache-hugegraph-incubating-1.7.0.tar.gz \
+            --output "$archive"
+          printf 'e9b95b5afac156f251a12134a03a27579cca9ed7cca7e42ad0529e639b1cde1e  %s\n' "$archive" | sha256sum --check
+          bash hugegraph-client/assembly/travis/start-hugegraph-servers.sh "$archive"
+
+      - name: Restore Loader Java 17
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          overwrite-settings: false
+
+      - name: Start candidate Server with Java 17
+        if: matrix.SERVER_BASELINE == 'candidate'
+        run: |
+          archives=(hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
+          [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
+          bash hugegraph-client/assembly/travis/start-hugegraph-servers.sh "${archives[0]}"
 
       - name: Compile
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
-      - name: Prepare env and service
-        env:
-          COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
-        run: |
-          $TRAVIS_DIR/install-hadoop.sh
-          $TRAVIS_DIR/install-hugegraph-from-source.sh $COMMIT_ID
+      - name: Prepare Hadoop service
+        run: bash "$TRAVIS_DIR/install-hadoop.sh"
 
       - name: Run test
         run: |

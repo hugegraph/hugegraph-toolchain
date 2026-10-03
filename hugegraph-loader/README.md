@@ -17,6 +17,15 @@ hugegraph-loader is a customizable command line utility for loading small to med
 
 ## 2. Quick start 
 
+HugeGraph Loader 1.8 requires Java 17 or later to build and run. Set `JAVA_HOME`
+to a compatible JDK when launching the command-line tools. The JVM running Loader
+must meet this requirement even when it connects to an older HugeGraph Server.
+
+The Loader launcher enables `--add-opens=java.base/java.net=ALL-UNNAMED` because
+its Hive ORC reader interns private URI fields. Applications embedding Loader
+and importing ORC files must add the same option to their Java process. This
+opening is limited to `java.net`.
+
 There are three ways to get HugeGraph-Loader:
 
 - Download the compiled tarball

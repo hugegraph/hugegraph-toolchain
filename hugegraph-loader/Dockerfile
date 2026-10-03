@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-FROM --platform=$BUILDPLATFORM maven:3.9.0-eclipse-temurin-11 AS build
+FROM --platform=$BUILDPLATFORM maven:3.9.11-eclipse-temurin-17 AS build
 
 COPY . /pkg
 WORKDIR /pkg
@@ -26,7 +26,7 @@ RUN set -x \
     && mvn clean package $MAVEN_ARGS -pl hugegraph-client,hugegraph-loader -am \
        -Dmaven.javadoc.skip=true -DskipTests -ntp
 
-FROM eclipse-temurin:11-jre-jammy
+FROM eclipse-temurin:17-jre-jammy
 
 RUN set -x \
     && apt-get -q update \

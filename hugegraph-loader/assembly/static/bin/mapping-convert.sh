@@ -42,7 +42,19 @@ for jar in "$LIB_PATH"/*.jar; do
     class_path=${class_path}:${jar}
 done
 
+JAVA=java
+if [ -n "$JAVA_HOME" ]; then
+    JAVA="$JAVA_HOME/bin/java"
+fi
+
+JAVA_VERSION=$("$JAVA" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+JAVA_MAJOR=${JAVA_VERSION%%[.+-]*}
+if ! [ "$JAVA_MAJOR" -ge 17 ] 2>/dev/null; then
+    echo "HugeGraph Loader requires Java 17 or later. Check JAVA_HOME and PATH." >&2
+    exit 1
+fi
+
 args=$1
 main_class="org.apache.hugegraph.loader.MappingConverter"
-exec java -Dlog4j.configurationFile="${CONF_PATH}"/log4j2.xml \
+exec "$JAVA" -Dlog4j.configurationFile="${CONF_PATH}"/log4j2.xml \
     -cp "${class_path}" ${main_class} "${args}"

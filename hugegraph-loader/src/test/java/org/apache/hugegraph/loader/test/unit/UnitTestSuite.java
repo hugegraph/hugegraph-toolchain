@@ -23,6 +23,9 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
         LineTest.class,
+        FileLineFetcherTest.class,
+        LoadOptionsTest.class,
+        TaskManagerTest.class,
         DateUtilTest.class,
         MappingConverterTest.class,
         LoadProgressTest.class,
