@@ -52,6 +52,16 @@ public class HGEnvUtilsConfigTest {
     }
 
     @Test
+    public void testPathPrefixRejectedBeforeFixtureAccess() {
+        Assert.assertEquals("http://localhost:8080/",
+                            HGEnvUtils.endpoint("http://localhost:8080/").toString());
+        for (String path : new String[]{"/proxy", "/proxy/", "/%70roxy"}) {
+            Assert.assertThrows(IllegalArgumentException.class,
+                                () -> HGEnvUtils.endpoint("http://localhost:8080" + path));
+        }
+    }
+
+    @Test
     public void testHttpsTlsOptionsMatchReadbackBuilder() {
         URI uri = HGEnvUtils.endpoint("HTTPS://localhost:8443");
         Map<String, String> options = HGEnvUtils.tlsOptions(uri.getScheme(), "/tmp/test-store", "secret");
