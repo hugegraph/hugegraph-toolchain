@@ -28,7 +28,6 @@ Required:
 - Java 17 (driver and every executor)
 - Spark 3.5.8 with Scala 2.12 (built with Scala 2.12.18)
 - Maven 3.6.3+
-- UTF-8 JVM defaults on the driver and every executor for text I/O.
 
 The locked candidate Common uses the declared request-body charset and defaults to UTF-8.
 The earlier preparation build uses published Common 1.7, whose request bodies depend on the
@@ -93,12 +92,15 @@ For example, after placing the JAR at `/opt/hugegraph-spark/lib/guava-30.0-jre.j
 ```bash
 EXECUTOR_GUAVA_JAR=/opt/hugegraph-spark/lib/guava-30.0-jre.jar
 spark-submit --deploy-mode client --driver-class-path "$DRIVER_GUAVA_JAR" \
-  --driver-java-options "-Dfile.encoding=UTF-8" \
-  --conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8" \
   --conf "spark.executor.extraClassPath=$EXECUTOR_GUAVA_JAR" \
   --jars /path/to/hugegraph-spark-connector-1.8.0-jar-with-dependencies.jar \
   /path/to/your-application.jar
 ```
+
+When running the earlier preparation build with published Common 1.7, also add
+`--driver-java-options "-Dfile.encoding=UTF-8"` and
+`--conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8"` to the submission command.
+These options are not required by the locked candidate Common's request-body implementation.
 
 For cluster deploy mode, provision Guava on the remote driver and use its readable absolute path in
 `--driver-class-path`; copying it to executors does not provision the driver.
