@@ -46,27 +46,10 @@
                         </goals>
                         <configuration>
                             <tasks>
-                                <!-- TODO: change to assembly plugin in future  -->
-                                <echo file="${project.basedir}/dist.sh">
-                                    root_path=$(cd $(dirname $0)/..; pwd)
-                                    cd $root_path || exit
-
-                                    mkdir -p ${final.name}
-                                    mv -v $root_path/hugegraph-hubble/apache-hugegraph-hubble-${project.version} ${final.name}/ || exit
-                                    mv -v $root_path/hugegraph-loader/apache-hugegraph-loader-${project.version} ${final.name}/ || exit
-                                    mv -v $root_path/hugegraph-tools/apache-hugegraph-tools-${project.version} ${final.name}/ || exit
-                                    cp -r -v $root_path/hugegraph-dist/release-docs/* ${final.name}/ || exit
-
-                                    tar zcvf $root_path/target/${final.name}.tar.gz ./${final.name} || exit 1
-
-                                    md5sum $root_path/target/${final.name}.tar.gz
-                                    echo -n "hugegraph-toolchain tar.gz available at: "
-                                    echo "$root_path/target/${final.name}.tar.gz"
-                                    rm -f ${project.basedir}/dist.sh
-
-                                </echo>
                                 <exec executable="${shell-executable}" dir="${project.basedir}" failonerror="true">
-                                    <arg line="./dist.sh"/>
+                                    <arg value="${project.basedir}/scripts/assemble-toolchain.sh"/>
+                                    <arg value="${project.basedir}/.."/>
+                                    <arg value="${project.version}"/>
                                 </exec>
                             </tasks>
                         </configuration>

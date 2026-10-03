@@ -263,3 +263,17 @@ are populated from that archive in a fresh build-stage directory, rather than
 copying a release directory that may contain local runtime data. The distributable
 archive is under `target/`; packaging no longer creates a redundant release copy
 under `hubble-dist/`.
+
+## Java 17 UI validation
+
+The following screenshots show the Java 17 Hubble package connected to released
+standalone Server 1.5 in anonymous mode: sample schema, graph query, and a saved
+query retained after restarting Hubble with the same new H2 database. They were
+captured before the final distribution dependency alignment. Final aligned-package
+checks against Server 1.7 and the candidate, PD mode, and Docker container
+recreation remain separate gates. See the
+[migration and validation matrix](../docs/java17-migration.md).
+
+| Sample schema | Graph query | Saved query after restart |
+| --- | --- | --- |
+| ![Person and software sample schema](docs/images/java17-validation/legacy15-schema.jpg) | ![Sample graph query results](docs/images/java17-validation/legacy15-query.jpg) | ![Saved query retained after Hubble restart](docs/images/java17-validation/legacy15-h2-persisted.jpg) |

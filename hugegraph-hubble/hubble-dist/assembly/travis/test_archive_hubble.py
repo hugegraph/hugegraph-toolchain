@@ -19,6 +19,7 @@
 
 import pathlib
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -46,6 +47,8 @@ class HubbleArchiveTest(unittest.TestCase):
                          for relative in runtime_files}
             (release / "lib").mkdir()
             (release / "lib/hubble.jar").write_bytes(b"application")
+            sidecar = release / "lib/._hubble.jar"
+            sidecar.write_bytes(b"existing AppleDouble metadata")
             (release / "ui").mkdir()
             (release / "ui/index.html").write_text("<html>Hubble</html>")
             archive = root / "target/hubble.tar.gz"
@@ -61,6 +64,8 @@ class HubbleArchiveTest(unittest.TestCase):
                         self.assertNotIn(f"{release.name}/{runtime_dir}", names)
                     self.assertIn(f"{release.name}/lib/hubble.jar", names)
                     self.assertIn(f"{release.name}/ui/index.html", names)
+                    self.assertFalse(any(pathlib.PurePosixPath(name).name.startswith("._")
+                                         for name in names))
 
                 # Docker uses the archive in a fresh build-stage directory.
                 image_input = root / f"fresh-image-{attempt}"
@@ -73,6 +78,27 @@ class HubbleArchiveTest(unittest.TestCase):
                 for relative, original in sentinels.items():
                     self.assertFalse((image_input / relative).exists())
                     self.assertEqual(original, (release / relative).read_bytes())
+                self.assertEqual(b"existing AppleDouble metadata", sidecar.read_bytes())
+
+    @unittest.skipUnless(sys.platform == "darwin", "requires macOS extended attributes")
+    def test_extended_attributes_do_not_generate_appledouble_members(self):
+        with tempfile.TemporaryDirectory(prefix="hubble-archive-xattr-") as directory:
+            root = pathlib.Path(directory)
+            release = root / "hubble"
+            release.mkdir()
+            payload = release / "application.jar"
+            payload.write_bytes(b"application")
+            attribute = "com.apple.metadata:hugegraph-archive-test"
+            subprocess.run(["xattr", "-w", attribute, "preserve attribute", str(payload)],
+                           check=True)
+            archive = root / "hubble.tar.gz"
+            subprocess.run(["bash", str(ARCHIVER), str(release), str(archive)], check=True)
+            with tarfile.open(archive) as package:
+                self.assertEqual(["hubble", "hubble/application.jar"], package.getnames())
+                self.assertEqual(b"application",
+                                 package.extractfile("hubble/application.jar").read())
+            self.assertEqual(b"preserve attribute", subprocess.check_output(
+                ["xattr", "-p", attribute, str(payload)]).strip())
 
     def test_missing_release_fails_without_creating_archive(self):
         with tempfile.TemporaryDirectory(prefix="hubble-archive-") as directory:

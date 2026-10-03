@@ -93,6 +93,9 @@ jobs:
           bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-hugegraph-from-source.sh" \
             "$SERVER_COMMIT" --build-only
 
+      - name: Test aggregate distribution isolation
+        run: python3 -m unittest discover -s hugegraph-dist/scripts -p test_assemble_toolchain.py
+
       - name: mvn install
         run: |
           mvn install -DskipTests=true -ntp

@@ -26,6 +26,12 @@
 **/node_modules
 **/.cache
 
+# Generated distributions can contain local databases and uploaded files.
+# Build them again inside the builder; never send runtime data to its cache.
+hugegraph-hubble/apache-hugegraph-hubble-*/
+hugegraph-loader/apache-hugegraph-loader-*/
+apache-hugegraph-toolchain-*/
+
 # Modules not used by the Hubble image build. Keep the Maven module POMs so
 # the root reactor can still be parsed, and keep release docs used by hubble-dist.
 hugegraph-client-go

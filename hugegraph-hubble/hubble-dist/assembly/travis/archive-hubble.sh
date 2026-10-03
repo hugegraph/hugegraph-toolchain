@@ -17,6 +17,9 @@
 #
 set -euo pipefail
 
+# BSD tar otherwise synthesizes AppleDouble files from macOS extended attributes.
+export COPYFILE_DISABLE=1
+
 if [[ $# -ne 2 || ! -d "$1" ]]; then
     echo "Usage: $0 <release-directory> <output.tar.gz>" >&2
     exit 1
@@ -32,6 +35,7 @@ archive="$(cd "$(dirname "${archive}")" && pwd)/$(basename "${archive}")"
 # A release directory may have been run locally. Preserve its databases and
 # other runtime files, but never include them in a distributable archive.
 tar -czf "${archive}" \
+    --exclude='._*' --exclude='*/._*' \
     --exclude="${release_name}/data" \
     --exclude="${release_name}/logs" \
     --exclude="${release_name}/upload-files" \
