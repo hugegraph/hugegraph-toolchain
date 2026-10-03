@@ -27,7 +27,7 @@ jobs:
       TRAVIS_DIR: hugegraph-spark-connector/assembly/travis
     strategy:
       matrix:
-        JAVA_VERSION: [ '11' ]
+        JAVA_VERSION: [ '17' ]
 
     steps:
       - name: Fetch Code

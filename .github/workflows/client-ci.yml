@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        JAVA_VERSION: [ '17' ]
+        SERVER_BASELINE: [ 'candidate', 'release-1.7' ]
 
     steps:
       - name: Fetch code
@@ -40,9 +40,10 @@ jobs:
       - name: Test server baseline resolver
         run: |
           node --test .github/actions/get-hugegraph-commit/resolve.test.cjs \
-            hugegraph-client/assembly/travis/checkout-server.test.cjs
+            hugegraph-client/assembly/travis/*.test.cjs
           bash -n hugegraph-client/assembly/travis/checkout-server.sh \
-            hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
+            hugegraph-client/assembly/travis/install-hugegraph-from-source.sh \
+            hugegraph-client/assembly/travis/start-hugegraph-servers.sh
 
       - name: Resolve locked Java 17 server baseline
         id: get-commit
@@ -50,12 +51,12 @@ jobs:
         with:
           repository: hugegraph/hugegraph
           ref: codex/cypher-minimal-compat
-          expected-commit: 4fa9413b139060649cc136aea116ec3261a8a05a
+          expected-commit: 59ad5374b4bf90ec3ee7aa133b830e66788b51ec
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
-          java-version: ${{ matrix.JAVA_VERSION }}
+          java-version: '17'
           distribution: 'zulu'
           use-stage: ${{ env.USE_STAGE }}
 
@@ -64,13 +65,48 @@ jobs:
           candidate_repo=$(mktemp -d "$RUNNER_TEMP/java17-candidate-m2.XXXXXX")
           printf 'MAVEN_ARGS=-Dmaven.repo.local=%s\n' "$candidate_repo" >> "$GITHUB_ENV"
 
-      - name: Setup HugeGraph server
-        uses: ./.github/actions/setup-hugegraph-server
+      - name: Install candidate dependencies for both server baselines
+        env:
+          SERVER_COMMIT: ${{ steps.get-commit.outputs.commit_id }}
+          SERVER_REPOSITORY: hugegraph/hugegraph
+          SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
+        run: bash "$TRAVIS_DIR/install-hugegraph-from-source.sh" "$SERVER_COMMIT" --build-only
+
+      - name: Install legacy server JVM
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        id: legacy-java
+        uses: actions/setup-java@v5
         with:
-          travis-dir: ${{ env.TRAVIS_DIR }}
-          commit-id: ${{ steps.get-commit.outputs.commit_id }}
-          repository: hugegraph/hugegraph
-          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
+          java-version: '11'
+          distribution: 'zulu'
+          overwrite-settings: false
+
+      - name: Start official Server 1.7 with Java 11
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        env:
+          JAVA_HOME: ${{ steps.legacy-java.outputs.path }}
+        run: |
+          archive="$RUNNER_TEMP/apache-hugegraph-incubating-1.7.0.tar.gz"
+          curl --fail --location --retry 3 \
+            https://github.com/apache/hugegraph/releases/download/1.7.0/apache-hugegraph-incubating-1.7.0.tar.gz \
+            --output "$archive"
+          printf 'e9b95b5afac156f251a12134a03a27579cca9ed7cca7e42ad0529e639b1cde1e  %s\n' "$archive" | sha256sum --check
+          bash "$TRAVIS_DIR/start-hugegraph-servers.sh" "$archive"
+
+      - name: Restore client Java 17
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+          overwrite-settings: false
+
+      - name: Start candidate Server with Java 17
+        if: matrix.SERVER_BASELINE == 'candidate'
+        run: |
+          archives=(hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
+          [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
+          bash "$TRAVIS_DIR/start-hugegraph-servers.sh" "${archives[0]}"
 
       - name: Compile
         run: |
@@ -80,7 +116,7 @@ jobs:
         run: |
           cd hugegraph-client
           mvn test -Dtest=UnitTestSuite -ntp
-          mvn test -Dtest=ApiTestSuite
+          mvn test -Dtest=ApiTestSuite,CypherApiTest
           mvn test -Dtest=FuncTestSuite
 
       - name: Upload coverage to Codecov

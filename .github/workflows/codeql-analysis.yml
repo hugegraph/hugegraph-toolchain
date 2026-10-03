@@ -44,18 +44,42 @@ jobs:
       uses: actions/setup-java@v5
       with:
         distribution: 'zulu'
-        java-version: '11'
+        java-version: '17'
 
     - name: use staged maven repo settings
       if: ${{ env.USE_STAGE == 'true' }}
       run: |
-        cp $HOME/.m2/settings.xml /tmp/settings.xml
-        mv -vf .github/configs/settings.xml $HOME/.m2/settings.xml
+        cp "$HOME/.m2/settings.xml" /tmp/settings.xml
+        mv -vf .github/configs/settings.xml "$HOME/.m2/settings.xml"
 
     - name: Use Node.js 16
       uses: actions/setup-node@v6
       with:
         node-version: '16'
+    - if: matrix.language == 'java'
+      name: Resolve locked Java 17 dependencies
+      id: server-ref
+      uses: ./.github/actions/get-hugegraph-commit
+      with:
+        repository: hugegraph/hugegraph
+        ref: codex/cypher-minimal-compat
+        expected-commit: 59ad5374b4bf90ec3ee7aa133b830e66788b51ec
+
+    - if: matrix.language == 'java'
+      name: Install same-source candidate dependencies
+      env:
+        SERVER_COMMIT: ${{ steps.server-ref.outputs.commit_id }}
+        SERVER_REPOSITORY: hugegraph/hugegraph
+        SERVER_FETCH_REF: ${{ steps.server-ref.outputs.fetch_ref }}
+      run: |
+        candidate_repo=$(mktemp -d "$RUNNER_TEMP/java17-candidate-m2.XXXXXX")
+        export MAVEN_ARGS="-Dmaven.repo.local=$candidate_repo"
+        printf 'MAVEN_ARGS=%s\n' "$MAVEN_ARGS" >> "$GITHUB_ENV"
+        server_build=$(mktemp -d "$RUNNER_TEMP/java17-server-build.XXXXXX")
+        cd "$server_build"
+        bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-hugegraph-from-source.sh" \
+          "$SERVER_COMMIT" --build-only
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4

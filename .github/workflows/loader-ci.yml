@@ -31,7 +31,7 @@ jobs:
       DB_DATABASE: load_test
     strategy:
       matrix:
-        JAVA_VERSION: ['11']
+        JAVA_VERSION: ['17']
     services:
       mysql:
         image: mysql:8.0
