@@ -31,6 +31,7 @@ import org.apache.hugegraph.loader.metrics.LoadDistributeMetrics;
 import org.apache.hugegraph.loader.source.InputSource;
 import org.apache.hugegraph.loader.source.jdbc.JDBCSource;
 import org.apache.hugegraph.loader.util.Printer;
+import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.loader.mapping.EdgeMapping;
 import org.apache.hugegraph.loader.mapping.ElementMapping;
 import org.apache.hugegraph.loader.mapping.InputStruct;
@@ -51,6 +52,7 @@ import org.apache.hugegraph.util.Log;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.function.ForeachPartitionFunction;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -60,6 +62,7 @@ import org.apache.spark.util.LongAccumulator;
 import org.slf4j.Logger;
 
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,8 +82,6 @@ public class HugeGraphSparkLoader implements Serializable {
     public static final Logger LOG = Log.logger(HugeGraphSparkLoader.class);
 
     private final LoadOptions loadOptions;
-    private final Map<ElementBuilder, List<GraphElement>> builders;
-
     private final transient ExecutorService executor;
 
     public static void main(String[] args) {
@@ -90,12 +91,12 @@ public class HugeGraphSparkLoader implements Serializable {
             loader.load();
         } catch (Throwable e) {
             Printer.printError("Failed to start loading", e);
+            System.exit(1);
         }
     }
 
     public HugeGraphSparkLoader(String[] args) {
         this.loadOptions = LoadOptions.parseOptions(args);
-        this.builders = new HashMap<>();
         this.executor = Executors.newCachedThreadPool();
     }
 
@@ -137,54 +138,51 @@ public class HugeGraphSparkLoader implements Serializable {
         registerKryoClasses(conf);
         SparkSession session = SparkSession.builder().config(conf).getOrCreate();
         SparkContext sc = session.sparkContext();
+        LOG.info("Spark Loader runtime: Java {}, default charset {}",
+                 System.getProperty("java.version"), Charset.defaultCharset().name());
 
-        LongAccumulator totalInsertSuccess = sc.longAccumulator("totalInsertSuccess");
-        List<Future<?>> futures = new ArrayList<>(structs.size());
+        try {
+            LongAccumulator totalInsertSuccess = sc.longAccumulator("totalInsertSuccess");
+            List<Future<?>> futures = new ArrayList<>(structs.size());
 
-        for (InputStruct struct : structs) {
-            Future<?> future = this.executor.submit(() -> {
-                LOG.info("\n Initializes the accumulator corresponding to the  {} ",
-                         struct.input().asFileSource().path());
-                LoadDistributeMetrics loadDistributeMetrics = new LoadDistributeMetrics(struct);
-                loadDistributeMetrics.init(sc);
-                LOG.info("\n  Start to load data, data info is: \t {} ",
-                         struct.input().asFileSource().path());
-                Dataset<Row> ds = read(session, struct);
-                if (sinkType) {
-                    LOG.info("\n  Start to load data using spark apis  \n");
-                    ds.foreachPartition((Iterator<Row> p) -> {
-                        LoadContext context = initPartition(this.loadOptions, struct);
-                        p.forEachRemaining((Row row) -> {
-                            loadRow(struct, row, p, context);
-                        });
-                        context.close();
-                    });
+            for (InputStruct struct : structs) {
+                Future<?> future = this.executor.submit(() -> {
+                    LOG.info("\n Initializes the accumulator corresponding to the  {} ",
+                             struct.input().asFileSource().path());
+                    LoadDistributeMetrics loadDistributeMetrics = new LoadDistributeMetrics(struct);
+                    loadDistributeMetrics.init(sc);
+                    LOG.info("\n  Start to load data, data info is: \t {} ",
+                             struct.input().asFileSource().path());
+                    Dataset<Row> ds = read(session, struct);
+                    if (sinkType) {
+                        LOG.info("\n  Start to load data using spark apis  \n");
+                        ds.foreachPartition(new PartitionWriter(this.loadOptions, struct));
 
-                } else {
-                    LOG.info("\n Start to load data using spark bulkload \n");
-                    // gen-hfile
-                    HBaseDirectLoader directLoader = new HBaseDirectLoader(loadOptions, struct,
-                                                                           loadDistributeMetrics);
-                    directLoader.bulkload(ds);
+                    } else {
+                        LOG.info("\n Start to load data using spark bulkload \n");
+                        // gen-hfile
+                        HBaseDirectLoader directLoader = new HBaseDirectLoader(loadOptions, struct,
+                                                                               loadDistributeMetrics);
+                        directLoader.bulkload(ds);
 
-                }
-                collectLoadMetrics(loadDistributeMetrics, totalInsertSuccess);
-                LOG.info("\n Finished  load {}  data ", struct.input().asFileSource().path());
-            });
-            futures.add(future);
+                    }
+                    collectLoadMetrics(loadDistributeMetrics, totalInsertSuccess);
+                    LOG.info("\n Finished  load {}  data ", struct.input().asFileSource().path());
+                });
+                futures.add(future);
+            }
+            for (Future<?> future : futures) {
+                future.get();
+            }
+
+            Long totalInsertSuccessCnt = totalInsertSuccess.value();
+            LOG.info("\n ------------The data load task is complete-------------------\n" +
+                     "\n insertSuccessCnt:\t {} \n ---------------------------------------------\n",
+                     totalInsertSuccessCnt);
+        } finally {
+            this.executor.shutdownNow();
+            session.stop();
         }
-        for (Future<?> future : futures) {
-            future.get();
-        }
-
-        Long totalInsertSuccessCnt = totalInsertSuccess.value();
-        LOG.info("\n ------------The data load task is complete-------------------\n" +
-                 "\n insertSuccessCnt:\t {} \n ---------------------------------------------\n",
-                 totalInsertSuccessCnt);
-
-        sc.stop();
-        session.close();
-        session.stop();
     }
 
     private void collectLoadMetrics(LoadDistributeMetrics loadMetrics,
@@ -195,25 +193,24 @@ public class HugeGraphSparkLoader implements Serializable {
         totalInsertSuccess.add(vertexInsertSuccess);
     }
 
-    private LoadContext initPartition(
-            LoadOptions loadOptions, InputStruct struct) {
-        LoadContext context = new LoadContext(loadOptions);
+    private static void initPartition(LoadContext context, InputStruct struct,
+                                      Map<ElementBuilder, List<GraphElement>> builders) {
+        context.updateSchemaCache();
         for (VertexMapping vertexMapping : struct.vertices()) {
-            this.builders.put(new VertexBuilder(context, struct, vertexMapping),
+            builders.put(new VertexBuilder(context, struct, vertexMapping),
                               new ArrayList<>());
         }
         for (EdgeMapping edgeMapping : struct.edges()) {
-            this.builders.put(new EdgeBuilder(context, struct, edgeMapping),
+            builders.put(new EdgeBuilder(context, struct, edgeMapping),
                               new ArrayList<>());
         }
-        context.updateSchemaCache();
-        return context;
     }
 
-    private void loadRow(InputStruct struct, Row row, Iterator<Row> p,
-                         LoadContext context) {
+    private static void loadRow(InputStruct struct, Row row, LoadContext context,
+                                Map<ElementBuilder, List<GraphElement>> builders,
+                                boolean checkVertex) {
         for (Map.Entry<ElementBuilder, List<GraphElement>> builderMap :
-                this.builders.entrySet()) {
+                builders.entrySet()) {
             ElementMapping elementMapping = builderMap.getKey().mapping();
             // Parse
             if (elementMapping.skip()) {
@@ -223,11 +220,7 @@ public class HugeGraphSparkLoader implements Serializable {
 
             // Insert
             List<GraphElement> graphElements = builderMap.getValue();
-            //if (graphElements.size() >= elementMapping.batchSize() ||
-            //    (!p.hasNext() && graphElements.size() > 0)) {
-            //    flush(builderMap, context.client().graph(), this.loadOptions.checkVertex);
-            //}
-            flush(builderMap, context.client().graph(), this.loadOptions.checkVertex);
+            flush(builderMap, context.client().graph(), checkVertex);
         }
     }
 
@@ -282,7 +275,7 @@ public class HugeGraphSparkLoader implements Serializable {
         return ds;
     }
 
-    private void parse(Row row, Map.Entry<ElementBuilder, List<GraphElement>> builderMap,
+    private static void parse(Row row, Map.Entry<ElementBuilder, List<GraphElement>> builderMap,
                        InputStruct struct) {
         ElementBuilder builder = builderMap.getKey();
         List<GraphElement> graphElements = builderMap.getValue();
@@ -327,7 +320,7 @@ public class HugeGraphSparkLoader implements Serializable {
         graphElements.addAll(elements);
     }
 
-    private void flush(Map.Entry<ElementBuilder, List<GraphElement>> builderMap,
+    private static void flush(Map.Entry<ElementBuilder, List<GraphElement>> builderMap,
                        GraphManager g, boolean isCheckVertex) {
         ElementBuilder builder = builderMap.getKey();
         ElementMapping elementMapping = builder.mapping();
@@ -360,4 +353,32 @@ public class HugeGraphSparkLoader implements Serializable {
         }
         graphElements.clear();
     }
+
+    static final class PartitionWriter implements ForeachPartitionFunction<Row> {
+
+        private final String optionsJson;
+        private final String structJson;
+
+        PartitionWriter(LoadOptions options, InputStruct struct) {
+            // Spark uses Java serialization for closures, independently of its data serializer.
+            this.optionsJson = JsonUtil.toJson(options);
+            this.structJson = JsonUtil.toJson(struct);
+        }
+
+        @Override
+        public void call(Iterator<Row> rows) {
+            LoadOptions options = JsonUtil.fromJson(this.optionsJson, LoadOptions.class);
+            InputStruct struct = JsonUtil.fromJson(this.structJson, InputStruct.class);
+            Map<ElementBuilder, List<GraphElement>> builders = new HashMap<>();
+            LoadContext context = new LoadContext(options);
+            try {
+                initPartition(context, struct, builders);
+                rows.forEachRemaining(row -> loadRow(struct, row, context, builders,
+                                                     options.checkVertex));
+            } finally {
+                context.close();
+            }
+        }
+    }
+
 }

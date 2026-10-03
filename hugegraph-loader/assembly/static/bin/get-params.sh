@@ -17,40 +17,60 @@
 #
 
 function get_params() {
-  echo "params: $*"
-  ENGINE_PARAMS=""
-  HUGEGRAPH_PARAMS=""
+  ENGINE_ARGS=()
+  HUGEGRAPH_ARGS=()
+  local file="" mode=""
   while (("$#")); do
     case "$1" in
-      --graph | --schema | --host | --port | --username | --token | --protocol | \
+      -g | --graph | -s | --schema | -h | -i | --host | -p | --port | --username | --password | --token | --protocol | \
+      --pd-peers | --pd-token | --meta-endpoints | --route-type | --cluster | --graphspace | \
       --trust-store-file | --trust-store-password | --clear-all-data | --clear-timeout | \
       --incremental-mode | --failure-mode | --batch-insert-threads | --single-insert-threads | \
       --max-conn | --max-conn-per-route | --batch-size | --max-parse-errors | --max-insert-errors | \
       --timeout | --shutdown-timeout | --retry-times | --retry-interval | --check-vertex | \
-      --print-progress | --dry-run | --sink-type | --vertex-partitions | --edge-partitions | --help )
-        HUGEGRAPH_PARAMS="$HUGEGRAPH_PARAMS $1 $2"
+      --print-progress | --dry-run | --sink-type | --vertex-partitions | --edge-partitions | \
+      --vertex-table-name | --edge-table-name | --hbase-zk-quorum | --hbase-zk-port | --hbase-zk-parent)
+        if (( $# < 2 )); then
+          echo "Missing value for $1" >&2
+          return 2
+        fi
+        HUGEGRAPH_ARGS+=("$1" "$2")
         shift 2
         ;;
-      --file)
-        file=$2
+      -help | --help)
+        HUGEGRAPH_ARGS+=("$1")
+        shift
+        ;;
+      -f | --file | --deploy-mode)
+        if (( $# < 2 )); then
+          echo "Missing value for $1" >&2
+          return 2
+        fi
+        if [ "$1" = '--file' ] || [ "$1" = '-f' ]; then
+          file=$2
+        else
+          mode=$2
+          ENGINE_ARGS+=("$1" "$2")
+        fi
         shift 2
         ;;
-      --deploy-mode)
-        mode=$2
-        ENGINE_PARAMS="$ENGINE_PARAMS $1 $2"
-        shift 2
-        ;;
-      *) # preserve positional arguments
-        ENGINE_PARAMS="$ENGINE_PARAMS $1"
+      *)
+        ENGINE_ARGS+=("$1")
         shift
         ;;
     esac
   done
 
-  if [ "$mode" = 'cluster' ];then
-    HUGEGRAPH_PARAMS="$HUGEGRAPH_PARAMS --file ${file##*/}"
-    ENGINE_PARAMS="$ENGINE_PARAMS --files ${file}"
-  else
-    HUGEGRAPH_PARAMS="$HUGEGRAPH_PARAMS --file ${file}"
+  if [ -n "$file" ]; then
+    if [ "$mode" = 'cluster' ]; then
+      HUGEGRAPH_ARGS+=(--file "${file##*/}")
+      ENGINE_ARGS+=(--files "$file")
+    else
+      HUGEGRAPH_ARGS+=(--file "$file")
+    fi
   fi
+
+  # Retain the existing string interface for other engine launchers.
+  ENGINE_PARAMS="${ENGINE_ARGS[*]}"
+  HUGEGRAPH_PARAMS="${HUGEGRAPH_ARGS[*]}"
 }

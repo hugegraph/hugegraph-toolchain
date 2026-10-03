@@ -119,6 +119,9 @@ docker exec -it loader bin/hugegraph-loader.sh -g hugegraph -f example/file/stru
 
 ## 4. Doc
 
+For Spark execution, see [Spark Loader on Java 17](docs/spark-java17.md) for the
+tested engine version, launcher usage, and the separate HBase bulkload boundary.
+
 The [loader homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-loader/) contains more information about it. 
 
 ## 5. License

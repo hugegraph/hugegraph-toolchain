@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+
+class SparkLauncherTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="spark launcher ")
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name)
+        self.app = root / "loader package"
+        self.lib = self.app / "lib"
+        self.lib.mkdir(parents=True)
+        (self.app / "bin").mkdir()
+        source = Path(__file__).resolve().parents[3] / "assembly/static/bin"
+        for name in ("get-params.sh", "hugegraph-spark-loader.sh"):
+            shutil.copyfile(source / name, self.app / "bin" / name)
+        self.shaded = self.lib / "apache-hugegraph-loader-test-shaded.jar"
+        for path in (self.shaded, self.lib / "hugegraph-loader-test.jar",
+                     self.lib / "dependency one.jar"):
+            path.touch()
+        self.spark = root / "spark home"
+        (self.spark / "bin").mkdir(parents=True)
+        submit = self.spark / "bin/spark-submit"
+        submit.write_text("#!/usr/bin/env python3\nimport json, os, sys\n"
+                          "with open(os.environ['SPARK_ARGV_FILE'], 'w') as output:\n"
+                          "    json.dump(sys.argv[1:], output)\n")
+        submit.chmod(0o755)
+        self.argv = root / "argv.json"
+
+    def run_launcher(self, *args):
+        env = dict(os.environ, SPARK_HOME=str(self.spark), SPARK_ARGV_FILE=str(self.argv))
+        return subprocess.run(["bash", str(self.app / "bin/hugegraph-spark-loader.sh"), *args],
+                              env=env, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=10)
+
+    def arguments(self):
+        return json.loads(self.argv.read_text())
+
+    def test_password_and_paths_preserve_boundaries_without_echo(self):
+        password = "not-a-real-secret with spaces"
+        mapping = str(self.app / "mapping with spaces.json")
+        result = self.run_launcher("--master", "local[1]", "--file", mapping,
+                                   "--username", "test-user", "--password", password)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertNotIn(password, result.stdout + result.stderr)
+        args = self.arguments()
+        jar = args.index(str(self.shaded))
+        self.assertEqual(["--username", "test-user", "--password", password,
+                          "--file", mapping], args[jar + 1:])
+        self.assertNotIn(str(self.lib / "hugegraph-loader-test.jar"), args)
+        self.assertNotIn(str(self.lib / "dependency one.jar"), args)
+
+    def test_cluster_files_and_engine_parameters(self):
+        mapping = "/tmp/mapping directory/input.json"
+        result = self.run_launcher("--deploy-mode", "cluster", "--file", mapping,
+                                   "--conf", "spark.app.name=two words", "--master", "yarn",
+                                   "--jars", "/tmp/custom library.jar")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        jar = args.index(str(self.shaded))
+        self.assertIn("spark.app.name=two words", args[:jar])
+        self.assertEqual("/tmp/custom library.jar", args[args.index("--jars") + 1])
+        self.assertEqual(mapping, args[args.index("--files") + 1])
+        self.assertEqual(["--file", "input.json"], args[jar + 1:])
+
+    def test_hbase_parameters_are_application_arguments(self):
+        params = ["--hbase-zk-quorum", "localhost", "--hbase-zk-port", "2181",
+                  "--hbase-zk-parent", "/hbase", "--vertex-table-name", "graph:v",
+                  "--edge-table-name", "graph:e", "--sink-type", "false"]
+        result = self.run_launcher("--master", "local[1]", *params, "--file", "mapping.json")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(params + ["--file", "mapping.json"], args[args.index(str(self.shaded)) + 1:])
+
+    def test_routing_options_and_aliases_are_application_arguments(self):
+        params = ["--pd-peers", "localhost:8686", "--pd-token", "test-token",
+                  "--meta-endpoints", "localhost:2379", "--route-type", "pd",
+                  "--cluster", "test-cluster", "--graphspace", "test-space",
+                  "-g", "test-graph", "-s", "schema.json", "-h", "localhost", "-p", "8080"]
+        result = self.run_launcher("--master", "local[1]", *params, "-f", "mapping.json")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(params + ["--file", "mapping.json"], args[args.index(str(self.shaded)) + 1:])
+
+    def test_shared_legacy_string_outputs_remain_available(self):
+        result = subprocess.run(
+            ["bash", "-c", 'source "$1"; shift; get_params "$@"; '
+             'printf "%s\\n%s\\n" "$ENGINE_PARAMS" "$HUGEGRAPH_PARAMS"',
+             "bash", str(self.app / "bin/get-params.sh"), "--master", "local[1]",
+             "--file", "mapping.json", "--batch-size", "10"],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(["--master local[1]", "--batch-size 10 --file mapping.json"],
+                         result.stdout.splitlines())
+
+    def test_missing_value_fails_before_submit(self):
+        result = self.run_launcher("--password")
+        self.assertEqual(2, result.returncode)
+        self.assertIn("Missing value for --password", result.stderr)
+        self.assertFalse(self.argv.exists())
+
+    def test_help_does_not_consume_an_engine_parameter(self):
+        result = self.run_launcher("--help", "--master", "local[1]")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(["--help"], args[args.index(str(self.shaded)) + 1:])
+        self.assertEqual("local[1]", args[args.index("--master") + 1])
+
+
+if __name__ == "__main__":
+    unittest.main()
