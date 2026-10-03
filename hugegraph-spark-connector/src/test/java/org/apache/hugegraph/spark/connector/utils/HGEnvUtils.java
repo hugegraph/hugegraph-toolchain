@@ -17,6 +17,8 @@
 
 package org.apache.hugegraph.spark.connector.utils;
 
+import java.net.URI;
+
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.SchemaManager;
 
@@ -28,15 +30,23 @@ public class HGEnvUtils {
     public static final String DEFAULT_GRAPHSPACE = "DEFAULT";
     public static final String DEFAULT_URL = "http://" + DEFAULT_HOST + ":" + DEFAULT_PORT;
 
+    public static final String URL = System.getProperty("hugegraph.test.url", DEFAULT_URL);
+    public static final String GRAPH = System.getProperty("hugegraph.test.graph", DEFAULT_GRAPH);
+    public static final String HOST = URI.create(URL).getHost();
+    public static final String PORT = String.valueOf(URI.create(URL).getPort() == -1 ?
+                                                    (URI.create(URL).getScheme().equals("https") ? 443 : 80) :
+                                                    URI.create(URL).getPort());
+    public static final String PROTOCOL = URI.create(URL).getScheme();
+
     private static HugeClient hugeClient;
 
     public static void createEnv() {
 
         hugeClient =
-                HugeClient.builder(DEFAULT_URL, DEFAULT_GRAPH)
+                HugeClient.builder(URL, GRAPH)
                           .configUser("admin", "pa").build();
 
-        hugeClient.graphs().clearGraph(DEFAULT_GRAPH, "I'm sure to delete all data");
+        hugeClient.graphs().clearGraph(GRAPH, "I'm sure to delete all data");
 
         SchemaManager schema = hugeClient.schema();
 
