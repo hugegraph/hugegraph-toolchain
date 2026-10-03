@@ -256,7 +256,12 @@ marker. Databases without that marker or with another schema version are refused
 without initializing or modifying them. The marker is written only after the
 complete new schema initializes successfully.
 
-Metadata connections accept local `jdbc:h2:file:` and `jdbc:h2:mem:` URLs. Hikari
+Metadata connections accept local H2 file and memory URLs. The file prefix can
+be omitted, for example `jdbc:h2:./data/hubble-v2`. Encrypted files using
+`CIPHER=AES` retain their cipher setting during the read-only compatibility
+check; configure the H2 file and user passwords through the password property.
+Other URL settings are excluded from that probe so they cannot run SQL or change
+the database before validation. Hikari
 pool settings are applied before validating the final connection. Use the JDBC
 URL, username and password directly; alternative DataSource/JNDI factories and
 DataSource properties are unsupported. URLs containing `INIT` are refused so

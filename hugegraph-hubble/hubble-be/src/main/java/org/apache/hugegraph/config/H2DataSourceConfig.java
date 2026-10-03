@@ -51,7 +51,7 @@ public class H2DataSourceConfig {
         Binder.get(environment).bind("spring.datasource.hikari", Bindable.ofInstance(dataSource));
         String url = dataSource.getJdbcUrl();
         if (url == null ||
-            !(url.startsWith("jdbc:h2:file:") || url.startsWith("jdbc:h2:mem:")) ||
+            !this.isEmbeddedUrl(url) ||
             !"org.h2.Driver".equals(dataSource.getDriverClassName()) ||
             dataSource.getDataSource() != null ||
             dataSource.getDataSourceClassName() != null ||
@@ -60,20 +60,47 @@ public class H2DataSourceConfig {
             throw new IllegalArgumentException("Hubble metadata requires H2 with a local file or memory URL; " +
                                                "configure the JDBC URL and credentials directly");
         }
-        for (String option : url.split(";")) {
-            if (option.substring(0, option.indexOf('=') < 0 ? option.length() : option.indexOf('='))
-                      .trim().toUpperCase(Locale.ROOT).equals("INIT")) {
-                throw new IllegalArgumentException("Hubble metadata URLs must not contain INIT");
-            }
-        }
-        this.checkExistingDatabase(dataSource);
+        this.checkExistingDatabase(dataSource, this.readOnlyProbeUrl(url));
         return dataSource;
     }
 
-    private void checkExistingDatabase(HikariDataSource dataSource) {
-        // Do not carry connection options into the probe: they can execute SQL or modify settings.
-        String url = dataSource.getJdbcUrl().split(";", 2)[0] +
-                     ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0";
+    private boolean isEmbeddedUrl(String url) {
+        if (!url.startsWith("jdbc:h2:")) {
+            return false;
+        }
+        String name = url.substring("jdbc:h2:".length()).split(";", 2)[0];
+        return !name.isEmpty() && (name.startsWith("file:") || name.startsWith("mem:") ||
+                name.indexOf(':') < 0 || name.startsWith("/") || name.startsWith("./") ||
+                name.startsWith("../") || name.startsWith("~/") ||
+                (name.length() > 2 && Character.isLetter(name.charAt(0)) && name.charAt(1) == ':' &&
+                 (name.charAt(2) == '/' || name.charAt(2) == '\\')));
+    }
+
+    private String readOnlyProbeUrl(String url) {
+        String[] parts = url.split(";");
+        StringBuilder probe = new StringBuilder(parts[0]);
+        for (int i = 1; i < parts.length; i++) {
+            String option = parts[i];
+            int equals = option.indexOf('=');
+            String name = option.substring(0, equals < 0 ? option.length() : equals).trim();
+            // H2 unescapes option names; do not allow an escaped INIT alias past this check.
+            if (name.indexOf('\\') >= 0 || name.toUpperCase(Locale.ROOT).equals("INIT")) {
+                throw new IllegalArgumentException("Hubble metadata URLs must not contain INIT " +
+                                                   "or escaped setting names");
+            }
+            if (name.toUpperCase(Locale.ROOT).equals("CIPHER") && equals >= 0) {
+                String cipher = option.substring(equals + 1);
+                if (!cipher.matches("[A-Za-z0-9]+")) {
+                    throw new IllegalArgumentException("Hubble metadata CIPHER must name a native cipher");
+                }
+                probe.append(";CIPHER=").append(cipher);
+            }
+        }
+        // Keep only the cipher needed to open an encrypted file. Never copy SQL/settings hooks.
+        return probe.append(";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0").toString();
+    }
+
+    private void checkExistingDatabase(HikariDataSource dataSource, String url) {
         try (Connection connection = DriverManager.getConnection(
                      url, dataSource.getUsername(), dataSource.getPassword());
              Statement statement = connection.createStatement();

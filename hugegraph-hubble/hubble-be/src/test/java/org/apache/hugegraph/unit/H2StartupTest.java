@@ -71,9 +71,25 @@ public class H2StartupTest {
 
     @Test
     public void testStartupAndRestartPreserveMetadata() throws Exception {
-        Path directory = Files.createTempDirectory("hubble-startup-");
-        ApplicationContextRunner runner = this.runner(
-                "jdbc:h2:file:" + directory.resolve("metadata"));
+        this.assertFreshDatabaseRestarts(false, false);
+    }
+
+    @Test
+    public void testShorthandFileDatabaseInitializesAndRestarts() throws Exception {
+        this.assertFreshDatabaseRestarts(true, false);
+    }
+
+    @Test
+    public void testEncryptedDatabaseInitializesAndRestarts() throws Exception {
+        this.assertFreshDatabaseRestarts(false, true);
+    }
+
+    private void assertFreshDatabaseRestarts(boolean shorthand, boolean encrypted) throws Exception {
+        Path directory = Files.createTempDirectory(Path.of("target"), "hubble-startup-");
+        String url = (shorthand ? "jdbc:h2:./" : "jdbc:h2:file:./") + directory.resolve("metadata") +
+                     (encrypted ? ";CIPHER=AES" : "");
+        ApplicationContextRunner runner = this.runner(url).withPropertyValues(
+                "spring.datasource.password=" + (encrypted ? "file-secret login-secret" : ""));
         try {
             runner.run(context -> {
                 Assert.assertNull(context.getStartupFailure());
@@ -115,16 +131,41 @@ public class H2StartupTest {
         this.assertLegacyDatabaseIsUnchanged(false, ";INIT=CREATE TABLE injected(id INT)");
     }
 
+    @Test
+    public void testInitIsRejectedBeforeOpeningNewDatabase() throws Exception {
+        for (String setting : new String[]{"INIT", "I\\NIT"}) {
+            Path directory = Files.createTempDirectory("hubble-init-rejection-");
+            try {
+                this.runner("jdbc:h2:file:" + directory.resolve("metadata") +
+                            ";" + setting + "=CREATE TABLE injected(id INT)").run(context -> {
+                                Assert.assertNotNull(context.getStartupFailure());
+                            });
+                try (Stream<Path> files = Files.list(directory)) {
+                    Assert.assertEquals("INIT rejection must not create database or trace files", 0L, files.count());
+                }
+            } finally {
+                Files.delete(directory);
+            }
+        }
+    }
+
     private void assertLegacyDatabaseIsUnchanged(boolean hikariOverride) throws Exception {
         this.assertLegacyDatabaseIsUnchanged(hikariOverride, "");
     }
 
+    @Test
+    public void testEncryptedLegacyDatabaseIsRejectedWithoutChanges() throws Exception {
+        this.assertLegacyDatabaseIsUnchanged(false, ";CIPHER=AES");
+    }
+
     private void assertLegacyDatabaseIsUnchanged(boolean hikariOverride, String options) throws Exception {
+        String cipher = options.contains("CIPHER=AES") ? ";CIPHER=AES" : "";
+        String password = cipher.isEmpty() ? "" : "file-secret login-secret";
         Path directory = Files.createTempDirectory("hubble-legacy-rejection-");
         String url = "jdbc:h2:file:" + directory.resolve("legacy");
         try {
             // A real existing H2 database with the old user_info shape and user data.
-            try (Connection connection = DriverManager.getConnection(url, "sa", "");
+            try (Connection connection = DriverManager.getConnection(url + cipher, "sa", password);
                  Statement statement = connection.createStatement()) {
                 statement.execute("CREATE TABLE user_info (id INT PRIMARY KEY, " +
                                   "username VARCHAR(48), locale VARCHAR(20))");
@@ -132,7 +173,8 @@ public class H2StartupTest {
             }
             byte[] before = Files.readAllBytes(directory.resolve("legacy.mv.db"));
             ApplicationContextRunner runner = this.runner(
-                    hikariOverride ? "jdbc:h2:mem:unused-legacy-override" : url + options);
+                    hikariOverride ? "jdbc:h2:mem:unused-legacy-override" : url + options)
+                    .withPropertyValues("spring.datasource.password=" + password);
             if (hikariOverride) {
                 runner = runner.withPropertyValues("spring.datasource.hikari.jdbc-url=" + url);
             }
@@ -142,7 +184,7 @@ public class H2StartupTest {
             Assert.assertArrayEquals("Rejected legacy database must not be rewritten", before, after);
             Assert.assertNotNull("Existing unmarked metadata must fail before initialization", failure.get());
             try (Connection connection = DriverManager.getConnection(
-                         url + ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0", "sa", "");
+                         url + cipher + ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0", "sa", password);
                  Statement statement = connection.createStatement()) {
                 try (java.sql.ResultSet result = statement.executeQuery(
                         "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'")) {
