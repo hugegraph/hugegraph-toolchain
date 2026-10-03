@@ -120,9 +120,12 @@ graph TB
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| JDK | 11+ | LTS recommended |
+| JDK | 17+ | Build and run the core tools with Java 17 |
 | Maven | 3.6.3+ | For building from source |
-| HugeGraph Server | 1.5.0+ | Required for client/loader |
+| HugeGraph Server | 1.7.0 or the locked Java 17 candidate | See the migration guide for Server 1.5 scope |
+
+For the Java 17 candidate SDK, upgrade procedure and compatibility boundary, see
+[the migration guide](docs/java17-migration.md).
 
 ### Choose Your Path
 

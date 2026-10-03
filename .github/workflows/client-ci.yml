@@ -10,25 +10,27 @@ on:
       - hugegraph-client/**
       - hugegraph-dist/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
   pull_request:
     paths:
       - hugegraph-client/**
       - hugegraph-dist/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
 
 jobs:
   client-ci:
     runs-on: ubuntu-latest
     env:
-      USE_STAGE: 'true' # Whether to include the stage repository.
+      USE_STAGE: 'false' # Whether to include the stage repository.
       TRAVIS_DIR: hugegraph-client/assembly/travis
     strategy:
       fail-fast: false
       matrix:
-        # released pd package is compiled in version 55.0, which requires java 11 to use
-        JAVA_VERSION: [ '11' ]
+        JAVA_VERSION: ['17']
+        SERVER_BASELINE: ['candidate', 'release-1.7']
 
     steps:
       - name: Fetch code
@@ -36,9 +38,14 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
-        id: get-commit
-        uses: ./.github/actions/get-hugegraph-commit
+      - name: Install released Server JVM
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        id: released-java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          overwrite-settings: false
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -47,13 +54,34 @@ jobs:
           distribution: 'zulu'
           use-stage: ${{ env.USE_STAGE }}
 
+      - name: Install locked candidate SDK
+        id: candidate-sdk
+        uses: ./.github/actions/setup-candidate-sdk
+
+      - name: Resolve released Server 1.7 fixture
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        id: get-commit
+        uses: ./.github/actions/get-hugegraph-commit
+        with:
+          ref: 'refs/tags/1.7.0'
+          expected-commit: 'b12425c2032bf0d21a97b8221f42a18055c2982f'
+
       - name: Setup HugeGraph server
+        if: matrix.SERVER_BASELINE == 'release-1.7'
         uses: ./.github/actions/setup-hugegraph-server
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
           commit-id: ${{ steps.get-commit.outputs.commit_id }}
           repository: ${{ steps.get-commit.outputs.repository }}
           fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
+          java-home: ${{ steps.released-java.outputs.path }}
+          isolate-maven-repo: 'true'
+
+      - name: Start candidate Server fixture
+        if: matrix.SERVER_BASELINE == 'candidate'
+        env:
+          CANDIDATE_ARCHIVE: ${{ steps.candidate-sdk.outputs.archive }}
+        run: bash hugegraph-client/assembly/travis/start-hugegraph-servers.sh "$CANDIDATE_ARCHIVE"
 
       - name: Compile
         run: |
@@ -61,7 +89,7 @@ jobs:
 
       - name: Run test
         run: |
-          cd hugegraph-client && ls *
+          cd hugegraph-client
           mvn test -Dtest=UnitTestSuite -ntp
           mvn test -Dtest=ApiTestSuite
           mvn test -Dtest=FuncTestSuite

@@ -279,10 +279,17 @@ copying a release directory that may contain local runtime data. The distributab
 archive is under `target/`; packaging no longer creates a redundant release copy
 under `hubble-dist/`.
 
-The Hubble CI runs this module on Java 17 and checks its released Server 1.7
-baseline on a separate Java 11 JVM. SDK dependencies remain the published 1.7
-artifacts; building the server package does not install candidate SDK artifacts.
-The shared build and Client compatibility changes are required before this module.
+The Hubble CI builds the toolchain on Java 17 and bootstraps the SDK artifacts
+from one pinned candidate Server commit. Its server fixture matrix uses that
+same candidate on Java 17 and released Server 1.7 on Java 11. Fixture source
+builds use a separate Maven repository and `package` rather than installing over
+the candidate SDK. Gremlin serializers come from the selected server archive's
+own configuration and are checked against its actual JAR classes, so the
+released 1.7 fixture retains its legacy serializers.
+
+The existing Java 17 package and browser evidence below belongs to the published
+1.7 SDK preparation. It does not establish candidate SDK or server acceptance;
+those runtime and browser checks must run after the candidate integration freezes.
 
 ## Java 17 UI validation
 

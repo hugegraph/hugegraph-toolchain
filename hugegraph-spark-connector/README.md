@@ -25,7 +25,7 @@ HugeGraph Spark Connector writes Spark DataFrames to HugeGraph through the Spark
 
 Required:
 
-- Java 11 or Java 17 (driver and every executor)
+- Java 17 (driver and every executor)
 - Spark 3.5.8 with Scala 2.12 (built with Scala 2.12.18)
 - Maven 3.6+
 
@@ -49,7 +49,11 @@ The default Spark master is `local[2]`; set `-Dspark.test.master=...` to test an
 Run applications with `spark-submit` from the matching Spark distribution. Spark supplies its
 SLF4J 2 provider and Java module options; the connector assembly does not bundle an SLF4J provider.
 The Maven test configuration supplies the module options for embedded Spark on Java 17.
-The connector continues to emit Java 8 bytecode.
+This candidate core cutover requires Java 17 for the connector and its Java Client/core dependencies.
+Unlike the earlier preparation stage, which supported Java 11 and Java 17, this build uses the
+parent's Java 17 release setting: Java classes use class-file major version 61. Scala 2.12.18 still
+emits major version 52 with its separate compiler target. The Scala output does not make the combined
+connector or its Java Client/core dependencies compatible with Java 11.
 
 Keep Spark's default class loading order for its logging classes. The Java Client needs
 `com.google.guava:guava:30.0-jre`; an older Guava from Spark can fail with a missing
