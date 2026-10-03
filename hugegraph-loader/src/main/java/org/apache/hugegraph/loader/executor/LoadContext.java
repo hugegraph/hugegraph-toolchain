@@ -212,9 +212,12 @@ public final class LoadContext implements Cloneable {
         }
         LOG.info("Write load progress successfully");
 
-        this.client.close();
+        try (HugeClient secondary = this.indirectClient != this.client ? this.indirectClient : null) {
+            this.client.close();
+        } finally {
+            this.closed = true;
+        }
         LOG.info("Close HugeClient successfully");
-        this.closed = true;
     }
 
     @Override
