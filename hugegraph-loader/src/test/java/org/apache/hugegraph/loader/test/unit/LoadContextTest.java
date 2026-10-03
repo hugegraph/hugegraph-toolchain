@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.HugeClientBuilder;
+import org.apache.hugegraph.loader.constant.ElemType;
 import org.apache.hugegraph.loader.executor.LoadContext;
 import org.apache.hugegraph.loader.executor.LoadOptions;
 import org.apache.hugegraph.loader.metrics.LoadSummary;
@@ -68,9 +69,25 @@ public class LoadContextTest {
             Assert.fail("Expected primary close failure");
         } catch (IllegalStateException expected) {
             Assert.assertEquals("Primary close failed", expected.getMessage());
+            Assert.assertEquals(0, expected.getSuppressed().length);
         }
-        Assert.assertEquals(1, client.closeCalls);
-        Assert.assertEquals(1, indirect.closeCalls);
+        assertClosedWithoutRetrying(context, client, indirect);
+    }
+
+    @Test
+    public void testCloseRemainsClosedWhenSecondaryCloseFails() throws Exception {
+        RecordingClient client = allocate(RecordingClient.class);
+        RecordingClient indirect = allocate(RecordingClient.class);
+        indirect.closeFailure = "Indirect close failed";
+        LoadContext context = this.context(client, indirect);
+        try {
+            context.close();
+            Assert.fail("Expected indirect close failure");
+        } catch (IllegalStateException expected) {
+            Assert.assertEquals("Indirect close failed", expected.getMessage());
+            Assert.assertEquals(0, expected.getSuppressed().length);
+        }
+        assertClosedWithoutRetrying(context, client, indirect);
     }
 
     @Test
@@ -88,8 +105,17 @@ public class LoadContextTest {
             Assert.assertEquals(1, expected.getSuppressed().length);
             Assert.assertEquals("Indirect close failed", expected.getSuppressed()[0].getMessage());
         }
+        assertClosedWithoutRetrying(context, client, indirect);
+    }
+
+    private static void assertClosedWithoutRetrying(LoadContext context, RecordingClient client,
+                                                  RecordingClient indirect) {
+        Assert.assertTrue(context.closed());
+        context.close();
         Assert.assertEquals(1, client.closeCalls);
         Assert.assertEquals(1, indirect.closeCalls);
+        Assert.assertEquals(2L, context.newProgress().vertexLoaded());
+        Assert.assertEquals(3L, context.newProgress().edgeLoaded());
     }
 
     private LoadContext context(HugeClient client, HugeClient indirect) throws Exception {
@@ -99,7 +125,10 @@ public class LoadContextTest {
         options.file = this.folder.newFile("mapping.json").getAbsolutePath();
         set(context, "timestamp", "test");
         set(context, "options", options);
-        set(context, "summary", new LoadSummary());
+        LoadSummary summary = new LoadSummary();
+        summary.plusLoaded(ElemType.VERTEX, 2);
+        summary.plusLoaded(ElemType.EDGE, 3);
+        set(context, "summary", summary);
         set(context, "newProgress", new LoadProgress());
         set(context, "loggers", new HashMap<>());
         set(context, "client", client);
