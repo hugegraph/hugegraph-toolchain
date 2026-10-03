@@ -29,6 +29,9 @@ bash "$SCRIPT_DIR/checkout-server.sh" "$1" hugegraph
 (cd hugegraph && mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp)
 if [[ "${2:-}" != "--build-only" ]]; then
     ARCHIVES=(hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
-    [[ ${#ARCHIVES[@]} -eq 1 && -f "${ARCHIVES[0]}" ]]
+    if [[ ${#ARCHIVES[@]} -ne 1 || ! -f "${ARCHIVES[0]}" ]]; then
+        printf 'Expected exactly one server archive, found: %s\n' "${ARCHIVES[*]}" >&2
+        exit 1
+    fi
     bash "$SCRIPT_DIR/start-hugegraph-servers.sh" "${ARCHIVES[0]}"
 fi
