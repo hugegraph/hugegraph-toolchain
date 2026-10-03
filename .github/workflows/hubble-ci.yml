@@ -113,6 +113,7 @@ jobs:
       - name: Test release archive isolation
         run: |
           python -m unittest discover -s "$TRAVIS_DIR" -p test_archive_hubble.py
+          python -m unittest discover -s "$TRAVIS_DIR" -p test_diagnose_hubble_servers.py
           bash -n "$TRAVIS_DIR/download-hugegraph.sh" "$TRAVIS_DIR/archive-hubble.sh"
 
       - name: Frontend i18n check
@@ -162,6 +163,11 @@ jobs:
           pwd
           "$TRAVIS_DIR/install-hugegraph.sh" "$COMMIT_ID" "$COMMIT_REF"
 
+      - name: Diagnose servers after startup
+        if: ${{ always() }}
+        continue-on-error: true
+        run: python "$TRAVIS_DIR/diagnose_hubble_servers.py" after-startup
+
       - name: Release package audit
         env:
           GNUPGHOME: ${{ runner.temp }}/hubble-release-gate-gpghome
@@ -194,8 +200,18 @@ jobs:
                --require-sidecars \
                --json-output hugegraph-hubble/target/hubble-dist-check.json
 
+      - name: Diagnose servers after package audit
+        if: ${{ always() }}
+        continue-on-error: true
+        run: python "$TRAVIS_DIR/diagnose_hubble_servers.py" after-audit
+
       - name: Unit test
         run: mvn test -P unit-test -pl hugegraph-hubble/hubble-be -ntp
+
+      - name: Diagnose servers after unit tests
+        if: ${{ always() }}
+        continue-on-error: true
+        run: python "$TRAVIS_DIR/diagnose_hubble_servers.py" after-unit
 
       - name: API test
         run: |
@@ -206,6 +222,11 @@ jobs:
           HUBBLE_694_EVIDENCE_DIR=target/hubble-live-acceptance \
             hubble-dist/assembly/travis/verify-hubble-issue-694.sh \
             "${HUBBLE_TARBALL}" http://127.0.0.1:8080
+
+      - name: Diagnose servers after API test
+        if: ${{ always() }}
+        continue-on-error: true
+        run: python "$TRAVIS_DIR/diagnose_hubble_servers.py" final
 
       - name: Upload Hubble smoke evidence
         if: ${{ always() }}

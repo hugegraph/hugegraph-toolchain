@@ -3520,21 +3520,21 @@ possession, or use, and re-export of encryption software, to see if this is
 permitted.
 
 ========================================================================
-org.apache.calcite.avatica:avatica-core:1.11.0 / META-INF/NOTICE
+org.apache.calcite.avatica:avatica-core:1.22.0 / META-INF/NOTICE
 ========================================================================
 
-Apache Calcite Avatica
-Copyright 2012-2018 The Apache Software Foundation
+Apache Calcite -- Avatica
+Copyright 2012-2022 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 
 ========================================================================
-org.apache.calcite.avatica:avatica-metrics:1.11.0 / META-INF/NOTICE
+org.apache.calcite.avatica:avatica-metrics:1.22.0 / META-INF/NOTICE
 ========================================================================
 
-Apache Calcite Avatica Metrics
-Copyright 2012-2018 The Apache Software Foundation
+Apache Calcite -- Avatica
+Copyright 2012-2022 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -4792,3 +4792,33 @@ This product may include a number of subcomponents with separate
 copyright notices and license terms. Your use of the source code for
 these subcomponents is subject to the terms and conditions of the
 subcomponent's license, as noted in the license.txt file.
+
+========================================================================
+org.apache.httpcomponents.client5:httpclient5:5.5.2 / META-INF/NOTICE
+========================================================================
+
+Apache HttpClient
+Copyright 1999-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+========================================================================
+org.apache.httpcomponents.core5:httpcore5-h2:5.3.6 / META-INF/NOTICE
+========================================================================
+
+Apache HttpComponents Core HTTP/2
+Copyright 2005-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+========================================================================
+org.apache.httpcomponents.core5:httpcore5:5.3.6 / META-INF/NOTICE
+========================================================================
+
+Apache HttpComponents Core HTTP/1.1
+Copyright 2005-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).

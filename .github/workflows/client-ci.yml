@@ -63,6 +63,8 @@ jobs:
       - name: Isolate candidate Maven artifacts
         run: |
           candidate_repo=$(mktemp -d "$RUNNER_TEMP/java17-candidate-m2.XXXXXX")
+          server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
+          printf 'SERVER_BUILD_DIR=%s\n' "$server_build" >> "$GITHUB_ENV"
           printf 'MAVEN_ARGS=-Dmaven.repo.local=%s\n' "$candidate_repo" >> "$GITHUB_ENV"
 
       - name: Install candidate dependencies for both server baselines
@@ -70,7 +72,10 @@ jobs:
           SERVER_COMMIT: ${{ steps.get-commit.outputs.commit_id }}
           SERVER_REPOSITORY: hugegraph/hugegraph
           SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
-        run: bash "$TRAVIS_DIR/install-hugegraph-from-source.sh" "$SERVER_COMMIT" --build-only
+        run: |
+          cd "$SERVER_BUILD_DIR"
+          bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-hugegraph-from-source.sh" \
+            "$SERVER_COMMIT" --build-only
 
       - name: Install legacy server JVM
         if: matrix.SERVER_BASELINE == 'release-1.7'
@@ -104,7 +109,7 @@ jobs:
       - name: Start candidate Server with Java 17
         if: matrix.SERVER_BASELINE == 'candidate'
         run: |
-          archives=(hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
+          archives=("$SERVER_BUILD_DIR"/hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
           [[ ${#archives[@]} -eq 1 && -f "${archives[0]}" ]]
           bash "$TRAVIS_DIR/start-hugegraph-servers.sh" "${archives[0]}"
 

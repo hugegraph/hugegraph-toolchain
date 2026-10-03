@@ -777,9 +777,9 @@ Javassist). Other bundled terms remain applicable as stated by the artifact.
         http://www.abego-software.de/legal/apl-v10.html
     (The BSD License) org.antlr:antlr4-runtime:4.9.1
         http://www.antlr.org/license.html
-    (Apache License, Version 2.0) org.apache.calcite.avatica:avatica-core:1.11.0
+    (Apache License, Version 2.0) org.apache.calcite.avatica:avatica-core:1.22.0
         Apache-2.0 text above
-    (Apache License, Version 2.0) org.apache.calcite.avatica:avatica-metrics:1.11.0
+    (Apache License, Version 2.0) org.apache.calcite.avatica:avatica-metrics:1.22.0
         Apache-2.0 text above
     (Apache-2.0) org.apache.commons:commons-configuration2:2.10.1
         Apache-2.0 text above
@@ -968,3 +968,9 @@ Javassist). Other bundled terms remain applicable as stated by the artifact.
     (Apache License, Version 2.0) org.springframework:spring-webmvc:6.2.19
         licenses/LICENSE-spring-core.txt
     (Apache License, Version 2.0) org.yaml:snakeyaml:2.4
+    (Apache License, Version 2.0) org.apache.httpcomponents.client5:httpclient5:5.5.2
+        Apache-2.0 text above
+    (Apache License, Version 2.0) org.apache.httpcomponents.core5:httpcore5-h2:5.3.6
+        Apache-2.0 text above
+    (Apache License, Version 2.0) org.apache.httpcomponents.core5:httpcore5:5.3.6
+        Apache-2.0 text above

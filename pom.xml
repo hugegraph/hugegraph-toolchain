@@ -597,6 +597,7 @@
                         <exclude>**/*.txt</exclude>
                         <exclude>**/.flattened-pom.xml</exclude>
                         <exclude>**/node_modules/**/*</exclude>
+                        <exclude>**/__pycache__/**</exclude>
                         <exclude>**/dist/**/*</exclude>
                         <exclude>**/.vinext/**/*</exclude>
                         <exclude>**/.wrangler/**/*</exclude>

@@ -80,16 +80,27 @@ See the [Hubble guide and UI evidence](../hugegraph-hubble/README.md#java-17-ui-
 
 This is the local validation snapshot for 2026-10-03, not a blanket support
 claim. “Candidate” means the pinned Java 17 server and its same-source Common/PD
-dependencies used by CI. Released Server 1.7 and 1.5 ran on Java 11.
+dependencies used by CI. The local Server 1.7 and 1.5 services were built from
+their official release tags and ran on Java 11; the separate 1.7 CI baseline
+downloads and verifies the published binary archive.
 
 | Area | Passed locally | Remaining validation |
 | --- | --- | --- |
-| Java Client | Unit tests; API, Cypher and functional suites against candidate and released 1.7; 1.5 graph/schema/data, batch, pagination, Unicode/type round trips, Gremlin and error parsing | Extended old-client and PD compatibility |
-| Loader | Unit tests; file and real HDFS suites against candidate and released 1.7 | JDBC/Kafka integration and actual Docker image gate |
-| Tools | Functional suites and local/HDFS ZIP/plain round trips against candidate and released 1.7; restore of old Tools backups | Final integrated CI |
+| Java Client | Unit tests; API, Cypher and functional suites against candidate and released 1.7; 1.5 graph/schema/data, batch, pagination, Unicode/type round trips, Gremlin and error parsing; candidate PD discovery and HStore CRUD | Candidate HStore Gremlin response handling after legacy requests is under investigation |
+| Loader | Unit tests; file and real HDFS suites against candidate and released 1.7; basic CSV/Groovy import against anonymous 1.5 with the updated Client | JDBC/Kafka integration and actual Docker image gate |
+| Tools | Functional suites and local/HDFS ZIP/plain round trips against candidate and released 1.7; restore of old Tools backups; label-scoped ZIP/plain data round trips against anonymous 1.5 with the updated Client | Final integrated CI |
 | Spark Connector | Spark 3.5/Scala 2.12 suite; real writes/readback against candidate with a separate Java 17 executor | Final packaged-artifact and integrated CI gates |
 | Hubble | Backend tests with the final same-source dependencies and default US-ASCII charset; frontend tests and production UI build; packaged standalone 1.5 anonymous navigation, graph/sample creation, schema/query views, and favorite retained after process restart | Final aligned-package 1.7/candidate UI flows, PD mode, and H2 persistence across Docker container recreation |
 | Packaging | Full reactor build, Checkstyle, rebuilt Hubble dependency alignment, dependency inventory check | Final-head CI and actual Loader/Hubble Docker builds |
+
+Original Client 1.5 on Java 8 and 1.7 on Java 11 were tested with their original
+dependencies against the candidate HStore server. Batch operations, pagination,
+numeric/boolean round trips and error parsing passed; Unicode was corrupted
+under the test JVMs' default US-ASCII charset. Their Gremlin probes also failed.
+New Client 1.8 preserved Unicode, but a later Gremlin request received a reference
+count error after legacy requests; that candidate-server issue remains under
+investigation. Original Client 1.7 also passed a separate PD-discovery/factory
+CRUD probe. Client 1.5 has no corresponding PD entry point.
 
 Spark Connector validation does not cover the separate Spark Loader or Flink CDC
 execution modes. Hubble's 1.5 screenshots were collected before the final

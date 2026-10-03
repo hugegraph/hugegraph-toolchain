@@ -27,4 +27,7 @@ runs:
         SERVER_REPOSITORY: ${{ inputs.repository }}
         SERVER_FETCH_REF: ${{ inputs.fetch-ref }}
       run: |
-        "${TRAVIS_SCRIPT_DIR}/install-hugegraph-from-source.sh" "$SERVER_COMMIT"
+        installer=$(realpath "${TRAVIS_SCRIPT_DIR}/install-hugegraph-from-source.sh")
+        server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
+        cd "$server_build"
+        bash "$installer" "$SERVER_COMMIT"

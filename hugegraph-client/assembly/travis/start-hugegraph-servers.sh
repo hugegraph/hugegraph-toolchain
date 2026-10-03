@@ -26,8 +26,21 @@ fi
 # JAVA_HOME belongs to the server process only; callers retain their client JVM.
 SERVER_ROOT=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/hugegraph-servers.XXXXXX")
 tar zxf "$1" -C "$SERVER_ROOT"
-SERVER_DIRS=("$SERVER_ROOT"/apache-hugegraph-*/)
-[[ ${#SERVER_DIRS[@]} -eq 1 && -d "${SERVER_DIRS[0]}" ]]
+# Candidate archives contain the server directly; official aggregate releases
+# put it one level below the distribution root, alongside PD and Store.
+SERVER_DIRS=()
+for dir in "$SERVER_ROOT"/apache-hugegraph-*/ "$SERVER_ROOT"/apache-hugegraph-*/*/; do
+    if [[ -f "$dir/conf/graphs/hugegraph.properties" &&
+          -f "$dir/conf/rest-server.properties" &&
+          -f "$dir/conf/gremlin-server.yaml" &&
+          -x "$dir/bin/init-store.sh" && -x "$dir/bin/start-hugegraph.sh" ]]; then
+        SERVER_DIRS+=("$dir")
+    fi
+done
+if [[ ${#SERVER_DIRS[@]} -ne 1 ]]; then
+    printf 'Expected exactly one runnable server distribution, found %s\n' "${#SERVER_DIRS[@]}" >&2
+    exit 1
+fi
 cp -r "${SERVER_DIRS[0]}" "$SERVER_ROOT/hugegraph_https"
 printf 'Server directories: %s\n' "$SERVER_ROOT"
 

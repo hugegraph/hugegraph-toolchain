@@ -59,9 +59,7 @@ test('build-only installs candidate dependencies without starting a server', t =
   assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
 });
 
-test('shared starter configures and launches HTTP/auth and HTTPS with caller JVM', t => {
-  const root = temp(t);
-  const fixture = join(root, 'apache-hugegraph-fixture');
+function serverFixture(fixture) {
   mkdirSync(join(fixture, 'conf/graphs'), { recursive: true });
   mkdirSync(join(fixture, 'bin'));
   writeFileSync(join(fixture, 'conf/graphs/hugegraph.properties'),
@@ -70,23 +68,76 @@ test('shared starter configures and launches HTTP/auth and HTTPS with caller JVM
     'restserver.url=http://127.0.0.1:8080\n#auth.authenticator=none\n#auth.admin_pa=none\n');
   writeFileSync(join(fixture, 'conf/gremlin-server.yaml'), '#port: 8182\n');
   writeFileSync(join(fixture, 'bin/init-store.sh'),
-    '#!/bin/bash\nread -r password\n[[ "$password" == pa ]]\n', { mode: 0o755 });
+    '#!/bin/bash\nread -r password\n[[ "$password" == pa ]]\nprintf "%s" "$JAVA_HOME" > initialized-with-jvm\n', { mode: 0o755 });
   writeFileSync(join(fixture, 'bin/start-hugegraph.sh'),
     '#!/bin/bash\nprintf "%s" "$JAVA_HOME" > started-with-jvm\n', { mode: 0o755 });
+}
+
+function runStarter(root, entries) {
   const archive = join(root, 'server.tar.gz');
-  execFileSync('tar', ['czf', archive, '-C', root, 'apache-hugegraph-fixture']);
+  execFileSync('tar', ['czf', archive, '-C', root, ...entries]);
   const result = spawnSync('bash', [join(__dirname, 'start-hugegraph-servers.sh'), archive],
     { env: { ...process.env, RUNNER_TEMP: root, JAVA_HOME: '/fixture/java11' }, encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr);
   const serverRoot = join(root, readdirSync(root).find(name => name.startsWith('hugegraph-servers.')));
-  for (const dir of ['apache-hugegraph-fixture', 'hugegraph_https']) {
-    const deployed = join(serverRoot, dir);
-    assert.equal(readFileSync(join(deployed, 'started-with-jvm'), 'utf8'), '/fixture/java11');
-    assert.match(readFileSync(join(deployed, 'conf/graphs/hugegraph.properties'), 'utf8'), /HugeFactoryAuthProxy/);
-    const rest = readFileSync(join(deployed, 'conf/rest-server.properties'), 'utf8');
-    assert.match(rest, /auth.authenticator=org.apache.hugegraph.auth.StandardAuthenticator/);
-    assert.match(rest, /auth.admin_pa=pa/);
-    assert.match(rest, dir === 'hugegraph_https' ? /https:\/\/127.0.0.1:8443/ : /http:\/\/127.0.0.1:8080/);
+  return { result, serverRoot };
+}
+
+for (const layout of [
+  { name: 'direct candidate', top: 'apache-hugegraph-fixture', server: 'apache-hugegraph-fixture' },
+  { name: 'official aggregate', top: 'apache-hugegraph-incubating-1.7.0',
+    server: 'apache-hugegraph-incubating-1.7.0/apache-hugegraph-server-incubating-1.7.0' }
+]) {
+  test(`shared starter launches ${layout.name} HTTP/auth and HTTPS with caller JVM`, t => {
+    const root = temp(t);
+    serverFixture(join(root, layout.server));
+    if (layout.server !== layout.top) {
+      // Sibling components in the real release are not server candidates.
+      mkdirSync(join(root, layout.top, 'apache-hugegraph-pd-incubating-1.7.0'));
+      mkdirSync(join(root, layout.top, 'apache-hugegraph-store-incubating-1.7.0'));
+    }
+    const { result, serverRoot } = runStarter(root, [layout.top]);
+    assert.equal(result.status, 0, result.stderr);
+    for (const dir of [layout.server, 'hugegraph_https']) {
+      const deployed = join(serverRoot, dir);
+      assert.equal(readFileSync(join(deployed, 'started-with-jvm'), 'utf8'), '/fixture/java11');
+      assert.equal(readFileSync(join(deployed, 'initialized-with-jvm'), 'utf8'), '/fixture/java11');
+      assert.match(readFileSync(join(deployed, 'conf/graphs/hugegraph.properties'), 'utf8'), /HugeFactoryAuthProxy/);
+      const rest = readFileSync(join(deployed, 'conf/rest-server.properties'), 'utf8');
+      assert.match(rest, /auth.authenticator=org.apache.hugegraph.auth.StandardAuthenticator/);
+      assert.match(rest, /auth.admin_pa=pa/);
+      assert.match(rest, /batch.max_vertices_per_batch=500/);
+      assert.match(rest, /batch.max_edges_per_batch=500/);
+      assert.match(rest, dir === 'hugegraph_https' ? /https:\/\/127.0.0.1:8443/ : /http:\/\/127.0.0.1:8080/);
+    }
+    assert.match(readFileSync(join(serverRoot, 'hugegraph_https/conf/gremlin-server.yaml'), 'utf8'), /^port: 8282/m);
+    assert.equal(existsSync(join(serverRoot, 'hugegraph_https/apache-hugegraph-pd-incubating-1.7.0')), false);
+  });
+}
+
+test('shared starter rejects multiple runnable server distributions before starting either', t => {
+  const root = temp(t);
+  const top = 'apache-hugegraph-ambiguous';
+  const paths = [top, `${top}/apache-hugegraph-server-nested`];
+  paths.forEach(path => serverFixture(join(root, path)));
+  const { result, serverRoot } = runStarter(root, [top]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Expected exactly one runnable server distribution, found 2/);
+  for (const path of paths) {
+    assert.equal(existsSync(join(serverRoot, path, 'initialized-with-jvm')), false);
+    assert.equal(existsSync(join(serverRoot, path, 'started-with-jvm')), false);
   }
-  assert.match(readFileSync(join(serverRoot, 'hugegraph_https/conf/gremlin-server.yaml'), 'utf8'), /^port: 8282/m);
+  assert.equal(existsSync(join(serverRoot, 'hugegraph_https')), false);
+});
+
+test('shared starter rejects an incomplete server before initialization', t => {
+  const root = temp(t);
+  const top = 'apache-hugegraph-incomplete';
+  serverFixture(join(root, top));
+  rmSync(join(root, top, 'conf/graphs/hugegraph.properties'));
+  const { result, serverRoot } = runStarter(root, [top]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Expected exactly one runnable server distribution, found 0/);
+  assert.equal(existsSync(join(serverRoot, top, 'initialized-with-jvm')), false);
+  assert.equal(existsSync(join(serverRoot, top, 'started-with-jvm')), false);
+  assert.equal(existsSync(join(serverRoot, 'hugegraph_https')), false);
 });

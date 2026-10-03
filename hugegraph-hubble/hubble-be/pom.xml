@@ -298,12 +298,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!-- The shaded Avatica bundle embeds SLF4J 1.x. Use the same
+        <!-- The shaded Avatica bundle embeds SLF4J 1.x. Use the patched
              unshaded implementation with Boot's managed logging API. -->
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
             <artifactId>avatica-core</artifactId>
-            <version>1.11.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
         <dependency>

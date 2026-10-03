@@ -63,6 +63,7 @@ import org.junit.runners.Suite;
     GraphMetricsControllerTest.class,
     HugeClientPoolServiceTest.class,
     H2StartupTest.class,
+    AvaticaRuntimeTest.class,
     GraphSpaceControllerTest.class,
     GraphSpaceAuthMutationAuthorizationTest.class,
     GraphSpaceAuthOwnershipTest.class,

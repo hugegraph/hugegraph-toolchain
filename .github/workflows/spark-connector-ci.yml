@@ -10,6 +10,7 @@ on:
       - hugegraph-spark-connector/**
       - hugegraph-dist/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - hugegraph-dist/**
       - hugegraph-client/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
 
 jobs:

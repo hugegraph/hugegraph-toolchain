@@ -48,6 +48,7 @@
         <kotlin.version>1.9.25</kotlin.version>
         <es.version>7.16.1</es.version>
         <caffeine.version>2.8.0</caffeine.version>
+        <avatica.version>1.22.0</avatica.version>
         <!-- Align inherited dependency management with the Boot 3 BOM. -->
         <jackson.version>2.21.4</jackson.version>
         <netty.version>4.1.135.Final</netty.version>
@@ -56,6 +57,17 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Avatica 1.22.0 fixes CVE-2022-36364; align backend and distribution. -->
+            <dependency>
+                <groupId>org.apache.calcite.avatica</groupId>
+                <artifactId>avatica-core</artifactId>
+                <version>${avatica.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite.avatica</groupId>
+                <artifactId>avatica-metrics</artifactId>
+                <version>${avatica.version}</version>
+            </dependency>
             <!-- Keep backend compilation and the distribution on the same supported clients. -->
             <dependency>
                 <groupId>org.elasticsearch.client</groupId>
