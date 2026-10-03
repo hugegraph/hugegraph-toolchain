@@ -17,7 +17,9 @@
 
 package org.apache.hugegraph.unit;
 
+import java.io.StringReader;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.hugegraph.api.graphs.GraphsAPI;
 import org.apache.hugegraph.client.RestClient;
@@ -25,10 +27,13 @@ import org.apache.hugegraph.driver.GraphsManager;
 import org.apache.hugegraph.rest.RestHeaders;
 import org.apache.hugegraph.rest.RestResult;
 import org.apache.hugegraph.testutil.Assert;
+import org.apache.hugegraph.util.JsonUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+
+import com.google.common.collect.ImmutableMap;
 
 public class GraphsAPITest extends BaseUnitTest {
 
@@ -40,6 +45,7 @@ public class GraphsAPITest extends BaseUnitTest {
         this.mockClient = Mockito.mock(RestClient.class);
         Mockito.when(this.mockClient.apiVersionLt(Mockito.anyString()))
                .thenReturn(false);
+        Mockito.when(this.mockClient.isSupportGs()).thenReturn(true);
         this.graphsAPI = new GraphsAPI(this.mockClient, "DEFAULT");
     }
 
@@ -107,6 +113,43 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertNotNull(capturedParams);
         Assert.assertEquals("source-graph",
                             capturedParams.get("clone_graph_name"));
+    }
+
+    @Test
+    public void testLegacyCreateConvertsJsonToProperties() throws Exception {
+        Mockito.when(this.mockClient.isSupportGs()).thenReturn(false);
+        RestResult result = Mockito.mock(RestResult.class);
+        ArgumentCaptor<Object> body = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<RestHeaders> headers = ArgumentCaptor.forClass(RestHeaders.class);
+        Mockito.when(this.mockClient.post(Mockito.anyString(), body.capture(),
+                                          headers.capture(), Mockito.isNull())).thenReturn(result);
+        this.graphsAPI.create("legacy", null, JsonUtil.toJson(
+                ImmutableMap.of("backend", "rocksdb", "path", "C:\\data\\graph", "note", "a=b\nnext")));
+        Assert.assertEquals("text/plain", headers.getValue().get(RestHeaders.CONTENT_TYPE));
+        Properties parsed = new Properties();
+        parsed.load(new StringReader((String) body.getValue()));
+        Assert.assertEquals("rocksdb", parsed.getProperty("backend"));
+        Assert.assertEquals("C:\\data\\graph", parsed.getProperty("path"));
+        Assert.assertEquals("a=b\nnext", parsed.getProperty("note"));
+    }
+
+    @Test
+    public void testLegacyPropertiesAndClonePreserveBody() {
+        Mockito.when(this.mockClient.isSupportGs()).thenReturn(false);
+        RestResult result = Mockito.mock(RestResult.class);
+        ArgumentCaptor<Object> body = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<RestHeaders> headers = ArgumentCaptor.forClass(RestHeaders.class);
+        ArgumentCaptor<Map> params = ArgumentCaptor.forClass(Map.class);
+        Mockito.when(this.mockClient.post(Mockito.anyString(), body.capture(),
+                                          headers.capture(), params.capture())).thenReturn(result);
+        String config = "backend=rocksdb\nstore=legacy\n";
+        this.graphsAPI.create("legacy", null, config);
+        Assert.assertEquals(config, body.getValue());
+        Assert.assertEquals("text/plain", headers.getValue().get(RestHeaders.CONTENT_TYPE));
+        this.graphsAPI.create("copy", "legacy", null);
+        Assert.assertNull(body.getValue());
+        Assert.assertEquals("legacy", params.getValue().get("clone_graph_name"));
+        Assert.assertEquals("text/plain", headers.getValue().get(RestHeaders.CONTENT_TYPE));
     }
 
     @Test
