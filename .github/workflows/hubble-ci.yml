@@ -47,6 +47,9 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
+      - name: Record released Server JDK
+        run: echo "SERVER_JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
@@ -149,7 +152,7 @@ jobs:
           ./stop-hubble.sh
           cd ../../../
           pwd
-          JAVA_HOME="$JAVA_HOME_11_X64" PATH="$JAVA_HOME_11_X64/bin:$PATH" \
+          JAVA_HOME="$SERVER_JAVA_HOME" PATH="$SERVER_JAVA_HOME/bin:$PATH" \
             "$TRAVIS_DIR/install-hugegraph.sh" "$COMMIT_ID" "$COMMIT_REF"
 
       - name: Archive preservation test
