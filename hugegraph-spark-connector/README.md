@@ -19,13 +19,14 @@ under the License.
 
 [![License](https://img.shields.io/badge/license-Apache%202-0E78BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 
-HugeGraph Spark Connector is a Spark connector application for reading and writing HugeGraph data in Spark standard format.
+HugeGraph Spark Connector writes Spark DataFrames to HugeGraph through the Spark DataSource API.
 
 ## Building
 
 Required:
 
-- Java 8+
+- Java 11 or Java 17 (driver and every executor)
+- Spark 3.5.8 with Scala 2.12 (built with Scala 2.12.18)
 - Maven 3.6+
 
 To build without executing tests:
@@ -37,8 +38,17 @@ mvn clean package -DskipTests
 To build with default tests:
 
 ```bash
-mvn clean packge
+mvn clean package
 ```
+
+The integration tests clear the configured graph before writing vertices and edges through Spark.
+Use a disposable server and graph. The defaults are `http://127.0.0.1:8080` and `hugegraph`;
+set `-Dhugegraph.test.url=... -Dhugegraph.test.graph=...` to select another target.
+The default Spark master is `local[2]`; set `-Dspark.test.master=...` to test another master.
+
+Run applications with `spark-submit` from the matching Spark distribution. Spark supplies its
+Java module options; the Maven test configuration supplies these options for embedded Spark on Java 17.
+The connector continues to emit Java 8 bytecode.
 
 ## How to use
 
