@@ -2782,10 +2782,10 @@ possession, or use, and re-export of encryption software, to see if this is
 permitted.
 
 ========================================================================
-org.apache.logging.log4j:log4j-slf4j2-impl:2.25.5 / META-INF/NOTICE
+Retained published baseline: org.apache.logging.log4j:log4j-api:2.25.5 / META-INF/NOTICE
 ========================================================================
 
-SLF4J 2 Provider for Log4j API
+Apache Log4j API
 Copyright 1999-2026 The Apache Software Foundation
 
 

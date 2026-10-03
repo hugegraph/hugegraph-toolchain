@@ -711,8 +711,6 @@ is used for Jakarta Activation and XML Binding APIs.
         licenses/LICENSE-jakarta.activation-api.txt
     (EDL-1.0) jakarta.xml.bind:jakarta.xml.bind-api:2.3.3
         licenses/LICENSE-jakarta.xml.bind-api.txt
-    (Apache-2.0) org.apache.logging.log4j:log4j-slf4j2-impl:2.25.5
-        Apache-2.0 terms above
     (Apache-2.0) org.javassist:javassist:3.30.2-GA
         Apache-2.0 terms above
     (MIT) org.slf4j:slf4j-api:2.0.7
