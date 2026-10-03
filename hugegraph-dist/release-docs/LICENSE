@@ -687,8 +687,6 @@ https://github.com/h2database/h2database/tree/version-2.3.232
         Apache-2.0 terms above
     (Apache-2.0) info.picocli:picocli:4.3.2
         Apache-2.0 terms above
-    (Apache-2.0) io.grpc:grpc-core:1.39.0
-        Apache-2.0 terms above
     (Apache-2.0) io.micrometer:micrometer-commons:1.15.12
         licenses/LICENSE-spring-boot-actuator-autoconfigure.txt
     (Apache-2.0) io.micrometer:micrometer-observation:1.15.12
@@ -934,4 +932,14 @@ https://github.com/h2database/h2database/tree/version-2.3.232
     (Apache-2.0) org.springframework:spring-webmvc:6.2.19
         licenses/LICENSE-hubble-java17-third-party.txt
     (Apache-2.0) org.yaml:snakeyaml:2.4
+        Apache-2.0 terms above
+
+========================================================================
+Retained published baseline license coverage
+========================================================================
+
+This version was already present in the original published runtime classpaths.
+Its Apache-2.0 terms are reproduced at the beginning of this LICENSE.
+
+    (Apache-2.0) io.grpc:grpc-core:1.39.0
         Apache-2.0 terms above
