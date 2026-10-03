@@ -988,7 +988,8 @@ represented as byte-identical Maven Central 1.7.0 artifacts.
     (MIT) io.cucumber:ci-environment:10.0.1
         licenses/LICENSE-java17-candidate-sdk.txt
     (MIT) io.cucumber:cucumber-core:7.21.1
-        Apache-2.0 terms above, licenses/LICENSE-java17-candidate-sdk.txt
+        Apache-2.0 terms above, licenses/LICENSE-java17-candidate-sdk.txt,
+        licenses/LICENSE-spark-java17-third-party.txt, licenses/LICENSE-hubble-java17-third-party.txt
     (MIT) io.cucumber:cucumber-expressions:18.0.1
         licenses/LICENSE-java17-candidate-sdk.txt
     (MIT) io.cucumber:cucumber-gherkin-messages:7.21.1

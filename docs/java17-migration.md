@@ -46,6 +46,12 @@ same explicit `-Dmaven.repo.local` option for subsequent Toolchain validation.
 The package command skips test execution; run the module test suites separately.
 These source-built packages are candidates, not an ASF release.
 
+The container changes are delivered separately in
+[PR #37](https://github.com/hugegraph/hugegraph-toolchain/pull/37).
+Apply that change with this cutover before building Loader or Hubble images. Both
+container build stages install and verify the locked SDK in an isolated Maven
+repository before packaging; their build and runtime JVMs use Java 17.
+
 ## Upgrade the core tools
 
 Keep the previous distribution, configuration, metadata and graph data.

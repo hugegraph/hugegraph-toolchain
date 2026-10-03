@@ -1051,3 +1051,37 @@ Redistribution and use in source and binary forms, with or without modification,
     * Neither the name of Esoteric Software nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+========================================================================
+Shared grants required by io.cucumber:cucumber-core:7.21.1
+Source: META-INF/FastDoubleParser-NOTICE in the resolved JAR
+========================================================================
+
+FastDoubleParser
+Copyright © 2024 Werner Randelshofer, Switzerland.
+MIT source identified by that NOTICE:
+https://github.com/wrandelshofer/FastDoubleParser/blob/522be16e145f43308c43b23094e31d5efcaa580e/LICENSE
+
+The complete MIT grant, including its original copyright statement, is
+reproduced verbatim in licenses/LICENSE-spark-java17-third-party.txt under
+"FastDoubleParser bundled in com.fasterxml.jackson.core:jackson-core:2.15.2".
+That section reproduces the same pinned source required by Cucumber's NOTICE;
+it also applies to this Cucumber-bundled copy. The 2024 copyright attribution
+above is preserved from Cucumber's own NOTICE.
+
+fast_double_parser
+Copyright (c) 2022 Daniel Lemire. BSL License.
+Boost source identified by that NOTICE:
+https://github.com/lemire/fast_double_parser/blob/07d9189a8fb815fe800cb15ca022e7a07093236e/LICENSE.BSL
+
+The complete Boost Software License 1.0 grant and its original copyright
+statement are reproduced verbatim in licenses/LICENSE-hubble-java17-third-party.txt
+under the source ending in the same 07d9189a8fb815fe800cb15ca022e7a07093236e/LICENSE.BSL.
+That identical grant also applies to the code derived from fast_double_parser
+in this Cucumber-bundled FastDoubleParser copy. The 2022 attribution above is
+preserved from Cucumber's own NOTICE.
+
+These shared full texts accompany this distribution and are referenced by
+Cucumber's entry in the main LICENSE. The fast_float MIT and bigint BSD terms
+already reproduced above remain applicable. The complete original
+FastDoubleParser-NOTICE is retained in the main distribution NOTICE.
