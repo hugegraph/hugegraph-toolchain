@@ -19,40 +19,84 @@
 function get_params() {
   ENGINE_ARGS=()
   HUGEGRAPH_ARGS=()
-  local file="" mode=""
+  local file="" mode="" option="" value="" file_set=false inline=false
   while (("$#")); do
-    case "$1" in
+    option=${1%%=*}
+    inline=false
+    if [[ "$1" == *=* ]]; then
+      inline=true
+      value=${1#*=}
+    fi
+    case "$option" in
       -g | --graph | -s | --schema | -h | -i | --host | -p | --port | --username | --password | --token | --protocol | \
-      --pd-peers | --pd-token | --meta-endpoints | --route-type | --cluster | --graphspace | \
+      --pd-peers | --pd-token | --meta-endpoints | --direct | --route-type | --cluster | --graphspace | --create-graph | \
       --trust-store-file | --trust-store-password | --clear-all-data | --clear-timeout | \
       --incremental-mode | --failure-mode | --batch-insert-threads | --single-insert-threads | \
-      --max-conn | --max-conn-per-route | --batch-size | --max-parse-errors | --max-insert-errors | \
+      --max-conn | --max-conn-per-route | --batch-size | --parallel-count | --parser-threads | \
+      --start-file | --end-file | --scatter-sources | --cdc-flush-interval | --cdc-sink-parallelism | \
+      --max-read-errors | --max-parse-errors | --max-insert-errors | --max-read-lines | \
       --timeout | --shutdown-timeout | --retry-times | --retry-interval | --check-vertex | \
-      --print-progress | --dry-run | --sink-type | --vertex-partitions | --edge-partitions | \
-      --vertex-table-name | --edge-table-name | --hbase-zk-quorum | --hbase-zk-port | --hbase-zk-parent)
-        if (( $# < 2 )); then
-          echo "Missing value for $1" >&2
-          return 2
+      --print-progress | --dry-run | --test-mode | --use-prefilter | --short-id | --vertex-edge-limit | \
+      --sink-type | --vertex-partitions | --edge-partitions | --vertex-table-name | --edge-table-name | \
+      --hbase-zk-quorum | --hbase-zk-port | --hbase-zk-parent | --restore | --backend | --serializer | \
+      --scheduler-type | --batch-failure-fallback)
+        # LoadOptions uses arity=1 even for booleans; ShortIdConfig lists also consume one value.
+        if [[ "$inline" == true ]]; then
+          shift
+        else
+          if (( $# < 2 )); then
+            echo "Missing value for $option" >&2
+            return 2
+          fi
+          value=$2
+          shift 2
         fi
-        HUGEGRAPH_ARGS+=("$1" "$2")
-        shift 2
+        HUGEGRAPH_ARGS+=("$option" "$value")
         ;;
       -help | --help)
-        HUGEGRAPH_ARGS+=("$1")
+        if [[ "$inline" == true ]]; then
+          echo "Option $option does not take a value" >&2
+          return 2
+        fi
+        HUGEGRAPH_ARGS+=("$option")
         shift
         ;;
       -f | --file | --deploy-mode)
-        if (( $# < 2 )); then
-          echo "Missing value for $1" >&2
-          return 2
-        fi
-        if [ "$1" = '--file' ] || [ "$1" = '-f' ]; then
-          file=$2
+        if [[ "$inline" == true ]]; then
+          shift
         else
-          mode=$2
-          ENGINE_ARGS+=("$1" "$2")
+          if (( $# < 2 )); then
+            echo "Missing value for $option" >&2
+            return 2
+          fi
+          value=$2
+          shift 2
         fi
-        shift 2
+        if [[ "$option" == '--file' || "$option" == '-f' ]]; then
+          file=$value
+          file_set=true
+        else
+          mode=$value
+          ENGINE_ARGS+=("$option" "$value")
+        fi
+        ;;
+      --archives | --class | --conf | -c | --driver-class-path | --driver-cores | --driver-java-options | \
+      --driver-library-path | --driver-memory | --executor-cores | --executor-memory | --files | --jars | \
+      --keytab | --kill | --master | --remote | --name | --num-executors | --packages | --exclude-packages | \
+      --principal | --properties-file | --proxy-user | --py-files | --queue | --repositories | --status | \
+      --total-executor-cores)
+        # Consume Spark's value with its option so Loader-looking values stay engine arguments.
+        if [[ "$inline" == true ]]; then
+          ENGINE_ARGS+=("$1")
+          shift
+        else
+          if (( $# < 2 )); then
+            echo "Missing value for $option" >&2
+            return 2
+          fi
+          ENGINE_ARGS+=("$1" "$2")
+          shift 2
+        fi
         ;;
       *)
         ENGINE_ARGS+=("$1")
@@ -61,7 +105,7 @@ function get_params() {
     esac
   done
 
-  if [ -n "$file" ]; then
+  if [[ "$file_set" == true ]]; then
     if [ "$mode" = 'cluster' ]; then
       HUGEGRAPH_ARGS+=(--file "${file##*/}")
       ENGINE_ARGS+=(--files "$file")

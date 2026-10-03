@@ -17,6 +17,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -56,6 +57,90 @@ class SparkLauncherTest(unittest.TestCase):
 
     def arguments(self):
         return json.loads(self.argv.read_text())
+
+    def load_option_parameters(self):
+        source = Path(__file__).resolve().parents[2] / "main/java/org/apache/hugegraph/loader/executor/LoadOptions.java"
+        text = source.read_text()
+        parameters = re.findall(r"@Parameter\((.*?)\)\s*public\s+([\w<>]+)\s+\w+", text, re.DOTALL)
+        self.assertEqual(text.count("@Parameter("), len(parameters))
+        self.assertNotIn("@ParametersDelegate", text)
+        self.assertNotRegex(text, r"class LoadOptions\s+extends")
+        for annotation, kind in parameters:
+            names = re.search(r'names\s*=\s*(\{[^}]*\}|"[^"]*")', annotation)
+            self.assertIsNotNone(names)
+            arity = re.search(r"arity\s*=\s*(\d+)", annotation)
+            count = int(arity.group(1)) if arity else (0 if kind in ("boolean", "Boolean") else 1)
+            self.assertNotIn("variableArity", annotation)
+            self.assertIn(count, (0, 1))
+            for name in re.findall(r'"([^"]+)"', names.group(1)):
+                yield name, count
+
+    def test_every_load_options_annotation_and_alias_routes_after_jar(self):
+        for name, arity in self.load_option_parameters():
+            with self.subTest(name=name):
+                values = ["value with spaces"] if arity else []
+                result = self.run_launcher("--master", "local[1]", name, *values)
+                self.assertEqual(0, result.returncode, result.stderr)
+                args = self.arguments()
+                expected_name = "--file" if name in ("-f", "--file") else name
+                self.assertEqual([expected_name] + values, args[args.index(str(self.shaded)) + 1:])
+                self.assertEqual("local[1]", args[args.index("--master") + 1])
+
+    def test_equals_forms_of_all_value_options_preserve_value_and_routing(self):
+        for name, arity in self.load_option_parameters():
+            if arity != 1:
+                continue
+            with self.subTest(name=name):
+                value = "value with spaces=second part"
+                result = self.run_launcher("--master", "local[1]", name + "=" + value)
+                self.assertEqual(0, result.returncode, result.stderr)
+                args = self.arguments()
+                expected_name = "--file" if name in ("-f", "--file") else name
+                self.assertEqual([expected_name, value], args[args.index(str(self.shaded)) + 1:])
+
+    def test_every_value_option_requires_its_annotated_argument(self):
+        for name, arity in self.load_option_parameters():
+            if arity != 1:
+                continue
+            with self.subTest(name=name):
+                result = self.run_launcher(name)
+                self.assertEqual(2, result.returncode)
+                self.assertIn("Missing value for " + name, result.stderr)
+                self.assertFalse(self.argv.exists())
+
+    def test_empty_equals_values_and_repeated_list_options_are_not_dropped(self):
+        result = self.run_launcher("--password=", "--short-id", "first,second",
+                                   "--short-id=third=fourth", "--file=")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(["--password", "", "--short-id", "first,second", "--short-id", "third=fourth",
+                          "--file", ""], args[args.index(str(self.shaded)) + 1:])
+
+    def test_engine_values_are_not_reclassified_as_loader_options(self):
+        engine = ["-c", "--create-graph=true", "--driver-java-options", "--direct=false",
+                  "--files", "--file=engine-owned.json", "--jars=/tmp/library with spaces.jar"]
+        result = self.run_launcher(*engine, "--deploy-mode=cluster", "--file=/tmp/input with spaces.json",
+                                   "--direct=false", "--batch-failure-fallback=true")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        jar = args.index(str(self.shaded))
+        self.assertEqual(engine + ["--deploy-mode", "cluster", "--files", "/tmp/input with spaces.json"],
+                         args[2:jar])
+        self.assertEqual(["--direct", "false", "--batch-failure-fallback", "true",
+                          "--file", "input with spaces.json"], args[jar + 1:])
+
+    def test_help_equals_value_is_rejected_without_echoing_value(self):
+        result = self.run_launcher("--help=not-a-real-secret")
+        self.assertEqual(2, result.returncode)
+        self.assertNotIn("not-a-real-secret", result.stdout + result.stderr)
+        self.assertFalse(self.argv.exists())
+
+    def test_recognized_engine_value_option_requires_an_argument(self):
+        for name in ("--conf", "-c", "--driver-memory"):
+            with self.subTest(name=name):
+                result = self.run_launcher(name)
+                self.assertEqual(2, result.returncode)
+                self.assertFalse(self.argv.exists())
 
     def test_password_and_paths_preserve_boundaries_without_echo(self):
         password = "not-a-real-secret with spaces"
