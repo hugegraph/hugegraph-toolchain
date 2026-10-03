@@ -33,7 +33,9 @@ object SinkExampleTest {
   var client: HugeClient = _
 
   val sparkSession: SparkSession = SparkSession.builder()
-    .master("local[*]")
+    .master(sys.props.getOrElse("spark.test.master", "local[2]"))
+    .config("spark.ui.enabled", "false")
+    .config("spark.sql.shuffle.partitions", "2")
     .appName(this.getClass.getSimpleName)
     .getOrCreate()
 
