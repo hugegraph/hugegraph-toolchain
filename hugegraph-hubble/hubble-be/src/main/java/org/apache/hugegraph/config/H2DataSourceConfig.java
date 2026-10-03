@@ -115,7 +115,7 @@ public class H2DataSourceConfig {
             }
             // Do not expose JDBC URLs, credentials or database contents in the failure.
         }
-        throw new IllegalArgumentException("Existing Hubble metadata cannot be used by this release; " +
-                                           "configure a new H2 database");
+        throw new IllegalArgumentException("Hubble metadata validation failed; verify database credentials " +
+                                           "and file access before choosing a new H2 database");
     }
 }

@@ -39,6 +39,7 @@ public class HGClientHolderTest {
         configs.put("data-type", "vertex");
         configs.put("label", "person");
         configs.put("id", "name");
+        configs.putAll(HGEnvUtils.tlsOptions());
         HGOptions options = new HGOptions(configs);
         HugeClient client = HGClientHolder.create(options);
         Assert.assertNotNull(client);

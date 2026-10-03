@@ -950,6 +950,8 @@ bundled in the Connector assembly. Required attribution notices are in the
 distribution NOTICE. Full bundled terms and copyright statements are in
 licenses/LICENSE-spark-java17-third-party.txt and the component files below.
 Apache-2.0 terms are reproduced at the beginning of this LICENSE.
+Jackson Core 2.15.2 also bundles FastDoubleParser under MIT; its complete
+copyright and grant are in licenses/LICENSE-spark-java17-third-party.txt.
 Javassist is distributed under its Apache-2.0 option; the EDL-1.0 option
 is used for Jakarta Activation and XML Binding APIs.
 
