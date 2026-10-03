@@ -180,3 +180,10 @@ CREATE TABLE IF NOT EXISTS `datasource` (
     `create_time` DATETIME(6) NOT NULL,
     PRIMARY KEY (`id`)
 );
+
+-- Written only after the complete new schema has initialized successfully.
+CREATE TABLE IF NOT EXISTS "PUBLIC"."HUBBLE_SCHEMA_VERSION" (
+    "ID" INT PRIMARY KEY CHECK ("ID" = 1),
+    "VERSION" INT NOT NULL
+);
+MERGE INTO "PUBLIC"."HUBBLE_SCHEMA_VERSION" ("ID", "VERSION") KEY ("ID") VALUES (1, 1);

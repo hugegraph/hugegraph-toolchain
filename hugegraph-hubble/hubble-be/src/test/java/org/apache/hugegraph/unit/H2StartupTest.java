@@ -20,6 +20,12 @@ package org.apache.hugegraph.unit;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
@@ -60,7 +66,7 @@ public class H2StartupTest {
                                     "spring.datasource.password=",
                                     "spring.sql.init.mode=always",
                                     "spring.sql.init.schema-locations=" +
-                                    "classpath:database/schema.sql");
+                                    "file:src/main/resources/database/schema.sql");
     }
 
     @Test
@@ -91,6 +97,123 @@ public class H2StartupTest {
             Files.deleteIfExists(directory.resolve("metadata.mv.db"));
             Files.deleteIfExists(directory.resolve("metadata.trace.db"));
             Files.delete(directory);
+        }
+    }
+
+    @Test
+    public void testExistingUnmarkedDatabaseIsRejectedWithoutChanges() throws Exception {
+        this.assertLegacyDatabaseIsUnchanged(false);
+    }
+
+    @Test
+    public void testHikariUrlOverrideCannotInitializeLegacyDatabase() throws Exception {
+        this.assertLegacyDatabaseIsUnchanged(true);
+    }
+
+    @Test
+    public void testUrlInitCannotTouchLegacyDatabase() throws Exception {
+        this.assertLegacyDatabaseIsUnchanged(false, ";INIT=CREATE TABLE injected(id INT)");
+    }
+
+    private void assertLegacyDatabaseIsUnchanged(boolean hikariOverride) throws Exception {
+        this.assertLegacyDatabaseIsUnchanged(hikariOverride, "");
+    }
+
+    private void assertLegacyDatabaseIsUnchanged(boolean hikariOverride, String options) throws Exception {
+        Path directory = Files.createTempDirectory("hubble-legacy-rejection-");
+        String url = "jdbc:h2:file:" + directory.resolve("legacy");
+        try {
+            // A real existing H2 database with the old user_info shape and user data.
+            try (Connection connection = DriverManager.getConnection(url, "sa", "");
+                 Statement statement = connection.createStatement()) {
+                statement.execute("CREATE TABLE user_info (id INT PRIMARY KEY, " +
+                                  "username VARCHAR(48), locale VARCHAR(20))");
+                statement.execute("INSERT INTO user_info VALUES (1, 'legacy-user', 'zh')");
+            }
+            byte[] before = Files.readAllBytes(directory.resolve("legacy.mv.db"));
+            ApplicationContextRunner runner = this.runner(
+                    hikariOverride ? "jdbc:h2:mem:unused-legacy-override" : url + options);
+            if (hikariOverride) {
+                runner = runner.withPropertyValues("spring.datasource.hikari.jdbc-url=" + url);
+            }
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            runner.run(context -> failure.set(context.getStartupFailure()));
+            byte[] after = Files.readAllBytes(directory.resolve("legacy.mv.db"));
+            Assert.assertArrayEquals("Rejected legacy database must not be rewritten", before, after);
+            Assert.assertNotNull("Existing unmarked metadata must fail before initialization", failure.get());
+            try (Connection connection = DriverManager.getConnection(
+                         url + ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0", "sa", "");
+                 Statement statement = connection.createStatement()) {
+                try (java.sql.ResultSet result = statement.executeQuery(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'")) {
+                    Assert.assertTrue(result.next());
+                    Assert.assertEquals(1, result.getInt(1));
+                }
+                try (java.sql.ResultSet result = statement.executeQuery(
+                        "SELECT username, locale FROM user_info WHERE id=1")) {
+                    Assert.assertTrue(result.next());
+                    Assert.assertEquals("legacy-user", result.getString(1));
+                    Assert.assertEquals("zh", result.getString(2));
+                }
+            }
+            Assert.assertArrayEquals(before, Files.readAllBytes(directory.resolve("legacy.mv.db")));
+            Assert.assertFalse(Files.exists(directory.resolve("legacy.trace.db")));
+        } finally {
+            try (Stream<Path> files = Files.walk(directory)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testFinalHikariConnectionAndPoolSettingsAreApplied() throws Exception {
+        Path directory = Files.createTempDirectory("hubble-hikari-final-");
+        String url = "jdbc:h2:file:" + directory.resolve("metadata");
+        try {
+            this.runner("jdbc:h2:mem:unused-hikari-final").withPropertyValues(
+                    "spring.datasource.hikari.jdbc-url=" + url,
+                    "spring.datasource.hikari.pool-name=validated-pool",
+                    "spring.datasource.hikari.minimum-idle=1",
+                    "spring.datasource.hikari.maximum-pool-size=2").run(context -> {
+                        Assert.assertNull(context.getStartupFailure());
+                        com.zaxxer.hikari.HikariDataSource pool = context.getBean(
+                                com.zaxxer.hikari.HikariDataSource.class);
+                        Assert.assertEquals(url, pool.getJdbcUrl());
+                        Assert.assertEquals("validated-pool", pool.getPoolName());
+                        Assert.assertEquals(1, pool.getMinimumIdle());
+                        Assert.assertEquals(2, pool.getMaximumPoolSize());
+                        Assert.assertEquals(Integer.valueOf(1), new JdbcTemplate(pool).queryForObject(
+                                "SELECT \"VERSION\" FROM \"PUBLIC\".\"HUBBLE_SCHEMA_VERSION\"", Integer.class));
+                    });
+        } finally {
+            try (Stream<Path> files = Files.walk(directory)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testAlternativeHikariConnectionFactoriesAreRejected() {
+        for (String override : new String[]{
+                "jdbc-url=jdbc:mysql://127.0.0.1:1/unused",
+                "driver-class-name=org.postgresql.Driver",
+                "data-source-class-name=org.h2.jdbcx.JdbcDataSource",
+                "data-source-j-n-d-i=java:comp/env/unused",
+                "data-source-properties.INIT=CREATE TABLE injected(id INT)"}) {
+            this.runner("jdbc:h2:mem:connection-factory-check").withPropertyValues(
+                    "spring.datasource.hikari." + override).run(context -> {
+                        Throwable failure = context.getStartupFailure();
+                        Assert.assertNotNull(override, failure);
+                        while (failure.getCause() != null) {
+                            failure = failure.getCause();
+                        }
+                        Assert.assertTrue(failure.getMessage(),
+                                          failure.getMessage().contains("Hubble metadata requires H2"));
+                    });
         }
     }
 

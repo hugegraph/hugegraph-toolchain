@@ -18,11 +18,20 @@
 
 package org.apache.hugegraph.config;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Locale;
+
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -30,16 +39,56 @@ import com.zaxxer.hikari.HikariDataSource;
 @EnableConfigurationProperties(DataSourceProperties.class)
 public class H2DataSourceConfig {
 
+    private static final int SCHEMA_VERSION = 1;
+    // H2's native IFEXISTS error: the database has not been created yet.
+    private static final int DATABASE_NOT_FOUND_WITH_IF_EXISTS = 90146;
+
     @Bean
-    @ConfigurationProperties("spring.datasource.hikari")
-    public HikariDataSource dataSource(DataSourceProperties properties) {
-        String url = properties.determineUrl();
-        if (!url.startsWith("jdbc:h2:") ||
-            !"org.h2.Driver".equals(properties.determineDriverClassName())) {
-            throw new IllegalArgumentException("Hubble metadata requires H2; " +
-                                               "configure a new H2 database");
+    public HikariDataSource dataSource(DataSourceProperties properties, Environment environment) {
+        HikariDataSource dataSource = properties.initializeDataSourceBuilder()
+                                               .type(HikariDataSource.class).build();
+        // Binding must finish before validation and before SQL initialization can get a connection.
+        Binder.get(environment).bind("spring.datasource.hikari", Bindable.ofInstance(dataSource));
+        String url = dataSource.getJdbcUrl();
+        if (url == null ||
+            !(url.startsWith("jdbc:h2:file:") || url.startsWith("jdbc:h2:mem:")) ||
+            !"org.h2.Driver".equals(dataSource.getDriverClassName()) ||
+            dataSource.getDataSource() != null ||
+            dataSource.getDataSourceClassName() != null ||
+            dataSource.getDataSourceJNDI() != null ||
+            !dataSource.getDataSourceProperties().isEmpty()) {
+            throw new IllegalArgumentException("Hubble metadata requires H2 with a local file or memory URL; " +
+                                               "configure the JDBC URL and credentials directly");
         }
-        return properties.initializeDataSourceBuilder()
-                         .type(HikariDataSource.class).build();
+        for (String option : url.split(";")) {
+            if (option.substring(0, option.indexOf('=') < 0 ? option.length() : option.indexOf('='))
+                      .trim().toUpperCase(Locale.ROOT).equals("INIT")) {
+                throw new IllegalArgumentException("Hubble metadata URLs must not contain INIT");
+            }
+        }
+        this.checkExistingDatabase(dataSource);
+        return dataSource;
+    }
+
+    private void checkExistingDatabase(HikariDataSource dataSource) {
+        // Do not carry connection options into the probe: they can execute SQL or modify settings.
+        String url = dataSource.getJdbcUrl().split(";", 2)[0] +
+                     ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0";
+        try (Connection connection = DriverManager.getConnection(
+                     url, dataSource.getUsername(), dataSource.getPassword());
+             Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery(
+                     "SELECT \"VERSION\" FROM \"PUBLIC\".\"HUBBLE_SCHEMA_VERSION\" WHERE \"ID\"=1")) {
+            if (result.next() && result.getInt(1) == SCHEMA_VERSION) {
+                return;
+            }
+        } catch (SQLException e) {
+            if (e.getErrorCode() == DATABASE_NOT_FOUND_WITH_IF_EXISTS) {
+                return;
+            }
+            // Do not expose JDBC URLs, credentials or database contents in the failure.
+        }
+        throw new IllegalArgumentException("Existing Hubble metadata cannot be used by this release; " +
+                                           "configure a new H2 database");
     }
 }

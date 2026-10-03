@@ -250,7 +250,17 @@ Start with a new H2 database when upgrading. Existing Hubble databases are not
 migrated, deleted or rewritten automatically. Keep the old database and its matching
 Hubble release together if you need to access old metadata; do not point the new
 release at the old database. A database-open error must be resolved by configuring
-a new database path, not by deleting the old files.
+a new database path, not by deleting the old files. Before SQL initialization,
+Hubble opens an existing local database read-only and checks the release schema
+marker. Databases without that marker or with another schema version are refused
+without initializing or modifying them. The marker is written only after the
+complete new schema initializes successfully.
+
+Metadata connections accept local `jdbc:h2:file:` and `jdbc:h2:mem:` URLs. Hikari
+pool settings are applied before validating the final connection. Use the JDBC
+URL, username and password directly; alternative DataSource/JNDI factories and
+DataSource properties are unsupported. URLs containing `INIT` are refused so
+connection creation cannot execute SQL before the compatibility check.
 
 The packaged startup script opens `java.base/java.net` to the embedded Loader's
 Hive ORC reader, whose URI interning still uses reflection. Custom Java launch
