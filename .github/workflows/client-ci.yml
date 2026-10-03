@@ -10,12 +10,14 @@ on:
       - hugegraph-client/**
       - hugegraph-dist/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
   pull_request:
     paths:
       - hugegraph-client/**
       - hugegraph-dist/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
 
 jobs:
@@ -27,8 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # released pd package is compiled in version 55.0, which requires java 11 to use
-        JAVA_VERSION: [ '11' ]
+        JAVA_VERSION: [ '17' ]
 
     steps:
       - name: Fetch code
@@ -36,9 +37,20 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
+      - name: Test server baseline resolver
+        run: |
+          node --test .github/actions/get-hugegraph-commit/resolve.test.cjs \
+            hugegraph-client/assembly/travis/checkout-server.test.cjs
+          bash -n hugegraph-client/assembly/travis/checkout-server.sh \
+            hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
+
+      - name: Resolve locked Java 17 server baseline
         id: get-commit
         uses: ./.github/actions/get-hugegraph-commit
+        with:
+          repository: hugegraph/hugegraph
+          ref: codex/cypher-minimal-compat
+          expected-commit: 4fa9413b139060649cc136aea116ec3261a8a05a
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -47,11 +59,18 @@ jobs:
           distribution: 'zulu'
           use-stage: ${{ env.USE_STAGE }}
 
+      - name: Isolate candidate Maven artifacts
+        run: |
+          candidate_repo=$(mktemp -d "$RUNNER_TEMP/java17-candidate-m2.XXXXXX")
+          printf 'MAVEN_ARGS=-Dmaven.repo.local=%s\n' "$candidate_repo" >> "$GITHUB_ENV"
+
       - name: Setup HugeGraph server
         uses: ./.github/actions/setup-hugegraph-server
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
           commit-id: ${{ steps.get-commit.outputs.commit_id }}
+          repository: hugegraph/hugegraph
+          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
 
       - name: Compile
         run: |
@@ -59,7 +78,7 @@ jobs:
 
       - name: Run test
         run: |
-          cd hugegraph-client && ls *
+          cd hugegraph-client
           mvn test -Dtest=UnitTestSuite -ntp
           mvn test -Dtest=ApiTestSuite
           mvn test -Dtest=FuncTestSuite

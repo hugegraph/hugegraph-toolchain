@@ -19,5 +19,16 @@ hugegraph-client is a Java-written client of [HugeGraph](https://github.com/huge
 
 The [client homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-client/) contains more information about it.
 
+## Java runtime
+
+Starting with 1.8, building and running the Java client requires Java 17 or later.
+Applications that upgrade the client dependency must also upgrade their JVM; compiling
+the application with a lower `target` does not make the client or its dependencies
+loadable on Java 8 or 11.
+
+The server and application do not need to run the same Java version to communicate
+over REST. Applications that retain an older client must verify its API, authentication
+and response compatibility with their chosen server version independently.
+
 ## Licence
 The same as HugeGraph, hugegraph-client is also licensed under Apache 2.0 License.

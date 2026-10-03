@@ -15,29 +15,28 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-set -ev
+set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
     echo "Must input an existing commit id of hugegraph server" && exit 1
 fi
 
-COMMIT_ID=$1
-HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
-
-git clone --depth 150 ${HUGEGRAPH_GIT_URL} hugegraph
+bash "$(dirname "$0")/checkout-server.sh" "$1" hugegraph
 cd hugegraph
-git checkout "${COMMIT_ID}"
-mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp
+# Install the complete same-source reactor, including Common and PD client/gRPC.
+# The calling CI supplies an isolated Maven repository via MAVEN_ARGS.
+mvn install -DskipTests -Dmaven.javadoc.skip=true -ntp
 cd hugegraph-server
 mv apache-hugegraph-*.tar.gz ../../
 cd ../../
-rm -rf hugegraph
 tar zxf apache-hugegraph-*.tar.gz
 
 HTTPS_SERVER_DIR="hugegraph_https"
 mkdir ${HTTPS_SERVER_DIR}
 cp -r apache-hugegraph-*/. ${HTTPS_SERVER_DIR}
-cd "$(find apache-hugegraph-* | head -1)"
+SERVER_DIRS=(apache-hugegraph-*/)
+[[ ${#SERVER_DIRS[@]} -eq 1 && -d "${SERVER_DIRS[0]}" ]]
+cd "${SERVER_DIRS[0]}"
 # start HugeGraphServer with http protocol
 sed -i 's|gremlin.graph=org.apache.hugegraph.HugeFactory|gremlin.graph=org.apache.hugegraph.auth.HugeFactoryAuthProxy|' conf/graphs/hugegraph.properties
 sed -i 's|#auth.authenticator=.*|auth.authenticator=org.apache.hugegraph.auth.StandardAuthenticator|' conf/rest-server.properties

@@ -120,7 +120,7 @@ graph TB
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| JDK | 11+ | LTS recommended |
+| JDK | 17+ | Required for the 1.8 Java client and tools |
 | Maven | 3.6+ | For building from source |
 | HugeGraph Server | 1.5.0+ | Required for client/loader |
 
