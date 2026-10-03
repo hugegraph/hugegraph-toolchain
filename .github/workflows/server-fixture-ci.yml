@@ -30,6 +30,7 @@ on:
       - .github/actions/setup-hugegraph-server/**
       - .github/workflows/server-fixture-ci.yml
       - hugegraph-client/assembly/travis/*server*
+      - hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-tools/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-spark-connector/assembly/travis/install-hugegraph-from-source.sh
@@ -39,6 +40,7 @@ on:
       - .github/actions/setup-hugegraph-server/**
       - .github/workflows/server-fixture-ci.yml
       - hugegraph-client/assembly/travis/*server*
+      - hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-tools/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-spark-connector/assembly/travis/install-hugegraph-from-source.sh
