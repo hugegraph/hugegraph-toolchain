@@ -101,6 +101,8 @@ public class HGEnvUtils {
         E.checkArgument(scheme.equals("http") || scheme.equals("https"),
                         "Test URL must have an HTTP or HTTPS scheme");
         E.checkArgument(uri.getHost() != null, "Test URL must have a host");
+        E.checkArgument(uri.getRawPath().isEmpty() || uri.getRawPath().equals("/"),
+                        "Test URL must use the server root without a path prefix");
         return URI.create(scheme + url.substring(uri.getScheme().length()));
     }
 
