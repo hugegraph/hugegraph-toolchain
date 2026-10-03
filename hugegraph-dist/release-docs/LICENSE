@@ -656,7 +656,7 @@ https://github.com/h2database/h2database/tree/version-2.3.232
     (Apache-2.0) com.fasterxml.jackson.core:jackson-annotations:2.21
         licenses/LICENSE-hive-shims.txt
     (Apache-2.0) com.fasterxml.jackson.core:jackson-core:2.21.4
-        licenses/LICENSE-hive-shims.txt
+        licenses/LICENSE-hive-shims.txt, licenses/LICENSE-hubble-java17-third-party.txt
     (Apache-2.0) com.fasterxml.jackson.core:jackson-databind:2.21.4
         licenses/LICENSE-hive-shims.txt
     (Apache-2.0) com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.4
