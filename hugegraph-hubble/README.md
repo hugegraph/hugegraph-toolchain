@@ -264,6 +264,11 @@ copying a release directory that may contain local runtime data. The distributab
 archive is under `target/`; packaging no longer creates a redundant release copy
 under `hubble-dist/`.
 
+The Hubble CI runs this module on Java 17 and checks its released Server 1.7
+baseline on a separate Java 11 JVM. SDK dependencies remain the published 1.7
+artifacts; building the server package does not install candidate SDK artifacts.
+The shared build and Client compatibility changes are required before this module.
+
 ## Java 17 UI validation
 
 The Java 17 Hubble UI was exercised against released Server 1.7 with authentication:

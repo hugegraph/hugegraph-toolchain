@@ -23,18 +23,16 @@ on:
 
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
-  HUGEGRAPH_SERVER_GIT_URL: https://github.com/apache/hugegraph.git
-  HUGEGRAPH_SERVER_BRANCH: master
 
 jobs:
   hubble-ci:
     runs-on: ubuntu-latest
     env:
-      USE_STAGE: 'true' # Whether to include the stage repository.
+      USE_STAGE: 'false' # Whether to include the stage repository.
       STATIC_DIR: hugegraph-hubble/hubble-dist/assembly/static
     strategy:
       matrix:
-        JAVA_VERSION: ['11']
+        JAVA_VERSION: ['17']
         python-version: ["3.11"]
 
     steps:
@@ -42,6 +40,12 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 2
+
+      - name: Install released Server JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: 'temurin'
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -87,22 +91,18 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
-      - name: Resolve HugeGraph Server revision
+      - name: Resolve released HugeGraph Server 1.7
         id: server-ref
-        run: |
-          SERVER_COMMIT="$(git ls-remote "$HUGEGRAPH_SERVER_GIT_URL" \
-            "refs/heads/$HUGEGRAPH_SERVER_BRANCH" | cut -f1)"
-          if [[ -z "$SERVER_COMMIT" ]]; then
-            echo "Unable to resolve HugeGraph Server branch" >&2
-            exit 1
-          fi
-          echo "commit=$SERVER_COMMIT" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/get-hugegraph-commit
+        with:
+          ref: 'refs/tags/1.7.0'
+          expected-commit: 'b12425c2032bf0d21a97b8221f42a18055c2982f'
 
       - name: Cache HugeGraph Server
         uses: actions/cache@v6
         with:
-          path: ~/hugegraph-cache-${{ steps.server-ref.outputs.commit }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.server-ref.outputs.commit }}
+          path: ~/hugegraph-cache-${{ steps.server-ref.outputs.commit_id }}
+          key: ${{ runner.os }}-hugegraph-server-${{ steps.server-ref.outputs.commit_id }}
 
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
@@ -127,8 +127,8 @@ jobs:
 
       - name: Prepare env and service
         env:
-          COMMIT_ID: ${{ steps.server-ref.outputs.commit }}
-          COMMIT_REF: ${{ steps.server-ref.outputs.commit }}
+          COMMIT_ID: ${{ steps.server-ref.outputs.commit_id }}
+          COMMIT_REF: ${{ steps.server-ref.outputs.fetch_ref }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="
@@ -149,7 +149,11 @@ jobs:
           ./stop-hubble.sh
           cd ../../../
           pwd
-          $TRAVIS_DIR/install-hugegraph.sh $COMMIT_ID $COMMIT_REF
+          JAVA_HOME="$JAVA_HOME_11_X64" PATH="$JAVA_HOME_11_X64/bin:$PATH" \
+            "$TRAVIS_DIR/install-hugegraph.sh" "$COMMIT_ID" "$COMMIT_REF"
+
+      - name: Archive preservation test
+        run: python3 "$TRAVIS_DIR/test_archive_hubble.py"
 
       - name: Release package audit
         env:
