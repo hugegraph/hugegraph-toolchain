@@ -132,6 +132,14 @@ for ((i = 1; i <= $#; i++)); do
     fi
 done
 
+# Reject unsupported runtimes before loading Java 17 classes.
+JAVA_VERSION=$("$JAVA" -version 2>&1 | awk -F '"' '/version/ {print $2; exit}')
+JAVA_MAJOR=${JAVA_VERSION%%.*}
+if [[ ! "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || (( JAVA_MAJOR < 17 )); then
+    echo "HugeGraph Tools requires Java 17 or later; check JAVA_HOME." >&2
+    exit 1
+fi
+
 # Set Java options
 if [ "$JAVA_OPTIONS" = "" ]; then
     XMX=$(calc_xmx $MIN_MEM $MAX_MEM)
@@ -149,6 +157,6 @@ for i in "$LIB"/*.jar; do
     export tools_ext_jar_path
 done
 
-exec $JAVA -Dtools.home.path=${TOP} $JAVA_OPTIONS -cp $tools_ext_jar_path \
+exec "$JAVA" -Dtools.home.path=${TOP} $JAVA_OPTIONS -cp $tools_ext_jar_path \
     org.apache.hugegraph.cmd.HugeGraphCommand $URL_ARG $GRAPH_ARG $USER_ARG $PASSWORD_ARG \
     $TIMEOUT_ARG $TRUST_STORE_FILE_ARG $TRUST_STORE_PASSWORD_ARG "$@"

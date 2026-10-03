@@ -9,7 +9,9 @@ on:
     paths:
       - hugegraph-tools/**
       - hugegraph-dist/**
+      - hugegraph-client/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
   pull_request:
     paths:
@@ -17,6 +19,7 @@ on:
       - hugegraph-dist/**
       - hugegraph-client/**
       - .github/workflows/**
+      - .github/actions/**
       - pom.xml
 
 jobs:
@@ -35,9 +38,13 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
+      - name: Resolve locked Java 17 server baseline
         id: get-commit
         uses: ./.github/actions/get-hugegraph-commit
+        with:
+          repository: hugegraph/hugegraph
+          ref: codex/cypher-minimal-compat
+          expected-commit: 59ad5374b4bf90ec3ee7aa133b830e66788b51ec
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -46,15 +53,22 @@ jobs:
           distribution: 'temurin'
           use-stage: ${{ env.USE_STAGE }}
 
-      - name: Compile
+      - name: Isolate candidate Maven artifacts
         run: |
-          mvn install -pl hugegraph-client,hugegraph-tools -am -Dmaven.javadoc.skip=true -DskipTests -ntp
+          candidate_repo=$(mktemp -d "$RUNNER_TEMP/java17-tools-m2.XXXXXX")
+          printf 'MAVEN_ARGS=-Dmaven.repo.local=%s\n' "$candidate_repo" >> "$GITHUB_ENV"
 
       - name: Setup HugeGraph server
         uses: ./.github/actions/setup-hugegraph-server
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
           commit-id: ${{ steps.get-commit.outputs.commit_id }}
+          repository: hugegraph/hugegraph
+          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
+
+      - name: Compile
+        run: |
+          mvn install -pl hugegraph-client,hugegraph-tools -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
       - name: Run test
         run: |
