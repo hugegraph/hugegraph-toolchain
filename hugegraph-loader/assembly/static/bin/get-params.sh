@@ -19,7 +19,7 @@
 function get_params() {
   ENGINE_ARGS=()
   HUGEGRAPH_ARGS=()
-  local file="" mode="" option="" value="" file_set=false inline=false
+  local file="" mode="" option="" value="" files="" file_set=false files_set=false inline=false
   while (("$#")); do
     option=${1%%=*}
     inline=false
@@ -80,8 +80,26 @@ function get_params() {
           ENGINE_ARGS+=("$option" "$value")
         fi
         ;;
+      --files)
+        if [[ "$inline" == true ]]; then
+          shift
+        else
+          if (( $# < 2 )); then
+            echo "Missing value for $option" >&2
+            return 2
+          fi
+          value=$2
+          shift 2
+        fi
+        if [[ -z "$files" ]]; then
+          files=$value
+        elif [[ -n "$value" ]]; then
+          files+=",$value"
+        fi
+        files_set=true
+        ;;
       --archives | --class | --conf | -c | --driver-class-path | --driver-cores | --driver-java-options | \
-      --driver-library-path | --driver-memory | --executor-cores | --executor-memory | --files | --jars | \
+      --driver-library-path | --driver-memory | --executor-cores | --executor-memory | --jars | \
       --keytab | --kill | --master | --remote | --name | --num-executors | --packages | --exclude-packages | \
       --principal | --properties-file | --proxy-user | --py-files | --queue | --repositories | --status | \
       --total-executor-cores)
@@ -108,10 +126,20 @@ function get_params() {
   if [[ "$file_set" == true ]]; then
     if [ "$mode" = 'cluster' ]; then
       HUGEGRAPH_ARGS+=(--file "${file##*/}")
-      ENGINE_ARGS+=(--files "$file")
+      if [[ -z "$files" ]]; then
+        files=$file
+      else
+        files+=",$file"
+      fi
+      files_set=true
     else
       HUGEGRAPH_ARGS+=(--file "$file")
     fi
+  fi
+
+  # Spark assigns --files on each occurrence, so emit one list containing every resource.
+  if [[ "$files_set" == true ]]; then
+    ENGINE_ARGS+=(--files "$files")
   fi
 
   # Retain the existing string interface for other engine launchers.

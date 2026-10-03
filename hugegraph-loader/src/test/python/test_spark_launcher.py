@@ -116,6 +116,40 @@ class SparkLauncherTest(unittest.TestCase):
         self.assertEqual(["--password", "", "--short-id", "first,second", "--short-id", "third=fourth",
                           "--file", ""], args[args.index(str(self.shaded)) + 1:])
 
+    def test_cluster_files_merge_preserves_all_resources_with_last_wins_parser(self):
+        caller = ["hdfs://namenode/data.csv#records", "/tmp/library directory/config.json",
+                  "s3a://bucket/settings.json#settings", "file:/tmp/more%20data.csv#more"]
+        mapping = "/tmp/mapping directory/input.json"
+        result = self.run_launcher("--files", caller[0] + "," + caller[1],
+                                   "--files=" + caller[2], "--files", caller[3],
+                                   "--deploy-mode", "cluster", "--master", "spark://example:7077",
+                                   "--file", mapping)
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        engine = args[:args.index(str(self.shaded))]
+        effective_files = None
+        occurrences = 0
+        # SparkSubmitArguments assigns files for each occurrence: the last value wins.
+        for index, value in enumerate(engine):
+            if value == "--files":
+                effective_files = engine[index + 1]
+                occurrences += 1
+            elif value.startswith("--files="):
+                effective_files = value.split("=", 1)[1]
+                occurrences += 1
+        self.assertEqual(caller + [mapping], effective_files.split(","))
+        self.assertEqual(1, occurrences)
+        self.assertEqual(["--file", "input.json"], args[args.index(str(self.shaded)) + 1:])
+
+    def test_client_mode_files_merge_does_not_ship_the_mapping(self):
+        result = self.run_launcher("--files=first.json#first", "--files", "second path.json#second",
+                                   "--file", "/tmp/local mapping.json")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        jar = args.index(str(self.shaded))
+        self.assertEqual(["--files", "first.json#first,second path.json#second"], args[2:jar])
+        self.assertEqual(["--file", "/tmp/local mapping.json"], args[jar + 1:])
+
     def test_engine_values_are_not_reclassified_as_loader_options(self):
         engine = ["-c", "--create-graph=true", "--driver-java-options", "--direct=false",
                   "--files", "--file=engine-owned.json", "--jars=/tmp/library with spaces.jar"]
@@ -124,8 +158,8 @@ class SparkLauncherTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         args = self.arguments()
         jar = args.index(str(self.shaded))
-        self.assertEqual(engine + ["--deploy-mode", "cluster", "--files", "/tmp/input with spaces.json"],
-                         args[2:jar])
+        self.assertEqual(engine[:4] + engine[6:] + ["--deploy-mode", "cluster", "--files",
+                         "--file=engine-owned.json,/tmp/input with spaces.json"], args[2:jar])
         self.assertEqual(["--direct", "false", "--batch-failure-fallback", "true",
                           "--file", "input with spaces.json"], args[jar + 1:])
 
