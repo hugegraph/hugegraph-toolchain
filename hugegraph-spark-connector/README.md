@@ -68,11 +68,14 @@ For example, after placing the JAR at `/opt/hugegraph-spark/lib/guava-30.0-jre.j
 
 ```bash
 EXECUTOR_GUAVA_JAR=/opt/hugegraph-spark/lib/guava-30.0-jre.jar
-spark-submit --driver-class-path "$DRIVER_GUAVA_JAR" \
+spark-submit --deploy-mode client --driver-class-path "$DRIVER_GUAVA_JAR" \
   --conf "spark.executor.extraClassPath=$EXECUTOR_GUAVA_JAR" \
   --jars /path/to/hugegraph-spark-connector-1.8.0-jar-with-dependencies.jar \
   /path/to/your-application.jar
 ```
+
+For cluster deploy mode, provision Guava on the remote driver and use its readable absolute path in
+`--driver-class-path`; copying it to executors does not provision the driver.
 
 Supply the class and application arguments required by your application. This setting gives the
 application's Guava priority on both sides; it changes the effective Guava classpath while keeping
