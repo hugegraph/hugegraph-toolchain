@@ -22,6 +22,7 @@
 
 import React, {useState, useCallback, useEffect, useContext, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
+import {useParams} from 'react-router-dom';
 import GraphAnalysisContext from '../../Context';
 import QueryBar from '../QueryBar/Home';
 import QueryResult from '../QueryResult/Home';
@@ -76,6 +77,10 @@ export const extractQueryErrorMessage = (error, fallback) => {
 const AnalysisHome = () => {
     const {t} = useTranslation();
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
+    const {graphSpace: routeGraphSpace, graph: routeGraph} = useParams();
+    const isGraphReady = Boolean(graphSpace && graph)
+        && (!routeGraphSpace || routeGraphSpace === graphSpace)
+        && (!routeGraph || routeGraph === graph);
     const cypherEnabled = isCypherEnabled();
     const [queryStatus, setQueryStatus] = useState(STANDBY);
     const [queryMessage, setQueryMessage] = useState();
@@ -455,7 +460,7 @@ const AnalysisHome = () => {
 
     const onExecute = useCallback(
         tabKey => {
-            if (tabKey !== GREMLIN && tabKey !== CYPHER) {
+            if (!isGraphReady || (tabKey !== GREMLIN && tabKey !== CYPHER)) {
                 return;
             }
             if (executionInFlight.current) {
@@ -473,7 +478,7 @@ const AnalysisHome = () => {
                 executionInFlight.current = false;
             });
         },
-        [executeMode, onExecuteQuery, onExecuteTask]
+        [executeMode, isGraphReady, onExecuteQuery, onExecuteTask]
     );
 
     useEffect(
@@ -569,6 +574,7 @@ const AnalysisHome = () => {
                 onExecute={onExecute}
                 onRefresh={onFavoriteRefresh}
                 isExecuting={queryStatus === LOADING}
+                isGraphReady={isGraphReady}
                 cypherEnabled={cypherEnabled}
             />
             {analysisMode !== TEXT2GQL && <QueryResult

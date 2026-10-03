@@ -114,6 +114,34 @@ const waitForInitialData = async () => {
     expect(await screen.findByText('graph counts 0 0')).toBeInTheDocument();
 };
 
+it.each([null, undefined])('waits for a graph before executing a query (%s)', async graph => {
+    api.analysis.getExecutionQuery.mockResolvedValue({status: 200, data: {}});
+    const {rerender} = render(
+        <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph}}>
+            <AnalysisHome />
+        </GraphAnalysisContext.Provider>
+    );
+
+    await act(async () => {
+        fireEvent.click(screen.getByRole('button', {name: 'Run current'}));
+    });
+    expect(api.analysis.getExecutionQuery).not.toHaveBeenCalled();
+    expect(api.analysis.getGraphData).not.toHaveBeenCalled();
+
+    rerender(
+        <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph: 'ready_graph'}}>
+            <AnalysisHome />
+        </GraphAnalysisContext.Provider>
+    );
+    await waitForInitialData();
+    await act(async () => {
+        fireEvent.click(screen.getByRole('button', {name: 'Run current'}));
+    });
+    expect(api.analysis.getExecutionQuery).toHaveBeenCalledWith(
+        'DEFAULT', 'ready_graph', 'g.V().limit(10)'
+    );
+});
+
 it('starts with a limited default only when no saved query exists', async () => {
     render(
         <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph: 'hugegraph'}}>
