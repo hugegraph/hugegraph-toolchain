@@ -62,6 +62,7 @@ start_server() (
 start_server "${SERVER_DIRS[0]}"
 HTTPS_DIR="$SERVER_ROOT/hugegraph_https"
 sed -i.bak 's?http://127.0.0.1:8080?https://127.0.0.1:8443?g' "$HTTPS_DIR/conf/rest-server.properties"
+sed -i.bak 's/rpc.server_port=8091/rpc.server_port=8092/g' "$HTTPS_DIR/conf/rest-server.properties"
 sed -i.bak 's/#port: 8182/port: 8282/g' "$HTTPS_DIR/conf/gremlin-server.yaml"
 printf '\ngremlinserver.url=http://127.0.0.1:8282\n' >> "$HTTPS_DIR/conf/rest-server.properties"
 start_server "$HTTPS_DIR"

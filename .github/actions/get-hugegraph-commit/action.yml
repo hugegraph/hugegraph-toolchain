@@ -17,6 +17,9 @@ inputs:
     default: ''
 
 outputs:
+  repository:
+    description: 'GitHub repository selected as the server baseline'
+    value: ${{ inputs.repository }}
   commit_id:
     description: 'The HugeGraph commit SHA selected as integration baseline'
     value: ${{ steps.get-commit.outputs.commit_id }}

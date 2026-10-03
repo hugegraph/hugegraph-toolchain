@@ -77,9 +77,14 @@ jobs:
       - name: Prepare env and service
         env:
           COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
+          SERVER_REPOSITORY: ${{ steps.get-commit.outputs.repository }}
+          SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
         run: |
           $TRAVIS_DIR/install-hadoop.sh
-          $TRAVIS_DIR/install-hugegraph-from-source.sh $COMMIT_ID
+          installer=$(realpath "$TRAVIS_DIR/install-hugegraph-from-source.sh")
+          server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
+          cd "$server_build"
+          bash "$installer" "$COMMIT_ID"
 
       - name: Run test
         run: |

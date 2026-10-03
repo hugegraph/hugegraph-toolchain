@@ -55,6 +55,8 @@ jobs:
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
           commit-id: ${{ steps.get-commit.outputs.commit_id }}
+          repository: ${{ steps.get-commit.outputs.repository }}
+          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
 
       - name: Run test
         run: |

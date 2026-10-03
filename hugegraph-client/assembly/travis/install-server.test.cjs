@@ -28,7 +28,12 @@ function temp(t) {
   return root;
 }
 
-test('build-only packages the server without installing reactor dependencies or starting it', t => {
+for (const installer of [
+  join(__dirname, 'install-hugegraph-from-source.sh'),
+  join(__dirname, '../../../hugegraph-tools/assembly/travis/install-hugegraph-from-source.sh'),
+  join(__dirname, '../../../hugegraph-spark-connector/assembly/travis/install-hugegraph-from-source.sh')
+]) {
+test(`build-only ${installer} preserves source selection and packages without dependency installation`, t => {
   const root = temp(t);
   const source = join(root, 'source');
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -46,7 +51,7 @@ test('build-only packages the server without installing reactor dependencies or 
     PATH: `${bin}:${process.env.PATH}`, BUILD_ARGS: join(root, 'args'), BUILD_REPO: join(root, 'repo'),
     MAVEN_ARGS: `-Dmaven.repo.local=${root}/isolated-m2`, GIT_CONFIG_COUNT: '1',
     GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`, GIT_CONFIG_VALUE_0: 'https://github.com/example/server.git' };
-  const run = args => spawnSync('bash', [join(__dirname, 'install-hugegraph-from-source.sh'), ...args],
+  const run = args => spawnSync('bash', [installer, ...args],
     { cwd: root, env, encoding: 'utf8' });
   assert.notEqual(run([sha, '--unknown']).status, 0);
   assert.equal(existsSync(join(root, 'hugegraph')), false);
@@ -58,6 +63,7 @@ test('build-only packages the server without installing reactor dependencies or 
   // No archive exists: success proves build-only did not attempt extraction/startup.
   assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
 });
+}
 
 function serverFixture(fixture) {
   mkdirSync(join(fixture, 'conf/graphs'), { recursive: true });
@@ -65,7 +71,7 @@ function serverFixture(fixture) {
   writeFileSync(join(fixture, 'conf/graphs/hugegraph.properties'),
     'gremlin.graph=org.apache.hugegraph.HugeFactory\n');
   writeFileSync(join(fixture, 'conf/rest-server.properties'),
-    'restserver.url=http://127.0.0.1:8080\n#auth.authenticator=none\n#auth.admin_pa=none\n');
+    'restserver.url=http://127.0.0.1:8080\nrpc.server_port=8091\n#auth.authenticator=none\n#auth.admin_pa=none\n');
   writeFileSync(join(fixture, 'conf/gremlin-server.yaml'), '#port: 8182\n');
   writeFileSync(join(fixture, 'bin/init-store.sh'),
     '#!/bin/bash\nset -e\nshopt -s dotglob\nread -r password\n[[ "$password" == pa ]]\n' +
@@ -122,6 +128,7 @@ for (const layout of [
       assert.match(rest, /auth.admin_pa=pa/);
       assert.match(rest, /batch.max_vertices_per_batch=500/);
       assert.match(rest, /batch.max_edges_per_batch=500/);
+      assert.match(rest, dir === 'hugegraph_https' ? /rpc.server_port=8092/ : /rpc.server_port=8091/);
       assert.match(rest, dir === 'hugegraph_https' ? /https:\/\/127.0.0.1:8443/ : /http:\/\/127.0.0.1:8080/);
     }
     assert.match(readFileSync(join(serverRoot, 'hugegraph_https/conf/gremlin-server.yaml'), 'utf8'), /^port: 8282/m);
@@ -193,4 +200,56 @@ test('shared starter still rejects invalid non-metadata graph names', t => {
   assert.notEqual(result.status, 0);
   assert.equal(existsSync(join(serverRoot, top, 'conf/graphs/9invalid.properties')), true);
   assert.equal(existsSync(join(serverRoot, top, 'started-with-jvm')), false);
+});
+
+
+test('Loader retains its source cache while using the selected repository and shared startup', t => {
+  const root = temp(t);
+  const source = join(root, 'source');
+  const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  git('init', source);
+  git('-C', source, 'config', 'user.name', 'Fixture');
+  git('-C', source, 'config', 'user.email', 'fixture@example.invalid');
+  writeFileSync(join(source, 'pom.xml'), 'fixture');
+  git('-C', source, 'add', 'pom.xml');
+  git('-C', source, 'commit', '-m', 'initial');
+  const sha = git('-C', source, 'rev-parse', 'HEAD');
+  const top = 'apache-hugegraph-loader-fixture';
+  serverFixture(join(root, top));
+  const archive = join(root, 'fixture.tar.gz');
+  execFileSync('tar', ['czf', archive, '-C', root, top],
+    { env: { ...process.env, COPYFILE_DISABLE: '1' } });
+  const bin = join(root, 'bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'mvn'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$BUILD_ARGS"\n' +
+    'mkdir -p hugegraph-server\ncp "$FIXTURE_ARCHIVE" hugegraph-server/apache-hugegraph-fixture.tar.gz\n',
+    { mode: 0o755 });
+  const env = { ...process.env, SERVER_REPOSITORY: 'example/server', SERVER_FETCH_REF: sha,
+    SERVER_CACHE_DIR: join(root, 'cache'), FIXTURE_ARCHIVE: archive, BUILD_ARGS: join(root, 'args'),
+    PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: root, JAVA_HOME: '/fixture/java11',
+    GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`,
+    GIT_CONFIG_VALUE_0: 'https://github.com/example/server.git' };
+  const installer = join(__dirname, '../../../hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh');
+  for (const pass of ['build', 'cache']) {
+    const cwd = join(root, `run-${pass}`);
+    mkdirSync(cwd);
+    const result = spawnSync('bash', [installer, sha], { cwd, env, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readFileSync(env.BUILD_ARGS, 'utf8').trim().split('\n'),
+      ['package', '-DskipTests', '-Dmaven.javadoc.skip=true', '-ntp']);
+    assert.equal(existsSync(join(cwd, 'hugegraph')), false);
+    if (pass === 'build') {
+      assert.equal(readdirSync(env.SERVER_CACHE_DIR).length, 1);
+      // A cache hit must not execute Maven or reach the source repository again.
+      writeFileSync(join(bin, 'mvn'), '#!/bin/bash\nexit 91\n', { mode: 0o755 });
+      rmSync(source, { recursive: true, force: true });
+    }
+  }
+  const deployments = readdirSync(root).filter(name => name.startsWith('hugegraph-servers.'));
+  assert.equal(deployments.length, 2);
+  for (const deployment of deployments) {
+    for (const dir of [top, 'hugegraph_https']) {
+      assert.equal(readFileSync(join(root, deployment, dir, 'started-with-jvm'), 'utf8'), '/fixture/java11');
+    }
+  }
 });
