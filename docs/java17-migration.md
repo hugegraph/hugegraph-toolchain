@@ -43,8 +43,19 @@ server. It requires a new external source directory and a dedicated Maven
 repository with no existing HugeGraph artifacts. It records source and artifact
 provenance in `candidate-sdk-manifest.json` inside that repository. Reuse the
 same explicit `-Dmaven.repo.local` option for subsequent Toolchain validation.
+The manifest's source and JDK paths describe that build; use your own directories
+when rebuilding.
 The package command skips test execution; run the module test suites separately.
 These source-built packages are candidates, not an ASF release.
+
+These isolated builds reuse `1.7.0` coordinates only for source validation.
+Before proposing a release candidate or deploying Toolchain Maven artifacts for
+external consumers, every Java 17 SDK dependency must have coordinates that
+distinguish it from the previously released `1.7.0` artifacts and are available
+to those consumers. Update the Toolchain dependencies and rerun the module
+dependency and runtime matrices against those publishable identities. Server
+versioning and publication are separate release work; this candidate validation
+does not authorize either.
 
 The container changes are delivered separately in
 [PR #37](https://github.com/hugegraph/hugegraph-toolchain/pull/37).

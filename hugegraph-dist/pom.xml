@@ -66,6 +66,13 @@
                                     rm -f ${project.basedir}/dist.sh
 
                                 </echo>
+                                <delete file="${project.basedir}/../${final.name}/candidate-sdk-manifest.json"
+                                        failonerror="true"/>
+                                <copy todir="${project.basedir}/../${final.name}">
+                                    <fileset dir="${settings.localRepository}">
+                                        <include name="candidate-sdk-manifest.json"/>
+                                    </fileset>
+                                </copy>
                                 <exec executable="${shell-executable}" dir="${project.basedir}" failonerror="true">
                                     <arg line="./dist.sh"/>
                                 </exec>

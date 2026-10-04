@@ -28,8 +28,10 @@ jobs:
       USE_STAGE: 'false' # Whether to include the stage repository.
       TRAVIS_DIR: hugegraph-tools/assembly/travis
     strategy:
+      fail-fast: false
       matrix:
         JAVA_VERSION: ['17']
+        SERVER_BASELINE: ['candidate', 'release-1.7']
 
     steps:
       - name: Fetch Code
@@ -38,6 +40,7 @@ jobs:
           fetch-depth: 2
 
       - name: Install released Server JVM
+        if: matrix.SERVER_BASELINE == 'release-1.7'
         id: released-java
         uses: actions/setup-java@v5
         with:
@@ -57,18 +60,19 @@ jobs:
         uses: ./.github/actions/setup-candidate-sdk
 
       - name: Resolve released Server 1.7 fixture
+        if: matrix.SERVER_BASELINE == 'release-1.7'
         id: get-commit
         uses: ./.github/actions/get-hugegraph-commit
         with:
           ref: 'refs/tags/1.7.0'
           expected-commit: 'b12425c2032bf0d21a97b8221f42a18055c2982f'
 
-
       - name: Compile
         run: |
           mvn install -pl hugegraph-client,hugegraph-tools -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
       - name: Setup HugeGraph server
+        if: matrix.SERVER_BASELINE == 'release-1.7'
         uses: ./.github/actions/setup-hugegraph-server
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
@@ -77,6 +81,12 @@ jobs:
           fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
           java-home: ${{ steps.released-java.outputs.path }}
           isolate-maven-repo: 'true'
+
+      - name: Start candidate Server fixture
+        if: matrix.SERVER_BASELINE == 'candidate'
+        env:
+          CANDIDATE_ARCHIVE: ${{ steps.candidate-sdk.outputs.archive }}
+        run: bash hugegraph-client/assembly/travis/start-hugegraph-servers.sh "$CANDIDATE_ARCHIVE"
 
       - name: Run test
         run: |
