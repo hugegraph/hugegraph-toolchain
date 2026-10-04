@@ -216,7 +216,7 @@ public final class LoadContext implements Cloneable {
         } finally {
             this.closed = true;
         }
-        LOG.info("Close HugeClient successfully");
+        LOG.info("Close loader clients successfully");
     }
 
     @Override
