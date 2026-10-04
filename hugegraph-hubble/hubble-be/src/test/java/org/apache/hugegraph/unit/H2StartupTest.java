@@ -85,6 +85,48 @@ public class H2StartupTest {
     }
 
     @Test
+    public void testUnnamedMemoryUrlsAreRejectedBeforeConnecting() {
+        for (String url : new String[]{"jdbc:h2:mem", "jdbc:h2:mem:", "jdbc:h2:mem:;DB_CLOSE_DELAY=-1"}) {
+            this.runner(url).run(context -> {
+                Throwable failure = context.getStartupFailure();
+                Assert.assertNotNull(failure);
+                while (failure.getCause() != null) {
+                    failure = failure.getCause();
+                }
+                Assert.assertTrue(failure instanceof IllegalArgumentException);
+                Assert.assertEquals("Hubble metadata requires H2 with a local file or named memory URL; " +
+                                    "configure the JDBC URL and credentials directly", failure.getMessage());
+            });
+        }
+    }
+
+    @Test
+    public void testNamedMemorySharesMetadataUntilLastConnectionCloses() throws Exception {
+        String url = "jdbc:h2:mem:named-metadata-pool;DB_CLOSE_DELAY=0";
+        this.runner(url).withPropertyValues("spring.datasource.hikari.minimum-idle=0",
+                                           "spring.datasource.hikari.maximum-pool-size=2").run(context -> {
+            Assert.assertNull(context.getStartupFailure());
+            DataSource dataSource = context.getBean(DataSource.class);
+            try (Connection first = dataSource.getConnection();
+                 Connection second = dataSource.getConnection();
+                 Statement write = first.createStatement();
+                 Statement read = second.createStatement()) {
+                write.execute("INSERT INTO user_info(username, locale) VALUES ('memory-user', 'zh')");
+                try (java.sql.ResultSet result = read.executeQuery(
+                        "SELECT locale FROM user_info WHERE username='memory-user'")) {
+                    Assert.assertTrue(result.next());
+                    Assert.assertEquals("zh", result.getString(1));
+                }
+            }
+        });
+        try (Connection ignored = DriverManager.getConnection(url + ";IFEXISTS=TRUE", "sa", "")) {
+            Assert.fail("Named memory metadata must disappear after its last connection closes");
+        } catch (java.sql.SQLException failure) {
+            Assert.assertEquals(90146, failure.getErrorCode());
+        }
+    }
+
+    @Test
     public void testWrongEncryptedPasswordHasSafeValidationGuidance() throws Exception {
         Path directory = Files.createTempDirectory("hubble-password-rejection-");
         String url = "jdbc:h2:file:" + directory.resolve("metadata") + ";CIPHER=AES";
