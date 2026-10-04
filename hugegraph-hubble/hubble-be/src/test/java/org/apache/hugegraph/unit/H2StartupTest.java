@@ -33,6 +33,7 @@ import org.apache.hugegraph.config.H2DataSourceConfig;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSessionFactory;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
+import org.h2.mvstore.MVStore;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -151,6 +152,53 @@ public class H2StartupTest {
                     });
             Assert.assertArrayEquals(before, Files.readAllBytes(directory.resolve("metadata.mv.db")));
             Assert.assertFalse(Files.exists(directory.resolve("metadata.trace.db")));
+        } finally {
+            try (Stream<Path> files = Files.walk(directory)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testReadOnlyInitializationFailurePreservesDatabase() throws Exception {
+        Path directory = Files.createTempDirectory(Path.of("target"), "hubble-readonly-rejection-");
+        Path database = directory.resolve("metadata.mv.db");
+        String url = "jdbc:h2:file:" + directory.toAbsolutePath().resolve("metadata");
+        try {
+            // A native empty MVStore deterministically requires H2 initialization on open.
+            try (MVStore store = new MVStore.Builder().fileName(database.toString()).open()) {
+                store.commit();
+            }
+            byte[] before = Files.readAllBytes(database);
+            // Keep the direct probe independent of the framework's first open.
+            Path probe = directory.resolve("probe.mv.db");
+            Files.copy(database, probe);
+            try (Connection ignored = DriverManager.getConnection(
+                    "jdbc:h2:file:" + directory.toAbsolutePath().resolve("probe") +
+                    ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0", "sa", "")) {
+                Assert.fail("Read-only initialization must fail");
+            } catch (java.sql.SQLException failure) {
+                Assert.assertEquals(90097, failure.getErrorCode());
+            }
+            this.runner(url).run(context -> {
+                Throwable failure = context.getStartupFailure();
+                Assert.assertNotNull(failure);
+                while (failure.getCause() != null) {
+                    failure = failure.getCause();
+                }
+                Assert.assertTrue(failure instanceof IllegalArgumentException);
+                Assert.assertEquals("Hubble metadata read-only validation failed (H2 error 90097); " +
+                                    "preserve the database and follow the manual recovery guidance " +
+                                    "in the README. This error does not establish that the database " +
+                                    "is empty", failure.getMessage());
+                Assert.assertNull(failure.getCause());
+            });
+            Assert.assertArrayEquals(before, Files.readAllBytes(database));
+            Assert.assertArrayEquals(before, Files.readAllBytes(probe));
+            Assert.assertFalse(Files.exists(directory.resolve("metadata.trace.db")));
+            Assert.assertFalse(Files.exists(directory.resolve("probe.trace.db")));
         } finally {
             try (Stream<Path> files = Files.walk(directory)) {
                 for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
