@@ -47,5 +47,8 @@ else
 fi
 
 ARCHIVES=(apache-hugegraph-*.tar.gz)
-[[ ${#ARCHIVES[@]} -eq 1 && -f "${ARCHIVES[0]}" ]]
+if [[ ${#ARCHIVES[@]} -ne 1 || ! -f "${ARCHIVES[0]}" ]]; then
+    printf 'Expected exactly one server archive, found: %s\n' "${ARCHIVES[*]}" >&2
+    exit 1
+fi
 exec bash "$SHARED_DIR/start-hugegraph-servers.sh" "${ARCHIVES[0]}"

@@ -203,6 +203,23 @@ test('shared starter still rejects invalid non-metadata graph names', t => {
 });
 
 
+test('Loader reports ambiguous archives before shared startup', t => {
+  const root = temp(t);
+  const cache = join(root, 'cache');
+  mkdirSync(cache);
+  writeFileSync(join(cache, 'apache-hugegraph-cached.tar.gz'), 'cached archive');
+  writeFileSync(join(root, 'apache-hugegraph-leftover.tar.gz'), 'leftover archive');
+  const installer = join(__dirname, '../../../hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh');
+  const result = spawnSync('bash', [installer, 'a'.repeat(40)], {
+    cwd: root, env: { ...process.env, SERVER_CACHE_DIR: cache }, encoding: 'utf8'
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Expected exactly one server archive, found:/);
+  assert.match(result.stderr, /apache-hugegraph-cached\.tar\.gz/);
+  assert.match(result.stderr, /apache-hugegraph-leftover\.tar\.gz/);
+  assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
+});
+
 test('Loader retains its source cache while using the selected repository and shared startup', t => {
   const root = temp(t);
   const source = join(root, 'source');
