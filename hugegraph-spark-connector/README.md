@@ -50,6 +50,8 @@ The Surefire JVM starts with `-Dfile.encoding=UTF-8` so these fixtures do not de
 The default Spark master is `local[2]`. `-Dspark.test.master=...` accepts only `local` or `local[...]`,
 for example `local[4]` or `local[*]`; remote masters and `local-cluster` are rejected because the Maven
 fixture does not distribute connector classes or dependencies to separate executors.
+CI runs this embedded fixture. Packaged `spark-submit` runs with separate executor JVMs
+and the assembly's SLF4J provider check are manual validation, not automated CI gates.
 
 HTTPS tests require an explicit trust store shared by the readback client and local Spark writers:
 
