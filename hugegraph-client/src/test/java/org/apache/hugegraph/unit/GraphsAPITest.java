@@ -17,6 +17,7 @@
 
 package org.apache.hugegraph.unit;
 
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.InetSocketAddress;
@@ -168,7 +169,9 @@ public class GraphsAPITest extends BaseUnitTest {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/graphs/copy", exchange -> {
             path.set(exchange.getRequestURI().getPath());
-            requestBody.set(IOUtils.toString(exchange.getRequestBody(), StandardCharsets.UTF_8));
+            try (InputStream input = exchange.getRequestBody()) {
+                requestBody.set(IOUtils.toString(input, StandardCharsets.UTF_8));
+            }
             contentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
             query.set(exchange.getRequestURI().getQuery());
             byte[] response = "{}".getBytes(StandardCharsets.UTF_8);
