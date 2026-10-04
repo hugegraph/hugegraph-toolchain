@@ -26,7 +26,6 @@ import java.util.UUID;
 
 import org.apache.hugegraph.base.Directory;
 import org.apache.hugegraph.base.HdfsDirectory;
-import org.apache.hugegraph.base.LocalDirectory;
 import org.apache.hugegraph.cmd.HugeGraphCommand;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.SchemaManager;
@@ -34,6 +33,7 @@ import org.apache.hugegraph.structure.constant.GraphMode;
 import org.apache.hugegraph.structure.constant.T;
 import org.apache.hugegraph.structure.graph.Vertex;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -55,18 +55,21 @@ public class BackupRestoreTest extends AuthTest {
     }
 
     private void backupRestore(boolean compress) throws Exception {
-        String hdfs = System.getProperty("tools.test.hdfs");
-        String path = hdfs == null ? this.temporary.newFolder("backup").getAbsolutePath() :
+        requireDisposableInstance(System.getProperty("tools.test.disposable"));
+        String hdfs = System.getProperty("tools.test.hdfs", "file:///");
+        String path = "file:///".equals(hdfs) ? this.temporary.newFolder("backup").toURI().toString() :
                       hdfs + "/tools-backup-" + UUID.randomUUID();
-        Directory backup = hdfs == null ? new LocalDirectory(path) :
-                           new HdfsDirectory(path, Collections.singletonMap("fs.default.name", hdfs));
-        backup.ensureDirectoryExist(true);
-        File logs = this.temporary.newFolder("logs");
+        Directory backup = new HdfsDirectory(path, Collections.singletonMap("fs.default.name", hdfs));
         try (HugeClient client = HugeClient.builder(URL, GRAPH)
                                            .configUser(USER_NAME, USER_PASSWORD)
-                                           .build()) {
-            client.graphs().clearGraph(GRAPH, "I'm sure to delete all data");
-            try {
+                                           .build();
+             AutoCloseable removeBackup = backup::removeDirectory) {
+            backup.ensureDirectoryExist(true);
+            try (AutoCloseable clearGraph = () ->
+                         client.graphs().clearGraph(GRAPH, "I'm sure to delete all data");
+                 AutoCloseable resetMode = () -> client.graphs().mode(GRAPH, GraphMode.NONE)) {
+                File logs = this.temporary.newFolder("logs");
+                client.graphs().clearGraph(GRAPH, "I'm sure to delete all data");
                 SchemaManager schema = client.schema();
                 schema.propertyKey("name").asText().create();
                 schema.vertexLabel("person").properties("name")
@@ -79,7 +82,7 @@ public class BackupRestoreTest extends AuthTest {
                 Assert.assertEquals("李四", client.graph().getVertex(second.id()).property("name"));
 
                 this.command("backup", path, logs, "--compress", String.valueOf(compress));
-                Assert.assertFalse(backup.files().isEmpty());
+                assertBackupFiles(backup, compress);
                 client.graphs().clearGraph(GRAPH, "I'm sure to delete all data");
                 Assert.assertTrue(client.graph().listVertices().isEmpty());
                 client.graphs().mode(GRAPH, GraphMode.RESTORING);
@@ -93,12 +96,23 @@ public class BackupRestoreTest extends AuthTest {
                 Assert.assertEquals(1, client.graph().listEdges().size());
                 Assert.assertEquals("Alice", client.graph().getVertex(first.id()).property("name"));
                 Assert.assertEquals("李四", client.graph().getVertex(second.id()).property("name"));
-                Assert.assertFalse(backup.files().isEmpty());
-            } finally {
-                client.graphs().mode(GRAPH, GraphMode.NONE);
-                client.graphs().clearGraph(GRAPH, "I'm sure to delete all data");
-                backup.removeDirectory();
+                assertBackupFiles(backup, compress);
             }
+        }
+    }
+
+    static void requireDisposableInstance(String disposable) {
+        Assume.assumeTrue("BackupRestoreTest clears hugegraph; set tools.test.disposable=true only " +
+                          "for a disposable server instance", "true".equals(disposable));
+    }
+
+    private static void assertBackupFiles(Directory backup, boolean compress) {
+        List<String> files = backup.files();
+        // Hadoop's local filesystem can also produce checksum sidecars.
+        files.removeIf(file -> file.startsWith(".") && file.endsWith(".crc"));
+        Assert.assertFalse(files.isEmpty());
+        for (String file : files) {
+            Assert.assertEquals(file, compress, file.endsWith(".zip"));
         }
     }
 
@@ -108,10 +122,7 @@ public class BackupRestoreTest extends AuthTest {
                 "--user", USER_NAME, "--password", USER_PASSWORD, operation,
                 "--directory", backup, "--log", logs.getAbsolutePath(),
                 "--thread-num", "2"));
-        String hdfs = System.getProperty("tools.test.hdfs");
-        if (hdfs != null) {
-            args.add("-Dfs.default.name=" + hdfs);
-        }
+        args.add("-Dfs.default.name=" + System.getProperty("tools.test.hdfs", "file:///"));
         args.addAll(Arrays.asList(extra));
         HugeGraphCommand.main(args.toArray(new String[0]));
     }
