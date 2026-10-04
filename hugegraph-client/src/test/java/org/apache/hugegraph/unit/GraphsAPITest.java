@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.io.IOUtils;
 
 import org.apache.hugegraph.api.graphs.GraphsAPI;
@@ -139,6 +140,24 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertEquals("rocksdb", parsed.getProperty("backend"));
         Assert.assertEquals("C:\\data\\graph", parsed.getProperty("path"));
         Assert.assertEquals("a=b\nnext", parsed.getProperty("note"));
+    }
+
+    @Test
+    public void testLegacyConfigPreservesWhitespaceWithServerParser() throws Exception {
+        Mockito.when(this.mockClient.isSupportGs()).thenReturn(false);
+        RestResult result = Mockito.mock(RestResult.class);
+        ArgumentCaptor<Object> body = ArgumentCaptor.forClass(Object.class);
+        Mockito.when(this.mockClient.post(Mockito.anyString(), body.capture(),
+                                          Mockito.any(), Mockito.isNull())).thenReturn(result);
+        for (String password : new String[]{" pa", "pa ", " pa ", "   ",
+                                           "\\ pa ", "\\\\ pa ", "\\u0020 ",
+                                           "李四 a=b\nnext\t "}) {
+            this.graphsAPI.create("legacy", null,
+                                  JsonUtil.toJson(ImmutableMap.of("jdbc.password", password)));
+            PropertiesConfiguration parsed = new PropertiesConfiguration();
+            parsed.read(new StringReader((String) body.getValue()));
+            Assert.assertEquals(password, parsed.getString("jdbc.password"));
+        }
     }
 
     @Test
