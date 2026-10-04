@@ -100,6 +100,27 @@ management are outside that support boundary. New Client/Loader/Tools results
 against 1.5 and original Client 1.5/1.7 results against the candidate are recorded
 separately, including failures.
 
+The following results were verified on 2026-10-04. New tools used native
+Java 17 and the locked candidate SDK above; published servers and original
+clients retained their supported JVMs. A pass describes the exercised operations.
+
+| Tool | Server | Verified result |
+|---|---|---|
+| New Client | Published 1.7 | API and functional suites, including HTTPS, passed; three existing API skips remain. |
+| New Loader / Tools | Published 1.7 | File-source and Tools functional suites passed. |
+| New Client / Loader / Tools | Locked candidate | Client unit/API/functional, Loader unit/file-source and Tools functional suites passed; ZIP/plain HDFS backup/restore passed; three existing API skips remain. |
+| New Client | 1.5 standalone | Schema, vertices/edges, Unicode, numeric precision, pagination, Gremlin, errors and cleanup passed. |
+| New Loader / Tools | 1.5 standalone | Bundled file import and ZIP/plain backup/restore passed with schema, IDs, property types and Unicode readback. |
+| Original Client 1.7 / Java 11 | Locked candidate | REST and Gremlin cases passed. |
+| Original Client 1.5 / Java 8 | Locked candidate | REST cases passed; Gremlin count failed because the legacy `__g_hugegraph` alias is absent from graphspace-prefixed bindings. |
+| New Hubble | Published 1.7 / 1.5 and locked candidate | Final candidate-SDK server/browser matrix and browser-created metadata persistence remain pending. |
+
+Native Java 17 Hubble backend tests and packaged H2/JAXB checks passed. These
+checks do not establish browser workflows or server compatibility.
+
+Original Tools 1.7 ZIP and plain backups were also restored by the new Java 17
+Tools package, with schema, vertex/edge IDs, types and Unicode readback verified.
+
 The Spark Connector uses Spark 3.5.8 and Scala 2.12.18. Spark supplies its logging
 provider; the connector assembly does not bundle a competing SLF4J provider.
 Its [guide](../hugegraph-spark-connector/README.md) specifies driver and executor
