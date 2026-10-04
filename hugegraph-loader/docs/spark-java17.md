@@ -27,6 +27,19 @@ Use the generated distribution's `bin/hugegraph-spark-loader.sh`. It submits
 the distribution's shaded Loader jar, which contains the application dependencies.
 Spark supplies the engine libraries and Java 17 module options. Set `SPARK_HOME`
 and `JAVA_HOME` for the matching engine and JVM before starting the launcher.
+Extra JARs placed in `lib/` are not shipped automatically. Pass JDBC drivers and
+other additional dependencies explicitly with `--jars /path/to/mysql-driver.jar`.
+The Spark CSV reader does not skip physical CSV header rows or implement
+the ordinary Loader's per-file header detection. Use headerless CSV with an
+explicit mapping header. Header-bearing CSV remains a known limitation for a
+separate follow-up.
+CSV parsing retains Spark's permissive behavior. Validate input column counts
+before submission: Spark can truncate nonempty extra fields before mapping
+validation. This is a known limitation of the current reader.
+Standalone (`--master spark://...`) supports client deploy mode only; cluster
+deploy mode is rejected because the remote driver's mapping is needed before
+Spark initializes file localization. This restriction does not establish
+validation of YARN or Kubernetes cluster deployment.
 `--file` requires a local mapping path without `#` fragments in cluster mode; caller `--files` URI aliases are supported.
 
 Create the target schema before loading. Data paths must be readable by the

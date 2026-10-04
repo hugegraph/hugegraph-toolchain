@@ -23,7 +23,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import org.apache.hugegraph.loader.executor.LoadOptions;
+import org.apache.hugegraph.loader.filter.util.ShortIdConfig;
 import org.apache.hugegraph.loader.mapping.InputStruct;
+import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.loader.util.MappingUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,6 +36,13 @@ public class SparkPartitionWriterTest {
     public void testPartitionClosureCanCrossExecutorBoundary() throws Exception {
         LoadOptions options = new LoadOptions();
         options.host = "http://serialization-probe.invalid";
+        options.port = 18080;
+        options.graph = "serialization_graph";
+        options.username = "fixture-user";
+        options.password = "fixture-password";
+        options.dryRun = true;
+        options.shorterIDConfigs.add(new ShortIdConfig.ShortIdConfigConverter()
+                                    .convert("person:name:text"));
         String mapping = "{\"vertices\":[{\"label\":\"person\",\"id\":\"name\","
                          + "\"input\":{\"type\":\"file\",\"format\":\"JSON\","
                          + "\"path\":\"persons.json\",\"header\":[\"name\"]}}]}";
@@ -49,6 +58,23 @@ public class SparkPartitionWriterTest {
             Object restored = in.readObject();
             Assert.assertEquals(writer.getClass(), restored.getClass());
             Assert.assertNotSame(writer, restored);
+            HugeGraphSparkLoader.PartitionWriter restoredWriter =
+                    (HugeGraphSparkLoader.PartitionWriter) restored;
+            LoadOptions restoredOptions = JsonUtil.fromJson(restoredWriter.optionsJson, LoadOptions.class);
+            Assert.assertEquals(options.host, restoredOptions.host);
+            Assert.assertEquals(options.port, restoredOptions.port);
+            Assert.assertEquals(options.graph, restoredOptions.graph);
+            Assert.assertEquals(options.username, restoredOptions.username);
+            Assert.assertEquals(options.password, restoredOptions.password);
+            Assert.assertTrue(restoredOptions.dryRun);
+            Assert.assertEquals(1, restoredOptions.shorterIDConfigs.size());
+            ShortIdConfig shortId = restoredOptions.getShortIdConfig("person");
+            Assert.assertEquals("name", shortId.getIdFieldName());
+            Assert.assertEquals(options.shorterIDConfigs.get(0).getIdFieldType(), shortId.getIdFieldType());
+            InputStruct restoredStruct = JsonUtil.fromJson(restoredWriter.structJson, InputStruct.class);
+            Assert.assertEquals("person", restoredStruct.vertices().get(0).label());
+            Assert.assertEquals("persons.json", restoredStruct.input().asFileSource().path());
+            Assert.assertArrayEquals(new String[]{"name"}, restoredStruct.input().asFileSource().header());
         }
     }
 }

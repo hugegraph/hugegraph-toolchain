@@ -37,6 +37,8 @@ import org.apache.hugegraph.loader.mapping.ElementMapping;
 import org.apache.hugegraph.loader.mapping.InputStruct;
 import org.apache.hugegraph.loader.mapping.LoadMapping;
 import org.apache.hugegraph.loader.mapping.VertexMapping;
+import org.apache.hugegraph.loader.parser.TextLineParser;
+import org.apache.hugegraph.loader.reader.line.Line;
 import org.apache.hugegraph.loader.source.file.Compression;
 import org.apache.hugegraph.loader.source.file.FileFilter;
 import org.apache.hugegraph.loader.source.file.FileFormat;
@@ -63,7 +65,6 @@ import org.slf4j.Logger;
 
 import java.io.Serializable;
 import java.nio.charset.Charset;
-import java.util.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -96,6 +97,7 @@ public class HugeGraphSparkLoader implements Serializable {
     }
 
     public HugeGraphSparkLoader(String[] args) {
+        checkDeployment(new SparkConf());
         this.loadOptions = LoadOptions.parseOptions(args);
         this.executor = Executors.newCachedThreadPool();
     }
@@ -126,7 +128,16 @@ public class HugeGraphSparkLoader implements Serializable {
         }
     }
 
+    static void checkDeployment(SparkConf conf) {
+        if ("cluster".equals(conf.get("spark.submit.deployMode", "client")) &&
+            conf.get("spark.master", "").startsWith("spark://")) {
+            throw new LoadException("Standalone cluster deploy mode is not supported; " +
+                                    "use client deploy mode");
+        }
+    }
+
     public void load() throws ExecutionException, InterruptedException {
+        SparkConf conf = new SparkConf();
         LoadMapping mapping = LoadMapping.of(this.loadOptions.file);
         List<InputStruct> structs = mapping.structs();
         boolean sinkType = this.loadOptions.sinkType;
@@ -134,7 +145,6 @@ public class HugeGraphSparkLoader implements Serializable {
         //    this.loadOptions.copyBackendStoreInfo(mapping.getBackendStoreInfo());
         //}
 
-        SparkConf conf = new SparkConf();
         registerKryoClasses(conf);
         SparkSession session = SparkSession.builder().config(conf).getOrCreate();
         SparkContext sc = session.sparkContext();
@@ -206,7 +216,7 @@ public class HugeGraphSparkLoader implements Serializable {
         }
     }
 
-    private static void loadRow(InputStruct struct, Row row, LoadContext context,
+    static void loadRow(InputStruct struct, Row row, LoadContext context,
                                 Map<ElementBuilder, List<GraphElement>> builders,
                                 boolean checkVertex) {
         for (Map.Entry<ElementBuilder, List<GraphElement>> builderMap :
@@ -220,7 +230,11 @@ public class HugeGraphSparkLoader implements Serializable {
 
             // Insert
             List<GraphElement> graphElements = builderMap.getValue();
-            flush(builderMap, context.client().graph(), checkVertex);
+            if (context.options().dryRun) {
+                graphElements.clear();
+            } else {
+                flush(builderMap, context.client().graph(), checkVertex);
+            }
         }
     }
 
@@ -279,21 +293,25 @@ public class HugeGraphSparkLoader implements Serializable {
                        InputStruct struct) {
         ElementBuilder builder = builderMap.getKey();
         List<GraphElement> graphElements = builderMap.getValue();
-        if ("".equals(row.mkString())) {
-            return;
-        }
         List<GraphElement> elements;
         switch (struct.input().type()) {
             case FILE:
             case HDFS:
                 FileSource fileSource = struct.input().asFileSource();
-                String delimiter = fileSource.delimiter();
-                if (Optional.ofNullable(delimiter).isPresent()) {
-                    elements = builder.build(fileSource.header(),
-                               row.mkString(delimiter).split(delimiter));
+                if (fileSource.format() == FileFormat.TEXT) {
+                    if (row.isNullAt(0) || "".equals(row.getString(0))) {
+                        return;
+                    }
+                    Line line = new TextLineParser(fileSource.delimiter())
+                                .parse(fileSource.header(), row.getString(0));
+                    elements = builder.build(line.names(), line.values());
                 } else {
-                    //elements = builder.build(row);
-                    String[] names = row.schema().fieldNames();
+                    String[] names = fileSource.format() == FileFormat.CSV ?
+                                     fileSource.header() : row.schema().fieldNames();
+                    if (names.length != row.size()) {
+                        throw new LoadException("Input column count %s does not match header count %s",
+                                                row.size(), names.length);
+                    }
                     Object[] values = new Object[row.size()];
                     for (int i = 0; i < row.size(); i++) {
                         values[i] = row.get(i);
@@ -356,8 +374,8 @@ public class HugeGraphSparkLoader implements Serializable {
 
     static final class PartitionWriter implements ForeachPartitionFunction<Row> {
 
-        private final String optionsJson;
-        private final String structJson;
+        final String optionsJson;
+        final String structJson;
 
         PartitionWriter(LoadOptions options, InputStruct struct) {
             // Spark uses Java serialization for closures, independently of its data serializer.

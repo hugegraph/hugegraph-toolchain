@@ -22,6 +22,36 @@ LIB_DIR=${APP_DIR}/lib
 source "$BIN_DIR"/get-params.sh
 get_params "$@" || exit $?
 
+# Standalone cluster does not make --files available before this driver's mapping parse.
+MASTER="" DEPLOY_MODE="" CONF_MASTER="" CONF_DEPLOY_MODE=""
+for ((i=0; i<${#ENGINE_ARGS[@]}; i++)); do
+  case "${ENGINE_ARGS[i]}" in
+    --master) MASTER=${ENGINE_ARGS[i+1]}; ((i+=1)) ;;
+    --master=*) MASTER=${ENGINE_ARGS[i]#*=} ;;
+    --deploy-mode) DEPLOY_MODE=${ENGINE_ARGS[i+1]}; ((i+=1)) ;;
+    --conf | -c)
+      case "${ENGINE_ARGS[i+1]}" in
+        spark.master=*) CONF_MASTER=${ENGINE_ARGS[i+1]#*=} ;;
+        spark.submit.deployMode=*) CONF_DEPLOY_MODE=${ENGINE_ARGS[i+1]#*=} ;;
+      esac
+      ((i+=1))
+      ;;
+    --conf=spark.master=*) CONF_MASTER=${ENGINE_ARGS[i]#--conf=spark.master=} ;;
+    --conf=spark.submit.deployMode=*) CONF_DEPLOY_MODE=${ENGINE_ARGS[i]#--conf=spark.submit.deployMode=} ;;
+    --archives | --class | --driver-class-path | --driver-cores | --driver-java-options | \
+    --driver-library-path | --driver-memory | --executor-cores | --executor-memory | --files | --jars | \
+    --keytab | --kill | --remote | --name | --num-executors | --packages | --exclude-packages | \
+    --principal | --properties-file | --proxy-user | --py-files | --queue | --repositories | --status | \
+    --total-executor-cores) ((i+=1)) ;;
+  esac
+done
+MASTER=${MASTER:-$CONF_MASTER}
+DEPLOY_MODE=${DEPLOY_MODE:-$CONF_DEPLOY_MODE}
+if [[ "$DEPLOY_MODE" == cluster && "$MASTER" == spark://* ]]; then
+  echo "Standalone cluster deploy mode is not supported; use client deploy mode" >&2
+  exit 2
+fi
+
 shopt -s nullglob
 ASSEMBLY_JARS=("${LIB_DIR}"/apache-hugegraph-loader-*-shaded.jar)
 if [ "${#ASSEMBLY_JARS[@]}" -ne 1 ]; then

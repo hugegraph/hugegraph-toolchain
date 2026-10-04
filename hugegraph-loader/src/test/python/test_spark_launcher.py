@@ -122,7 +122,7 @@ class SparkLauncherTest(unittest.TestCase):
         mapping = "/tmp/mapping directory/input.json"
         result = self.run_launcher("--files", caller[0] + "," + caller[1],
                                    "--files=" + caller[2], "--files", caller[3],
-                                   "--deploy-mode", "cluster", "--master", "spark://example:7077",
+                                   "--deploy-mode", "cluster", "--master", "yarn",
                                    "--file", mapping)
         self.assertEqual(0, result.returncode, result.stderr)
         args = self.arguments()
@@ -149,6 +149,42 @@ class SparkLauncherTest(unittest.TestCase):
         jar = args.index(str(self.shaded))
         self.assertEqual(["--files", "first.json#first,second path.json#second"], args[2:jar])
         self.assertEqual(["--file", "/tmp/local mapping.json"], args[jar + 1:])
+
+    def test_explicit_jdbc_jar_is_shipped_but_other_lib_jars_are_not(self):
+        driver = self.lib / "mysql driver.jar"
+        driver.touch()
+        result = self.run_launcher("--master", "local[1]", "--jars", str(driver),
+                                   "--file", "jdbc-mapping.json")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(str(driver), args[args.index("--jars") + 1])
+        self.assertNotIn(str(self.lib / "dependency one.jar"), args)
+
+    def test_standalone_cluster_is_rejected_before_submission(self):
+        variants = [
+            ["--master", "spark://example:7077", "--deploy-mode", "cluster"],
+            ["--deploy-mode=cluster", "--master=spark://example:7077"],
+            ["--conf", "spark.master=spark://example:7077", "--deploy-mode", "cluster"],
+            ["--master", "spark://example:7077", "--conf=spark.submit.deployMode=cluster"],
+        ]
+        for engine in variants:
+            with self.subTest(engine=engine):
+                result = self.run_launcher(*engine, "--file", "mapping.json")
+                self.assertEqual(2, result.returncode)
+                self.assertIn("Standalone cluster", result.stderr)
+                self.assertFalse(self.argv.exists())
+
+    def test_standalone_client_preserves_mapping_and_opaque_engine_values(self):
+        result = self.run_launcher("--master", "spark://example:7077", "--deploy-mode", "client",
+                                   "--name", "--deploy-mode", "--file", "/tmp/mapping.json")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(["--file", "/tmp/mapping.json"], args[args.index(str(self.shaded)) + 1:])
+
+    def test_explicit_client_mode_takes_priority_over_conf(self):
+        result = self.run_launcher("--master", "spark://example:7077", "--deploy-mode", "client",
+                                   "--conf", "spark.submit.deployMode=cluster", "--file", "mapping.json")
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_cluster_mapping_fragment_fails_before_submission_without_echoing_path(self):
         mapping = self.app / "valid mapping#private-alias.json"
