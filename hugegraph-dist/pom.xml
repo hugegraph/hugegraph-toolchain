@@ -57,7 +57,8 @@
                                     mv -v $root_path/hugegraph-tools/apache-hugegraph-tools-${project.version} ${final.name}/ || exit
                                     cp -r -v $root_path/hugegraph-dist/release-docs/* ${final.name}/ || exit
 
-                                    tar zcvf $root_path/target/${final.name}.tar.gz ./${final.name} || exit 1
+                                    COPYFILE_DISABLE=1 tar zcvf "$root_path/target/${final.name}.tar.gz" \
+                                        ./${final.name} || exit 1
 
                                     md5sum $root_path/target/${final.name}.tar.gz
                                     echo -n "hugegraph-toolchain tar.gz available at: "
