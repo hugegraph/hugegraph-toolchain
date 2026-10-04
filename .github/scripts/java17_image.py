@@ -26,6 +26,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -209,6 +210,7 @@ def smoke(evidence):
               "toolchain_commit": manifest["toolchain_commit"], "container_ids": []}
     server_home = None
     volume_created = False
+    failure_types = set()
     with tempfile.TemporaryDirectory(prefix="java17-image-runtime-") as directory:
         try:
             report["image_id"] = run(["docker", "image", "inspect", "--format", "{{.Id}}", image])
@@ -252,6 +254,7 @@ def smoke(evidence):
             report["status"] = "passed"
         except Exception as error:
             report["error"] = str(error)
+            failure_types.add("smoke: " + type(error).__name__)
         finally:
             def cleanup(args, **kwargs):
                 try:
@@ -259,6 +262,7 @@ def smoke(evidence):
                 except Exception as error:
                     report["status"] = "failed"
                     report.setdefault("cleanup_errors", []).append(str(error))
+                    failure_types.add("cleanup: " + type(error).__name__)
 
             cleanup(["docker", "logs", name], log=evidence / "container.log")
             cleanup(["docker", "rm", "-fv", name])
@@ -274,7 +278,13 @@ def smoke(evidence):
                     except OSError as error:
                         report["status"] = "failed"
                         report.setdefault("cleanup_errors", []).append(str(error))
+                        failure_types.add("cleanup: " + type(error).__name__)
             (evidence / "report.json").write_text(json.dumps(report, indent=2))
+    if report["status"] != "passed":
+        # Exception details may contain credentials, URLs or full commands; retain them only in the artifact.
+        summary = ", ".join(sorted(failure_types))[:1024]
+        message = f"Java 17 image smoke failed ({summary}); report={evidence / 'report.json'}"
+        print(message.encode("utf-8")[:7168].decode("utf-8", errors="ignore"), file=sys.stderr)
     return report["status"] == "passed"
 
 

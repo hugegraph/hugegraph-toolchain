@@ -18,9 +18,14 @@
 """Small fixtures for provenance failures; actual Docker behavior is a CI gate."""
 
 import copy
+import contextlib
+import io
 import json
+import os
+import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import java17_image as images
@@ -130,6 +135,63 @@ class ImageEvidenceTest(unittest.TestCase):
             path.write_text("# reference\nusePD=true\nauth.authenticator=fixture.Auth\ngraphs=./conf/graphs\n")
             images.configure(path, {"usePD": "false"}, ("auth.authenticator",))
             self.assertEqual("# reference\ngraphs=./conf/graphs\nusePD=false\n", path.read_text())
+
+    def test_smoke_reports_failure_types_without_exposing_exception_details(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory)
+            manifest = {"module": "loader", "image": "fixture", "server_commit": sdk.COMMIT,
+                        "toolchain_commit": "fixture"}
+            (evidence / "manifest.json").write_text(json.dumps(manifest))
+            original_error = "https://user:password@example.invalid/?token=secret"
+            cleanup_error = "Command ['docker', '--password=secret'] timed out"
+            stderr = io.StringIO()
+            with patch.object(images, "run", side_effect=[RuntimeError(original_error),
+                                                          OSError(cleanup_error), ""]), \
+                    contextlib.redirect_stderr(stderr):
+                self.assertFalse(images.smoke(evidence))
+            report = json.loads((evidence / "report.json").read_text())
+            self.assertEqual(report["error"], original_error)
+            self.assertEqual(report["cleanup_errors"], [cleanup_error])
+            self.assertEqual(report["status"], "failed")
+            output = stderr.getvalue()
+            self.assertIn("smoke: RuntimeError", output)
+            self.assertIn("cleanup: OSError", output)
+            self.assertIn(str(evidence / "report.json"), output)
+            self.assertNotIn("secret", output)
+            self.assertNotIn("https://", output)
+            self.assertNotIn("Command", output)
+            self.assertLess(len(output.encode("utf-8")), 8192)
+
+    def test_prepare_failure_reports_existing_log_and_preserves_exit_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary, evidence = root / "bin", root / "evidence"
+            binary.mkdir()
+            message = "fixture exception: password=secret"
+            fake_python = binary / "python3"
+            fake_python.write_text("#!/bin/bash\n"
+                                   "case \"$1\" in\n"
+                                   "  */verify_candidate_image_sdk.py) exit 0 ;;\n"
+                                   f"  */java17_image.py) echo '{message}' >&2; exit 23 ;;\n"
+                                   "  *) exit 99 ;;\n"
+                                   "esac\n")
+            fake_python.chmod(0o755)
+            fake_docker = binary / "docker"
+            fake_docker.write_text(f"#!/bin/bash\ntouch '{root / 'docker-called'}'\nexit 99\n")
+            fake_docker.chmod(0o755)
+            environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ["PATH"],
+                               RUNNER_TEMP=str(root))
+            result = subprocess.run(["bash", str(images.ROOT / ".github/scripts/build-java17-image.sh"),
+                                     "loader", sdk.COMMIT, str(root / "repository"),
+                                     str(root / "server.tar.gz"), "fixture-sha", str(evidence)],
+                                    cwd=images.ROOT, env=environment, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 23)
+            self.assertIn("prepare candidate provenance (exit 23)", result.stderr)
+            self.assertIn(str(evidence / "prepare.log"), result.stderr)
+            self.assertNotIn("secret", result.stderr)
+            self.assertEqual((evidence / "prepare.log").read_text(), message + "\n")
+            self.assertFalse((evidence / "manifest.json").exists())
+            self.assertFalse((root / "docker-called").exists())
 
 
 if __name__ == "__main__":

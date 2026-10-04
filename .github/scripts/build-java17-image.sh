@@ -29,11 +29,25 @@ archive_sha=$5
 evidence=$(mkdir -p "$6" && cd "$6" && pwd)
 root=$(git rev-parse --show-toplevel)
 work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/java17-image-build.XXXXXX")
+phase="prepare build inputs"
+phase_log="$evidence/manifest.json"
+report_failure() {
+    local status=$?
+    printf 'Java 17 image build failed during %s (exit %s); evidence: %s\n' \
+        "$phase" "$status" "$phase_log" >&2
+    exit "$status"
+}
+trap report_failure ERR
 mkdir -p "$work/builder/repository/org/apache"
+phase="verify candidate SDK"
+phase_log="$evidence/sdk-verification.log"
 python3 "$root/.github/scripts/verify_candidate_image_sdk.py" "$repository" \
     > "$evidence/sdk-verification.log" 2>&1
+phase="prepare candidate provenance"
+phase_log="$evidence/prepare.log"
 python3 "$root/.github/scripts/java17_image.py" prepare \
-    "$module" "$server_commit" "$repository" "$archive" "$archive_sha" "$work" "$evidence"
+    "$module" "$server_commit" "$repository" "$archive" "$archive_sha" "$work" "$evidence" \
+    > "$phase_log" 2>&1
 cp -a "$repository/org/apache/hugegraph" "$work/builder/repository/org/apache/"
 cp "$repository/candidate-sdk-manifest.json" "$work/builder/repository/"
 cat > "$work/builder/Dockerfile" <<'DOCKERFILE'
@@ -41,9 +55,13 @@ FROM maven:3.9.11-eclipse-temurin-17
 COPY repository /opt/candidate-m2
 DOCKERFILE
 builder="hugegraph-candidate-maven:$server_commit"
+phase="build candidate Maven image"
+phase_log="$evidence/builder.log"
 docker build -t "$builder" "$work/builder" > "$evidence/builder.log" 2>&1
 # These are fresh task-owned build inputs; retain the server archive and evidence.
 rm -rf -- "$work/builder"
+phase="build product image"
+phase_log="$evidence/image-build.log"
 docker build -f "$root/hugegraph-$module/Dockerfile" \
     --build-arg "MAVEN_BUILDER_IMAGE=$builder" \
     --build-arg 'MAVEN_ARGS=-Dmaven.repo.local=/opt/candidate-m2' \
