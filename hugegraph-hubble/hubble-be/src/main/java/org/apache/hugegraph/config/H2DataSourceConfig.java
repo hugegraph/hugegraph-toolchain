@@ -57,7 +57,7 @@ public class H2DataSourceConfig {
             dataSource.getDataSourceClassName() != null ||
             dataSource.getDataSourceJNDI() != null ||
             !dataSource.getDataSourceProperties().isEmpty()) {
-            throw new IllegalArgumentException("Hubble metadata requires H2 with a local file or memory URL; " +
+            throw new IllegalArgumentException("Hubble metadata requires H2 with a local file or named memory URL; " +
                                                "configure the JDBC URL and credentials directly");
         }
         this.checkExistingDatabase(dataSource, this.readOnlyProbeUrl(url));
@@ -69,6 +69,9 @@ public class H2DataSourceConfig {
             return false;
         }
         String name = url.substring("jdbc:h2:".length()).split(";", 2)[0];
+        if (name.equals("mem") || name.equals("mem:")) {
+            return false;
+        }
         return !name.isEmpty() && (name.startsWith("file:") || name.startsWith("mem:") ||
                 name.indexOf(':') < 0 || name.startsWith("/") || name.startsWith("./") ||
                 name.startsWith("../") || name.startsWith("~/") ||
