@@ -33,7 +33,9 @@ process_start_time() {
     if [[ -r /proc/${process_pid}/stat ]]; then
         awk '{print $22}' "/proc/${process_pid}/stat"
     else
-        LC_ALL=C ps -o lstart= -p "${process_pid}" 2>/dev/null
+        local process_stamp
+        process_stamp=$(LC_ALL=C ps -o lstart= -p "${process_pid}" 2>/dev/null) || return 1
+        printf '%s\n' "${process_stamp}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
     fi
 }
 
@@ -92,23 +94,23 @@ if [[ -f ${PID_FILE} ]] ; then
         echo "Invalid HugeGraphHubble PID file, removing it"
         rm "${PID_FILE}"
     elif kill -0 "${PID}" > /dev/null 2>&1; then
-        CURRENT_START=$(process_start_time "${PID}") || CURRENT_START=""
-        if [[ -z ${PID_START} ]]; then
-            PROCESS_ARGS=$(ps -p "${PID}" -o args= 2>/dev/null || true)
-            if [[ ${PROCESS_ARGS} == *"${MAIN_CLASS}"* &&
-                  ${PROCESS_ARGS} == *"-Dhubble.home.path=${HOME_PATH}"* ]]; then
-                echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
-                exit 1
-            fi
-            echo "Stale HugeGraphHubble PID file, removing it"
-            rm "${PID_FILE}"
-        elif [[ ${PID_START} != "${CURRENT_START}" ]]; then
-            echo "Stale HugeGraphHubble PID file, removing it"
-            rm "${PID_FILE}"
-        else
+        if ! CURRENT_START=$(process_start_time "${PID}") || [[ -z ${CURRENT_START} ]]; then
+            echo "Unable to verify process ${PID} start time; retaining PID file" >&2
+            exit 1
+        fi
+        if ! PROCESS_ARGS=$(ps -p "${PID}" -o args= 2>/dev/null) ||
+           [[ ! ${PROCESS_ARGS} =~ [^[:space:]] ]]; then
+            echo "Unable to verify process ${PID} arguments; retaining PID file" >&2
+            exit 1
+        fi
+        if [[ " ${PROCESS_ARGS} " == *" ${MAIN_CLASS} "* &&
+              " ${PROCESS_ARGS} " == *" -Dhubble.home.path=${HOME_PATH} "* &&
+              ( -z ${PID_START} || ${PID_START} == "${CURRENT_START}" ) ]]; then
             echo "HugeGraphHubble is running as process ${PID}, please stop it first!"
             exit 1
         fi
+        echo "Stale HugeGraphHubble PID file, removing it"
+        rm "${PID_FILE}"
     else
         rm "${PID_FILE}"
     fi
