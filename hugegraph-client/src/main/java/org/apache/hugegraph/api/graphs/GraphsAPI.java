@@ -83,8 +83,12 @@ public class GraphsAPI extends API {
         RestHeaders headers = new RestHeaders().add(RestHeaders.CONTENT_TYPE,
                                                     legacy ? "text/plain" :
                                                     RestHeaders.APPLICATION_JSON);
-        if (legacy && configText != null && configText.trim().startsWith("{")) {
-            configText = legacyGraphConfig(configText);
+        if (legacy) {
+            if (configText == null) {
+                configText = "";
+            } else if (configText.trim().startsWith("{")) {
+                configText = legacyGraphConfig(configText);
+            }
         }
         Map<String, Object> params = null;
         if (StringUtils.isNotEmpty(cloneGraphName)) {

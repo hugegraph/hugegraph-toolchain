@@ -42,6 +42,7 @@ public class H2DataSourceConfig {
     private static final int SCHEMA_VERSION = 1;
     // H2's native IFEXISTS error: the database has not been created yet.
     private static final int DATABASE_NOT_FOUND_WITH_IF_EXISTS = 90146;
+    private static final int DATABASE_IS_READ_ONLY = 90097;
 
     @Bean
     public HikariDataSource dataSource(DataSourceProperties properties, Environment environment) {
@@ -117,6 +118,12 @@ public class H2DataSourceConfig {
                 return;
             }
             // Do not expose JDBC URLs, credentials or database contents in the failure.
+            if (e.getErrorCode() == DATABASE_IS_READ_ONLY) {
+                throw new IllegalArgumentException("Hubble metadata read-only validation failed (H2 error 90097); " +
+                                                   "preserve the database and follow the manual recovery guidance " +
+                                                   "in the README. This error does not establish that the database " +
+                                                   "is empty");
+            }
         }
         throw new IllegalArgumentException("Hubble metadata validation failed; verify database credentials " +
                                            "and file access before choosing a new H2 database");
