@@ -166,7 +166,9 @@ def check_loader(container, evidence):
             raise RuntimeError(f"Loader readback mismatch for {label}")
         counts[label] = len(values)
         if label == "person":
-            marko = next(v for v in values if v["properties"].get("name") == "marko")
+            marko = next((v for v in values if v["properties"].get("name") == "marko"), None)
+            if marko is None:
+                raise RuntimeError("Loader readback is missing vertex marko")
             if marko["properties"].get("age") != 29 or marko["properties"].get("city") != "Beijing":
                 raise RuntimeError("Loader did not preserve example property values")
     return counts
