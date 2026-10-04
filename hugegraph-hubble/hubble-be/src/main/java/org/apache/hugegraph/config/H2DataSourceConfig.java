@@ -42,6 +42,7 @@ public class H2DataSourceConfig {
     private static final int SCHEMA_VERSION = 1;
     // H2's native IFEXISTS error: the database has not been created yet.
     private static final int DATABASE_NOT_FOUND_WITH_IF_EXISTS = 90146;
+    private static final int DATABASE_IS_READ_ONLY = 90097;
 
     @Bean
     public HikariDataSource dataSource(DataSourceProperties properties, Environment environment) {
@@ -57,7 +58,7 @@ public class H2DataSourceConfig {
             dataSource.getDataSourceClassName() != null ||
             dataSource.getDataSourceJNDI() != null ||
             !dataSource.getDataSourceProperties().isEmpty()) {
-            throw new IllegalArgumentException("Hubble metadata requires H2 with a local file or memory URL; " +
+            throw new IllegalArgumentException("Hubble metadata requires H2 with a local file or named memory URL; " +
                                                "configure the JDBC URL and credentials directly");
         }
         this.checkExistingDatabase(dataSource, this.readOnlyProbeUrl(url));
@@ -69,6 +70,9 @@ public class H2DataSourceConfig {
             return false;
         }
         String name = url.substring("jdbc:h2:".length()).split(";", 2)[0];
+        if (name.equals("mem") || name.equals("mem:")) {
+            return false;
+        }
         return !name.isEmpty() && (name.startsWith("file:") || name.startsWith("mem:") ||
                 name.indexOf(':') < 0 || name.startsWith("/") || name.startsWith("./") ||
                 name.startsWith("../") || name.startsWith("~/") ||
@@ -114,6 +118,12 @@ public class H2DataSourceConfig {
                 return;
             }
             // Do not expose JDBC URLs, credentials or database contents in the failure.
+            if (e.getErrorCode() == DATABASE_IS_READ_ONLY) {
+                throw new IllegalArgumentException("Hubble metadata read-only validation failed (H2 error 90097); " +
+                                                   "preserve the database and follow the manual recovery guidance " +
+                                                   "in the README. This error does not establish that the database " +
+                                                   "is empty");
+            }
         }
         throw new IllegalArgumentException("Hubble metadata validation failed; verify database credentials " +
                                            "and file access before choosing a new H2 database");

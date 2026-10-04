@@ -62,9 +62,16 @@ runs:
           printf 'Expected one candidate server archive, found: %s\n' "${archives[*]}" >&2
           exit 1
         fi
+        manifest="$candidate_repo/candidate-sdk-manifest.json"
+        if [[ ! -s "$manifest" ]]; then
+          printf 'Candidate SDK installer did not produce a provenance manifest\n' >&2
+          exit 1
+        fi
+        manifest_artifact_id=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
         archive_sha=$(sha256sum "${archives[0]}" | cut -d ' ' -f 1)
         printf 'archive-sha256=%s\nmanifest=%s\n' "$archive_sha" \
-          "$candidate_repo/candidate-sdk-manifest.json" >> "$GITHUB_OUTPUT"
+          "$manifest" >> "$GITHUB_OUTPUT"
+        printf 'manifest-artifact-id=%s\n' "$manifest_artifact_id" >> "$GITHUB_OUTPUT"
         # MAVEN_OPTS also supports Maven versions predating MAVEN_ARGS (3.9).
         {
           printf 'MAVEN_OPTS=%s -Dmaven.repo.local=%s\n' "${MAVEN_OPTS:-}" "$candidate_repo"
@@ -72,3 +79,9 @@ runs:
           printf 'CANDIDATE_SOURCE_COMMIT=%s\n' "$SERVER_COMMIT"
         } >> "$GITHUB_ENV"
         printf 'archive=%s\nmaven-repo=%s\n' "${archives[0]}" "$candidate_repo" >> "$GITHUB_OUTPUT"
+    - name: Retain candidate SDK provenance
+      uses: actions/upload-artifact@v7
+      with:
+        name: candidate-sdk-manifest-${{ steps.build.outputs.manifest-artifact-id }}
+        path: ${{ steps.build.outputs.manifest }}
+        if-no-files-found: error

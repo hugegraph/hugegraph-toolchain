@@ -29,9 +29,10 @@ Required:
 - Spark 3.5.8 with Scala 2.12 (built with Scala 2.12.18)
 - Maven 3.6.3+
 
-The locked candidate Common uses the declared request-body charset and defaults to UTF-8.
-The earlier preparation build uses published Common 1.7, whose request bodies depend on the
-JVM default charset; retain the UTF-8 options below when running that preparation build.
+The default Maven commands below use published Common 1.7.0, whose request bodies depend on
+the JVM default charset. Retain the UTF-8 submission options below when running this build on
+Java 17. The isolated same-source candidate SDK used by CI supplies a Common implementation
+that uses the declared request-body charset and defaults to UTF-8.
 
 To build without executing tests:
 
@@ -52,6 +53,8 @@ The Surefire JVM starts with `-Dfile.encoding=UTF-8` so these fixtures do not de
 The default Spark master is `local[2]`. `-Dspark.test.master=...` accepts only `local` or `local[...]`,
 for example `local[4]` or `local[*]`; remote masters and `local-cluster` are rejected because the Maven
 fixture does not distribute connector classes or dependencies to separate executors.
+CI runs this embedded fixture. Packaged `spark-submit` runs with separate executor JVMs
+and the assembly's SLF4J provider check are manual validation, not automated CI gates.
 
 HTTPS tests require an explicit trust store shared by the readback client and local Spark writers:
 
@@ -92,15 +95,15 @@ For example, after placing the JAR at `/opt/hugegraph-spark/lib/guava-30.0-jre.j
 ```bash
 EXECUTOR_GUAVA_JAR=/opt/hugegraph-spark/lib/guava-30.0-jre.jar
 spark-submit --deploy-mode client --driver-class-path "$DRIVER_GUAVA_JAR" \
+  --driver-java-options "-Dfile.encoding=UTF-8" \
   --conf "spark.executor.extraClassPath=$EXECUTOR_GUAVA_JAR" \
+  --conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8" \
   --jars /path/to/hugegraph-spark-connector-1.8.0-jar-with-dependencies.jar \
   /path/to/your-application.jar
 ```
 
-When running the earlier preparation build with published Common 1.7, also add
-`--driver-java-options "-Dfile.encoding=UTF-8"` and
-`--conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8"` to the submission command.
-These options are not required by the locked candidate Common's request-body implementation.
+Omit the UTF-8 driver and executor options only when the connector and Java Client were built
+using the isolated same-source candidate SDK. The default Maven build still requires them.
 
 For cluster deploy mode, provision Guava on the remote driver and use its readable absolute path in
 `--driver-class-path`; copying it to executors does not provision the driver.

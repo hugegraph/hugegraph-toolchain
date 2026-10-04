@@ -95,7 +95,7 @@ public class HGEnvUtils {
     }
 
     static URI endpoint(String url) {
-        URI uri = URI.create(url);
+        URI uri = parseEndpoint(url);
         E.checkArgument(uri.getScheme() != null, "Test URL must have an HTTP or HTTPS scheme");
         String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
         E.checkArgument(scheme.equals("http") || scheme.equals("https"),
@@ -103,7 +103,18 @@ public class HGEnvUtils {
         E.checkArgument(uri.getHost() != null, "Test URL must have a host");
         E.checkArgument(uri.getRawPath().isEmpty() || uri.getRawPath().equals("/"),
                         "Test URL must use the server root without a path prefix");
-        return URI.create(scheme + url.substring(uri.getScheme().length()));
+        E.checkArgument(uri.getRawQuery() == null, "Test URL must not have a query");
+        E.checkArgument(uri.getRawFragment() == null, "Test URL must not have a fragment");
+        E.checkArgument(uri.getRawUserInfo() == null, "Test URL must not have user info");
+        return parseEndpoint(scheme + url.substring(uri.getScheme().length()));
+    }
+
+    private static URI parseEndpoint(String url) {
+        try {
+            return URI.create(url);
+        } catch (IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Test URL must be a valid URI");
+        }
     }
 
     static String port(URI uri) {

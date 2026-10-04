@@ -603,6 +603,7 @@
                         <exclude>**/.wrangler/**/*</exclude>
                         <exclude>**/*.mv.db</exclude>
                         <exclude>**/*.trace.db</exclude>
+                        <exclude>**/*.truststore</exclude>
                         <exclude>**/*.svg</exclude>
                         <exclude>**/*.woff2</exclude>
                         <exclude>**/hubble-fe/**/*</exclude>

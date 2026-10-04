@@ -43,8 +43,33 @@ server. It requires a new external source directory and a dedicated Maven
 repository with no existing HugeGraph artifacts. It records source and artifact
 provenance in `candidate-sdk-manifest.json` inside that repository. Reuse the
 same explicit `-Dmaven.repo.local` option for subsequent Toolchain validation.
+The manifest's source and JDK paths describe that build; use your own directories
+when rebuilding.
 The package command skips test execution; run the module test suites separately.
 These source-built packages are candidates, not an ASF release.
+
+Distribution packaging also requires Python 3.9 or newer. Before each module
+archive is written, the existing SDK verifier checks the locked source, required
+POM/JAR hashes and local installation origins, then checks the distribution's
+manifest and actual SDK libraries. The combined archive rechecks all three
+module directories before moving them. Source checks lock Server SDK artifacts;
+Toolchain artifacts such as the Client, Loader and Hubble backend are outputs of
+this reactor and may change during `install`. Older manifests can retain their
+metadata, but those outputs are excluded from SDK source hashes. The original
+manifest is still retained unchanged and compared with each packaged copy.
+A missing manifest, a Central artifact
+with the same version, or a stale/changed packaged SDK library fails packaging.
+Ordinary `compile` and `test` do not require the candidate manifest; they may
+validate published dependencies without establishing candidate package identity.
+
+These isolated builds reuse `1.7.0` coordinates only for source validation.
+Before proposing a release candidate or deploying Toolchain Maven artifacts for
+external consumers, every Java 17 SDK dependency must have coordinates that
+distinguish it from the previously released `1.7.0` artifacts and are available
+to those consumers. Update the Toolchain dependencies and rerun the module
+dependency and runtime matrices against those publishable identities. Server
+versioning and publication are separate release work; this candidate validation
+does not authorize either.
 
 The container changes are delivered separately in
 [PR #37](https://github.com/hugegraph/hugegraph-toolchain/pull/37).
@@ -99,6 +124,27 @@ graph, schema and data operations on standalone Server 1.5; 1.5 GraphSpace and P
 management are outside that support boundary. New Client/Loader/Tools results
 against 1.5 and original Client 1.5/1.7 results against the candidate are recorded
 separately, including failures.
+
+The following results were verified on 2026-10-04. New tools used native
+Java 17 and the locked candidate SDK above; published servers and original
+clients retained their supported JVMs. A pass describes the exercised operations.
+
+| Tool | Server | Verified result |
+|---|---|---|
+| New Client | Published 1.7 | API and functional suites, including HTTPS, passed; three existing API skips remain. |
+| New Loader / Tools | Published 1.7 | File-source and Tools functional suites passed. |
+| New Client / Loader / Tools | Locked candidate | Client unit/API/functional, Loader unit/file-source and Tools functional suites passed; ZIP/plain HDFS backup/restore passed; three existing API skips remain. |
+| New Client | 1.5 standalone | Schema, vertices/edges, Unicode, numeric precision, pagination, Gremlin, errors and cleanup passed. |
+| New Loader / Tools | 1.5 standalone | Bundled file import and ZIP/plain backup/restore passed with schema, IDs, property types and Unicode readback. |
+| Original Client 1.7 / Java 11 | Locked candidate | REST and Gremlin cases passed. |
+| Original Client 1.5 / Java 8 | Locked candidate | REST cases passed; Gremlin count failed because the legacy `__g_hugegraph` alias is absent from graphspace-prefixed bindings. |
+| New Hubble | Published 1.7 / 1.5 and locked candidate | Final candidate-SDK server/browser matrix and browser-created metadata persistence remain pending. |
+
+Native Java 17 Hubble backend tests and packaged H2/JAXB checks passed. These
+checks do not establish browser workflows or server compatibility.
+
+Original Tools 1.7 ZIP and plain backups were also restored by the new Java 17
+Tools package, with schema, vertex/edge IDs, types and Unicode readback verified.
 
 The Spark Connector uses Spark 3.5.8 and Scala 2.12.18. Spark supplies its logging
 provider; the connector assembly does not bundle a competing SLF4J provider.

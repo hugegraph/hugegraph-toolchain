@@ -33,6 +33,7 @@ import org.apache.hugegraph.config.H2DataSourceConfig;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSessionFactory;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
+import org.h2.mvstore.MVStore;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -85,6 +86,48 @@ public class H2StartupTest {
     }
 
     @Test
+    public void testUnnamedMemoryUrlsAreRejectedBeforeConnecting() {
+        for (String url : new String[]{"jdbc:h2:mem", "jdbc:h2:mem:", "jdbc:h2:mem:;DB_CLOSE_DELAY=-1"}) {
+            this.runner(url).run(context -> {
+                Throwable failure = context.getStartupFailure();
+                Assert.assertNotNull(failure);
+                while (failure.getCause() != null) {
+                    failure = failure.getCause();
+                }
+                Assert.assertTrue(failure instanceof IllegalArgumentException);
+                Assert.assertEquals("Hubble metadata requires H2 with a local file or named memory URL; " +
+                                    "configure the JDBC URL and credentials directly", failure.getMessage());
+            });
+        }
+    }
+
+    @Test
+    public void testNamedMemorySharesMetadataUntilLastConnectionCloses() throws Exception {
+        String url = "jdbc:h2:mem:named-metadata-pool;DB_CLOSE_DELAY=0";
+        this.runner(url).withPropertyValues("spring.datasource.hikari.minimum-idle=0",
+                                           "spring.datasource.hikari.maximum-pool-size=2").run(context -> {
+            Assert.assertNull(context.getStartupFailure());
+            DataSource dataSource = context.getBean(DataSource.class);
+            try (Connection first = dataSource.getConnection();
+                 Connection second = dataSource.getConnection();
+                 Statement write = first.createStatement();
+                 Statement read = second.createStatement()) {
+                write.execute("INSERT INTO user_info(username, locale) VALUES ('memory-user', 'zh')");
+                try (java.sql.ResultSet result = read.executeQuery(
+                        "SELECT locale FROM user_info WHERE username='memory-user'")) {
+                    Assert.assertTrue(result.next());
+                    Assert.assertEquals("zh", result.getString(1));
+                }
+            }
+        });
+        try (Connection ignored = DriverManager.getConnection(url + ";IFEXISTS=TRUE", "sa", "")) {
+            Assert.fail("Named memory metadata must disappear after its last connection closes");
+        } catch (java.sql.SQLException failure) {
+            Assert.assertEquals(90146, failure.getErrorCode());
+        }
+    }
+
+    @Test
     public void testWrongEncryptedPasswordHasSafeValidationGuidance() throws Exception {
         Path directory = Files.createTempDirectory("hubble-password-rejection-");
         String url = "jdbc:h2:file:" + directory.resolve("metadata") + ";CIPHER=AES";
@@ -109,6 +152,53 @@ public class H2StartupTest {
                     });
             Assert.assertArrayEquals(before, Files.readAllBytes(directory.resolve("metadata.mv.db")));
             Assert.assertFalse(Files.exists(directory.resolve("metadata.trace.db")));
+        } finally {
+            try (Stream<Path> files = Files.walk(directory)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testReadOnlyInitializationFailurePreservesDatabase() throws Exception {
+        Path directory = Files.createTempDirectory(Path.of("target"), "hubble-readonly-rejection-");
+        Path database = directory.resolve("metadata.mv.db");
+        String url = "jdbc:h2:file:" + directory.toAbsolutePath().resolve("metadata");
+        try {
+            // A native empty MVStore deterministically requires H2 initialization on open.
+            try (MVStore store = new MVStore.Builder().fileName(database.toString()).open()) {
+                store.commit();
+            }
+            byte[] before = Files.readAllBytes(database);
+            // Keep the direct probe independent of the framework's first open.
+            Path probe = directory.resolve("probe.mv.db");
+            Files.copy(database, probe);
+            try (Connection ignored = DriverManager.getConnection(
+                    "jdbc:h2:file:" + directory.toAbsolutePath().resolve("probe") +
+                    ";IFEXISTS=TRUE;ACCESS_MODE_DATA=r;TRACE_LEVEL_FILE=0", "sa", "")) {
+                Assert.fail("Read-only initialization must fail");
+            } catch (java.sql.SQLException failure) {
+                Assert.assertEquals(90097, failure.getErrorCode());
+            }
+            this.runner(url).run(context -> {
+                Throwable failure = context.getStartupFailure();
+                Assert.assertNotNull(failure);
+                while (failure.getCause() != null) {
+                    failure = failure.getCause();
+                }
+                Assert.assertTrue(failure instanceof IllegalArgumentException);
+                Assert.assertEquals("Hubble metadata read-only validation failed (H2 error 90097); " +
+                                    "preserve the database and follow the manual recovery guidance " +
+                                    "in the README. This error does not establish that the database " +
+                                    "is empty", failure.getMessage());
+                Assert.assertNull(failure.getCause());
+            });
+            Assert.assertArrayEquals(before, Files.readAllBytes(database));
+            Assert.assertArrayEquals(before, Files.readAllBytes(probe));
+            Assert.assertFalse(Files.exists(directory.resolve("metadata.trace.db")));
+            Assert.assertFalse(Files.exists(directory.resolve("probe.trace.db")));
         } finally {
             try (Stream<Path> files = Files.walk(directory)) {
                 for (Path path : files.sorted(Comparator.reverseOrder()).toList()) {
