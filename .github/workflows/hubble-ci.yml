@@ -122,7 +122,10 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: hugegraph-hubble/hubble-fe
-        run: yarn playwright install --with-deps chromium
+        run: |
+          # Browser dependencies use Ubuntu repositories; this job does not use the Microsoft feed.
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
+          yarn playwright install --with-deps chromium
 
       - name: Compile
         run: |
