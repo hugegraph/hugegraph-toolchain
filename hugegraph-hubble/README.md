@@ -256,7 +256,11 @@ marker. Databases without that marker or with another schema version are refused
 without initializing or modifying them. The marker is written only after the
 complete new schema initializes successfully.
 
-Metadata connections accept local H2 file and memory URLs. The file prefix can
+Metadata connections accept local H2 file and named memory URLs. Use a name such
+as `jdbc:h2:mem:metadata` for disposable tests; `jdbc:h2:mem` and `jdbc:h2:mem:`
+are rejected before opening a connection. With the default `DB_CLOSE_DELAY=0`,
+named memory metadata disappears when the last connection closes. Use a file
+URL to retain metadata across restarts. The file prefix can
 be omitted, for example `jdbc:h2:./data/hubble-v2`. Encrypted files using
 `CIPHER=AES` retain their cipher setting during the read-only compatibility
 check; configure the H2 file and user passwords through the password property.
