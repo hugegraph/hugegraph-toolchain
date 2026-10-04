@@ -68,7 +68,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}
+          key: ${{ runner.os }}-hugegraph-server-provenance-v1-${{ steps.get-commit.outputs.commit_id }}
 
       - name: Compile
         run: |
