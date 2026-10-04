@@ -53,11 +53,53 @@ public class HGEnvUtilsConfigTest {
 
     @Test
     public void testPathPrefixRejectedBeforeFixtureAccess() {
+        Assert.assertEquals("http://localhost:8080",
+                            HGEnvUtils.endpoint("http://localhost:8080").toString());
         Assert.assertEquals("http://localhost:8080/",
                             HGEnvUtils.endpoint("http://localhost:8080/").toString());
         for (String path : new String[]{"/proxy", "/proxy/", "/%70roxy"}) {
             Assert.assertThrows(IllegalArgumentException.class,
                                 () -> HGEnvUtils.endpoint("http://localhost:8080" + path));
+        }
+    }
+
+    @Test
+    public void testQueryRejectedBeforeFixtureAccess() {
+        for (String suffix : new String[]{"?", "/?", "?token=private-query-value",
+                                          "/?token=private-query-value"}) {
+            Throwable error = Assert.assertThrows(IllegalArgumentException.class,
+                                                 () -> HGEnvUtils.endpoint("HTTP://localhost:8080" + suffix));
+            Assert.assertEquals("Test URL must not have a query", error.getMessage());
+        }
+    }
+
+    @Test
+    public void testFragmentRejectedBeforeFixtureAccess() {
+        for (String suffix : new String[]{"#", "/#", "#private-fragment-value", "/#private-fragment-value"}) {
+            Throwable error = Assert.assertThrows(IllegalArgumentException.class,
+                                                 () -> HGEnvUtils.endpoint("HTTPS://localhost:8443" + suffix));
+            Assert.assertEquals("Test URL must not have a fragment", error.getMessage());
+        }
+    }
+
+    @Test
+    public void testUserInfoRejectedBeforeFixtureAccess() {
+        for (String userInfo : new String[]{"", "fixture", "fixture:private-user-info"}) {
+            Throwable error = Assert.assertThrows(IllegalArgumentException.class,
+                                                 () -> HGEnvUtils.endpoint("http://" + userInfo + "@localhost"));
+            Assert.assertEquals("Test URL must not have user info", error.getMessage());
+        }
+    }
+
+    @Test
+    public void testMalformedEndpointDoesNotExposeInput() {
+        for (String url : new String[]{"http://localhost?token=private-query-value%",
+                                      "http://fixture:private-user-info%@localhost"}) {
+            Throwable error = Assert.assertThrows(IllegalArgumentException.class, () -> HGEnvUtils.endpoint(url));
+            Assert.assertTrue("Parse errors must use a sanitized message",
+                              "Test URL must be a valid URI".equals(error.getMessage()));
+            Assert.assertTrue("Parse errors must not retain a cause", error.getCause() == null);
+            Assert.assertEquals(0, error.getSuppressed().length);
         }
     }
 
