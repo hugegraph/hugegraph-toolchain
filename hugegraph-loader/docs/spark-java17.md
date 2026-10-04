@@ -27,6 +27,7 @@ Use the generated distribution's `bin/hugegraph-spark-loader.sh`. It submits
 the distribution's shaded Loader jar, which contains the application dependencies.
 Spark supplies the engine libraries and Java 17 module options. Set `SPARK_HOME`
 and `JAVA_HOME` for the matching engine and JVM before starting the launcher.
+`--file` requires a local mapping path without `#` fragments in cluster mode; caller `--files` URI aliases are supported.
 
 Create the target schema before loading. Data paths must be readable by the
 Spark executors. Load vertices before edges when the edges require those vertices.

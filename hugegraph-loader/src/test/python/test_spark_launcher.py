@@ -150,6 +150,27 @@ class SparkLauncherTest(unittest.TestCase):
         self.assertEqual(["--files", "first.json#first,second path.json#second"], args[2:jar])
         self.assertEqual(["--file", "/tmp/local mapping.json"], args[jar + 1:])
 
+    def test_cluster_mapping_fragment_fails_before_submission_without_echoing_path(self):
+        mapping = self.app / "valid mapping#private-alias.json"
+        mapping.write_text("{}")
+        for option in (["--file", str(mapping)], ["--file=" + str(mapping)], ["-f", str(mapping)]):
+            with self.subTest(option=option[0]):
+                result = self.run_launcher("--deploy-mode=cluster", "--files=hdfs://namenode/data.csv#records",
+                                           *option)
+                self.assertEqual(2, result.returncode)
+                self.assertIn("--file", result.stderr)
+                self.assertNotIn(str(mapping), result.stdout + result.stderr)
+                self.assertNotIn("private-alias", result.stdout + result.stderr)
+                self.assertFalse(self.argv.exists())
+
+    def test_client_mapping_literal_hash_remains_a_local_path(self):
+        mapping = self.app / "valid mapping#part.json"
+        mapping.write_text("{}")
+        result = self.run_launcher("--file", str(mapping), "--files=hdfs://namenode/data.csv#records")
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = self.arguments()
+        self.assertEqual(["--file", str(mapping)], args[args.index(str(self.shaded)) + 1:])
+
     def test_engine_values_are_not_reclassified_as_loader_options(self):
         engine = ["-c", "--create-graph=true", "--driver-java-options", "--direct=false",
                   "--files", "--file=engine-owned.json", "--jars=/tmp/library with spaces.jar"]
