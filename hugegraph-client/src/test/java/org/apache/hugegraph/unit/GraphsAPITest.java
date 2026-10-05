@@ -21,11 +21,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.io.IOUtils;
 
 import org.apache.hugegraph.api.graphs.GraphsAPI;
@@ -139,6 +141,30 @@ public class GraphsAPITest extends BaseUnitTest {
         Assert.assertEquals("rocksdb", parsed.getProperty("backend"));
         Assert.assertEquals("C:\\data\\graph", parsed.getProperty("path"));
         Assert.assertEquals("a=b\nnext", parsed.getProperty("note"));
+    }
+
+    @Test
+    public void testLegacyConfigPreservesWhitespaceWithServerParser() throws Exception {
+        Mockito.when(this.mockClient.isSupportGs()).thenReturn(false);
+        RestResult result = Mockito.mock(RestResult.class);
+        ArgumentCaptor<Object> body = ArgumentCaptor.forClass(Object.class);
+        Mockito.when(this.mockClient.post(Mockito.anyString(), body.capture(),
+                                          Mockito.any(), Mockito.isNull())).thenReturn(result);
+        for (String password : new String[]{" pa", "pa ", " pa ", "   ",
+                                           "\\ pa ", "\\\\ pa ", "\\u0020 ",
+                                           "李四 a=b\nnext\t ", "李四é😀"}) {
+            this.graphsAPI.create("legacy", null,
+                                  JsonUtil.toJson(ImmutableMap.of("jdbc.password", password)));
+            String config = (String) body.getValue();
+            Assert.assertTrue(StandardCharsets.US_ASCII.newEncoder().canEncode(config));
+            for (String charset : new String[]{"UTF-8", "windows-1252", "GBK"}) {
+                String received = new String(config.getBytes(Charset.forName(charset)),
+                                             StandardCharsets.UTF_8);
+                PropertiesConfiguration parsed = new PropertiesConfiguration();
+                parsed.read(new StringReader(received));
+                Assert.assertEquals(password, parsed.getString("jdbc.password"));
+            }
+        }
     }
 
     @Test
