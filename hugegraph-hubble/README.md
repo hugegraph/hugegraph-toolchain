@@ -237,7 +237,7 @@ The `hubble-fe` folder contains the frontend code, including all related source 
 
 The `hubble-be` folder contains the backend code, including all related source code for the backend.
 
-The `assembly` folder contains distribution resources. Packaging the frontend and backend produces the deployment archive under `target/`.
+The `hubble-dist/assembly` folder contains distribution resources. Packaging the frontend and backend produces the deployment archive under `target/`.
 
 ## Java 17 and metadata storage
 
