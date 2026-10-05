@@ -26,6 +26,11 @@ on:
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
 
+# Keep the newest PR run; preserve independent push, release and manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   hubble-ci:
     runs-on: ubuntu-latest
@@ -136,7 +141,10 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: hugegraph-hubble/hubble-fe
-        run: yarn playwright install --with-deps chromium
+        run: |
+          # Browser dependencies use Ubuntu repositories; this job does not use the Microsoft feed.
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
+          yarn playwright install --with-deps chromium
 
       - name: Compile
         run: |

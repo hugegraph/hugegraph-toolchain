@@ -30,6 +30,8 @@ on:
       - .github/actions/setup-hugegraph-server/**
       - .github/actions/setup-candidate-sdk/**
       - .github/workflows/server-fixture-ci.yml
+      - .github/scripts/verify_candidate_image_sdk.py
+      - .github/scripts/test_candidate_sdk.py
       - hugegraph-client/assembly/travis/*server*
       - hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-client/assembly/travis/install-candidate-sdk.sh
@@ -42,6 +44,8 @@ on:
       - .github/actions/setup-hugegraph-server/**
       - .github/actions/setup-candidate-sdk/**
       - .github/workflows/server-fixture-ci.yml
+      - .github/scripts/verify_candidate_image_sdk.py
+      - .github/scripts/test_candidate_sdk.py
       - hugegraph-client/assembly/travis/*server*
       - hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
       - hugegraph-client/assembly/travis/install-candidate-sdk.sh
@@ -51,6 +55,11 @@ on:
 
 permissions:
   contents: read
+
+# Keep the newest PR run; preserve independent push, release and manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   server-fixture-contracts:
@@ -70,3 +79,5 @@ jobs:
           node --test .github/actions/get-hugegraph-commit/resolve.test.cjs \
             hugegraph-client/assembly/travis/checkout-server.test.cjs \
             hugegraph-client/assembly/travis/install-server.test.cjs
+      - name: Test candidate SDK and distribution provenance
+        run: python3 -m unittest discover -s .github/scripts -p 'test_candidate_sdk.py'

@@ -48,6 +48,20 @@ when rebuilding.
 The package command skips test execution; run the module test suites separately.
 These source-built packages are candidates, not an ASF release.
 
+Distribution packaging also requires Python 3.9 or newer. Before each module
+archive is written, the existing SDK verifier checks the locked source, required
+POM/JAR hashes and local installation origins, then checks the distribution's
+manifest and actual SDK libraries. The combined archive rechecks all three
+module directories before moving them. Source checks lock Server SDK artifacts;
+Toolchain artifacts such as the Client, Loader and Hubble backend are outputs of
+this reactor and may change during `install`. Older manifests can retain their
+metadata, but those outputs are excluded from SDK source hashes. The original
+manifest is still retained unchanged and compared with each packaged copy.
+A missing manifest, a Central artifact
+with the same version, or a stale/changed packaged SDK library fails packaging.
+Ordinary `compile` and `test` do not require the candidate manifest; they may
+validate published dependencies without establishing candidate package identity.
+
 These isolated builds reuse `1.7.0` coordinates only for source validation.
 Before proposing a release candidate or deploying Toolchain Maven artifacts for
 external consumers, every Java 17 SDK dependency must have coordinates that

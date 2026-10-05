@@ -17,16 +17,22 @@
 
 package org.apache.hugegraph.loader.test.unit;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.HugeClientBuilder;
 import org.apache.hugegraph.loader.constant.ElemType;
+import org.apache.hugegraph.loader.exception.LoadException;
 import org.apache.hugegraph.loader.executor.LoadContext;
 import org.apache.hugegraph.loader.executor.LoadOptions;
+import org.apache.hugegraph.loader.failure.FailLogger;
+import org.apache.hugegraph.loader.mapping.InputStruct;
 import org.apache.hugegraph.loader.metrics.LoadSummary;
 import org.apache.hugegraph.loader.progress.LoadProgress;
+import org.apache.hugegraph.loader.source.file.FileSource;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -104,6 +110,65 @@ public class LoadContextTest {
             Assert.assertEquals("Primary close failed", expected.getMessage());
             Assert.assertEquals(1, expected.getSuppressed().length);
             Assert.assertEquals("Indirect close failed", expected.getSuppressed()[0].getMessage());
+        }
+        assertClosedWithoutRetrying(context, client, indirect);
+    }
+
+    @Test
+    public void testLoggerFailureClosesClientsWithoutSavingProgress() throws Exception {
+        RecordingClient client = allocate(RecordingClient.class);
+        RecordingClient indirect = allocate(RecordingClient.class);
+        client.closeFailure = "Primary close failed";
+        indirect.closeFailure = "Indirect close failed";
+        LoadContext context = this.context(client, indirect);
+        FileSource source = new FileSource();
+        source.header(new String[]{"name"});
+        InputStruct struct = new InputStruct(null, null);
+        struct.id("broken");
+        struct.input(source);
+        FailLogger logger = allocate(FailLogger.class);
+        set(logger, "struct", struct);
+        set(logger, "file", this.folder.newFile("broken.error"));
+        // A directory at the header's file path makes the actual header write fail.
+        this.folder.newFolder("broken.header");
+        HashMap<String, FailLogger> loggers = new HashMap<>();
+        loggers.put("broken", logger);
+        set(context, "loggers", loggers);
+        try {
+            context.close();
+            Assert.fail("Expected failure logger close failure");
+        } catch (LoadException expected) {
+            Assert.assertTrue(expected.getMessage().contains("Failed to write header"));
+            Assert.assertTrue(expected.getCause() instanceof IOException);
+            Assert.assertEquals(2, expected.getSuppressed().length);
+            Assert.assertEquals("Primary close failed", expected.getSuppressed()[0].getMessage());
+            Assert.assertEquals("Indirect close failed", expected.getSuppressed()[1].getMessage());
+        }
+        Assert.assertTrue(context.closed());
+        context.close();
+        Assert.assertEquals(1, client.closeCalls);
+        Assert.assertEquals(1, indirect.closeCalls);
+        Assert.assertEquals(0L, context.newProgress().vertexLoaded());
+        Assert.assertEquals(0L, context.newProgress().edgeLoaded());
+        Assert.assertFalse(new File(LoadProgress.format(context.options(), "test")).exists());
+    }
+
+    @Test
+    public void testProgressFailureStillClosesBothClients() throws Exception {
+        RecordingClient client = allocate(RecordingClient.class);
+        RecordingClient indirect = allocate(RecordingClient.class);
+        client.closeFailure = "Primary close failed";
+        indirect.closeFailure = "Indirect close failed";
+        LoadContext context = this.context(client, indirect);
+        context.options().file = "invalid-mapping-suffix";
+        try {
+            context.close();
+            Assert.fail("Expected invalid mapping filename");
+        } catch (IllegalArgumentException expected) {
+            Assert.assertTrue(expected.getMessage().contains("mapping description file name"));
+            Assert.assertEquals(2, expected.getSuppressed().length);
+            Assert.assertEquals("Primary close failed", expected.getSuppressed()[0].getMessage());
+            Assert.assertEquals("Indirect close failed", expected.getSuppressed()[1].getMessage());
         }
         assertClosedWithoutRetrying(context, client, indirect);
     }

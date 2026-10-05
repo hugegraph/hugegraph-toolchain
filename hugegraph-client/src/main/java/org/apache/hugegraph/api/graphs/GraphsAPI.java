@@ -83,8 +83,12 @@ public class GraphsAPI extends API {
         RestHeaders headers = new RestHeaders().add(RestHeaders.CONTENT_TYPE,
                                                     legacy ? "text/plain" :
                                                     RestHeaders.APPLICATION_JSON);
-        if (legacy && configText != null && configText.trim().startsWith("{")) {
-            configText = legacyGraphConfig(configText);
+        if (legacy) {
+            if (configText == null) {
+                configText = "";
+            } else if (configText.trim().startsWith("{")) {
+                configText = legacyGraphConfig(configText);
+            }
         }
         Map<String, Object> params = null;
         if (StringUtils.isNotEmpty(cloneGraphName)) {
@@ -110,7 +114,29 @@ public class GraphsAPI extends API {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        return text.toString();
+        // Commons PropertiesConfiguration trims literal whitespace and does not
+        // decode the JDK writer's escaped leading space. Unicode escapes also
+        // keep legacy request bytes independent of the client's default charset.
+        String serialized = text.toString();
+        StringBuilder encoded = new StringBuilder(serialized.length());
+        for (int i = 0; i < serialized.length(); i++) {
+            char c = serialized.charAt(i);
+            if (c == '\\' && i + 1 < serialized.length()) {
+                char next = serialized.charAt(++i);
+                if (next == ' ') {
+                    encoded.append("\\u0020");
+                } else {
+                    encoded.append(c).append(next);
+                }
+            } else if (c == ' ') {
+                encoded.append("\\u0020");
+            } else if (c > 0x7E) {
+                encoded.append(String.format("\\u%04x", (int) c));
+            } else {
+                encoded.append(c);
+            }
+        }
+        return encoded.toString();
     }
 
     @SuppressWarnings("unchecked")

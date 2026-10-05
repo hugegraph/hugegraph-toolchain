@@ -365,9 +365,17 @@ Check [Maven Central](https://mvnrepository.com/artifact/org.apache.hugegraph) f
 
 ### Full Build
 
+Follow the [Java 17 bootstrap instructions](docs/java17-migration.md#build-the-locked-candidate)
+to install the locked SDK into an isolated Maven repository, then build with that repository:
+
 ```bash
-mvn clean install -DskipTests -Dmaven.javadoc.skip=true -ntp
+mvn -Dmaven.repo.local="$candidate_dir/m2" clean install -DskipTests -Dmaven.javadoc.skip=true -ntp
 ```
+
+Distribution packaging requires Python 3.9 or newer and verifies the SDK manifest
+and bundled libraries before producing archives. Ordinary `compile` and `test`
+remain available with published dependencies; those checks do not validate a candidate distribution.
+Use the same `-Dmaven.repo.local` option in the module commands below when building candidates.
 
 ### Module-Specific Builds
 

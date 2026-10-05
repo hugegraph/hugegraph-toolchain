@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Validate the same-source SDK before and after a Docker product build."""
+"""Validate the locked SDK and the actual libraries in a candidate distribution."""
 
 import argparse
 import hashlib
@@ -35,6 +35,14 @@ REQUIRED_MODULES = {
 }
 
 
+# These artifacts are outputs of this repository, not inputs from the locked Server SDK.
+# Older retained manifests may include them because they described a shared Maven cache.
+TOOLCHAIN_ARTIFACTS = {
+    "hugegraph-toolchain", "hugegraph-client", "hugegraph-loader", "hugegraph-tools",
+    "hugegraph-spark-connector", "hugegraph-hubble", "hugegraph-dist", "hubble-be", "hubble-fe", "hubble-dist",
+}
+
+
 def digest(path):
     checksum = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -44,6 +52,14 @@ def digest(path):
 
 
 def validate_sdk(repository):
+    try:
+        return _validate_sdk(Path(repository))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        raise RuntimeError("Invalid candidate SDK manifest or artifact metadata (" +
+                           type(error).__name__ + ")") from None
+
+
+def _validate_sdk(repository):
     repository = Path(repository)
     manifest = json.loads((repository / "candidate-sdk-manifest.json").read_text())
     if (manifest["repository"], manifest["commit"]) != (REPOSITORY, COMMIT):
@@ -75,18 +91,24 @@ def validate_sdk(repository):
         required_files.update(expected)
     jars = {}
     for relative, item in artifacts.items():
+        parts = Path(relative).parts
+        if (Path(relative).is_absolute() or ".." in parts or len(parts) != 6 or
+                parts[:3] != ("org", "apache", "hugegraph")):
+            raise RuntimeError(f"Invalid SDK artifact path: {relative}")
+        # Server and Toolchain share the hugegraph-dist name at different revisions.
+        if parts[3] in TOOLCHAIN_ARTIFACTS and (parts[3] != "hugegraph-dist" or
+                                              parts[4] != manifest["source_revision"]):
+            continue
         path = repository / relative
-        if (Path(relative).is_absolute() or ".." in Path(relative).parts or
-                not relative.startswith("org/apache/hugegraph/") or
-                not path.is_file() or not path.resolve().is_relative_to(repository.resolve())):
+        if not path.is_file() or not path.resolve().is_relative_to(repository.resolve()):
             raise RuntimeError(f"Invalid SDK artifact path: {relative}")
         if digest(path) != item["sha256"]:
             raise RuntimeError(f"SDK artifact hash mismatch: {relative}")
         origins = path.parent / "_remote.repositories"
         installed = origins.is_file() and f"{path.name}>=" in origins.read_text().splitlines()
-        if relative in required_files and (not item["source_reactor_install"] or not installed):
+        if relative in required_files and (item["source_reactor_install"] is not True or not installed):
             raise RuntimeError(f"Required SDK artifact was not installed from source: {relative}")
-        if path.suffix == ".jar" and item["source_reactor_install"]:
+        if path.suffix == ".jar" and item["source_reactor_install"] is True:
             if path.name in jars:
                 raise RuntimeError(f"Duplicate candidate JAR name: {path.name}")
             jars[path.name] = item["sha256"]
@@ -95,9 +117,48 @@ def validate_sdk(repository):
     return manifest, jars
 
 
+def validate_distribution(repository, directory, module):
+    manifest, expected = validate_sdk(repository)
+    directory = Path(directory)
+    try:
+        packaged = json.loads((directory / "candidate-sdk-manifest.json").read_text())
+    except (OSError, ValueError) as error:
+        raise RuntimeError("Missing or invalid packaged SDK manifest (" +
+                           type(error).__name__ + ")") from None
+    if packaged != manifest:
+        raise RuntimeError("Packaged SDK manifest differs from the build repository")
+    required = {"hugegraph-common", "hg-pd-client", "hg-pd-grpc"}
+    if module == "hubble":
+        required.add("hugegraph-core")
+    actual = {}
+    # Check only distribution libraries, never runtime data or user plugins.
+    for path in (directory / "lib").glob("*.jar"):
+        if path.name.startswith(("hugegraph-client-", "hugegraph-loader-", "hugegraph-tools-")):
+            continue
+        if not path.name.startswith(("hugegraph-", "hg-")):
+            continue
+        if path.is_symlink() or path.name not in expected or digest(path) != expected[path.name]:
+            raise RuntimeError("Unexpected or changed packaged SDK library: " + path.name)
+        actual[path.name] = expected[path.name]
+    for artifact in required:
+        matches = [name for name in actual if name.startswith(artifact + "-")]
+        if len(matches) != 1:
+            raise RuntimeError("Missing or ambiguous packaged SDK library: " + artifact)
+    return actual
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository", type=Path)
+    parser.add_argument("--distribution", type=Path)
+    parser.add_argument("--module", choices=("loader", "tools", "hubble"))
     args = parser.parse_args()
-    manifest, jars = validate_sdk(args.repository)
+    if bool(args.distribution) != bool(args.module):
+        parser.error("--distribution and --module must be used together")
+    try:
+        manifest, jars = validate_sdk(args.repository)
+        if args.distribution:
+            validate_distribution(args.repository, args.distribution, args.module)
+    except RuntimeError as error:
+        parser.exit(1, str(error) + "\n")
     print(f"Verified {manifest['repository']}@{manifest['commit']}: {len(jars)} candidate JARs")

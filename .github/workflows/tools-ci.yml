@@ -21,6 +21,11 @@ on:
       - .github/actions/**
       - pom.xml
 
+# Keep the newest PR run; preserve independent push, release and manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   tools-ci:
     runs-on: ubuntu-latest
@@ -90,4 +95,5 @@ jobs:
 
       - name: Run test
         run: |
-          mvn test -Dtest=FuncTestSuite -pl hugegraph-tools -ntp
+          # The setup step above creates this job's disposable server instance.
+          mvn test -Dtest=FuncTestSuite -Dtools.test.disposable=true -pl hugegraph-tools -ntp
