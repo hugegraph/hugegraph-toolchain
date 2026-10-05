@@ -192,6 +192,12 @@ class CandidateDistributionTest(unittest.TestCase):
                     self.write_manifest(repository, manifest)
                     with self.assertRaisesRegex(RuntimeError, "Java version"):
                         sdk.validate_sdk(repository)
+            for version in (17.9, 17, True, "17.0"):
+                with self.subTest(version=version):
+                    manifest["java_version"] = version
+                    self.write_manifest(repository, manifest)
+                    with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
+                        sdk.validate_sdk(repository)
             manifest["java_version"] = "17"
             self.write_manifest(repository, manifest)
             sdk.validate_sdk(repository)
