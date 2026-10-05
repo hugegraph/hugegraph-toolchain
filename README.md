@@ -124,8 +124,7 @@ graph TB
 | Maven | 3.6.3+ | For building from source |
 | HugeGraph Server | 1.7.0 or the locked Java 17 candidate | See the migration guide for Server 1.5 scope |
 
-For the Java 17 candidate SDK, upgrade procedure and compatibility boundary, see
-[the migration guide](docs/java17-migration.md).
+For the Java 17 candidate SDK, upgrade procedure and compatibility boundary, see [the migration guide](docs/java17-migration.md).
 
 ### Choose Your Path
 
@@ -365,17 +364,13 @@ Check [Maven Central](https://mvnrepository.com/artifact/org.apache.hugegraph) f
 
 ### Full Build
 
-Follow the [Java 17 bootstrap instructions](docs/java17-migration.md#build-the-locked-candidate)
-to install the locked SDK into an isolated Maven repository, then build with that repository:
+Follow the [Java 17 bootstrap instructions](docs/java17-migration.md#build-the-locked-candidate) to install the locked SDK into an isolated Maven repository, then build with that repository:
 
 ```bash
 mvn -Dmaven.repo.local="$candidate_dir/m2" clean install -DskipTests -Dmaven.javadoc.skip=true -ntp
 ```
 
-Distribution packaging requires Python 3.9 or newer and verifies the SDK manifest
-and bundled libraries before producing archives. Ordinary `compile` and `test`
-remain available with published dependencies; those checks do not validate a candidate distribution.
-Use the same `-Dmaven.repo.local` option in the module commands below when building candidates.
+Distribution packaging requires Python 3.9 or newer and verifies the SDK manifest and bundled libraries before producing archives. Ordinary `compile` and `test` remain available with published dependencies; those checks do not validate a candidate distribution. Use the same `-Dmaven.repo.local` option in the module commands below when building candidates.
 
 ### Module-Specific Builds
 
