@@ -18,6 +18,11 @@ on:
       - .github/workflows/**
       - pom.xml
 
+# Keep the newest PR run; preserve independent push, release and manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   client-ci:
     runs-on: ubuntu-latest
@@ -52,6 +57,8 @@ jobs:
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
           commit-id: ${{ steps.get-commit.outputs.commit_id }}
+          repository: ${{ steps.get-commit.outputs.repository }}
+          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
 
       - name: Compile
         run: |

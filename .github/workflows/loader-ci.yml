@@ -19,6 +19,11 @@ on:
       - .github/workflows/**
       - pom.xml
 
+# Keep the newest PR run; preserve independent push, release and manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   loader-ci:
     runs-on: ubuntu-latest
@@ -68,7 +73,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.get-commit.outputs.commit_id }}
+          key: ${{ runner.os }}-hugegraph-server-provenance-v1-${{ steps.get-commit.outputs.commit_id }}
 
       - name: Compile
         run: |
@@ -77,9 +82,14 @@ jobs:
       - name: Prepare env and service
         env:
           COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
+          SERVER_REPOSITORY: ${{ steps.get-commit.outputs.repository }}
+          SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
         run: |
           $TRAVIS_DIR/install-hadoop.sh
-          $TRAVIS_DIR/install-hugegraph-from-source.sh $COMMIT_ID
+          installer=$(realpath "$TRAVIS_DIR/install-hugegraph-from-source.sh")
+          server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
+          cd "$server_build"
+          bash "$installer" "$COMMIT_ID"
 
       - name: Run test
         run: |

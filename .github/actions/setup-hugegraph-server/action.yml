@@ -9,10 +9,25 @@ inputs:
     description: 'HugeGraph commit SHA to install'
     required: true
 
+  repository:
+    description: 'GitHub owner/repository containing the server source'
+    default: 'apache/hugegraph'
+  fetch-ref:
+    description: 'Fetchable ref; the installer verifies its HEAD against commit-id'
+    default: ''
+
 runs:
   using: composite
   steps:
     - name: Prepare env and service
       shell: bash
+      env:
+        TRAVIS_SCRIPT_DIR: ${{ inputs.travis-dir }}
+        SERVER_COMMIT: ${{ inputs.commit-id }}
+        SERVER_REPOSITORY: ${{ inputs.repository }}
+        SERVER_FETCH_REF: ${{ inputs.fetch-ref }}
       run: |
-        ${{ inputs.travis-dir }}/install-hugegraph-from-source.sh ${{ inputs.commit-id }}
+        installer=$(realpath "${TRAVIS_SCRIPT_DIR}/install-hugegraph-from-source.sh")
+        server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
+        cd "$server_build"
+        bash "$installer" "$SERVER_COMMIT"
