@@ -23,13 +23,13 @@ if [[ $# -ne 3 || "$2" != /* || -e "$2" || "$3" != /* || ! -d "$3" || -e "$3/org
 fi
 
 if [[ -z "${JAVA_HOME:-}" || ! -x "$JAVA_HOME/bin/java" ]]; then
-    echo "Set JAVA_HOME to an installed JDK 17 or newer before building the candidate SDK" >&2
+    echo "Set JAVA_HOME to an installed JDK 17 before building the candidate SDK" >&2
     exit 1
 fi
 JAVA_VERSION=$("$JAVA_HOME/bin/java" -XshowSettings:properties -version 2>&1 |
     awk -F ' = ' '/java.specification.version =/ {print $2}')
-if [[ ! "$JAVA_VERSION" =~ ^[0-9]+$ || "$JAVA_VERSION" -lt 17 ]]; then
-    echo "Candidate SDK requires JDK 17 or newer, found: $JAVA_VERSION" >&2
+if [[ ! "$JAVA_VERSION" =~ ^[0-9]+$ || "$JAVA_VERSION" -ne 17 ]]; then
+    echo "Candidate SDK requires JDK 17, found: $JAVA_VERSION" >&2
     exit 1
 fi
 export PATH="$JAVA_HOME/bin:$PATH"

@@ -428,10 +428,18 @@ test('candidate SDK rejects a moved source before Maven or manifest publication'
   assert.equal(existsSync(join(repo, 'candidate-sdk-manifest.json')), false);
 });
 
-test('candidate SDK refuses missing or legacy JVMs and existing HugeGraph artifact repositories', t => {
+test('candidate SDK refuses missing JVMs, unsupported build JVMs and existing artifact repositories', t => {
   const { root, repo, env, run } = candidateSdkFixture(t);
   assert.notEqual(run('missing-jvm', undefined, { JAVA_HOME: '' }).status, 0);
   assert.notEqual(run('legacy-jvm', undefined, { SDK_JAVA_VERSION: '11' }).status, 0);
+  for (const version of ['18', '21']) {
+    const result = run(`unsupported-jvm-${version}`, undefined, { SDK_JAVA_VERSION: version });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /requires JDK 17/);
+    assert.equal(existsSync(join(root, `unsupported-jvm-${version}`)), false);
+  }
+  assert.equal(existsSync(env.BUILD_ARGS), false);
+  assert.equal(existsSync(join(repo, 'candidate-sdk-manifest.json')), false);
   mkdirSync(join(repo, 'org/apache/hugegraph'), { recursive: true });
   const result = run('existing-repo');
   assert.notEqual(result.status, 0);

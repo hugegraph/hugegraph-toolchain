@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        JAVA_VERSION: ['11']
+        SERVER_JAVA_VERSION: ['11']
 
     steps:
       - name: Fetch Code
@@ -39,14 +39,18 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
+      - name: Resolve the released Server 1.7 fixture
         id: get-commit
         uses: ./.github/actions/get-hugegraph-commit
+        with:
+          repository: apache/hugegraph
+          ref: refs/tags/1.7.0
+          expected-commit: b12425c2032bf0d21a97b8221f42a18055c2982f
 
-      - name: Setup Java environment
+      - name: Set up Java 11 for the released Server fixture
         uses: ./.github/actions/setup-java-env
         with:
-          java-version: ${{ matrix.JAVA_VERSION }}
+          java-version: ${{ matrix.SERVER_JAVA_VERSION }}
           distribution: 'zulu'
           use-stage: ${{ env.USE_STAGE }}
 

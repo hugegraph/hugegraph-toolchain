@@ -183,6 +183,19 @@ class CandidateDistributionTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "SDK artifact hash mismatch"):
                 sdk.validate_distribution(repository, directory, "hubble")
 
+    def test_candidate_manifest_requires_the_supported_build_jdk(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            for version in ("11", "18", "21"):
+                with self.subTest(version=version):
+                    manifest["java_version"] = version
+                    self.write_manifest(repository, manifest)
+                    with self.assertRaisesRegex(RuntimeError, "Java version"):
+                        sdk.validate_sdk(repository)
+            manifest["java_version"] = "17"
+            self.write_manifest(repository, manifest)
+            sdk.validate_sdk(repository)
+
     def test_malformed_manifests_have_controlled_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:
             repository, manifest = self.fixture(Path(temporary))

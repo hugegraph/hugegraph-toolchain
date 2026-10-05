@@ -2,6 +2,8 @@
 
 Toolchain 1.8 requires Java 17 for the Java Client, ordinary Loader, Tools and Hubble. Select Java 17 for applications and for every Spark driver and executor using the new Client. An older server can keep its own supported JVM.
 
+Toolchain builds, tests and applications use Java 17. The released Server 1.7 compatibility fixture retains its supported Java 11 in a separate process; its JVM must not select the Toolchain build or test JVM. Building the candidate Server SDK requires JDK 17, matching the server reactor's `[17,18)` Enforcer range.
+
 ## Build the locked candidate
 
 The Java 17 server candidate retains the Maven version `1.7.0`. Its Common, PD, gRPC and Store artifacts must come from the same source commit; Maven Central artifacts with that version are not interchangeable with the candidate. The locked source is `hugegraph/hugegraph`, branch `codex/cypher-minimal-compat`, commit `4c162f539b906fa06dd83228e3691b77fa5b77d7`.
