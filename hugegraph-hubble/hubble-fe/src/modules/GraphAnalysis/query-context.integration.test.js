@@ -164,3 +164,75 @@ it.each(['button', 'shortcut'])(
             expect(graphs.some(item => item.name === graph)).toBe(true);
         }
     });
+
+it('executes the ready dropdown graph while the previous graph query is pending', async () => {
+    jest.clearAllMocks();
+    window.matchMedia = window.matchMedia || (() => ({
+        matches: false, addListener: jest.fn(), removeListener: jest.fn(),
+    }));
+    localStorage.clear();
+    api.auth.getVermeer.mockResolvedValue({status: 200, data: {enable: false}});
+    api.analysis.getGraphSpaceList.mockResolvedValue({
+        status: 200, data: {graphspaces: ['DEFAULT']},
+    });
+    api.analysis.getGraphList.mockResolvedValue(graphResponse);
+    api.manage.getGraphList.mockResolvedValue({status: 200, data: {records: graphs}});
+    api.analysis.getOlapMode.mockResolvedValue({status: 200, data: {status: '1'}});
+    api.analysis.getExecutionLogs.mockResolvedValue(records);
+    api.analysis.fetchFavoriteQueries.mockResolvedValue(records);
+    api.analysis.getGraphData.mockResolvedValue({
+        status: 200, data: {vertexcount: 8, edgecount: 6},
+    });
+    api.manage.getMetaEdgeList.mockResolvedValue(records);
+    api.manage.getMetaVertexList.mockResolvedValue(records);
+    api.manage.getMetaPropertyList.mockResolvedValue(records);
+    let resolveA;
+    let resolveB;
+    api.analysis.getExecutionQuery
+        .mockImplementationOnce(() => new Promise(resolve => {
+            resolveA = resolve;
+        }))
+        .mockImplementationOnce(() => new Promise(resolve => {
+            resolveB = resolve;
+        }));
+
+    render(
+        <MemoryRouter
+            initialEntries={['/gremlin/DEFAULT/hugegraph']}
+            future={{v7_startTransition: true, v7_relativeSplatPath: true}}
+        >
+            <GraphContextSwitcher />
+            <Location />
+            <Routes>
+                <Route
+                    path='/gremlin/:graphSpace/:graph'
+                    element={<GraphAnalysisHome moduleName='gremlin' />}
+                />
+            </Routes>
+        </MemoryRouter>
+    );
+    const run = () => screen.getByRole('button', {name: 'analysis.query.execute_query'});
+    await waitFor(() => expect(run()).toBeEnabled());
+    await act(async () => fireEvent.click(run()));
+    expect(api.analysis.getExecutionQuery).toHaveBeenCalledTimes(1);
+    await act(async () => fireEvent.mouseDown(screen.getByRole('combobox', {
+        name: 'workbench.context.graph',
+    })));
+    const graphOption = await screen.findByText('java17_legacy17_ui', {
+        selector: '.ant-select-item-option-content',
+    });
+    await act(async () => fireEvent.click(graphOption));
+    await screen.findByText('/gremlin/DEFAULT/java17_legacy17_ui');
+    await waitFor(() => expect(api.analysis.getGraphData)
+        .toHaveBeenCalledWith('DEFAULT', 'java17_legacy17_ui'));
+    await waitFor(() => expect(run()).toBeEnabled());
+    await act(async () => fireEvent.click(run()));
+    expect(api.analysis.getExecutionQuery).toHaveBeenCalledTimes(2);
+    expect(api.analysis.getExecutionQuery).toHaveBeenLastCalledWith(
+        'DEFAULT', 'java17_legacy17_ui', 'g.V().limit(10)'
+    );
+    await act(async () => resolveA({status: 200, data: {}}));
+    expect(run()).toBeDisabled();
+    await act(async () => resolveB({status: 200, data: {}}));
+    await waitFor(() => expect(run()).toBeEnabled());
+});
