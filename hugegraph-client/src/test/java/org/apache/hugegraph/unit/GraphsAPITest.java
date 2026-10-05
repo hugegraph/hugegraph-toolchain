@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
@@ -151,12 +152,18 @@ public class GraphsAPITest extends BaseUnitTest {
                                           Mockito.any(), Mockito.isNull())).thenReturn(result);
         for (String password : new String[]{" pa", "pa ", " pa ", "   ",
                                            "\\ pa ", "\\\\ pa ", "\\u0020 ",
-                                           "李四 a=b\nnext\t "}) {
+                                           "李四 a=b\nnext\t ", "李四é😀"}) {
             this.graphsAPI.create("legacy", null,
                                   JsonUtil.toJson(ImmutableMap.of("jdbc.password", password)));
-            PropertiesConfiguration parsed = new PropertiesConfiguration();
-            parsed.read(new StringReader((String) body.getValue()));
-            Assert.assertEquals(password, parsed.getString("jdbc.password"));
+            String config = (String) body.getValue();
+            Assert.assertTrue(StandardCharsets.US_ASCII.newEncoder().canEncode(config));
+            for (String charset : new String[]{"UTF-8", "windows-1252", "GBK"}) {
+                String received = new String(config.getBytes(Charset.forName(charset)),
+                                             StandardCharsets.UTF_8);
+                PropertiesConfiguration parsed = new PropertiesConfiguration();
+                parsed.read(new StringReader(received));
+                Assert.assertEquals(password, parsed.getString("jdbc.password"));
+            }
         }
     }
 
