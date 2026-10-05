@@ -21,6 +21,12 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync, existsSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
+const { createHash } = require('node:crypto');
+
+function cacheStamp(cache, repository, sha, archive) {
+  const digest = createHash('sha256').update(readFileSync(join(cache, archive))).digest('hex');
+  writeFileSync(join(cache, 'server-provenance'), `${repository}\n${sha}\n${archive}\n${digest}\n`);
+}
 
 function temp(t) {
   const root = mkdtempSync(join(tmpdir(), 'server-install-'));
@@ -203,6 +209,24 @@ test('shared starter still rejects invalid non-metadata graph names', t => {
 });
 
 
+test('Loader reports ambiguous archives before shared startup', t => {
+  const root = temp(t);
+  const cache = join(root, 'cache');
+  mkdirSync(cache);
+  writeFileSync(join(cache, 'apache-hugegraph-cached.tar.gz'), 'cached archive');
+  cacheStamp(cache, 'apache/hugegraph', 'a'.repeat(40), 'apache-hugegraph-cached.tar.gz');
+  writeFileSync(join(root, 'apache-hugegraph-leftover.tar.gz'), 'leftover archive');
+  const installer = join(__dirname, '../../../hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh');
+  const result = spawnSync('bash', [installer, 'a'.repeat(40)], {
+    cwd: root, env: { ...process.env, SERVER_CACHE_DIR: cache }, encoding: 'utf8'
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Expected exactly one server archive, found:/);
+  assert.match(result.stderr, /apache-hugegraph-cached\.tar\.gz/);
+  assert.match(result.stderr, /apache-hugegraph-leftover\.tar\.gz/);
+  assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
+});
+
 test('Loader retains its source cache while using the selected repository and shared startup', t => {
   const root = temp(t);
   const source = join(root, 'source');
@@ -215,6 +239,9 @@ test('Loader retains its source cache while using the selected repository and sh
   git('-C', source, 'commit', '-m', 'initial');
   const sha = git('-C', source, 'rev-parse', 'HEAD');
   const top = 'apache-hugegraph-loader-fixture';
+  writeFileSync(join(source, 'pom.xml'), 'another commit');
+  git('-C', source, 'commit', '-am', 'another commit');
+  const anotherSha = git('-C', source, 'rev-parse', 'HEAD');
   serverFixture(join(root, top));
   const archive = join(root, 'fixture.tar.gz');
   execFileSync('tar', ['czf', archive, '-C', root, top],
@@ -222,7 +249,9 @@ test('Loader retains its source cache while using the selected repository and sh
   const bin = join(root, 'bin');
   mkdirSync(bin);
   writeFileSync(join(bin, 'mvn'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$BUILD_ARGS"\n' +
-    'mkdir -p hugegraph-server\ncp "$FIXTURE_ARCHIVE" hugegraph-server/apache-hugegraph-fixture.tar.gz\n',
+    'mkdir -p hugegraph-server\ncp "$FIXTURE_ARCHIVE" hugegraph-server/apache-hugegraph-fixture.tar.gz\n' +
+    'if [[ "$DUPLICATE_ARCHIVE" == true ]]; then\n' +
+    '  cp "$FIXTURE_ARCHIVE" hugegraph-server/apache-hugegraph-other.tar.gz\nfi\n',
     { mode: 0o755 });
   const env = { ...process.env, SERVER_REPOSITORY: 'example/server', SERVER_FETCH_REF: sha,
     SERVER_CACHE_DIR: join(root, 'cache'), FIXTURE_ARCHIVE: archive, BUILD_ARGS: join(root, 'args'),
@@ -230,21 +259,47 @@ test('Loader retains its source cache while using the selected repository and sh
     GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: `url.file://${source}.insteadOf`,
     GIT_CONFIG_VALUE_0: 'https://github.com/example/server.git' };
   const installer = join(__dirname, '../../../hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh');
+  for (const failure of [
+    { name: 'checkout', extra: { SERVER_FETCH_REF: anotherSha }, error: /Server checkout mismatch/ },
+    { name: 'build', extra: { DUPLICATE_ARCHIVE: 'true' }, error: /Expected exactly one built server archive/ }
+  ]) {
+    const cwd = join(root, `run-failed-${failure.name}`);
+    const cache = join(root, `cache-failed-${failure.name}`);
+    mkdirSync(cwd);
+    const result = spawnSync('bash', [installer, sha], {
+      cwd, env: { ...env, ...failure.extra, SERVER_CACHE_DIR: cache }, encoding: 'utf8'
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, failure.error);
+    assert.deepEqual(readdirSync(cache), []);
+    assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
+  }
   for (const pass of ['build', 'cache']) {
     const cwd = join(root, `run-${pass}`);
     mkdirSync(cwd);
-    const result = spawnSync('bash', [installer, sha], { cwd, env, encoding: 'utf8' });
+    const result = spawnSync('bash', [installer, pass === 'cache' ? sha.toUpperCase() : sha],
+      { cwd, env, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(readFileSync(env.BUILD_ARGS, 'utf8').trim().split('\n'),
       ['package', '-DskipTests', '-Dmaven.javadoc.skip=true', '-ntp']);
     assert.equal(existsSync(join(cwd, 'hugegraph')), false);
     if (pass === 'build') {
-      assert.equal(readdirSync(env.SERVER_CACHE_DIR).length, 1);
+      assert.deepEqual(readdirSync(env.SERVER_CACHE_DIR).sort(),
+        ['apache-hugegraph-fixture.tar.gz', 'server-provenance']);
+      assert.equal(readFileSync(join(env.SERVER_CACHE_DIR, 'server-provenance'), 'utf8'),
+        `example/server\n${sha}\napache-hugegraph-fixture.tar.gz\n` +
+        `${createHash('sha256').update(readFileSync(archive)).digest('hex')}\n`);
       // A cache hit must not execute Maven or reach the source repository again.
       writeFileSync(join(bin, 'mvn'), '#!/bin/bash\nexit 91\n', { mode: 0o755 });
       rmSync(source, { recursive: true, force: true });
     }
   }
+  const otherCwd = join(root, 'run-other-commit');
+  mkdirSync(otherCwd);
+  const other = spawnSync('bash', [installer, anotherSha], { cwd: otherCwd, env, encoding: 'utf8' });
+  assert.equal(other.status, 1);
+  assert.match(other.stderr, /source or archive provenance mismatch/);
+  assert.deepEqual(readdirSync(otherCwd), []);
   const deployments = readdirSync(root).filter(name => name.startsWith('hugegraph-servers.'));
   assert.equal(deployments.length, 2);
   for (const deployment of deployments) {
@@ -253,3 +308,45 @@ test('Loader retains its source cache while using the selected repository and sh
     }
   }
 });
+
+for (const scenario of [
+  { name: 'another commit', commit: 'b'.repeat(40), error: /provenance mismatch/ },
+  { name: 'another repository', repository: 'example/other', error: /provenance mismatch/ },
+  { name: 'a missing stamp', mutate: cache => rmSync(join(cache, 'server-provenance')),
+    error: /missing provenance/ },
+  { name: 'a tampered archive', mutate: cache => writeFileSync(join(cache, 'apache-hugegraph-fixture.tar.gz'),
+    'modified archive'), error: /provenance mismatch/ },
+  { name: 'multiple cached archives', mutate: cache => writeFileSync(join(cache, 'apache-hugegraph-other.tar.gz'),
+    'another archive'), error: /exactly one regular server archive/ },
+  { name: 'extra provenance data', mutate: cache => writeFileSync(join(cache, 'server-provenance'),
+    readFileSync(join(cache, 'server-provenance'), 'utf8') + 'unexpected'), error: /provenance mismatch/ },
+  { name: 'binary provenance data', mutate: cache => writeFileSync(join(cache, 'server-provenance'),
+    readFileSync(join(cache, 'server-provenance'), 'utf8').replace('example/server', 'example/\0server')),
+    error: /provenance mismatch/ },
+  { name: 'executable metadata', mutate: cache => writeFileSync(join(cache, 'server-provenance'),
+    '$(touch should-not-exist)\n' + 'a'.repeat(40) + '\napache-hugegraph-fixture.tar.gz\n' + '0'.repeat(64) + '\n'),
+    error: /provenance mismatch/ }
+]) {
+  test(`Loader rejects ${scenario.name} without altering the custom cache or starting a server`, t => {
+    const root = temp(t);
+    const cache = join(root, 'cache');
+    mkdirSync(cache);
+    writeFileSync(join(cache, 'apache-hugegraph-fixture.tar.gz'), 'original archive');
+    writeFileSync(join(cache, 'unrelated-file'), 'preserve this file');
+    cacheStamp(cache, 'example/server', 'a'.repeat(40), 'apache-hugegraph-fixture.tar.gz');
+    if (scenario.mutate) scenario.mutate(cache);
+    const files = readdirSync(cache).map(name => [name, readFileSync(join(cache, name), 'utf8')]);
+    const installer = join(__dirname, '../../../hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh');
+    const result = spawnSync('bash', [installer, scenario.commit || 'a'.repeat(40)], {
+      cwd: root, env: { ...process.env, SERVER_CACHE_DIR: cache,
+        SERVER_REPOSITORY: scenario.repository || 'example/server' }, encoding: 'utf8'
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, scenario.error);
+    assert.match(result.stderr, /Use a fresh or separate SERVER_CACHE_DIR/);
+    assert.deepEqual(readdirSync(cache).map(name => [name, readFileSync(join(cache, name), 'utf8')]), files);
+    assert.equal(existsSync(join(root, 'hugegraph')), false);
+    assert.equal(existsSync(join(root, 'should-not-exist')), false);
+    assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
+  });
+}
