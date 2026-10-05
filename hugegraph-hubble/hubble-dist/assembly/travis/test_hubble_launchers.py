@@ -37,7 +37,7 @@ PADDED_STAMP = "  " + STAMP + "    "
 
 class HubbleLauncherTest(unittest.TestCase):
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory(prefix="hubble-launcher-")
+        self.directory = tempfile.TemporaryDirectory(prefix="hubble launcher-")
         self.root = pathlib.Path(self.directory.name)
         for name in ("bin", "conf", "lib", "tools"):
             (self.root / name).mkdir()
@@ -50,6 +50,9 @@ class HubbleLauncherTest(unittest.TestCase):
         java = self.root / "tools/java"
         java.write_text(
             "#!/bin/bash\nprintf '%s\\n' \"$$\" > \"$LAUNCHER_TEST_CHILD\"\n"
+            "printf 'fake java started\\n'\n"
+            "printf '%s\\n' \"$@\" > \"$LAUNCHER_TEST_ARGS\"\n"
+            "[[ $LAUNCHER_TEST_EXIT == true ]] && exit 0\n"
             "trap 'exit 0' TERM INT\nwhile :; do sleep 0.1; done\n", encoding="utf-8")
         java.chmod(0o755)
         ps = self.root / "tools/ps"
@@ -65,6 +68,7 @@ class HubbleLauncherTest(unittest.TestCase):
         ps.chmod(0o755)
         self.env = dict(os.environ, PATH=str(self.root / "tools") + os.pathsep + os.environ["PATH"],
                         LAUNCHER_TEST_CHILD=str(self.root / "fake-java.pid"),
+                        LAUNCHER_TEST_ARGS=str(self.root / "fake-java.args"), LAUNCHER_TEST_EXIT="false",
                         LAUNCHER_TEST_STAMP=PADDED_STAMP, LAUNCHER_TEST_PS_MODE="normal", STOP_TIMEOUT="2")
         self.children = []
         self.owned_pids = set()
@@ -95,14 +99,42 @@ class HubbleLauncherTest(unittest.TestCase):
         threading.Thread(target=child.wait, daemon=True).start()
         return child
 
-    def run_script(self, name):
-        result = subprocess.run(["bash", str(self.root / "bin" / name)], env=self.env,
+    def run_script(self, name, *args):
+        result = subprocess.run(["bash", str(self.root / "bin" / name), *args], env=self.env,
                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 timeout=10)
         marker = self.root / "fake-java.pid"
         if marker.exists():
             self.owned_pids.add(int(marker.read_text()))
         return result
+
+    def assert_launch_arguments(self):
+        arguments = self.root / "fake-java.args"
+        for attempt in range(100):
+            if arguments.exists() and arguments.read_text().endswith(".properties\n"):
+                break
+            time.sleep(0.01)
+        self.assertEqual([
+            "-server", "-Xms512m", "-Dfile.encoding=UTF-8",
+            "--add-opens=java.base/java.net=ALL-UNNAMED", f"-Dhubble.home.path={self.root}",
+            "-cp", f".:{self.root / 'lib/hubble test.jar'}",
+            "org.apache.hugegraph.HugeGraphHubble", str(self.root / "conf/hugegraph-hubble.properties")
+        ], arguments.read_text().splitlines())
+
+    def test_foreground_preserves_paths_with_spaces(self):
+        (self.root / "lib/hubble test.jar").touch()
+        self.env["LAUNCHER_TEST_EXIT"] = "true"
+        result = self.run_script("start-hubble.sh", "--foreground")
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assert_launch_arguments()
+        self.assertIn("fake java started", result.stdout)
+
+    def test_daemon_preserves_paths_with_spaces(self):
+        (self.root / "lib/hubble test.jar").touch()
+        result = self.run_script("start-hubble.sh")
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assert_launch_arguments()
+        self.assertIn("fake java started", (self.root / "logs/hugegraph-hubble.log").read_text())
 
     def stamp_pid(self, pid, stamp=PADDED_STAMP):
         (self.root / "bin/pid").write_text(f"{pid} {stamp}\n", encoding="utf-8")

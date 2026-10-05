@@ -29,10 +29,7 @@ Required:
 - Spark 3.5.8 with Scala 2.12 (built with Scala 2.12.18)
 - Maven 3.6.3+
 
-The default Maven commands below use published Common 1.7.0, whose request bodies depend on
-the JVM default charset. Retain the UTF-8 submission options below when running this build on
-Java 17. The isolated same-source candidate SDK used by CI supplies a Common implementation
-that uses the declared request-body charset and defaults to UTF-8.
+The default Maven commands below use published Common 1.7.0, whose request bodies depend on the JVM default charset. Retain the UTF-8 submission options below when running this build on Java 17. The isolated same-source candidate SDK used by CI supplies a Common implementation that uses the declared request-body charset and defaults to UTF-8.
 
 To build without executing tests:
 
@@ -46,15 +43,7 @@ To build with default tests:
 mvn clean package
 ```
 
-The integration tests clear the configured graph before writing vertices and edges through Spark.
-Use a disposable server and graph. The defaults are `http://127.0.0.1:8080` and `hugegraph`;
-set `-Dhugegraph.test.url=... -Dhugegraph.test.graph=...` to select another target.
-The Surefire JVM starts with `-Dfile.encoding=UTF-8` so these fixtures do not depend on the caller's locale.
-The default Spark master is `local[2]`. `-Dspark.test.master=...` accepts only `local` or `local[...]`,
-for example `local[4]` or `local[*]`; remote masters and `local-cluster` are rejected because the Maven
-fixture does not distribute connector classes or dependencies to separate executors.
-CI runs this embedded fixture. Packaged `spark-submit` runs with separate executor JVMs
-and the assembly's SLF4J provider check are manual validation, not automated CI gates.
+The integration tests clear the configured graph before writing vertices and edges through Spark. Use a disposable server and graph. The defaults are `http://127.0.0.1:8080` and `hugegraph`; set `-Dhugegraph.test.url=... -Dhugegraph.test.graph=...` to select another target. The Surefire JVM starts with `-Dfile.encoding=UTF-8` so these fixtures do not depend on the caller's locale. The default Spark master is `local[2]`. `-Dspark.test.master=...` accepts only `local` or `local[...]`, for example `local[4]` or `local[*]`; remote masters and `local-cluster` are rejected because the Maven fixture does not distribute connector classes or dependencies to separate executors. CI runs this embedded fixture. Packaged `spark-submit` runs with separate executor JVMs and the assembly's SLF4J provider check are manual validation, not automated CI gates.
 
 HTTPS tests require an explicit trust store shared by the readback client and local Spark writers:
 
@@ -65,21 +54,11 @@ mvn test -Dhugegraph.test.url=https://127.0.0.1:8443 \
   -Dhugegraph.test.trust-store-token=hugegraph
 ```
 
-The trust-store token defaults to `hugegraph`. The URL alone does not select a trust store;
-these test properties provide it directly, without depending on `connector.home.path`.
+The trust-store token defaults to `hugegraph`. The URL alone does not select a trust store; these test properties provide it directly, without depending on `connector.home.path`.
 
-Run applications with `spark-submit` from the matching Spark distribution. Spark supplies its
-SLF4J 2 provider and Java module options; the connector assembly does not bundle an SLF4J provider.
-The Maven test configuration supplies the module options for embedded Spark on Java 17.
-This candidate core cutover requires Java 17 for the connector and its Java Client/core dependencies.
-Unlike the earlier preparation stage, which supported Java 11 and Java 17, this build uses the
-parent's Java 17 release setting: Java classes use class-file major version 61. Scala 2.12.18 still
-emits major version 52 with its separate compiler target. The Scala output does not make the combined
-connector or its Java Client/core dependencies compatible with Java 11.
+Run applications with `spark-submit` from the matching Spark distribution. Spark supplies its SLF4J 2 provider and Java module options; the connector assembly does not bundle an SLF4J provider. The Maven test configuration supplies the module options for embedded Spark on Java 17. The connector and its Java Client dependencies require Java 17. Scala classes retain their Java 8 compiler target, which does not lower the runtime requirement of the complete connector.
 
-Keep Spark's default class loading order for its logging classes. The Java Client needs
-`com.google.guava:guava:30.0-jre`; an older Guava from Spark can fail with a missing
-`Preconditions.checkNotNull` overload. Fetch the exact application dependency on the driver:
+Keep Spark's default class loading order for its logging classes. The Java Client needs `com.google.guava:guava:30.0-jre`; an older Guava from Spark can fail with a missing `Preconditions.checkNotNull` overload. Fetch the exact application dependency on the driver:
 
 ```bash
 GUAVA_DIR="$PWD/spark-runtime"
@@ -88,9 +67,7 @@ mvn org.apache.maven.plugins:maven-dependency-plugin:3.7.0:copy \
 DRIVER_GUAVA_JAR="$GUAVA_DIR/guava-30.0-jre.jar"
 ```
 
-Before submission, copy that JAR to each executor host, or run the same Maven copy command there.
-Use one consistent absolute executor path across workers, and set `EXECUTOR_GUAVA_JAR` to it.
-For example, after placing the JAR at `/opt/hugegraph-spark/lib/guava-30.0-jre.jar` on every worker:
+Before submission, copy that JAR to each executor host, or run the same Maven copy command there. Use one consistent absolute executor path across workers, and set `EXECUTOR_GUAVA_JAR` to it. For example, after placing the JAR at `/opt/hugegraph-spark/lib/guava-30.0-jre.jar` on every worker:
 
 ```bash
 EXECUTOR_GUAVA_JAR=/opt/hugegraph-spark/lib/guava-30.0-jre.jar
@@ -102,16 +79,11 @@ spark-submit --deploy-mode client --driver-class-path "$DRIVER_GUAVA_JAR" \
   /path/to/your-application.jar
 ```
 
-Omit the UTF-8 driver and executor options only when the connector and Java Client were built
-using the isolated same-source candidate SDK. The default Maven build still requires them.
+Omit the UTF-8 driver and executor options only when the connector and Java Client were built using the isolated same-source candidate SDK. The default Maven build still requires them.
 
-For cluster deploy mode, provision Guava on the remote driver and use its readable absolute path in
-`--driver-class-path`; copying it to executors does not provision the driver.
+For cluster deploy mode, provision Guava on the remote driver and use its readable absolute path in `--driver-class-path`; copying it to executors does not provision the driver.
 
-Supply the class and application arguments required by your application. This setting gives the
-application's Guava priority on both sides; it changes the effective Guava classpath while keeping
-Spark's logging provider. It is not a guarantee of compatibility with every other Spark application
-or library in the same host.
+Supply the class and application arguments required by your application. This setting gives the application's Guava priority on both sides; it changes the effective Guava classpath while keeping Spark's logging provider. It is not a guarantee of compatibility with every other Spark application or library in the same host.
 
 ## How to use
 
