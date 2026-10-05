@@ -122,11 +122,11 @@ LOG=${LOG_PATH}/hugegraph-hubble.log
 if [[ $FOREGROUND == "false" ]]; then
     echo "Starting Hubble in daemon mode..."
     nohup nice -n 0 java -server ${JAVA_OPTS} ${JAVA_DEBUG_OPTS} -Dhubble.home.path="${HOME_PATH}" \
-  -cp ${class_path} ${MAIN_CLASS} ${ARGS} > ${LOG} 2>&1 < /dev/null &
+  -cp "${class_path}" "${MAIN_CLASS}" "${ARGS}" > "${LOG}" 2>&1 < /dev/null &
 else
     echo "Starting Hubble in foreground mode..."
     exec nice -n 0 java -server ${JAVA_OPTS} ${JAVA_DEBUG_OPTS} -Dhubble.home.path="${HOME_PATH}" \
-  -cp ${class_path} ${MAIN_CLASS} ${ARGS}
+  -cp "${class_path}" "${MAIN_CLASS}" "${ARGS}"
 fi
 
 PID=$!

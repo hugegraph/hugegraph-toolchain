@@ -427,3 +427,114 @@ it('keeps a pending favorite page selected instead of rolling back early', async
     expect(screen.getByText('favorite page 2')).toBeInTheDocument();
     expect(api.analysis.fetchFavoriteQueries).toHaveBeenCalledTimes(2);
 });
+
+it.each(['resolve', 'reject'])(
+    'keeps the new graph occupied when the old query completes via %s', async completion => {
+        let resolveA;
+        let rejectA;
+        let resolveB;
+        api.analysis.getExecutionQuery
+            .mockImplementationOnce(() => new Promise((resolve, reject) => {
+                resolveA = resolve;
+                rejectA = reject;
+            }))
+            .mockImplementationOnce(() => new Promise(resolve => {
+                resolveB = resolve;
+            }))
+            .mockResolvedValueOnce({status: 200, data: {}});
+        const home = graph => (
+            <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph}}>
+                <AnalysisHome />
+            </GraphAnalysisContext.Provider>
+        );
+        const {rerender} = render(home('graph-a'));
+        await waitForInitialData();
+        const run = () => screen.getByRole('button', {name: 'Run current'});
+        fireEvent.click(run());
+        fireEvent.click(run());
+        expect(api.analysis.getExecutionQuery).toHaveBeenCalledTimes(1);
+
+        rerender(home('graph-b'));
+        await waitForInitialData();
+        fireEvent.click(run());
+        expect(api.analysis.getExecutionQuery).toHaveBeenCalledTimes(2);
+        expect(api.analysis.getExecutionQuery).toHaveBeenLastCalledWith(
+            'DEFAULT', 'graph-b', 'g.V().limit(10)'
+        );
+        await act(async () => {
+            if (completion === 'resolve') {
+                resolveA({status: 200, data: {}, message: 'stale-a'});
+            }
+            else {
+                rejectA(new Error('stale-a'));
+            }
+        });
+        expect(screen.getByText(/query result loading/)).toBeInTheDocument();
+        expect(screen.queryByText(/stale-a/)).not.toBeInTheDocument();
+        // This QueryBar fixture deliberately keeps its button clickable while loading.
+        fireEvent.click(run());
+        expect(api.analysis.getExecutionQuery).toHaveBeenCalledTimes(2);
+
+        await act(async () => resolveB({status: 200, data: {}, message: 'current-b'}));
+        expect(screen.getByText(/query result success/)).toHaveTextContent('current-b');
+        await act(async () => fireEvent.click(run()));
+        expect(api.analysis.getExecutionQuery).toHaveBeenCalledTimes(3);
+    });
+
+it.each([false, true])('ignores late counts after switching graphs (return to A: %s)', async returnToA => {
+    const pending = [];
+    api.analysis.getGraphData.mockImplementation((space, graph) => new Promise(resolve => {
+        pending.push({graph, resolve});
+    }));
+    const home = graph => (
+        <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph}}>
+            <AnalysisHome />
+        </GraphAnalysisContext.Provider>
+    );
+    const {rerender, unmount} = render(home('graph-a'));
+    await waitFor(() => expect(pending).toHaveLength(1));
+    rerender(home('graph-b'));
+    await waitFor(() => expect(pending).toHaveLength(2));
+    expect(screen.getByText('graph counts -1 -1')).toBeInTheDocument();
+    await act(async () => pending[1].resolve({
+        status: 200, data: {vertexcount: 20, edgecount: 21},
+    }));
+    expect(screen.getByText('graph counts 20 21')).toBeInTheDocument();
+    if (returnToA) {
+        rerender(home('graph-a'));
+        await waitFor(() => expect(pending).toHaveLength(3));
+        expect(screen.getByText('graph counts -1 -1')).toBeInTheDocument();
+        await act(async () => pending[2].resolve({
+            status: 200, data: {vertexcount: 30, edgecount: 31},
+        }));
+    }
+    await act(async () => pending[0].resolve({
+        status: 200, data: {vertexcount: 10, edgecount: 11},
+    }));
+    expect(screen.getByText(returnToA ? 'graph counts 30 31' : 'graph counts 20 21')).toBeInTheDocument();
+    unmount();
+});
+
+it('does not let an older same-graph refresh overwrite current counts', async () => {
+    const pending = [];
+    api.analysis.getGraphData.mockImplementation(() => new Promise(resolve => {
+        pending.push(resolve);
+    }));
+    api.analysis.getExecutionQuery.mockResolvedValue({status: 200, data: {}});
+    const {unmount} = render(
+        <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph: 'graph-a'}}>
+            <AnalysisHome />
+        </GraphAnalysisContext.Provider>
+    );
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Run current'})));
+    await waitFor(() => expect(pending).toHaveLength(2));
+    await act(async () => pending[1]({status: 200, data: {vertexcount: 20, edgecount: 21}}));
+    await act(async () => pending[0]({status: 200, data: {vertexcount: 10, edgecount: 11}}));
+    expect(screen.getByText('graph counts 20 21')).toBeInTheDocument();
+    // A pending post-query refresh is also detached on unmount.
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Run current'})));
+    await waitFor(() => expect(pending).toHaveLength(3));
+    unmount();
+    await act(async () => pending[2]({status: 200, data: {vertexcount: 40, edgecount: 41}}));
+});
