@@ -144,15 +144,26 @@ class ImageEvidenceTest(unittest.TestCase):
             (evidence / "manifest.json").write_text(json.dumps(manifest))
             original_error = "https://user:password@example.invalid/?token=secret"
             cleanup_error = "Command ['docker', '--password=secret'] timed out"
+            runtime = evidence / "fixture-runtime"
+            logs = runtime / "apache-hugegraph-fixture/logs"
+            logs.mkdir(parents=True)
+            (logs / "fixture.log").write_text("fixture log")
+            copy_error = "log copy failed: password=secret https://example.invalid/?token=secret"
             stderr = io.StringIO()
-            with patch.object(images, "run", side_effect=[RuntimeError(original_error),
-                                                          OSError(cleanup_error), ""]), \
+            with patch.object(images.tempfile, "TemporaryDirectory",
+                              return_value=contextlib.nullcontext(str(runtime))), \
+                    patch.object(images, "run", side_effect=[RuntimeError(original_error),
+                                                             OSError(cleanup_error), "", ""]), \
+                    patch.object(images.shutil, "copy2", side_effect=OSError(copy_error)) as copy_log, \
                     contextlib.redirect_stderr(stderr):
                 self.assertFalse(images.smoke(evidence))
             report = json.loads((evidence / "report.json").read_text())
-            self.assertEqual(report["error"], original_error)
-            self.assertEqual(report["cleanup_errors"], [cleanup_error])
+            self.assertEqual(report["error"], "smoke: RuntimeError")
+            self.assertEqual(report["cleanup_errors"], ["cleanup: OSError", "cleanup: OSError"])
+            copy_log.assert_called_once()
             self.assertEqual(report["status"], "failed")
+            for secret in ("secret", "password", "https://", "Command"):
+                self.assertNotIn(secret, json.dumps(report))
             output = stderr.getvalue()
             self.assertIn("smoke: RuntimeError", output)
             self.assertIn("cleanup: OSError", output)

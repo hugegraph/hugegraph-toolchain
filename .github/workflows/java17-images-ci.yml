@@ -56,7 +56,7 @@ jobs:
           python-version: '3.11'
       - name: Check image gate fixtures
         run: |
-          python3 -m unittest discover -s .github/scripts -p 'test_java17_image.py'
+          python3 -m unittest discover -s .github/scripts -p 'test*.py'
           bash -n .github/scripts/build-java17-image.sh
       - name: Install locked same-source SDK
         id: server

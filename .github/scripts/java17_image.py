@@ -253,7 +253,7 @@ def smoke(evidence):
                 report["h2_recreated_container_readback"] = "passed"
             report["status"] = "passed"
         except Exception as error:
-            report["error"] = str(error)
+            report["error"] = "smoke: " + type(error).__name__
             failure_types.add("smoke: " + type(error).__name__)
         finally:
             def cleanup(args, **kwargs):
@@ -261,7 +261,7 @@ def smoke(evidence):
                     run(args, check=False, **kwargs)
                 except Exception as error:
                     report["status"] = "failed"
-                    report.setdefault("cleanup_errors", []).append(str(error))
+                    report.setdefault("cleanup_errors", []).append("cleanup: " + type(error).__name__)
                     failure_types.add("cleanup: " + type(error).__name__)
 
             cleanup(["docker", "logs", name], log=evidence / "container.log")
@@ -277,11 +277,11 @@ def smoke(evidence):
                         shutil.copy2(log, evidence / ("server-" + log.name))
                     except OSError as error:
                         report["status"] = "failed"
-                        report.setdefault("cleanup_errors", []).append(str(error))
+                        report.setdefault("cleanup_errors", []).append("cleanup: " + type(error).__name__)
                         failure_types.add("cleanup: " + type(error).__name__)
             (evidence / "report.json").write_text(json.dumps(report, indent=2))
     if report["status"] != "passed":
-        # Exception details may contain credentials, URLs or full commands; retain them only in the artifact.
+        # Exception details may contain credentials, URLs or full commands; report only failure types.
         summary = ", ".join(sorted(failure_types))[:1024]
         message = f"Java 17 image smoke failed ({summary}); report={evidence / 'report.json'}"
         print(message.encode("utf-8")[:7168].decode("utf-8", errors="ignore"), file=sys.stderr)

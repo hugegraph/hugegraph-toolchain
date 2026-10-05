@@ -30,7 +30,10 @@ RUN set -x \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /pkg
+
+COPY hugegraph-client/assembly/travis/install-candidate-sdk.sh \
+     hugegraph-client/assembly/travis/checkout-server.sh /pkg/hugegraph-client/assembly/travis/
+COPY .github/scripts/verify_candidate_image_sdk.py /pkg/.github/scripts/
 
 # Direct builds bootstrap the same locked SDK; CI can supply a verified builder.
 RUN mkdir -p /opt/candidate-m2 \
@@ -41,6 +44,8 @@ RUN mkdir -p /opt/candidate-m2 \
            4c162f539b906fa06dd83228e3691b77fa5b77d7 /opt/candidate-source /opt/candidate-m2; \
        fi \
     && python3 /pkg/.github/scripts/verify_candidate_image_sdk.py /opt/candidate-m2
+
+COPY . /pkg
 
 RUN set -x \
     && mvn install $MAVEN_ARGS -Dmaven.repo.local=/opt/candidate-m2 -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp \
