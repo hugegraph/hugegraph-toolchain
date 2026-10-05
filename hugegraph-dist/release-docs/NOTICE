@@ -2558,6 +2558,8 @@ Hubble Java 17 runtime dependency notices
 ========================================================================
 
 ========================================================================
+com.fasterxml.jackson.core:jackson-annotations:2.15.2 / META-INF/NOTICE
+com.fasterxml.jackson.core:jackson-databind:2.15.2 / META-INF/NOTICE
 com.fasterxml.jackson.core:jackson-annotations:2.21 / META-INF/NOTICE
 com.fasterxml.jackson.core:jackson-databind:2.21.4 / META-INF/NOTICE
 ========================================================================
