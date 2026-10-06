@@ -42,11 +42,15 @@ SERVER_FETCH_REF=${SERVER_FETCH_REF:-$1}
 export SERVER_REPOSITORY SERVER_FETCH_REF
 CANDIDATE_REPO=$3
 bash "$SCRIPT_DIR/checkout-server.sh" "$1" "$SOURCE_DIR"
-# Install the entire locked reactor so Common, Core, PD and Store share one source.
+# Install the SDK and Server distribution dependency closure from one source.
+# Server cluster tests pull an unrelated released Toolchain/SDK back into this build.
 # The fixture installers retain package-only semantics and use another repository.
+SDK_MODULES=hugegraph-server/hugegraph-dist,hugegraph-pd/hg-pd-client
+SDK_MODULES+=,hugegraph-store/hg-store-client,hugegraph-struct
 # Flatten the root too: its installed ${revision} otherwise breaks dependency
 # model reconstruction while remote-resources generates license metadata.
 (cd "$SOURCE_DIR" && mvn "-Dmaven.repo.local=$CANDIDATE_REPO" \
+    -pl "$SDK_MODULES" -am \
     org.codehaus.mojo:flatten-maven-plugin:1.3.0:flatten install \
     -Dflatten.mode=resolveCiFriendliesOnly -DupdatePomFile=true \
     -DskipTests -Dmaven.javadoc.skip=true -ntp)
