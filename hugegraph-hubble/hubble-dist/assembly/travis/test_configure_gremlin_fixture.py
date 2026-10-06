@@ -76,6 +76,7 @@ class GremlinFixtureTest(unittest.TestCase):
             output = root / "output"
             output.mkdir()
             commit = "1" * 40
+            # TODO(apache/hugegraph#3263): align this temporary source fixture with ASF after the merge.
             env = dict(os.environ, SERVER_ARCHIVE=str(archive), SERVER_ARCHIVE_COMMIT=commit,
                        SERVER_ARCHIVE_SHA256=hashlib.sha256(archive.read_bytes()).hexdigest(),
                        SERVER_REPOSITORY="hugegraph/hugegraph")
