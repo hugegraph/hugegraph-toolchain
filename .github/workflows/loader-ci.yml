@@ -1,31 +1,24 @@
 name: "loader-ci"
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - master
-      - 'release-*'
-    paths:
-      - hugegraph-loader/**
-      - hugegraph-dist/**
-      - .github/workflows/**
-      - pom.xml
-  pull_request:
-    paths:
-      - hugegraph-loader/**
-      - hugegraph-dist/**
-      - hugegraph-client/**
-      - .github/workflows/**
-      - pom.xml
-
-# Keep the newest PR run; preserve independent push, release and manual runs.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  workflow_call:
+    inputs:
+      server-repository:
+        type: string
+        default: apache/hugegraph
+      artifact-name:
+        type: string
+        required: true
+      server-commit:
+        type: string
+        required: true
+      server-ref:
+        type: string
+        required: true
 
 jobs:
-  loader-ci:
+  profiles:
+    name: profiles
     runs-on: ubuntu-latest
     env:
       USE_STAGE: 'true' # Whether to include the stage repository.
@@ -36,7 +29,7 @@ jobs:
       DB_DATABASE: load_test
     strategy:
       matrix:
-        JAVA_VERSION: ['11']
+        JAVA_VERSION: ['11', '17']
     services:
       mysql:
         image: mysql:8.0
@@ -52,9 +45,13 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
-        id: get-commit
-        uses: ./.github/actions/get-hugegraph-commit
+      - name: Install released Server JVM
+        id: server-java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: temurin
+          overwrite-settings: false
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
@@ -63,42 +60,102 @@ jobs:
           distribution: 'temurin'
           use-stage: ${{ env.USE_STAGE }}
 
-      - name: Cache Hadoop
-        uses: actions/cache@v6
-        with:
-          path: ~/hadoop-3.3.6.tar.gz
-          key: ${{ runner.os }}-hadoop-3.3.6
-
-      - name: Cache HugeGraph Server
-        uses: actions/cache@v6
-        with:
-          path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-provenance-v1-${{ steps.get-commit.outputs.commit_id }}
-
       - name: Compile
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
-      - name: Prepare env and service
-        env:
-          COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
-          SERVER_REPOSITORY: ${{ steps.get-commit.outputs.repository }}
-          SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
-        run: |
-          $TRAVIS_DIR/install-hadoop.sh
-          installer=$(realpath "$TRAVIS_DIR/install-hugegraph-from-source.sh")
-          server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
-          cd "$server_build"
-          bash "$installer" "$COMMIT_ID"
+      - name: Setup HugeGraph server
+        uses: ./.github/actions/setup-hugegraph-server
+        with:
+          mode: start
+          java-version: '11'
+          java-home: ${{ steps.server-java.outputs.path }}
+          artifact-name: ${{ inputs.artifact-name }}
+          commit-id: ${{ inputs.server-commit }}
+          repository: ${{ inputs.server-repository }}
+          fetch-ref: ${{ inputs.server-ref }}
+          travis-dir: ${{ env.TRAVIS_DIR }}
 
       - name: Run test
         run: |
           cd hugegraph-loader && ls
           mvn test -P unit -ntp
           mvn test -P file
-          mvn test -P hdfs
           mvn test -P jdbc
           mvn test -P kafka
+
+      - name: Upload coverage to Codecov
+        uses: ./.github/actions/upload-coverage
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: hugegraph-loader/target/jacoco.xml
+
+  hdfs:
+    name: hdfs
+    runs-on: ubuntu-latest
+    env:
+      USE_STAGE: 'true' # Whether to include the stage repository.
+      TRAVIS_DIR: hugegraph-loader/assembly/travis
+      STATIC_DIR: hugegraph-loader/assembly/static
+      DB_USER: root
+      DB_PASS: root
+      DB_DATABASE: load_test
+    strategy:
+      matrix:
+        JAVA_VERSION: ['11', '17']
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Install released Server JVM
+        id: server-java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: temurin
+          overwrite-settings: false
+
+      - name: Setup Java environment
+        uses: ./.github/actions/setup-java-env
+        with:
+          java-version: ${{ matrix.JAVA_VERSION }}
+          distribution: 'temurin'
+          use-stage: ${{ env.USE_STAGE }}
+
+      - name: Compile
+        run: |
+          mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
+
+      - name: Setup HugeGraph server
+        uses: ./.github/actions/setup-hugegraph-server
+        with:
+          mode: start
+          java-version: '11'
+          java-home: ${{ steps.server-java.outputs.path }}
+          artifact-name: ${{ inputs.artifact-name }}
+          commit-id: ${{ inputs.server-commit }}
+          repository: ${{ inputs.server-repository }}
+          fetch-ref: ${{ inputs.server-ref }}
+          travis-dir: ${{ env.TRAVIS_DIR }}
+
+      - name: Start HDFS from the official Hadoop image
+        timeout-minutes: 18
+        run: |
+          "$TRAVIS_DIR/start-hdfs-ci.sh"
+
+      - name: Run HDFS tests
+        run: mvn test -P hdfs -f hugegraph-loader/pom.xml -ntp
+
+      - name: Collect HDFS logs and remove containers
+        if: ${{ always() }}
+        run: |
+          for service in namenode datanode; do
+            name="${HDFS_CONTAINER_PREFIX:-hugegraph-ci-hdfs}-$service"
+            docker logs "$name" || true
+            docker rm -f "$name" || true
+          done
 
       - name: Upload coverage to Codecov
         uses: ./.github/actions/upload-coverage
