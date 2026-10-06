@@ -1,42 +1,35 @@
 name: "loader-ci"
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - master
-      - 'release-*'
-    paths:
-      - hugegraph-loader/**
-      - hugegraph-dist/**
-      - .github/workflows/**
-      - pom.xml
-  pull_request:
-    paths:
-      - hugegraph-loader/**
-      - hugegraph-dist/**
-      - hugegraph-client/**
-      - .github/workflows/**
-      - pom.xml
-
-# Keep the newest PR run; preserve independent push, release and manual runs.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  workflow_call:
+    inputs:
+      server-repository:
+        type: string
+        default: apache/hugegraph
+      artifact-name:
+        type: string
+        required: true
+      server-commit:
+        type: string
+        required: true
+      server-ref:
+        type: string
+        required: true
 
 jobs:
   loader-ci:
     runs-on: ubuntu-latest
     env:
-      USE_STAGE: 'true' # Whether to include the stage repository.
       TRAVIS_DIR: hugegraph-loader/assembly/travis
       STATIC_DIR: hugegraph-loader/assembly/static
       DB_USER: root
       DB_PASS: root
       DB_DATABASE: load_test
     strategy:
+      fail-fast: false
       matrix:
-        JAVA_VERSION: ['11']
+        JAVA_VERSION: ['17']
+        SERVER_BASELINE: ['candidate', 'release-1.7']
     services:
       mysql:
         image: mysql:8.0
@@ -52,16 +45,24 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
-        id: get-commit
-        uses: ./.github/actions/get-hugegraph-commit
+      - name: Install released Server JVM
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        id: released-java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          overwrite-settings: false
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
           distribution: 'temurin'
-          use-stage: ${{ env.USE_STAGE }}
+
+      - name: Install locked candidate SDK
+        id: candidate-sdk
+        uses: ./.github/actions/setup-candidate-sdk
 
       - name: Cache Hadoop
         uses: actions/cache@v6
@@ -69,27 +70,31 @@ jobs:
           path: ~/hadoop-3.3.6.tar.gz
           key: ${{ runner.os }}-hadoop-3.3.6
 
-      - name: Cache HugeGraph Server
-        uses: actions/cache@v6
-        with:
-          path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-provenance-v1-${{ steps.get-commit.outputs.commit_id }}
-
       - name: Compile
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
-      - name: Prepare env and service
+      - name: Prepare Hadoop service
+        run: bash "$TRAVIS_DIR/install-hadoop.sh"
+
+      - name: Setup released Server fixture
+        if: matrix.SERVER_BASELINE == 'release-1.7'
+        uses: ./.github/actions/setup-hugegraph-server
+        with:
+          travis-dir: ${{ env.TRAVIS_DIR }}
+          commit-id: ${{ inputs.server-commit }}
+          repository: ${{ inputs.server-repository }}
+          fetch-ref: ${{ inputs.server-ref }}
+          java-home: ${{ steps.released-java.outputs.path }}
+          mode: start
+          artifact-name: ${{ inputs.artifact-name }}
+          java-version: '11'
+
+      - name: Start candidate Server fixture
+        if: matrix.SERVER_BASELINE == 'candidate'
         env:
-          COMMIT_ID: ${{ steps.get-commit.outputs.commit_id }}
-          SERVER_REPOSITORY: ${{ steps.get-commit.outputs.repository }}
-          SERVER_FETCH_REF: ${{ steps.get-commit.outputs.fetch_ref }}
-        run: |
-          $TRAVIS_DIR/install-hadoop.sh
-          installer=$(realpath "$TRAVIS_DIR/install-hugegraph-from-source.sh")
-          server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-build.XXXXXX")
-          cd "$server_build"
-          bash "$installer" "$COMMIT_ID"
+          CANDIDATE_ARCHIVE: ${{ steps.candidate-sdk.outputs.archive }}
+        run: bash hugegraph-client/assembly/travis/start-hugegraph-servers.sh "$CANDIDATE_ARCHIVE"
 
       - name: Run test
         run: |

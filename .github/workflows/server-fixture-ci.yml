@@ -19,39 +19,12 @@
 
 name: "server-fixture-ci"
 
+# Automatic PR validation runs these contracts in Required CI.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
-      - 'release-*'
-    paths:
-      - .github/actions/get-hugegraph-commit/**
-      - .github/actions/setup-hugegraph-server/**
-      - .github/workflows/server-fixture-ci.yml
-      - hugegraph-client/assembly/travis/*server*
-      - hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
-      - hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh
-      - hugegraph-tools/assembly/travis/install-hugegraph-from-source.sh
-      - hugegraph-spark-connector/assembly/travis/install-hugegraph-from-source.sh
-  pull_request:
-    paths:
-      - .github/actions/get-hugegraph-commit/**
-      - .github/actions/setup-hugegraph-server/**
-      - .github/workflows/server-fixture-ci.yml
-      - hugegraph-client/assembly/travis/*server*
-      - hugegraph-client/assembly/travis/install-hugegraph-from-source.sh
-      - hugegraph-loader/assembly/travis/install-hugegraph-from-source.sh
-      - hugegraph-tools/assembly/travis/install-hugegraph-from-source.sh
-      - hugegraph-spark-connector/assembly/travis/install-hugegraph-from-source.sh
 
 permissions:
   contents: read
-
-# Keep the newest PR run; preserve independent push, release and manual runs.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   server-fixture-contracts:
@@ -71,3 +44,5 @@ jobs:
           node --test .github/actions/get-hugegraph-commit/resolve.test.cjs \
             hugegraph-client/assembly/travis/checkout-server.test.cjs \
             hugegraph-client/assembly/travis/install-server.test.cjs
+      - name: Test candidate SDK and distribution provenance
+        run: python3 -m unittest discover -s .github/scripts -p 'test_candidate_sdk.py'

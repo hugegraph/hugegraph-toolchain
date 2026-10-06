@@ -28,15 +28,38 @@ on:
 
 # Keep the newest PR run; preserve independent push, release and manual runs.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.run_attempt == 1 && 'head' || format('rerun-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check-license-header:
     runs-on: ubuntu-latest
+    outputs:
+      dependencies: ${{ steps.dependencies.outputs.changed }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Select dependency license audit
+        id: dependencies
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=true
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            if git diff --name-only "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/license-paths"; then
+              changed=false
+              if grep -Eq '(^|/)(pom.xml|package.json|yarn.lock|package-lock.json)$|(^|/)(assembly|licenses)/|(^|/)(LICENSE|NOTICE)$|dependency/|^\.github/(configs/|workflows/license-checker.yml)' "$RUNNER_TEMP/license-paths"; then
+                changed=true
+              fi
+            fi
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+      - name: Test automatic retry freshness rules
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
       # More info could refer to: https://github.com/apache/skywalking-eyes
       - name: Check License Header
         uses: apache/skywalking-eyes@29bd646002b63bb4c0ed1648d1654c35fb8ff027 # main 2026-07-12
@@ -46,6 +69,12 @@ jobs:
           log: info
           config: .licenserc.yaml
 
+      - name: Setup Java and Maven
+        uses: ./.github/actions/setup-java-env
+        with:
+          java-version: '17'
+          distribution: temurin
+
       - name: License check(RAT)
         run: |
           mvn apache-rat:check -ntp
@@ -53,15 +82,16 @@ jobs:
           grep "Binaries" merged-rat.txt -C 3 && cat merged-rat.txt
 
   check-dependency-license:
+    needs: check-license-header
+    if: needs.check-license-header.outputs.dependencies == 'true'
     runs-on: ubuntu-latest
     env:
       SCRIPT_DEPENDENCY: hugegraph-dist/scripts/dependency
-      USE_STAGE: 'true' # Whether to include the stage repository.
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: ./.github/actions/setup-java-env
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -70,18 +100,15 @@ jobs:
         with:
           node-version: '16'
 
-      - name: use staged maven repo settings
-        if: ${{ env.USE_STAGE == 'true' }}
-        run: |
-          cp $HOME/.m2/settings.xml /tmp/settings.xml
-          mv -vf .github/configs/settings.xml $HOME/.m2/settings.xml
+      - name: Install locked candidate SDK
+        uses: ./.github/actions/setup-candidate-sdk
 
       - name: mvn install
         run: |
           mvn install -DskipTests=true -ntp
       - name: generate current dependencies
         run: |
-          bash $SCRIPT_DEPENDENCY/regenerate_known_dependencies.sh current-dependencies.txt
+          bash "$SCRIPT_DEPENDENCY/regenerate_known_dependencies.sh" current-dependencies.txt
       - name: check third dependencies
         run: |
-          bash $SCRIPT_DEPENDENCY/check_dependencies.sh
+          bash "$SCRIPT_DEPENDENCY/check_dependencies.sh"
