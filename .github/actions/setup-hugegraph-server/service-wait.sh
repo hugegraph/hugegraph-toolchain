@@ -15,14 +15,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-export LANG=zh_CN.UTF-8
-set -ev
-
-if [[ $# -lt 1 || $# -gt 2 ]]; then
-    echo "Usage: $0 <commit-id> [fetch-ref]" >&2
-    exit 1
-fi
-
-FIXTURE_COMMIT=$1
-FIXTURE_REF=${2:-$1}
-source "$(cd "$(dirname "$0")/../../../.." && pwd)/.github/actions/setup-hugegraph-server/fixture.sh"
+fixture_wait() {
+    local url=$1 deadline=$((SECONDS + ${SERVICE_READY_TIMEOUT:-300}))
+    while (( SECONDS < deadline )); do
+        # Use an authenticated API response, rather than a listening socket.
+        if curl --fail --silent --insecure --connect-timeout 2 --max-time 5 -u admin:pa "$url/graphs" >/dev/null; then return; fi
+        sleep 2
+    done
+    echo "HugeGraph readiness timed out: $url" >&2
+    return 1
+}

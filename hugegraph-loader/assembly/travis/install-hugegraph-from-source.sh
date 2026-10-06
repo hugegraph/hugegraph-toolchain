@@ -21,6 +21,13 @@ if [[ $# -ne 1 ]]; then
     echo "Must input an existing commit id of hugegraph server" && exit 1
 fi
 
+if [[ "${FIXTURE_MODE:-standalone}" == start ]]; then
+    FIXTURE_COMMIT=$1
+    ROOT_DIR=$(cd "$(dirname "$0")/../../.." && pwd)
+    source "$ROOT_DIR/.github/actions/setup-hugegraph-server/fixture.sh"
+    ARCHIVE=$(python3 "$ROOT_DIR/.github/actions/setup-hugegraph-server/manifest.py" name)
+    exec bash "$ROOT_DIR/hugegraph-client/assembly/travis/start-hugegraph-servers.sh" "$ARCHIVE"
+fi
 COMMIT_ID=$1
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SHARED_DIR="$SCRIPT_DIR/../../../hugegraph-client/assembly/travis"
