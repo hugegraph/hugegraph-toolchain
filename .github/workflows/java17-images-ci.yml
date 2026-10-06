@@ -62,6 +62,7 @@ jobs:
         id: server
         uses: ./.github/actions/setup-candidate-sdk
         with:
+          # TODO(apache/hugegraph#3263): after merge replace this temporary source with apache/hugegraph and an ASF SHA.
           repository: hugegraph/hugegraph
           ref: codex/cypher-minimal-compat
           expected-commit: 4c162f539b906fa06dd83228e3691b77fa5b77d7
