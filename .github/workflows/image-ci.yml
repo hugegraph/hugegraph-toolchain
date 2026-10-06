@@ -17,32 +17,28 @@
 # under the License.
 #
 
-name: "server-fixture-ci"
+name: Toolchain image startup
 
-# Automatic PR validation runs these contracts in Required CI.
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      module:
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  server-fixture-contracts:
+  image:
+    name: build-and-start
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 50
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-      - name: Test server selection, checkout and installation
-        run: |
-          node --test .github/actions/get-hugegraph-commit/resolve.test.cjs \
-            hugegraph-client/assembly/travis/checkout-server.test.cjs \
-            hugegraph-client/assembly/travis/install-server.test.cjs
-      - name: Test candidate SDK and distribution provenance
-        run: python3 -m unittest discover -s .github/scripts -p 'test_candidate_sdk.py'
+      - name: Build and start this checkout's image
+        env:
+          MODULE: ${{ inputs.module }}
+        run: python3 .github/scripts/check-toolchain-image.py "$MODULE"

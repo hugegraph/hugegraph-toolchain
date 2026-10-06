@@ -51,29 +51,11 @@ if [[ -n "${SERVER_ARCHIVE:-}" ]]; then
     exit 0
 fi
 
-CACHE_DIR="${HOME}/hugegraph-cache-${COMMIT_ID}"
-SERVER_MAVEN_REPO=${SERVER_MAVEN_REPO:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/hubble-fixture-m2-${COMMIT_ID}}
-
-mkdir -p "${CACHE_DIR}"
-CACHED_TARBALL=$(find "${CACHE_DIR}" -maxdepth 1 \
-                       -name "apache-hugegraph-*.tar.gz" -print -quit)
-
-if [[ -f "${CACHED_TARBALL}" ]]; then
-    echo "Found HugeGraph server tarball cached for commit ${COMMIT_ID}."
-    cp "${CACHED_TARBALL}" ./
-    exit 0
+FIXTURE_COMMIT=$COMMIT_ID
+FIXTURE_REF=${COMMIT_REF:-$COMMIT_ID}
+FIXTURE_REPOSITORY=$SERVER_REPOSITORY
+FIXTURE_JAVA=${FIXTURE_JAVA:-17}
+if [[ -n "${SERVER_MAVEN_REPO:-}" ]]; then
+    export MAVEN_ARGS="${MAVEN_ARGS:-} -Dmaven.repo.local=$SERVER_MAVEN_REPO"
 fi
-
-# Build the selected server without replacing the candidate SDK dependencies.
-SERVER_FETCH_REF="${COMMIT_REF:-$COMMIT_ID}" \
-    bash "$REPO_ROOT/hugegraph-client/assembly/travis/checkout-server.sh" "$COMMIT_ID" "$GIT_DIR"
-cd "${GIT_DIR}"
-mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp \
-    -Dmaven.repo.local="$SERVER_MAVEN_REPO"
-
-cd hugegraph-server
-TAR=$(echo apache-hugegraph-*.tar.gz)
-cp apache-hugegraph-*.tar.gz ../../
-cd ../../
-rm -rf "${GIT_DIR}"
-cp apache-hugegraph-*.tar.gz "${CACHE_DIR}"/
+source "$REPO_ROOT/.github/actions/setup-hugegraph-server/fixture.sh"

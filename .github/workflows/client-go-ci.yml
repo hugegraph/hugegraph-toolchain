@@ -1,37 +1,30 @@
 name: "go-client-ci"
 
 on:
-  push:
-    branches:
-      - master
-      - 'release-*'
-    paths:
-      - hugegraph-client-go/**
-      - hugegraph-dist/**
-      - .github/workflows/**
-      - pom.xml
-  pull_request:
-    paths:
-      - hugegraph-client-go/**
-      - hugegraph-dist/**
-      - .github/workflows/**
-      - pom.xml
-
-# Keep the newest PR run; preserve independent push, release and manual runs.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  workflow_call:
+    inputs:
+      server-repository:
+        type: string
+        default: apache/hugegraph
+      artifact-name:
+        type: string
+        required: true
+      server-commit:
+        type: string
+        required: true
+      server-ref:
+        type: string
+        required: true
 
 jobs:
   client-go-ci:
     runs-on: ubuntu-latest
     env:
-      USE_STAGE: 'true' # Whether to include the stage repository.
       TRAVIS_DIR: hugegraph-client/assembly/travis
     strategy:
       fail-fast: false
       matrix:
-        JAVA_VERSION: ['11']
+        JAVA_VERSION: ['17']
 
     steps:
       - name: Fetch Code
@@ -39,24 +32,31 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get HugeGraph stable commit id
-        id: get-commit
-        uses: ./.github/actions/get-hugegraph-commit
+      - name: Install released Server JVM
+        id: server-java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: temurin
+          overwrite-settings: false
 
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
           distribution: 'zulu'
-          use-stage: ${{ env.USE_STAGE }}
 
       - name: Setup HugeGraph server
         uses: ./.github/actions/setup-hugegraph-server
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
-          commit-id: ${{ steps.get-commit.outputs.commit_id }}
-          repository: ${{ steps.get-commit.outputs.repository }}
-          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
+          commit-id: ${{ inputs.server-commit }}
+          repository: ${{ inputs.server-repository }}
+          fetch-ref: ${{ inputs.server-ref }}
+          artifact-name: ${{ inputs.artifact-name }}
+          mode: start
+          java-version: '11'
+          java-home: ${{ steps.server-java.outputs.path }}
 
       - name: Init Go env
         uses: actions/setup-go@v6
