@@ -96,7 +96,10 @@ class RuntimeTests(unittest.TestCase):
         for fixture_version, fixture_jdk, caller_version, caller_jdk in (
                 (11, jdk11, 17, jdk17), (17, jdk17, 11, jdk11)):
             with self.subTest(fixture=fixture_version, caller=caller_version):
-                self.manifest(java=str(fixture_version))
+                config = self.env['FIXTURE_CONFIG']
+                if fixture_version == 17:
+                    config = 'candidate-sdk-install;' + config.split(';', 1)[1]
+                self.manifest(java=str(fixture_version), config=config)
                 env = dict(self.env, JAVA_HOME=str(caller_jdk),
                            PATH=f'{caller_jdk}/bin:{self.env["PATH"]}',
                            FIXTURE_JAVA=str(fixture_version), FIXTURE_JAVA_HOME=str(fixture_jdk),
