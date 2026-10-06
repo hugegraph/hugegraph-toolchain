@@ -26,7 +26,12 @@ FIXTURE_DIR=${FIXTURE_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/hugegraph-fixture}
 FIXTURE_HELPER=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/manifest.py
 FIXTURE_BUILD_INPUTS=${FIXTURE_BUILD_INPUTS:-$(python3 "$FIXTURE_HELPER" inputs)}
 FIXTURE_PLATFORM=${FIXTURE_PLATFORM:-$(uname -sm)}
-FIXTURE_CONFIG="package -DskipTests -Dmaven.javadoc.skip=true -ntp;schema=1;inputs=$FIXTURE_BUILD_INPUTS;platform=$FIXTURE_PLATFORM"
+if [[ "$FIXTURE_JAVA" == 17 ]]; then
+    FIXTURE_BUILD_COMMAND=candidate-sdk-install
+else
+    FIXTURE_BUILD_COMMAND='package -DskipTests -Dmaven.javadoc.skip=true -ntp'
+fi
+FIXTURE_CONFIG="$FIXTURE_BUILD_COMMAND;schema=1;inputs=$FIXTURE_BUILD_INPUTS;platform=$FIXTURE_PLATFORM"
 export FIXTURE_REPOSITORY FIXTURE_COMMIT FIXTURE_JAVA FIXTURE_CONFIG FIXTURE_DIR
 [[ "$FIXTURE_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
 [[ "$FIXTURE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
@@ -39,7 +44,7 @@ fixture_validate_java() {
 
 fixture_verify() { python3 "$FIXTURE_HELPER" verify; }
 fixture_build() {
-    local cache_key cache_dir source_dir archive
+    local cache_key cache_dir source_dir archive candidate_repo=''
     cache_key=$(printf '%s\n' "$FIXTURE_REPOSITORY" "$FIXTURE_COMMIT" "$FIXTURE_JAVA" "$FIXTURE_CONFIG" | shasum -a 256 | cut -d ' ' -f 1)
     cache_dir="${HOME}/hugegraph-fixture-cache/$cache_key"
     mkdir -p "$FIXTURE_DIR"
@@ -51,9 +56,17 @@ fixture_build() {
     rm -f "$FIXTURE_DIR/server.tar.gz" "$FIXTURE_DIR/manifest.json"
     fixture_validate_java
     source_dir="$(mktemp -d "${TMPDIR:-/tmp}/hg-fixture-source.XXXXXX")/source"
-    SERVER_REPOSITORY=$FIXTURE_REPOSITORY SERVER_FETCH_REF=$FIXTURE_REF \
-        bash "${FIXTURE_HELPER%/*}/../../../hugegraph-client/assembly/travis/checkout-server.sh" "$FIXTURE_COMMIT" "$source_dir"
-    (cd "$source_dir" && mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp)
+    if [[ "$FIXTURE_JAVA" == 17 ]]; then
+        # Reuse the verified SDK build's same-source distribution and isolated repository.
+        candidate_repo=$(mktemp -d "${TMPDIR:-/tmp}/hg-fixture-sdk-m2.XXXXXX")
+        SERVER_REPOSITORY=$FIXTURE_REPOSITORY SERVER_FETCH_REF=$FIXTURE_REF \
+            bash "${FIXTURE_HELPER%/*}/../../../hugegraph-client/assembly/travis/install-candidate-sdk.sh" \
+                "$FIXTURE_COMMIT" "$source_dir" "$candidate_repo"
+    else
+        SERVER_REPOSITORY=$FIXTURE_REPOSITORY SERVER_FETCH_REF=$FIXTURE_REF \
+            bash "${FIXTURE_HELPER%/*}/../../../hugegraph-client/assembly/travis/checkout-server.sh" "$FIXTURE_COMMIT" "$source_dir"
+        (cd "$source_dir" && mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp)
+    fi
     archive=$(find "$source_dir/hugegraph-server" -maxdepth 1 -name 'apache-hugegraph-*.tar.gz' -print)
     [[ -n "$archive" && -f "$archive" ]]
     cp "$archive" "$FIXTURE_DIR/server.tar.gz"
@@ -63,6 +76,7 @@ fixture_build() {
     mkdir -p "$cache_dir"
     cp "$FIXTURE_DIR/server.tar.gz" "$FIXTURE_DIR/manifest.json" "$cache_dir/"
     rm -rf "$source_dir"
+    if [[ -n "$candidate_repo" ]]; then rm -rf "$candidate_repo"; fi
 }
 fixture_copy_archive() {
     fixture_validate_java
