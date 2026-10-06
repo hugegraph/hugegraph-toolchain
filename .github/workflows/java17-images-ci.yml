@@ -62,10 +62,9 @@ jobs:
         id: server
         uses: ./.github/actions/setup-candidate-sdk
         with:
-          # TODO(apache/hugegraph#3263): after merge replace this temporary source with apache/hugegraph and an ASF SHA.
-          repository: hugegraph/hugegraph
-          ref: codex/cypher-minimal-compat
-          expected-commit: 4c162f539b906fa06dd83228e3691b77fa5b77d7
+          repository: apache/hugegraph
+          ref: master
+          expected-commit: d9abcd4317fb36128e7e4d209139ec7f3a28cdfc
       - name: Build same-source dependencies and the real image
         env:
           IMAGE_EVIDENCE: ${{ runner.temp }}/java17-image-${{ matrix.module }}-evidence
