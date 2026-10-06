@@ -101,18 +101,9 @@ jobs:
       - name: Install verified Spark 3.5.8 runtime
         run: |
           archive="$RUNNER_TEMP/spark-3.5.8-bin-hadoop3.tgz"
-          # Prefer current ASF distribution endpoints; archived releases can be heavily throttled.
-          downloaded=false
-          for base in https://dlcdn.apache.org/spark https://downloads.apache.org/spark \
-                      https://archive.apache.org/dist/spark; do
-            if curl --fail --location --connect-timeout 15 --max-time 600 \
-              --speed-limit 102400 --speed-time 30 \
-              "$base/spark-3.5.8/spark-3.5.8-bin-hadoop3.tgz" --output "$archive"; then
-              downloaded=true
-              break
-            fi
-          done
-          [[ "$downloaded" == true ]] || { echo 'Unable to download Spark 3.5.8 from ASF endpoints' >&2; exit 1; }
+          curl --fail --location --retry 3 \
+            https://archive.apache.org/dist/spark/spark-3.5.8/spark-3.5.8-bin-hadoop3.tgz \
+            --output "$archive"
           printf '5d5d2e6e111182ee1210d4a46a17ae27107c7ccc70433da0ded3d8197e027f949b00445bb5678ed0c1d5c59f12993d9b9ed12e43686d5aad89a9ec570e93a083  %s\n' "$archive" | sha512sum --check
           tar -xzf "$archive" -C "$RUNNER_TEMP"
           printf 'SPARK_HOME=%s\n' "$RUNNER_TEMP/spark-3.5.8-bin-hadoop3" >> "$GITHUB_ENV"
