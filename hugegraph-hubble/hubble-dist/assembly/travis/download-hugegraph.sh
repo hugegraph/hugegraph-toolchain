@@ -25,7 +25,8 @@ fi
 
 COMMIT_ID=$1
 COMMIT_REF=${2:-}
-HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/../../../.." && pwd)
 GIT_DIR=hugegraph
 CACHE_DIR="${HOME}/hugegraph-cache-${COMMIT_ID}"
 
@@ -39,18 +40,10 @@ if [[ -f "${CACHED_TARBALL}" ]]; then
     exit 0
 fi
 
-# download code and compile
-git clone --depth 150 $HUGEGRAPH_GIT_URL $GIT_DIR
+# Build the released server without replacing published SDK dependencies.
+SERVER_FETCH_REF="${COMMIT_REF:-$COMMIT_ID}" \
+    bash "$REPO_ROOT/hugegraph-client/assembly/travis/checkout-server.sh" "$COMMIT_ID" "$GIT_DIR"
 cd "${GIT_DIR}"
-if [[ -n "${COMMIT_REF}" ]]; then
-    git fetch --depth 1 origin "${COMMIT_REF}"
-fi
-git checkout "${COMMIT_ID}"
-ACTUAL_COMMIT_ID=$(git rev-parse HEAD)
-if [[ "${ACTUAL_COMMIT_ID}" != "${COMMIT_ID}" ]]; then
-    echo "HugeGraph checkout mismatch: expected ${COMMIT_ID}, got ${ACTUAL_COMMIT_ID}" >&2
-    exit 1
-fi
 mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp
 
 cd hugegraph-server
