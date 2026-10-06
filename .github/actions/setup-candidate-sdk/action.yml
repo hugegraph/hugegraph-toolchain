@@ -73,10 +73,10 @@ runs:
         printf 'archive-sha256=%s\nmanifest=%s\n' "$archive_sha" \
           "$manifest" >> "$GITHUB_OUTPUT"
         printf 'manifest-artifact-id=%s\n' "$manifest_artifact_id" >> "$GITHUB_OUTPUT"
-        # MAVEN_OPTS also supports Maven versions predating MAVEN_ARGS (3.9).
+        # Keep subprocess Maven repository isolation aligned with CLI arguments.
         {
           printf 'MAVEN_OPTS=%s -Dmaven.repo.local=%s\n' "${MAVEN_OPTS:-}" "$candidate_repo"
-          printf 'MAVEN_ARGS=-Dmaven.repo.local=%s\n' "$candidate_repo"
+          printf 'MAVEN_ARGS=%s -Dmaven.repo.local=%s\n' "${MAVEN_ARGS:-}" "$candidate_repo"
           printf 'CANDIDATE_SOURCE_COMMIT=%s\n' "$SERVER_COMMIT"
         } >> "$GITHUB_ENV"
         printf 'archive=%s\nmaven-repo=%s\n' "${archives[0]}" "$candidate_repo" >> "$GITHUB_OUTPUT"

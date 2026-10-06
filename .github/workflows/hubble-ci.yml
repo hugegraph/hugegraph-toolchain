@@ -1,41 +1,40 @@
 name: "hubble-ci"
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - master
-      - 'release-*'
-    paths:
-      - hugegraph-hubble/**
-      - hugegraph-dist/**
-      - hugegraph-loader/**
-      - .github/workflows/**
-      - .github/actions/**
-      - pom.xml
-  pull_request:
-    paths:
-      - hugegraph-hubble/**
-      - hugegraph-dist/**
-      - hugegraph-loader/**
-      - hugegraph-client/**
-      - .github/workflows/**
-      - .github/actions/**
-      - pom.xml
+  workflow_call:
+    inputs:
+      current-artifact-name:
+        type: string
+        required: true
+      current-repository:
+        type: string
+        required: true
+      current-ref:
+        type: string
+        required: true
+      current-commit:
+        type: string
+        required: true
+      server-repository:
+        type: string
+        default: apache/hugegraph
+      artifact-name:
+        type: string
+        required: true
+      server-commit:
+        type: string
+        required: true
+      server-ref:
+        type: string
+        required: true
 
 env:
   TRAVIS_DIR: hugegraph-hubble/hubble-dist/assembly/travis
-
-# Keep the newest PR run; preserve independent push, release and manual runs.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   hubble-ci:
     runs-on: ubuntu-latest
     env:
-      USE_STAGE: 'false' # Whether to include the stage repository.
       STATIC_DIR: hugegraph-hubble/hubble-dist/assembly/static
     strategy:
       fail-fast: false
@@ -57,6 +56,7 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
+          overwrite-settings: false
 
       - name: Record released Server JDK
         if: matrix.SERVER_BASELINE == 'release-1.7'
@@ -67,7 +67,6 @@ jobs:
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
           distribution: 'temurin'
-          use-stage: ${{ env.USE_STAGE }}
 
       - name: Record candidate Server JDK
         if: matrix.SERVER_BASELINE == 'candidate'
@@ -114,20 +113,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('hugegraph-hubble/hubble-fe/yarn.lock') }}
 
-      - name: Resolve Server fixture
-        id: server-ref
-        uses: ./.github/actions/get-hugegraph-commit
-        with:
-          repository: ${{ matrix.SERVER_BASELINE == 'candidate' && steps.candidate-sdk.outputs.repository || 'apache/hugegraph' }}
-          ref: ${{ matrix.SERVER_BASELINE == 'candidate' && steps.candidate-sdk.outputs.fetch_ref || 'refs/tags/1.7.0' }}
-          expected-commit: ${{ matrix.SERVER_BASELINE == 'candidate' && steps.candidate-sdk.outputs.commit_id || 'b12425c2032bf0d21a97b8221f42a18055c2982f' }}
-
-      - name: Cache HugeGraph Server
-        uses: actions/cache@v6
-        with:
-          path: ~/hugegraph-cache-${{ steps.server-ref.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-${{ steps.server-ref.outputs.commit_id }}
-
       - name: Frontend i18n check
         working-directory: hugegraph-hubble/hubble-fe
         env:
@@ -154,14 +139,11 @@ jobs:
 
       - name: Prepare env and service
         env:
-          COMMIT_ID: ${{ steps.server-ref.outputs.commit_id }}
-          COMMIT_REF: ${{ steps.server-ref.outputs.fetch_ref }}
-          SERVER_REPOSITORY: ${{ steps.server-ref.outputs.repository }}
+          COMMIT_ID: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-commit || inputs.server-commit }}
+          COMMIT_REF: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-commit || inputs.server-ref }}
+          SERVER_REPOSITORY: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-repository || inputs.server-repository }}
           HG_SERVER_BASELINE: ${{ matrix.SERVER_BASELINE }}
           SERVER_MAVEN_REPO: ${{ runner.temp }}/hubble-fixture-${{ matrix.SERVER_BASELINE }}-m2
-          SERVER_ARCHIVE: ${{ matrix.SERVER_BASELINE == 'candidate' && steps.candidate-sdk.outputs.archive || '' }}
-          SERVER_ARCHIVE_COMMIT: ${{ matrix.SERVER_BASELINE == 'candidate' && steps.candidate-sdk.outputs.commit_id || '' }}
-          SERVER_ARCHIVE_SHA256: ${{ matrix.SERVER_BASELINE == 'candidate' && steps.candidate-sdk.outputs.archive-sha256 || '' }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           echo "=== Environment Info ==="
@@ -182,8 +164,19 @@ jobs:
           ./stop-hubble.sh
           cd ../../../
           pwd
-          JAVA_HOME="$SERVER_JAVA_HOME" PATH="$SERVER_JAVA_HOME/bin:$PATH" \
-            "$TRAVIS_DIR/install-hugegraph.sh" "$COMMIT_ID" "$COMMIT_REF"
+
+
+      - name: Setup shared HugeGraph server
+        uses: ./.github/actions/setup-hugegraph-server
+        with:
+          mode: start
+          java-version: ${{ matrix.SERVER_BASELINE == 'candidate' && '17' || '11' }}
+          java-home: ${{ env.SERVER_JAVA_HOME }}
+          artifact-name: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-artifact-name || inputs.artifact-name }}
+          commit-id: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-commit || inputs.server-commit }}
+          repository: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-repository || inputs.server-repository }}
+          fetch-ref: ${{ matrix.SERVER_BASELINE == 'candidate' && inputs.current-ref || inputs.server-ref }}
+          travis-dir: ${{ env.TRAVIS_DIR }}
 
       - name: Test Gremlin fixture configuration
         run: python3 "$TRAVIS_DIR/test_configure_gremlin_fixture.py"
