@@ -98,10 +98,20 @@ jobs:
           mvn install -pl hugegraph-client -am -DskipTests -Dmaven.javadoc.skip=true -ntp
           mvn package -pl hugegraph-loader -DskipTests -Dmaven.javadoc.skip=true -ntp
 
-      - name: Install official Spark 3.5.8 runtime
-        id: spark-runtime
+      - name: Prepare Spark runtime environment
         timeout-minutes: 10
-        uses: ./.github/actions/setup-spark-runtime
+        env:
+          SPARK_IMAGE: apache/spark:3.5.8-scala2.12-java17-ubuntu@sha256:9577096950d62dd59994f84cc3a0902fdae994a4bf238933f2fdca22053e5adb
+        run: |
+          docker pull --platform linux/amd64 "$SPARK_IMAGE"
+          container=$(docker create --platform linux/amd64 "$SPARK_IMAGE" /bin/true)
+          trap 'docker rm -f "$container" >/dev/null' EXIT
+          spark_home="$RUNNER_TEMP/spark-3.5.8"
+          docker cp "$container:/opt/spark" "$spark_home"
+          grep -q '^Spark 3\.5\.8 ' "$spark_home/RELEASE"
+          test -x "$spark_home/bin/spark-submit"
+          mkdir -p "$spark_home/conf" "$spark_home/work"
+          printf 'SPARK_HOME=%s\n' "$spark_home" >> "$GITHUB_ENV"
 
       - name: Reuse existing Loader test authentication
         run: |
@@ -120,7 +130,6 @@ jobs:
 
       - name: Verify shaded launcher with independent executor
         env:
-          SPARK_HOME: ${{ steps.spark-runtime.outputs.home }}
           SOURCE_COMMIT: ${{ github.sha }}
           SERVER_COMMIT: ${{ steps.candidate-sdk.outputs.commit_id }}
           SERVER_BASELINE: ${{ matrix.SERVER_BASELINE }}
