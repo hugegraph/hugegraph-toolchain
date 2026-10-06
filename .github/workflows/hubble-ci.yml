@@ -188,8 +188,10 @@ jobs:
       - name: Test Gremlin fixture configuration
         run: python3 "$TRAVIS_DIR/test_configure_gremlin_fixture.py"
 
-      - name: Archive preservation test
-        run: python3 "$TRAVIS_DIR/test_archive_hubble.py"
+      - name: Archive and distribution audit tests
+        run: |
+          python3 "$TRAVIS_DIR/test_archive_hubble.py"
+          python3 "$TRAVIS_DIR/test_check_hubble_dist.py"
 
       - name: Release package audit
         env:
