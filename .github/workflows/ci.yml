@@ -188,6 +188,10 @@ jobs:
           java-version: '17'
 
   client:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs: [plan, fixture]
     if: ${{ needs.plan.outputs.client == 'true' }}
     uses: ./.github/workflows/client-ci.yml
@@ -199,6 +203,10 @@ jobs:
     secrets: inherit
 
   loader:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs: [plan, fixture]
     if: ${{ needs.plan.outputs.loader == 'true' }}
     uses: ./.github/workflows/loader-ci.yml
@@ -232,6 +240,10 @@ jobs:
     secrets: inherit
 
   hubble:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     needs: [plan, fixture, hubble-fixture]
     if: ${{ needs.plan.outputs.hubble == 'true' }}
     uses: ./.github/workflows/hubble-ci.yml
