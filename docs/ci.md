@@ -69,11 +69,7 @@ selected consumers again. Source, type definitions, tests and CI configuration
 are never treated as docs. The gate checks the current workflow's actual selected
 job results and fixture producers. Its result report records the run, attempt and
 input metadata for diagnostics; it is not a reusable success receipt.
-The planner determines affected consumers before resolving external Server inputs.
-Go-only changes resolve the release fixture but skip the candidate source lookup;
-image-only and plain documentation changes need neither baseline. Unverifiable
-selection conservatively resolves both. A failed required baseline lookup still
-fails planning; without a published plan, recovery requires a full workflow rerun.
+The planner determines affected consumers before resolving external Server inputs. Plans that require Server fixtures record both the historical release and the locked candidate source; Go-only module tests consume only the release fixture. Image-only and plain documentation plans need neither baseline. Unverifiable selection conservatively resolves both. A failed required baseline lookup fails planning; without a published plan, recovery requires a full workflow rerun.
 
 PR planning records the event's head, base and source before querying live metadata.
 A known mismatch with the checkout merge or current PR fails planning; expanding
