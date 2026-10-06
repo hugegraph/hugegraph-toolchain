@@ -31,6 +31,7 @@ if sys.argv[1] == "inputs":
         '.github/actions/setup-hugegraph-server/manifest.py',
         '.github/actions/setup-java-env/action.yml', '.github/configs/settings.xml',
         'hugegraph-client/assembly/travis/checkout-server.sh',
+        'hugegraph-client/assembly/travis/install-candidate-sdk.sh',
         'hugegraph-client/assembly/travis/start-hugegraph-servers.sh',
         'hugegraph-*/assembly/travis/install-hugegraph-from-source.sh',
         'hugegraph-hubble/hubble-dist/assembly/travis/download-hugegraph.sh',
