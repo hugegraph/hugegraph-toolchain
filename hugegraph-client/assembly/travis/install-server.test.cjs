@@ -52,6 +52,7 @@ test(`build-only ${installer} preserves source selection and packages without de
   const sha = git('-C', source, 'rev-parse', 'HEAD');
   const bin = join(root, 'bin');
   mkdirSync(bin);
+  writeFileSync(join(bin, 'curl'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
   writeFileSync(join(bin, 'mvn'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$BUILD_ARGS"\nprintf "%s" "$MAVEN_ARGS" > "$BUILD_REPO"\n', { mode: 0o755 });
   const env = { ...process.env, SERVER_REPOSITORY: 'example/server', SERVER_FETCH_REF: sha,
     PATH: `${bin}:${process.env.PATH}`, BUILD_ARGS: join(root, 'args'), BUILD_REPO: join(root, 'repo'),
@@ -94,9 +95,11 @@ function runStarter(root, entries) {
   const archive = join(root, 'server.tar.gz');
   // Keep metadata entries as files on macOS too, matching the Linux CI extractor.
   const env = { ...process.env, COPYFILE_DISABLE: '1', RUNNER_TEMP: root, JAVA_HOME: '/fixture/java11' };
+  const bin = join(root, 'tar-bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'curl'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
+  env.PATH = `${bin}:${env.PATH}`;
   if (process.platform === 'darwin') {
-    const bin = join(root, 'tar-bin');
-    mkdirSync(bin);
     writeFileSync(join(bin, 'tar'),
       '#!/bin/bash\n[[ "$1" == -* ]] || set -- "-$1" "${@:2}"\n' +
       'exec /usr/bin/tar --no-mac-metadata "$@"\n', { mode: 0o755 });
@@ -248,6 +251,7 @@ test('Loader retains its source cache while using the selected repository and sh
     { env: { ...process.env, COPYFILE_DISABLE: '1' } });
   const bin = join(root, 'bin');
   mkdirSync(bin);
+  writeFileSync(join(bin, 'curl'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
   writeFileSync(join(bin, 'mvn'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$BUILD_ARGS"\n' +
     'mkdir -p hugegraph-server\ncp "$FIXTURE_ARCHIVE" hugegraph-server/apache-hugegraph-fixture.tar.gz\n' +
     'if [[ "$DUPLICATE_ARCHIVE" == true ]]; then\n' +
