@@ -37,7 +37,6 @@ jobs:
       matrix:
         SERVER_BASELINE: [ 'candidate', 'release-1.7' ]
     env:
-      USE_STAGE: 'true'
       MAVEN_OPTS: '-Xmx1g -XX:ActiveProcessorCount=2'
       HUGEGRAPH_TEST_URL: http://127.0.0.1:8080
       HUGEGRAPH_TEST_GRAPH: hugegraph
@@ -54,7 +53,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          use-stage: ${{ env.USE_STAGE }}
 
       - name: Install locked same-source candidate SDK
         id: candidate-sdk
