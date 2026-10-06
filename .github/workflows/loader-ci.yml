@@ -67,18 +67,12 @@ jobs:
         id: candidate-sdk
         uses: ./.github/actions/setup-candidate-sdk
 
-      - name: Cache Hadoop
-        uses: actions/cache@v6
-        with:
-          path: ~/hadoop-3.3.6.tar.gz
-          key: ${{ runner.os }}-hadoop-3.3.6
-
       - name: Compile
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
       - name: Prepare Hadoop service
-        run: bash "$TRAVIS_DIR/install-hadoop.sh"
+        run: bash "$TRAVIS_DIR/start-hdfs-ci.sh"
 
       - name: Setup released Server fixture
         if: matrix.SERVER_BASELINE == 'release-1.7'
@@ -113,3 +107,14 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: hugegraph-loader/target/jacoco.xml
+
+      - name: Collect HDFS diagnostics and stop containers
+        if: always()
+        run: |
+          for service in namenode datanode; do
+            container="hugegraph-ci-hdfs-$service"
+            if docker container inspect "$container" > /dev/null 2>&1; then
+              docker logs "$container" || true
+              docker rm --force "$container"
+            fi
+          done
