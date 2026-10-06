@@ -36,6 +36,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SOURCE_DIR=$2
+# TODO(apache/hugegraph#3263): temporary pre-merge source; after merge use apache/hugegraph and a verified ASF SHA.
 SERVER_REPOSITORY=${SERVER_REPOSITORY:-hugegraph/hugegraph}
 SERVER_FETCH_REF=${SERVER_FETCH_REF:-$1}
 export SERVER_REPOSITORY SERVER_FETCH_REF

@@ -22,6 +22,7 @@ import hashlib
 import json
 from pathlib import Path
 
+# TODO(apache/hugegraph#3263): temporary pre-merge source; after merge use apache/hugegraph and a verified ASF SHA.
 REPOSITORY = "hugegraph/hugegraph"
 COMMIT = "4c162f539b906fa06dd83228e3691b77fa5b77d7"
 REQUIRED_MODULES = {
