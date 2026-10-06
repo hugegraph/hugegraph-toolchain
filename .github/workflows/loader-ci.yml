@@ -1,36 +1,25 @@
 name: "loader-ci"
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - master
-      - 'release-*'
-    paths:
-      - hugegraph-loader/**
-      - hugegraph-dist/**
-      - .github/workflows/**
-      - .github/actions/**
-      - pom.xml
-  pull_request:
-    paths:
-      - hugegraph-loader/**
-      - hugegraph-dist/**
-      - hugegraph-client/**
-      - .github/workflows/**
-      - .github/actions/**
-      - pom.xml
-
-# Keep the newest PR run; preserve independent push, release and manual runs.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  workflow_call:
+    inputs:
+      server-repository:
+        type: string
+        default: apache/hugegraph
+      artifact-name:
+        type: string
+        required: true
+      server-commit:
+        type: string
+        required: true
+      server-ref:
+        type: string
+        required: true
 
 jobs:
   loader-ci:
     runs-on: ubuntu-latest
     env:
-      USE_STAGE: 'false' # Whether to include the stage repository.
       TRAVIS_DIR: hugegraph-loader/assembly/travis
       STATIC_DIR: hugegraph-loader/assembly/static
       DB_USER: root
@@ -70,7 +59,6 @@ jobs:
         with:
           java-version: ${{ matrix.JAVA_VERSION }}
           distribution: 'temurin'
-          use-stage: ${{ env.USE_STAGE }}
 
       - name: Test Spark launcher arguments
         run: python3 hugegraph-loader/src/test/python/test_spark_launcher.py
@@ -79,26 +67,11 @@ jobs:
         id: candidate-sdk
         uses: ./.github/actions/setup-candidate-sdk
 
-      - name: Resolve released Server 1.7 fixture
-        if: matrix.SERVER_BASELINE == 'release-1.7'
-        id: get-commit
-        uses: ./.github/actions/get-hugegraph-commit
-        with:
-          ref: 'refs/tags/1.7.0'
-          expected-commit: 'b12425c2032bf0d21a97b8221f42a18055c2982f'
-
       - name: Cache Hadoop
         uses: actions/cache@v6
         with:
           path: ~/hadoop-3.3.6.tar.gz
           key: ${{ runner.os }}-hadoop-3.3.6
-
-      - name: Cache HugeGraph Server
-        if: matrix.SERVER_BASELINE == 'release-1.7'
-        uses: actions/cache@v6
-        with:
-          path: ~/hugegraph-cache-${{ steps.get-commit.outputs.commit_id }}
-          key: ${{ runner.os }}-hugegraph-server-provenance-v1-${{ steps.get-commit.outputs.commit_id }}
 
       - name: Compile
         run: |
@@ -112,11 +85,13 @@ jobs:
         uses: ./.github/actions/setup-hugegraph-server
         with:
           travis-dir: ${{ env.TRAVIS_DIR }}
-          commit-id: ${{ steps.get-commit.outputs.commit_id }}
-          repository: ${{ steps.get-commit.outputs.repository }}
-          fetch-ref: ${{ steps.get-commit.outputs.fetch_ref }}
+          commit-id: ${{ inputs.server-commit }}
+          repository: ${{ inputs.server-repository }}
+          fetch-ref: ${{ inputs.server-ref }}
           java-home: ${{ steps.released-java.outputs.path }}
-          isolate-maven-repo: 'true'
+          mode: start
+          artifact-name: ${{ inputs.artifact-name }}
+          java-version: '11'
 
       - name: Start candidate Server fixture
         if: matrix.SERVER_BASELINE == 'candidate'
