@@ -55,9 +55,10 @@ runs:
       run: |
         candidate_repo=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-m2.XXXXXX")
         server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-build.XXXXXX")
+        source_dir="$server_build/source"
         bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-candidate-sdk.sh" \
-          "$SERVER_COMMIT" "$server_build/hugegraph" "$candidate_repo"
-        archives=("$server_build"/apache/hugegraph-server/apache-hugegraph-*.tar.gz)
+          "$SERVER_COMMIT" "$source_dir" "$candidate_repo"
+        archives=("$source_dir"/hugegraph-server/apache-hugegraph-*.tar.gz)
         if [[ ${#archives[@]} -ne 1 || ! -f "${archives[0]}" ]]; then
           printf 'Expected one candidate server archive, found: %s\n' "${archives[*]}" >&2
           exit 1
