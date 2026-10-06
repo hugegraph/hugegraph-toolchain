@@ -98,15 +98,10 @@ jobs:
           mvn install -pl hugegraph-client -am -DskipTests -Dmaven.javadoc.skip=true -ntp
           mvn package -pl hugegraph-loader -DskipTests -Dmaven.javadoc.skip=true -ntp
 
-      - name: Install verified Spark 3.5.8 runtime
-        run: |
-          archive="$RUNNER_TEMP/spark-3.5.8-bin-hadoop3.tgz"
-          curl --fail --location --retry 3 \
-            https://archive.apache.org/dist/spark/spark-3.5.8/spark-3.5.8-bin-hadoop3.tgz \
-            --output "$archive"
-          printf '5d5d2e6e111182ee1210d4a46a17ae27107c7ccc70433da0ded3d8197e027f949b00445bb5678ed0c1d5c59f12993d9b9ed12e43686d5aad89a9ec570e93a083  %s\n' "$archive" | sha512sum --check
-          tar -xzf "$archive" -C "$RUNNER_TEMP"
-          printf 'SPARK_HOME=%s\n' "$RUNNER_TEMP/spark-3.5.8-bin-hadoop3" >> "$GITHUB_ENV"
+      - name: Install official Spark 3.5.8 runtime
+        id: spark-runtime
+        timeout-minutes: 10
+        uses: ./.github/actions/setup-spark-runtime
 
       - name: Reuse existing Loader test authentication
         run: |
@@ -125,6 +120,7 @@ jobs:
 
       - name: Verify shaded launcher with independent executor
         env:
+          SPARK_HOME: ${{ steps.spark-runtime.outputs.home }}
           SOURCE_COMMIT: ${{ github.sha }}
           SERVER_COMMIT: ${{ steps.candidate-sdk.outputs.commit_id }}
           SERVER_BASELINE: ${{ matrix.SERVER_BASELINE }}
