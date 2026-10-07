@@ -79,7 +79,7 @@ jobs:
         with:
           repository: apache/hugegraph
           ref: refs/tags/1.7.0
-          expected-commit: b12425c2032bf0d21a97b8221f42a18055c2982f
+          expected-commit: b12425
       - name: Resolve locked Java17 candidate baseline
         id: hubble-baseline
         if: steps.scope.outputs.needsFixture == 'true'
