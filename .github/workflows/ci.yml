@@ -86,7 +86,7 @@ jobs:
         uses: ./.github/actions/get-hugegraph-commit
         with:
           repository: apache/hugegraph
-          ref: master
+          ref: d9abcd4317fb36128e7e4d209139ec7f3a28cdfc
           expected-commit: d9abcd4317fb36128e7e4d209139ec7f3a28cdfc
       - name: Record external test inputs
         env:

@@ -6,8 +6,8 @@ inputs:
     description: 'GitHub owner/repository for the candidate SDK'
     default: 'apache/hugegraph'
   ref:
-    description: 'Fetchable candidate source ref'
-    default: 'master'
+    description: 'Immutable candidate source commit'
+    default: 'd9abcd4317fb36128e7e4d209139ec7f3a28cdfc'
   expected-commit:
     description: 'Locked full candidate source commit'
     default: 'd9abcd4317fb36128e7e4d209139ec7f3a28cdfc'
