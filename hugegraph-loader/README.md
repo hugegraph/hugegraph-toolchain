@@ -56,11 +56,10 @@ Install ojdbc8 to the local maven repository, enter the directory where ojdbc8.j
 mvn install:install-file -Dfile=./ojdbc8.jar -DgroupId=com.oracle -DartifactId=ojdbc8 -Dversion=12.2.0.1 -Dpackaging=jar
 ```
 
-Compile and generate tar package:
+For the Java 17 candidate, prepare the locked SDK using the [bootstrap instructions](../docs/java17-migration.md#build-the-locked-candidate), then compile from the Toolchain repository root with the same isolated Maven repository:
 
-```
-cd hugegraph-loader
-mvn clean package -DskipTests
+```bash
+mvn -Dmaven.repo.local="$candidate_dir/m2" clean package -pl hugegraph-client,hugegraph-loader -am -DskipTests -ntp
 ```
 
 ### 2.3 Use docker image (Convenient for Test/Dev)
@@ -71,6 +70,12 @@ Use the command `docker run -itd --name loader hugegraph/loader` to start loader
 
 If you want to load your data, you can mount the data folder like `-v /path/to/data/file:/loader/file`
 
+
+To build the current checkout, run from the Toolchain repository root:
+
+```bash
+docker build -f hugegraph-loader/Dockerfile -t hugegraph/hugegraph-loader:latest .
+```
 
 #### 2.3.2 Docker-compose
 
@@ -123,14 +128,7 @@ For Spark execution, see [Spark Loader on Java 17](docs/spark-java17.md) for the
 
 The [loader homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-loader/) contains more information about it. 
 
-The CI server installer `assembly/travis/install-hugegraph-from-source.sh <full-commit-SHA>`
-uses `~/hugegraph-cache-<SHA>` by default. `SERVER_CACHE_DIR` selects the exact cache
-directory. A populated cache must contain one server archive and its generated
-`server-provenance` file matching the repository, commit, archive name and SHA-256.
-Existing custom caches without provenance and mismatched caches are preserved and
-rejected; use a fresh directory to build a verified cache, and separate directories for
-different server baselines. Loader CI uses a `provenance-v1` cache key so its first run
-builds a cache with provenance. The installer does not add SHA subdirectories to `SERVER_CACHE_DIR`.
+Server 1.7 compatibility CI uses the pinned official ASF 1.7.0 binary archive. The fixture cache verifies the release version, official source URL, official SHA-512 and cached archive SHA-256 before startup. A failed download does not fall back to rebuilding the release tag. Unpublished candidate SDKs and their Server fixture continue to use the locked ASF source build.
 
 ## 5. License
 

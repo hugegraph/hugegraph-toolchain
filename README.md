@@ -433,7 +433,7 @@ docker run --rm \
   ./bin/hugegraph-loader.sh -f /config/mapping.json
 ```
 
-Build images locally:
+Build images from the Toolchain repository root so the context contains the shared SDK bootstrap and verifier:
 ```bash
 # Loader
 docker build -f hugegraph-loader/Dockerfile \

@@ -195,15 +195,14 @@ Download the toolchain source code.
 git clone https://github.com/apache/hugegraph-toolchain.git
 ```
 
-Compile `hubble`. It depends on the loader and client, so you need to build these dependencies in advance during the compilation process (you can skip this step later).
+For the Java 17 candidate, prepare the locked SDK using the [bootstrap instructions](../docs/java17-migration.md#build-the-locked-candidate). Build Client and Loader first, then Hubble with the same isolated Maven repository:
 
 ```bash
 cd hugegraph-toolchain
-sudo pip install -r hugegraph-hubble/hubble-dist/assembly/travis/requirements.txt
-mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
-cd hugegraph-hubble
-mvn -e compile package -Dmaven.javadoc.skip=true -Dmaven.test.skip=true -ntp
-cd apache-hugegraph-hubble-*
+python3 -m pip install -r hugegraph-hubble/hubble-dist/assembly/travis/requirements.txt
+mvn -Dmaven.repo.local="$candidate_dir/m2" install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
+(cd hugegraph-hubble && mvn -Dmaven.repo.local="$candidate_dir/m2" package -Dmaven.javadoc.skip=true -DskipTests -ntp)
+cd hugegraph-hubble/apache-hugegraph-hubble-*
 ```
 
 Run `hubble`
@@ -213,6 +212,12 @@ bin/start-hubble.sh -d
 ```
 
 ### 3. User docker image (Convenient for Test/Dev)
+
+To build the current checkout, run from the Toolchain repository root:
+
+```bash
+docker build -f hugegraph-hubble/Dockerfile -t hugegraph/hugegraph-hubble:latest .
+```
 
 We can use `docker run -itd --name=hubble -p 8088:8088 hugegraph/hubble` to quickly start [hubble](https://hub.docker.com/r/hugegraph/hubble). An you can visit [hubble deploy doc](https://hugegraph.apache.org/docs/quickstart/hugegraph-hubble/#2-deploy) for more details.
 
