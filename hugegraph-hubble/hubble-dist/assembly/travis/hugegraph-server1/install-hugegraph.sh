@@ -27,9 +27,24 @@ ARCHIVES=(apache-hugegraph-*.tar.gz)
 TAR=${ARCHIVES[0]}
 tar -zxvf "$TAR" -C "${SERVER_PARENT_DIR}" >/dev/null 2>&1
 
-HUGEGRAPH_NAME=${TAR%%.tar*}
-SERVER_DIR="${SERVER_PARENT_DIR}"/$HUGEGRAPH_NAME
-echo $SERVER_DIR
+# Official releases wrap Server alongside PD/Store; candidate archives do not.
+# Remove macOS sidecars before graph configuration discovery, as Client CI does.
+find "$SERVER_PARENT_DIR" -type f -name '._*' -delete
+SERVER_DIRS=()
+for dir in "$SERVER_PARENT_DIR"/apache-hugegraph-*/ "$SERVER_PARENT_DIR"/apache-hugegraph-*/*/; do
+    if [[ -f "$dir/conf/graphs/hugegraph.properties" &&
+          -f "$dir/conf/rest-server.properties" &&
+          -f "$dir/conf/gremlin-server.yaml" &&
+          -x "$dir/bin/init-store.sh" && -x "$dir/bin/start-hugegraph.sh" ]]; then
+        SERVER_DIRS+=("$dir")
+    fi
+done
+if [[ ${#SERVER_DIRS[@]} -ne 1 ]]; then
+    printf 'Expected exactly one runnable server distribution, found %s\n' "${#SERVER_DIRS[@]}" >&2
+    exit 1
+fi
+SERVER_DIR=${SERVER_DIRS[0]}
+echo "$SERVER_DIR"
 
 python3 "${SERVER_CONFIG_DIR}/../configure_gremlin_fixture.py" \
         "${SERVER_DIR}" "${SERVER_CONFIG_DIR}/gremlin-server.yaml" \
