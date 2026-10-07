@@ -137,9 +137,10 @@ public class HugeGraphSparkLoader implements Serializable {
     }
 
     public void load() throws ExecutionException, InterruptedException {
-        SparkConf conf = new SparkConf();
         LoadMapping mapping = LoadMapping.of(this.loadOptions.file);
         List<InputStruct> structs = mapping.structs();
+        checkHeaders(structs);
+        SparkConf conf = new SparkConf();
         boolean sinkType = this.loadOptions.sinkType;
         //if (!sinkType) {
         //    this.loadOptions.copyBackendStoreInfo(mapping.getBackendStoreInfo());
@@ -192,6 +193,29 @@ public class HugeGraphSparkLoader implements Serializable {
         } finally {
             this.executor.shutdownNow();
             session.stop();
+        }
+    }
+
+    static void checkHeaders(List<InputStruct> structs) {
+        for (InputStruct struct : structs) {
+            switch (struct.input().type()) {
+                case FILE:
+                case HDFS:
+                    FileSource source = struct.input().asFileSource();
+                    if (source.format() != FileFormat.CSV &&
+                        source.format() != FileFormat.TEXT) {
+                        break;
+                    }
+                    if (source.header() == null || Boolean.TRUE.equals(source.hasHeader())) {
+                        throw new LoadException("Spark %s input '%s' requires an explicit mapping " +
+                                                "header and headerless data (has_header must not " +
+                                                "be true); see docs/spark-java17.md",
+                                                source.format(), source.path());
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
     }
 

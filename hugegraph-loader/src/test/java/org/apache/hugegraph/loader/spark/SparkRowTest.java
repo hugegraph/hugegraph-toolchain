@@ -18,6 +18,9 @@
 package org.apache.hugegraph.loader.spark;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -100,6 +103,88 @@ public class SparkRowTest {
             Assert.fail("Expected unsupported standalone cluster deployment");
         } catch (LoadException expected) {
             Assert.assertTrue(expected.getMessage().contains("Standalone cluster"));
+        }
+    }
+
+    @Test
+    public void testInvalidHeadersRejectedBeforeSparkOrPartitionsStart() throws Exception {
+        String oldMaster = System.getProperty("spark.master");
+        String oldDeployMode = System.getProperty("spark.submit.deployMode");
+        System.setProperty("spark.master", "invalid-header-preflight-master");
+        System.setProperty("spark.submit.deployMode", "client");
+        try {
+            for (String type : Arrays.asList("file", "hdfs")) {
+                for (String format : Arrays.asList("CSV", "TEXT")) {
+                    assertHeaderRejectedBeforeInitialization(type, format, "\"header\":null");
+                    assertHeaderRejectedBeforeInitialization(type, format, "\"has_header\":false");
+                    assertHeaderRejectedBeforeInitialization(type, format,
+                                                             "\"header\":[\"name\"],\"has_header\":true");
+                }
+            }
+        } finally {
+            restoreProperty("spark.master", oldMaster);
+            restoreProperty("spark.submit.deployMode", oldDeployMode);
+        }
+    }
+
+    @Test
+    public void testHeaderlessMappingsAndJsonRemainSupported() {
+        for (String type : Arrays.asList("file", "hdfs")) {
+            for (String format : Arrays.asList("CSV", "TEXT")) {
+                for (String header : Arrays.asList("\"header\":[\"name\"]",
+                                                   "\"header\":[\"name\"],\"has_header\":false")) {
+                    HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
+                            "{\"vertices\":[" + headerMapping(type, format, header) + "]}").structs());
+                }
+            }
+            HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
+                    "{\"vertices\":[" + headerMapping(type, "JSON", "\"header\":null") + "]}").structs());
+        }
+    }
+
+    private static void assertHeaderRejectedBeforeInitialization(String type, String format,
+                                                                 String header) throws Exception {
+        // The valid first mapping must not submit any partition before the second is checked.
+        String first = headerMapping("file", "CSV", "\"header\":[\"name\"]")
+                       .replace("\"path\":\"", "\"path\":\"first-");
+        String mapping = "{\"vertices\":[" + first +
+                         "," + headerMapping(type, format, header) + "]}";
+        Path file = Files.createTempFile("spark-header-preflight-", ".json");
+        try {
+            // HDFS mapping validation only needs an existing core-site file here.
+            mapping = mapping.replace("\"core-site-fixture\"", JsonUtil.toJson(file.toString()));
+            Files.write(file, mapping.getBytes(StandardCharsets.UTF_8));
+            LoadOptions options = new LoadOptions();
+            options.file = file.toString();
+            // Real load() must reject headers before the invalid master can initialize Spark.
+            // A null executor also prevents partition submission and executor-side client setup.
+            HugeGraphSparkLoader loader = allocate(HugeGraphSparkLoader.class);
+            set(loader, "loadOptions", options);
+            try {
+                loader.load();
+                Assert.fail("Expected Spark header validation failure");
+            } catch (LoadException expected) {
+                Assert.assertTrue(expected.getMessage().contains("Spark " + format + " input"));
+                Assert.assertTrue(expected.getMessage().contains(type + "-" + format));
+                Assert.assertTrue(expected.getMessage().contains("docs/spark-java17.md"));
+            }
+        } finally {
+            Files.deleteIfExists(file);
+        }
+    }
+
+    private static String headerMapping(String type, String format, String header) {
+        return "{\"label\":\"person\",\"id\":\"name\",\"input\":{\"type\":\"" + type + "\"," +
+               ("hdfs".equals(type) ? "\"core_site_path\":\"core-site-fixture\"," : "") +
+               "\"format\":\"" + format + "\",\"path\":\"" + type + "-" + format + "-" +
+               header.contains("true") + "-" + header.contains("null") + ".data\"," + header + "}}";
+    }
+
+    private static void restoreProperty(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
         }
     }
 
