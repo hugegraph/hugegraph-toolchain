@@ -47,7 +47,7 @@ module tests. They do not publish an image.
 
 Selected Client, Loader, Tools, Spark and Hubble tests compile and run on Java 17, including Loader's separate HDFS jobs. Core module tests cover the locked candidate and released Server 1.7 where configured; these runtime checks supplement the existing affected-module selection without adding unrelated modules.
 
-The historical Server 1.7 fixture runs on its own Java 11 JVM. The locked ASF master Server uses Java 17 and TinkerPop 3.8.1.
+The historical Server 1.7 fixture runs on its own Java 11 JVM. The locked ASF master Server uses Java 17 and TinkerPop 3.8.1. Required CI fetches the immutable baseline `d9abc` by its full commit, so later master updates do not change the build inputs.
 
 The released Server package and Hubble's candidate fixture are each built once and shared, with independent services per job. Reuse verifies source, commit, JDK, build inputs and archive checksum. Client, Loader and Tools candidate tests start the archive already produced by their SDK bootstrap. SDK generation remains job-local until distinct published SDK coordinates are available. The service JVM is scoped to startup; Toolchain compilation and tests remain on Java 17.
 
