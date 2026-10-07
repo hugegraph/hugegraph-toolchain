@@ -18,10 +18,12 @@
 """Exercise fixture identity, bounded downloads and service readiness offline."""
 import hashlib
 import json
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import shutil
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -33,6 +35,19 @@ class RuntimeTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.dir = Path(self.temp.name)
+        # Offline archives use a test-local checksum pin, never a production bypass.
+        self.action = self.dir / 'action'
+        self.action.mkdir()
+        for name in ('fixture.sh', 'manifest.py', 'release.py', 'service-wait.sh'):
+            shutil.copyfile(HERE / name, self.action / name)
+        spec = importlib.util.spec_from_file_location('fixture_release', HERE / 'release.py')
+        self.release = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.release)
+        checksum = hashlib.sha512(b'archive').hexdigest()
+        release_code = (self.action / 'release.py').read_text()
+        release_code = release_code.replace(self.release.SHA512[:64], checksum[:64])
+        release_code = release_code.replace(self.release.SHA512[64:], checksum[64:])
+        (self.action / 'release.py').write_text(release_code)
         self.bin = self.dir / 'bin'
         self.bin.mkdir()
         (self.bin/'java').write_text("#!/bin/bash\necho 'openjdk version \"11.0.1\"' >&2\n")
@@ -41,7 +56,8 @@ class RuntimeTests(unittest.TestCase):
                         FIXTURE_DIR=str(self.dir / 'fixture'), FIXTURE_REPOSITORY='apache/hugegraph',
                         FIXTURE_COMMIT=SHA, FIXTURE_JAVA='11',
                         FIXTURE_BUILD_INPUTS='test-build-contract', FIXTURE_PLATFORM='Linux-X64',
-                        FIXTURE_CONFIG='package -DskipTests -Dmaven.javadoc.skip=true -ntp;schema=1;inputs=test-build-contract;platform=Linux-X64')
+                        FIXTURE_RELEASE_VERSION='1.7.0',
+                        FIXTURE_CONFIG='asf-release-1.7.0;schema=2;inputs=test-build-contract;platform=Linux-X64')
         Path(self.env['FIXTURE_DIR']).mkdir()
     def command(self, name, body):
         script = self.bin / name
@@ -54,27 +70,36 @@ class RuntimeTests(unittest.TestCase):
         root = Path(self.env['FIXTURE_DIR'])
         data = {k.lower(): self.env['FIXTURE_'+k] for k in ('REPOSITORY','COMMIT','JAVA','CONFIG')}
         (root/'server.tar.gz').write_bytes(b'archive')
-        data.update(archive_name='apache-hugegraph-fixture.tar.gz', sha256=hashlib.sha256(b'archive').hexdigest())
+        if extra.get('java', self.env['FIXTURE_JAVA']) == '11':
+            data.update(self.release.identity('1.7.0'))
+            data['official_sha512'] = hashlib.sha512(b'archive').hexdigest()
+            name = self.release.ARCHIVE_NAME
+        else:
+            data.update(source_kind='candidate-sdk')
+            name = 'apache-hugegraph-fixture.tar.gz'
+        data.update(archive_name=name, sha256=hashlib.sha256(b'archive').hexdigest())
         data.update(extra)
         (root/'manifest.json').write_text(json.dumps(data))
     def test_identity_checksum_and_regular_files(self):
         self.manifest()
         env = dict(self.env, FIXTURE_MODE='start')
-        self.assertEqual(self.run_script(HERE/'fixture.sh', env=env).returncode, 0)
-        for field, wrong in [('repository','fork/hugegraph'), ('commit','b'*40), ('java','17'), ('config','different'), ('sha256','bad')]:
+        self.assertEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0)
+        for field, wrong in [('repository','fork/hugegraph'), ('commit','b'*40), ('java','17'),
+                              ('config','different'), ('source_url','https://example.invalid/release'),
+                              ('release_version','1.8.0'), ('official_sha512','bad'), ('sha256','bad')]:
             self.manifest(**{field:wrong})
-            self.assertNotEqual(self.run_script(HERE/'fixture.sh', env=env).returncode, 0, field)
+            self.assertNotEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0, field)
         self.manifest()
         self.command('java', "echo 'openjdk version \"17.0.1\"' >&2\n")
-        self.assertNotEqual(self.run_script(HERE/'fixture.sh', env=env).returncode, 0)
+        self.assertNotEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0)
         self.command('java', "echo 'openjdk version \"11.0.1\"' >&2\n")
         self.manifest(archive_name='../escape.tar.gz')
-        self.assertNotEqual(self.run_script(HERE/'fixture.sh', env=env).returncode, 0)
+        self.assertNotEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0)
         self.manifest()
         archive = Path(self.env['FIXTURE_DIR'])/'server.tar.gz'
         archive.unlink()
         archive.symlink_to(self.dir/'missing')
-        self.assertNotEqual(self.run_script(HERE/'fixture.sh', env=env).returncode, 0)
+        self.assertNotEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0)
     def test_composite_step_isolates_fixture_jdk_from_caller(self):
         action = (HERE / 'action.yml').read_text()
         block = action.split('      run: |\n', 1)[1].split('    - name:', 1)[0]
@@ -103,7 +128,7 @@ class RuntimeTests(unittest.TestCase):
                 env = dict(self.env, JAVA_HOME=str(caller_jdk),
                            PATH=f'{caller_jdk}/bin:{self.env["PATH"]}',
                            FIXTURE_JAVA=str(fixture_version), FIXTURE_JAVA_HOME=str(fixture_jdk),
-                           FIXTURE_MODE='start', FIXTURE_ARTIFACT='shared', FIXTURE_ACTION=str(HERE),
+                           FIXTURE_MODE='start', FIXTURE_ARTIFACT='shared', FIXTURE_ACTION=str(self.action),
                            ISOLATE_FIXTURE_REPO='false', TRAVIS_DIR=str(travis), RUNNER_TEMP=str(self.dir))
                 result = subprocess.run(
                     ['bash', '-c', 'bash "$HOME/action-step.sh" && java -version 2> "$HOME/caller-java"'],
@@ -200,15 +225,71 @@ esac
             (Path(self.env['FIXTURE_DIR'])/name).unlink()
         self.command('git', 'echo forbidden-git >> "$HOME/forbidden"; exit 99\n')
         self.command('mvn', 'echo forbidden-build >> "$HOME/forbidden"; exit 99\n')
-        result = self.run_script(HERE/'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
+        self.command('curl', 'echo download >> "$HOME/downloads"; exit 22\n')
+        result = self.run_script(self.action/'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.dir/'forbidden').exists())
-        self.assertFalse((self.dir/'apache-hugegraph-fixture.tar.gz').exists())
-        # An incomplete exact cache must rebuild, rather than poison future runs.
+        self.assertFalse((self.dir/self.release.ARCHIVE_NAME).exists())
+        # An incomplete release cache must download again, never rebuild old source.
         (cache/'manifest.json').unlink()
-        result = self.run_script(HERE/'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
+        result = self.run_script(self.action/'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
         self.assertNotEqual(result.returncode, 0)
-        self.assertTrue((self.dir/'forbidden').exists())
+        self.assertFalse((self.dir/'forbidden').exists())
+        self.assertTrue((self.dir/'downloads').exists())
+
+    def test_release_pin_matches_official_identity_and_rejects_wrong_bytes(self):
+        self.assertEqual('1.7.0', self.release.VERSION)
+        self.assertEqual('https://archive.apache.org/dist/incubator/hugegraph/1.7.0/' +
+                         self.release.ARCHIVE_NAME, self.release.SOURCE_URL)
+        self.assertEqual(128, len(self.release.SHA512))
+        self.assertEqual(self.release.SHA512,
+                         self.release.identity('1.7.0')['official_sha512'])
+        with self.assertRaises(ValueError):
+            self.release.identity('1.8.0')
+        archive = self.dir / 'invalid-release.tar.gz'
+        archive.write_bytes(b'archive')
+        with self.assertRaisesRegex(ValueError, 'SHA-512 mismatch'):
+            self.release.verify(archive)
+
+    def test_release_download_keeps_official_identity_and_never_builds(self):
+        self.command('curl', 'printf "%s\\n" "$@" > "$HOME/download-args"\n'
+                     'while [[ $# -gt 0 ]]; do\n'
+                     '  if [[ "$1" == --output ]]; then printf archive > "$2"; exit 0; fi\n'
+                     '  shift\ndone\nexit 1\n')
+        for name in ('git', 'mvn'):
+            self.command(name, 'echo forbidden >> "$HOME/forbidden"; exit 99\n')
+        result = self.run_script(self.action / 'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertFalse((self.dir / 'forbidden').exists())
+        manifest = json.loads((Path(self.env['FIXTURE_DIR']) / 'manifest.json').read_text())
+        self.assertEqual('asf-release', manifest['source_kind'])
+        self.assertEqual(self.release.SOURCE_URL, manifest['source_url'])
+        self.assertEqual(hashlib.sha512(b'archive').hexdigest(), manifest['official_sha512'])
+        args = (self.dir / 'download-args').read_text()
+        self.assertIn('--max-time\n900', args)
+        self.assertIn('--proto\n=https', args)
+        self.assertIn(self.release.SOURCE_URL, args)
+
+    def test_release_failure_never_falls_back_to_source_or_publishes_cache(self):
+        self.command('curl', 'echo download >> "$HOME/downloads"; exit 22\n')
+        for name in ('git', 'mvn'):
+            self.command(name, 'echo forbidden >> "$HOME/forbidden"; exit 99\n')
+        result = self.run_script(self.action / 'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse((self.dir / 'forbidden').exists())
+        self.assertFalse((self.dir / 'hugegraph-fixture-cache').exists())
+        self.assertEqual([], list(Path(self.env['FIXTURE_DIR']).iterdir()))
+
+    def test_release_rejects_tampering_even_with_updated_local_sha256(self):
+        self.manifest()
+        fixture = Path(self.env['FIXTURE_DIR'])
+        (fixture / 'server.tar.gz').write_bytes(b'changed archive')
+        manifest = json.loads((fixture / 'manifest.json').read_text())
+        manifest['sha256'] = hashlib.sha256(b'changed archive').hexdigest()
+        (fixture / 'manifest.json').write_text(json.dumps(manifest))
+        result = self.run_script(self.action / 'fixture.sh', env=dict(self.env, FIXTURE_MODE='start'))
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('official Server release SHA-512 mismatch', result.stderr)
 
 
 if __name__ == '__main__':
