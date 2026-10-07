@@ -93,7 +93,10 @@ def _validate_sdk(repository):
     manifest = json.loads((repository / "candidate-sdk-manifest.json").read_text())
     if (manifest["repository"], manifest["commit"]) != (REPOSITORY, source_commit()):
         raise RuntimeError("SDK source does not match the locked candidate")
-    if manifest["source_revision"] != "1.7.0" or int(manifest["java_version"]) < 17:
+    java_version = manifest["java_version"]
+    if not isinstance(java_version, str) or not java_version.isdecimal():
+        raise ValueError("Invalid Java version format")
+    if manifest["source_revision"] != "1.7.0" or java_version != "17":
         raise RuntimeError("SDK revision or Java version does not match the candidate contract")
     modules = manifest["required_sdk_modules"]
     if len(modules) != len(REQUIRED_MODULES) or {m["source_pom"] for m in modules} != REQUIRED_MODULES:

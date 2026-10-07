@@ -2,6 +2,8 @@
 
 Toolchain 1.8 requires Java 17 for the Java Client, ordinary Loader, Tools and Hubble. Select Java 17 for applications and for every Spark driver and executor using the new Client. An older server can keep its own supported JVM.
 
+Toolchain builds, tests and applications use Java 17. The released Server 1.7 compatibility fixture retains its supported Java 11 in a separate process; its JVM must not select the Toolchain build or test JVM. Building the candidate Server SDK requires JDK 17, matching the server reactor's `[17,18)` Enforcer range.
+
 ## Build the locked candidate
 
 The ASF Server master uses Java 17 and TinkerPop 3.8.1 while retaining the Maven version `1.7.0`. Its Common, PD, gRPC and Store artifacts must come from the same source commit; Maven Central artifacts with that version are not interchangeable with the candidate. CI uses the verified `apache/hugegraph` master baseline `d9abcd`, resolving the six-character commit through GitHub and fetching the complete immutable identity instead of the moving branch. Short prefixes that are ambiguous or inaccessible fail before fetching. Update the SDK action, verifier, Docker defaults and CI baseline together when advancing that commit; moving master alone must not silently change packaged SDK provenance.

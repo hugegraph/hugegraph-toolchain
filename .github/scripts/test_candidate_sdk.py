@@ -15,7 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-"""Bounded SDK provenance fixtures; these do not build real Maven artifacts."""
+"""SDK provenance fixtures and an opt-in real Maven parent-metadata regression."""
 
 import copy
 import json
@@ -26,8 +26,84 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import uuid
+import xml.etree.ElementTree as ET
 
 import verify_candidate_image_sdk as sdk
+
+
+class CandidateParentModelTest(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("CANDIDATE_SDK_MAVEN_TEST"),
+                         "Set CANDIDATE_SDK_MAVEN_TEST to a Maven executable for the metadata regression")
+    def test_license_metadata_can_rebuild_installed_root_parent(self):
+        # Use the real metadata plugin and unique coordinates, never the user's SDK artifacts.
+        maven = os.environ["CANDIDATE_SDK_MAVEN_TEST"]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = root / "settings.xml"
+            settings.write_text("<settings/>")
+            header = '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+            flatten = ('<plugin><groupId>org.codehaus.mojo</groupId><artifactId>flatten-maven-plugin</artifactId>'
+                       '<version>1.3.0</version><configuration><updatePomFile>true</updatePomFile>'
+                       '<flattenMode>resolveCiFriendliesOnly</flattenMode></configuration><executions>'
+                       '<execution><phase>process-resources</phase><goals><goal>flatten</goal></goals>'
+                       '</execution></executions></plugin>')
+            for fixed in (False, True):
+                group = "org.example.candidatesdk.g" + uuid.uuid4().hex
+                source = root / group
+                source.mkdir()
+                root_pom = (header + '<parent><groupId>org.apache</groupId><artifactId>apache</artifactId>'
+                            '<version>23</version></parent><groupId>' + group + '</groupId>'
+                            '<artifactId>root</artifactId><version>${revision}</version><packaging>pom</packaging>'
+                            '<properties><revision>1.7.0</revision></properties><modules><module>dependency</module>'
+                            '<module>consumer</module></modules><build><plugins><plugin>'
+                            '<artifactId>maven-remote-resources-plugin</artifactId><version>3.3.0</version>'
+                            '</plugin></plugins></build></project>')
+                (source / "pom.xml").write_text(root_pom)
+                parent = ('<parent><groupId>' + group + '</groupId><artifactId>root</artifactId>'
+                          '<version>${revision}</version></parent>')
+                for module in ("dependency", "consumer"):
+                    directory = source / module
+                    directory.mkdir()
+                    body = flatten if module == "dependency" else ""
+                    dependency = (('<dependencies><dependency><groupId>' + group + '</groupId>'
+                                   '<artifactId>dependency</artifactId><version>1.7.0</version>'
+                                   '</dependency></dependencies>') if module == "consumer" else "")
+                    (directory / "pom.xml").write_text(header + parent + '<artifactId>' + module + '</artifactId>'
+                                                      + dependency + '<build><plugins>' + body
+                                                      + '</plugins></build></project>')
+                original_poms = {p: p.read_bytes() for p in source.rglob("pom.xml")}
+
+                def run(*arguments):
+                    return subprocess.run([maven, "--settings", str(settings),
+                                           "-Dmaven.repo.local=" + str(root / "m2"), "-B", "-ntp", *arguments],
+                                          cwd=source, capture_output=True, text=True, timeout=240)
+
+                goals = (["org.codehaus.mojo:flatten-maven-plugin:1.3.0:flatten", "install",
+                          "-Dflatten.mode=resolveCiFriendliesOnly", "-DupdatePomFile=true"]
+                         if fixed else ["install"])
+                literal_request = group + ":root:pom:${revision}"
+                installed = run(*goals, "-DskipTests")
+                if fixed or installed.returncode == 0:
+                    self.assertEqual(0, installed.returncode, installed.stdout + installed.stderr)
+                else:
+                    # Newer resolvers fail here; older ones only warn on the leaf metadata goal.
+                    self.assertIn(literal_request, installed.stdout + installed.stderr)
+                metadata_goal = ("org.apache.maven.plugins:maven-remote-resources-plugin:3.3.0:"
+                                 "process@process-resource-bundles")
+                metadata = run(metadata_goal, "-f", "consumer/pom.xml", "-X")
+                output = metadata.stdout + metadata.stderr
+                if fixed:
+                    self.assertEqual(0, metadata.returncode, output)
+                    self.assertNotIn(literal_request, output)
+                    self.assertNotIn("Failed to build parent project", output)
+                    version = ET.parse(source / ".flattened-pom.xml").getroot().findtext(
+                        "{http://maven.apache.org/POM/4.0.0}version")
+                    self.assertEqual("1.7.0", version)
+                else:
+                    self.assertIn(literal_request, output)
+                for path, original in original_poms.items():
+                    self.assertEqual(original, path.read_bytes())
 
 
 class CandidateDistributionTest(unittest.TestCase):
@@ -223,6 +299,25 @@ class CandidateDistributionTest(unittest.TestCase):
                 resolve.side_effect = OSError("ambiguous or inaccessible")
                 with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
                     sdk.validate_sdk(repository)
+
+    def test_candidate_manifest_requires_the_supported_build_jdk(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            for version in ("11", "18", "21"):
+                with self.subTest(version=version):
+                    manifest["java_version"] = version
+                    self.write_manifest(repository, manifest)
+                    with self.assertRaisesRegex(RuntimeError, "Java version"):
+                        sdk.validate_sdk(repository)
+            for version in (17.9, 17, True, "17.0"):
+                with self.subTest(version=version):
+                    manifest["java_version"] = version
+                    self.write_manifest(repository, manifest)
+                    with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
+                        sdk.validate_sdk(repository)
+            manifest["java_version"] = "17"
+            self.write_manifest(repository, manifest)
+            sdk.validate_sdk(repository)
 
     def test_malformed_manifests_have_controlled_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:
