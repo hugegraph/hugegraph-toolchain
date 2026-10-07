@@ -6,7 +6,7 @@ Toolchain builds, tests and applications use Java 17. The released Server 1.7 co
 
 ## Build the locked candidate
 
-The ASF Server master uses Java 17 and TinkerPop 3.8.1 while retaining the Maven version `1.7.0`. Its Common, PD, gRPC and Store artifacts must come from the same source commit; Maven Central artifacts with that version are not interchangeable with the candidate. CI uses the verified `apache/hugegraph` master baseline (shown as `d9abcd` here), storing and fetching its complete immutable commit identity. Update the SDK action, verifier, Docker defaults and CI baseline together when advancing that commit; moving master alone must not silently change packaged SDK provenance.
+The ASF Server master uses Java 17 and TinkerPop 3.8.1 while retaining the Maven version `1.7.0`. Its Common, PD, gRPC and Store artifacts must come from the same source commit; Maven Central artifacts with that version are not interchangeable with the candidate. CI uses the verified `apache/hugegraph` master baseline (shown as `e62c96` here), storing and fetching its complete immutable commit identity. Update the SDK action, verifier, Docker defaults and CI baseline together when advancing that commit; moving master alone must not silently change packaged SDK provenance.
 
 Use an explicit JDK directory and check both Java and Maven. On systems where Java 17 is not registered, a system JDK selector can return another installed version. Checking the generated class version alone does not identify the JVM that built or tested it.
 
