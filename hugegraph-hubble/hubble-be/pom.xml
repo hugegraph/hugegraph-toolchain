@@ -264,11 +264,15 @@
                     <groupId>com.sun.xml.bind</groupId>
                     <artifactId>jaxb-impl</artifactId>
                 </exclusion>
-                <!-- Hubble only uses server configuration types. The store
-                     dependency pulls a broken 1.7.0 hugegraph-struct POM. -->
+                <!-- Hubble uses Server configuration types, not the Store runtime. -->
                 <exclusion>
                     <groupId>org.apache.hugegraph</groupId>
                     <artifactId>hg-store-common</artifactId>
+                </exclusion>
+                <!-- Word segmentation runs in Server; Hubble sends configuration over HTTP. -->
+                <exclusion>
+                    <groupId>org.apdplat</groupId>
+                    <artifactId>word</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
