@@ -22,12 +22,10 @@ import hashlib
 import json
 import os
 import re
-from functools import lru_cache
-import urllib.request
 from pathlib import Path
 
 REPOSITORY = "apache/hugegraph"
-COMMIT = "d9abcd"
+COMMIT = "d9abcd4317fb36128e7e4d209139ec7f3a28cdfc"
 REQUIRED_MODULES = {
     "pom.xml", "hugegraph-commons/pom.xml", "hugegraph-server/pom.xml",
     "hugegraph-pd/pom.xml", "hugegraph-store/pom.xml",
@@ -55,26 +53,9 @@ def digest(path):
     return checksum.hexdigest()
 
 
-
-@lru_cache(maxsize=1)
-def _resolve_source_commit(repository, commit):
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "hugegraph-toolchain-ci"}
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    if token:
-        headers["Authorization"] = "Bearer " + token
-    request = urllib.request.Request(f"https://api.github.com/repos/{repository}/commits/{commit}", headers=headers)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)["sha"]
-
-
 def source_commit():
     # The SDK action exports the full identity already verified by the source resolver.
-    # Standalone packaging resolves the configured short commit through GitHub instead.
-    expected = os.environ.get("CANDIDATE_SOURCE_COMMIT")
-    if expected is None:
-        expected = _resolve_source_commit(REPOSITORY, COMMIT)
-        if not isinstance(expected, str) or not expected.startswith(COMMIT):
-            raise ValueError("Invalid resolved Server source identity")
+    expected = os.environ.get("CANDIDATE_SOURCE_COMMIT", COMMIT)
     if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{40}", expected):
         raise ValueError("Invalid resolved Server source identity")
     return expected

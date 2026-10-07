@@ -57,7 +57,7 @@ test('resolves PR head from the selected repository', async () => {
 
 test('rejects invalid or ambiguous selectors before calling GitHub', async () => {
   for (const input of [{ repository: '../repo' }, { ref: 'master', pr: '42' },
-    { pr: '1.5' }, { pr: '0' }, { expectedCommit: 'short' }]) {
+    { pr: '1.5' }, { pr: '0' }, { expectedCommit: 'short' }, { expectedCommit: sha.slice(0, 6) }]) {
     const { github, calls } = client();
     await assert.rejects(resolve(github, { repository: 'apache/hugegraph', ...input }));
     assert.equal(calls.length, 0);
@@ -72,26 +72,11 @@ test('fails closed for a moved branch or API error', async () => {
   await assert.rejects(resolve(github, { repository: 'example/server', ref: 'missing' }), /Not Found/);
 });
 
-test('resolves an abbreviated commit to a complete fetch identity', async () => {
+test('verifies a full commit selector and fetch identity', async () => {
   const { github, calls } = client();
-  const short = sha.slice(0, 6);
   assert.deepEqual(await resolve(github, { repository: 'apache/hugegraph',
-    ref: short, expectedCommit: short }), { sha, fetchRef: sha });
-  assert.ok(calls.every(([, args]) => args.ref === short));
-});
-
-test('checks complete identity even when resolved commits share the short prefix', async () => {
-  const { github } = client();
-  github.rest.repos.getCommit = async ({ ref }) => ({ data: {
-    sha: ref === 'master' ? sha : sha.slice(0, 6) + 'b'.repeat(34)
-  } });
+    ref: sha, expectedCommit: sha }), { sha, fetchRef: sha });
+  assert.deepEqual(calls, [['commit', { owner: 'apache', repo: 'hugegraph', ref: sha }]]);
   await assert.rejects(resolve(github, { repository: 'apache/hugegraph',
-    ref: 'master', expectedCommit: sha.slice(0, 6) }), /Server ref moved/);
-});
-
-test('rejects abbreviated commits that GitHub cannot resolve', async () => {
-  const { github } = client();
-  github.rest.repos.getCommit = async () => { throw new Error('Ambiguous commit'); };
-  await assert.rejects(resolve(github, { repository: 'apache/hugegraph',
-    ref: sha.slice(0, 6), expectedCommit: sha.slice(0, 6) }), /Ambiguous commit/);
+    ref: 'b'.repeat(40) }), /different from the selected SHA/);
 });

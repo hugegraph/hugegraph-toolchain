@@ -6,7 +6,7 @@ Toolchain builds, tests and applications use Java 17. The released Server 1.7 co
 
 ## Build the locked candidate
 
-The ASF Server master uses Java 17 and TinkerPop 3.8.1 while retaining the Maven version `1.7.0`. Its Common, PD, gRPC and Store artifacts must come from the same source commit; Maven Central artifacts with that version are not interchangeable with the candidate. CI uses the verified `apache/hugegraph` master baseline `d9abcd`, resolving the six-character commit through GitHub and fetching the complete immutable identity instead of the moving branch. Short prefixes that are ambiguous or inaccessible fail before fetching. Update the SDK action, verifier, Docker defaults and CI baseline together when advancing that commit; moving master alone must not silently change packaged SDK provenance.
+The ASF Server master uses Java 17 and TinkerPop 3.8.1 while retaining the Maven version `1.7.0`. Its Common, PD, gRPC and Store artifacts must come from the same source commit; Maven Central artifacts with that version are not interchangeable with the candidate. CI uses the verified `apache/hugegraph` master baseline (shown as `d9abcd` here), storing and fetching its complete immutable commit identity. Update the SDK action, verifier, Docker defaults and CI baseline together when advancing that commit; moving master alone must not silently change packaged SDK provenance.
 
 Use an explicit JDK directory and check both Java and Maven. On systems where Java 17 is not registered, a system JDK selector can return another installed version. Checking the generated class version alone does not identify the JVM that built or tested it.
 
@@ -22,7 +22,11 @@ toolchain_root="$PWD"
 candidate_dir=$(mktemp -d /tmp/hugegraph-java17.XXXXXX)
 mkdir "$candidate_dir/m2"
 export SERVER_REPOSITORY=apache/hugegraph
-server_commit=d9abcd
+server_commit=$(python3 - <<'PY_COMMIT'
+import runpy
+print(runpy.run_path(".github/scripts/verify_candidate_image_sdk.py")["COMMIT"])
+PY_COMMIT
+)
 
 bash "$toolchain_root/hugegraph-client/assembly/travis/install-candidate-sdk.sh" \
   "$server_commit" "$candidate_dir/server" "$candidate_dir/m2"

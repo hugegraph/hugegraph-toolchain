@@ -79,15 +79,15 @@ jobs:
         with:
           repository: apache/hugegraph
           ref: refs/tags/1.7.0
-          expected-commit: b12425
+          expected-commit: b12425c2032bf0d21a97b8221f42a18055c2982f
       - name: Resolve locked Java17 candidate baseline
         id: hubble-baseline
         if: steps.scope.outputs.needsFixture == 'true'
         uses: ./.github/actions/get-hugegraph-commit
         with:
           repository: apache/hugegraph
-          ref: d9abcd
-          expected-commit: d9abcd
+          ref: d9abcd4317fb36128e7e4d209139ec7f3a28cdfc
+          expected-commit: d9abcd4317fb36128e7e4d209139ec7f3a28cdfc
       - name: Record external test inputs
         env:
           NEEDS_SERVER: ${{ steps.scope.outputs.needsFixture }}

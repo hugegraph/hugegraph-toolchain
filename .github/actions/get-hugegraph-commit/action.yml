@@ -13,7 +13,7 @@ inputs:
     description: 'Branch, tag or commit; mutually exclusive with server-pr-number'
     default: ''
   expected-commit:
-    description: 'Optional six-character or full commit SHA; fail if the selected ref has moved'
+    description: 'Optional full commit SHA; fail if the selected ref has moved'
     default: ''
 
 outputs:
