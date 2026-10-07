@@ -132,10 +132,12 @@ hugegraph-loader, hugegraph-tools, hugegraph-hubble, hugegraph-spark-connector
 
 ## Docker
 
+Run from the Toolchain repository root; the Dockerfiles copy shared SDK helpers.
+
 ```bash
 # Loader
-cd hugegraph-loader && docker build -t hugegraph/hugegraph-loader:latest .
+docker build -f hugegraph-loader/Dockerfile -t hugegraph/hugegraph-loader:latest .
 
 # Hubble
-cd hugegraph-hubble && docker build -t hugegraph/hugegraph-hubble:latest .
+docker build -f hugegraph-hubble/Dockerfile -t hugegraph/hugegraph-hubble:latest .
 ```

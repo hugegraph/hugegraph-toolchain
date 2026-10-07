@@ -56,8 +56,16 @@ runs:
         candidate_repo=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-m2.XXXXXX")
         server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-build.XXXXXX")
         source_dir="$server_build/source"
+        if [[ -d "$HOME/.m2/repository" ]]; then
+          rsync -a --exclude='/org/apache/hugegraph/' --exclude='/candidate-sdk-manifest.json' \
+            "$HOME/.m2/repository/" "$candidate_repo/"
+        fi
         bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-candidate-sdk.sh" \
           "$SERVER_COMMIT" "$source_dir" "$candidate_repo"
+        # Retain downloaded third-party inputs for the existing Maven cache.
+        mkdir -p "$HOME/.m2/repository"
+        rsync -a --exclude='/org/apache/hugegraph/' --exclude='/candidate-sdk-manifest.json' \
+          "$candidate_repo/" "$HOME/.m2/repository/"
         archives=("$source_dir"/hugegraph-server/apache-hugegraph-*.tar.gz)
         if [[ ${#archives[@]} -ne 1 || ! -f "${archives[0]}" ]]; then
           printf 'Expected one candidate server archive, found: %s\n' "${archives[*]}" >&2
