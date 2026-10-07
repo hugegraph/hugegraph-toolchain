@@ -117,7 +117,7 @@ function get_params() {
           ENGINE_ARGS+=("$1" "$2")
           shift 2
         fi
-        if [[ "$option" == --conf || "$option" == -c ]]; then
+        if [[ "$option" == --conf || ( "$option" == -c && "$inline" == false ) ]]; then
           case "$value" in
             spark.submit.deployMode=*) conf_mode=${value#*=} ;;
           esac

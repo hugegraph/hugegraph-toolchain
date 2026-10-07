@@ -156,7 +156,6 @@ class SparkLauncherTest(unittest.TestCase):
             ["--conf", "spark.submit.deployMode=cluster"],
             ["--conf=spark.submit.deployMode=cluster"],
             ["-c", "spark.submit.deployMode=cluster"],
-            ["-c=spark.submit.deployMode=cluster"],
             ["--conf", "spark.submit.deployMode=client",
              "--conf", "spark.submit.deployMode=cluster"],
         ]
@@ -202,7 +201,6 @@ class SparkLauncherTest(unittest.TestCase):
             ["--deploy-mode=cluster", "--master=spark://example:7077"],
             ["--conf", "spark.master=spark://example:7077", "--deploy-mode", "cluster"],
             ["--master", "spark://example:7077", "--conf=spark.submit.deployMode=cluster"],
-            ["-c=spark.master=spark://example:7077", "-c=spark.submit.deployMode=cluster"],
         ]
         for engine in variants:
             with self.subTest(engine=engine):
