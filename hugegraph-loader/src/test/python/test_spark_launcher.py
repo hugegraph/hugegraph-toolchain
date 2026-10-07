@@ -150,6 +150,42 @@ class SparkLauncherTest(unittest.TestCase):
         self.assertEqual(["--files", "first.json#first,second path.json#second"], args[2:jar])
         self.assertEqual(["--file", "/tmp/local mapping.json"], args[jar + 1:])
 
+    def test_conf_cluster_mode_ships_mapping_in_all_option_forms(self):
+        mapping = "/tmp/mapping directory/input.json"
+        variants = [
+            ["--conf", "spark.submit.deployMode=cluster"],
+            ["--conf=spark.submit.deployMode=cluster"],
+            ["-c", "spark.submit.deployMode=cluster"],
+            ["-c=spark.submit.deployMode=cluster"],
+            ["--conf", "spark.submit.deployMode=client",
+             "--conf", "spark.submit.deployMode=cluster"],
+        ]
+        for mode in variants:
+            with self.subTest(mode=mode):
+                result = self.run_launcher("--file", mapping, "--master", "yarn",
+                                           "--files", "config.json", *mode)
+                self.assertEqual(0, result.returncode, result.stderr)
+                args = self.arguments()
+                jar = args.index(str(self.shaded))
+                self.assertEqual("config.json," + mapping, args[args.index("--files") + 1])
+                self.assertEqual(["--file", "input.json"], args[jar + 1:])
+
+    def test_explicit_deploy_mode_controls_mapping_over_conf_in_any_order(self):
+        mapping = "/tmp/mapping directory/input.json"
+        for explicit, configured in (("client", "cluster"), ("cluster", "client")):
+            options = [["--deploy-mode", explicit],
+                       ["--conf", "spark.submit.deployMode=" + configured]]
+            for order in (options, options[::-1]):
+                with self.subTest(explicit=explicit, order=order):
+                    result = self.run_launcher("--master", "yarn", *order[0], *order[1],
+                                               "--file", mapping)
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    args = self.arguments()
+                    jar = args.index(str(self.shaded))
+                    expected = "input.json" if explicit == "cluster" else mapping
+                    self.assertEqual(["--file", expected], args[jar + 1:])
+                    self.assertEqual(explicit == "cluster", "--files" in args[:jar])
+
     def test_explicit_jdbc_jar_is_shipped_but_other_lib_jars_are_not(self):
         driver = self.lib / "mysql driver.jar"
         driver.touch()
@@ -166,6 +202,7 @@ class SparkLauncherTest(unittest.TestCase):
             ["--deploy-mode=cluster", "--master=spark://example:7077"],
             ["--conf", "spark.master=spark://example:7077", "--deploy-mode", "cluster"],
             ["--master", "spark://example:7077", "--conf=spark.submit.deployMode=cluster"],
+            ["-c=spark.master=spark://example:7077", "-c=spark.submit.deployMode=cluster"],
         ]
         for engine in variants:
             with self.subTest(engine=engine):

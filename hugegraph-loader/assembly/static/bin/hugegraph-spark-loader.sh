@@ -36,8 +36,14 @@ for ((i=0; i<${#ENGINE_ARGS[@]}; i++)); do
       esac
       ((i+=1))
       ;;
-    --conf=spark.master=*) CONF_MASTER=${ENGINE_ARGS[i]#--conf=spark.master=} ;;
-    --conf=spark.submit.deployMode=*) CONF_DEPLOY_MODE=${ENGINE_ARGS[i]#--conf=spark.submit.deployMode=} ;;
+    --conf=spark.master=* | -c=spark.master=*)
+      CONF_MASTER=${ENGINE_ARGS[i]#*=}
+      CONF_MASTER=${CONF_MASTER#*=}
+      ;;
+    --conf=spark.submit.deployMode=* | -c=spark.submit.deployMode=*)
+      CONF_DEPLOY_MODE=${ENGINE_ARGS[i]#*=}
+      CONF_DEPLOY_MODE=${CONF_DEPLOY_MODE#*=}
+      ;;
     --archives | --class | --driver-class-path | --driver-cores | --driver-java-options | \
     --driver-library-path | --driver-memory | --executor-cores | --executor-memory | --files | --jars | \
     --keytab | --kill | --remote | --name | --num-executors | --packages | --exclude-packages | \

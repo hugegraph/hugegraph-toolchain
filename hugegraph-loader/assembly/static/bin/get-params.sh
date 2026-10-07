@@ -20,6 +20,7 @@ function get_params() {
   ENGINE_ARGS=()
   HUGEGRAPH_ARGS=()
   local file="" mode="" option="" value="" files="" file_set=false files_set=false inline=false
+  local conf_mode=""
   while (("$#")); do
     option=${1%%=*}
     inline=false
@@ -112,8 +113,14 @@ function get_params() {
             echo "Missing value for $option" >&2
             return 2
           fi
+          value=$2
           ENGINE_ARGS+=("$1" "$2")
           shift 2
+        fi
+        if [[ "$option" == --conf || "$option" == -c ]]; then
+          case "$value" in
+            spark.submit.deployMode=*) conf_mode=${value#*=} ;;
+          esac
         fi
         ;;
       *)
@@ -123,6 +130,8 @@ function get_params() {
     esac
   done
 
+  # Spark's explicit --deploy-mode takes precedence over its --conf property.
+  mode=${mode:-$conf_mode}
   if [[ "$file_set" == true ]]; then
     if [ "$mode" = 'cluster' ]; then
       if [[ "$file" == *#* ]]; then
