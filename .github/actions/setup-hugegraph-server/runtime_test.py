@@ -240,7 +240,7 @@ esac
 
     def test_release_pin_matches_official_identity_and_rejects_wrong_bytes(self):
         self.assertEqual('1.7.0', self.release.VERSION)
-        self.assertEqual('https://archive.apache.org/dist/incubator/hugegraph/1.7.0/' +
+        self.assertEqual('https://downloads.apache.org/hugegraph/1.7.0/' +
                          self.release.ARCHIVE_NAME, self.release.SOURCE_URL)
         self.assertEqual('apache/hugegraph', self.release.REPOSITORY)
         self.assertEqual(SHA, self.release.COMMIT)
