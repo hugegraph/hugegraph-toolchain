@@ -19,6 +19,8 @@
 
 import copy
 import json
+import os
+from unittest.mock import patch
 from pathlib import Path
 import shutil
 import subprocess
@@ -29,6 +31,12 @@ import verify_candidate_image_sdk as sdk
 
 
 class CandidateDistributionTest(unittest.TestCase):
+    def setUp(self):
+        self.source_commit = sdk.COMMIT + "a" * (40 - len(sdk.COMMIT))
+        context = patch.dict(os.environ, {"CANDIDATE_SOURCE_COMMIT": self.source_commit})
+        context.start()
+        self.addCleanup(context.stop)
+
     def fixture(self, root):
         repository = root / "m2"
         artifacts, modules = [], []
@@ -49,7 +57,7 @@ class CandidateDistributionTest(unittest.TestCase):
             modules.append({"group_id": "org.apache.hugegraph", "artifact_id": artifact,
                             "version": "1.7.0", "packaging": packaging,
                             "source_pom": source_pom, "files": files})
-        manifest = {"repository": sdk.REPOSITORY, "commit": sdk.COMMIT,
+        manifest = {"repository": sdk.REPOSITORY, "commit": self.source_commit,
                     "source_revision": "1.7.0", "java_version": "17",
                     "required_sdk_modules": modules, "artifacts": artifacts}
         self.write_manifest(repository, manifest)
@@ -182,6 +190,39 @@ class CandidateDistributionTest(unittest.TestCase):
             common.write_bytes(b"replaced Server SDK input")
             with self.assertRaisesRegex(RuntimeError, "SDK artifact hash mismatch"):
                 sdk.validate_distribution(repository, directory, "hubble")
+
+    def test_short_source_context_preserves_full_identity_checks(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            manifest["commit"] = sdk.COMMIT + "b" * (40 - len(sdk.COMMIT))
+            self.write_manifest(repository, manifest)
+            with self.assertRaisesRegex(RuntimeError, "SDK source does not match"):
+                sdk.validate_sdk(repository)
+            with patch.dict(os.environ, {"CANDIDATE_SOURCE_COMMIT": sdk.COMMIT}):
+                with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
+                    sdk.validate_sdk(repository)
+
+    def test_explicit_resolved_context_supports_latest_master_provenance(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            selected = "b" * 40
+            manifest["commit"] = selected
+            self.write_manifest(repository, manifest)
+            with patch.dict(os.environ, {"CANDIDATE_SOURCE_COMMIT": selected}):
+                sdk.validate_sdk(repository)
+            with self.assertRaisesRegex(RuntimeError, "SDK source does not match"):
+                sdk.validate_sdk(repository)
+
+    def test_standalone_packaging_resolves_the_short_lock(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, _ = self.fixture(Path(temporary))
+            with patch.dict(os.environ, {}, clear=True), patch.object(sdk, "_resolve_source_commit") as resolve:
+                resolve.return_value = self.source_commit
+                sdk.validate_sdk(repository)
+                resolve.assert_called_once_with("apache/hugegraph", sdk.COMMIT)
+                resolve.side_effect = OSError("ambiguous or inaccessible")
+                with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
+                    sdk.validate_sdk(repository)
 
     def test_malformed_manifests_have_controlled_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:

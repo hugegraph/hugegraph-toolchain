@@ -20,10 +20,14 @@
 import argparse
 import hashlib
 import json
+import os
+import re
+from functools import lru_cache
+import urllib.request
 from pathlib import Path
 
 REPOSITORY = "apache/hugegraph"
-COMMIT = "d9abcd4317fb36128e7e4d209139ec7f3a28cdfc"
+COMMIT = "d9abcd"
 REQUIRED_MODULES = {
     "pom.xml", "hugegraph-commons/pom.xml", "hugegraph-server/pom.xml",
     "hugegraph-pd/pom.xml", "hugegraph-store/pom.xml",
@@ -51,6 +55,31 @@ def digest(path):
     return checksum.hexdigest()
 
 
+
+@lru_cache(maxsize=1)
+def _resolve_source_commit(repository, commit):
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "hugegraph-toolchain-ci"}
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    request = urllib.request.Request(f"https://api.github.com/repos/{repository}/commits/{commit}", headers=headers)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)["sha"]
+
+
+def source_commit():
+    # The SDK action exports the full identity already verified by the source resolver.
+    # Standalone packaging resolves the configured short commit through GitHub instead.
+    expected = os.environ.get("CANDIDATE_SOURCE_COMMIT")
+    if expected is None:
+        expected = _resolve_source_commit(REPOSITORY, COMMIT)
+        if not isinstance(expected, str) or not expected.startswith(COMMIT):
+            raise ValueError("Invalid resolved Server source identity")
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{40}", expected):
+        raise ValueError("Invalid resolved Server source identity")
+    return expected
+
+
 def validate_sdk(repository):
     try:
         return _validate_sdk(Path(repository))
@@ -62,7 +91,7 @@ def validate_sdk(repository):
 def _validate_sdk(repository):
     repository = Path(repository)
     manifest = json.loads((repository / "candidate-sdk-manifest.json").read_text())
-    if (manifest["repository"], manifest["commit"]) != (REPOSITORY, COMMIT):
+    if (manifest["repository"], manifest["commit"]) != (REPOSITORY, source_commit()):
         raise RuntimeError("SDK source does not match the locked candidate")
     if manifest["source_revision"] != "1.7.0" or int(manifest["java_version"]) < 17:
         raise RuntimeError("SDK revision or Java version does not match the candidate contract")
@@ -161,4 +190,4 @@ if __name__ == "__main__":
             validate_distribution(args.repository, args.distribution, args.module)
     except RuntimeError as error:
         parser.exit(1, str(error) + "\n")
-    print(f"Verified {manifest['repository']}@{manifest['commit']}: {len(jars)} candidate JARs")
+    print(f"Verified {manifest['repository']}@{manifest['commit'][:6]}: {len(jars)} candidate JARs")
