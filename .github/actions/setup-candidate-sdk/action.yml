@@ -7,10 +7,10 @@ inputs:
     default: 'apache/hugegraph'
   ref:
     description: 'Immutable candidate source commit'
-    default: 'd9abcd4317fb36128e7e4d209139ec7f3a28cdfc'
+    default: 'e62c961e00221569d4f955abbadf60faee45b283'
   expected-commit:
     description: 'Locked candidate source commit'
-    default: 'd9abcd4317fb36128e7e4d209139ec7f3a28cdfc'
+    default: 'e62c961e00221569d4f955abbadf60faee45b283'
 
 outputs:
   repository:
