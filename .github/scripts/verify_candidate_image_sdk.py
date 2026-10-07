@@ -25,7 +25,7 @@ import re
 from pathlib import Path
 
 REPOSITORY = "apache/hugegraph"
-COMMIT = "d9abcd4317fb36128e7e4d209139ec7f3a28cdfc"
+COMMIT = "e62c961e00221569d4f955abbadf60faee45b283"
 REQUIRED_MODULES = {
     "pom.xml", "hugegraph-commons/pom.xml", "hugegraph-server/pom.xml",
     "hugegraph-pd/pom.xml", "hugegraph-store/pom.xml",
