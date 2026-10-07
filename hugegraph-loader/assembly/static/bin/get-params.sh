@@ -134,8 +134,8 @@ function get_params() {
   mode=${mode:-$conf_mode}
   if [[ "$file_set" == true ]]; then
     if [ "$mode" = 'cluster' ]; then
-      if [[ "$file" == *#* ]]; then
-        echo "Cluster --file must be a local mapping path without # fragments" >&2
+      if [[ "$file" == *#* || "$file" == *,* ]]; then
+        echo "Cluster --file must be a local mapping path without commas or # fragments" >&2
         return 2
       fi
       HUGEGRAPH_ARGS+=(--file "${file##*/}")

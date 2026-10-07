@@ -47,6 +47,16 @@ for ((i=0; i<${#ENGINE_ARGS[@]}; i++)); do
 done
 MASTER=${MASTER:-$CONF_MASTER}
 DEPLOY_MODE=${DEPLOY_MODE:-$CONF_DEPLOY_MODE}
+# Keep mapping localization consistent with the mode actually passed to Spark.
+# Configuration files must not silently switch this launcher to a remote driver.
+if [[ -z "$DEPLOY_MODE" ]]; then
+  DEPLOY_MODE=client
+  ENGINE_ARGS+=(--deploy-mode client)
+fi
+if [[ "$DEPLOY_MODE" == cluster && -z "$MASTER" ]]; then
+  echo "Cluster deploy mode requires --master or --conf spark.master on the command line" >&2
+  exit 2
+fi
 if [[ "$DEPLOY_MODE" == cluster && "$MASTER" == spark://* ]]; then
   echo "Standalone cluster deploy mode is not supported; use client deploy mode" >&2
   exit 2

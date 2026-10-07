@@ -147,7 +147,8 @@ class SparkLauncherTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         args = self.arguments()
         jar = args.index(str(self.shaded))
-        self.assertEqual(["--files", "first.json#first,second path.json#second"], args[2:jar])
+        self.assertEqual(["--files", "first.json#first,second path.json#second",
+                          "--deploy-mode", "client"], args[2:jar])
         self.assertEqual(["--file", "/tmp/local mapping.json"], args[jar + 1:])
 
     def test_conf_cluster_mode_ships_mapping_in_all_option_forms(self):
@@ -234,6 +235,51 @@ class SparkLauncherTest(unittest.TestCase):
                 self.assertNotIn("private-alias", result.stdout + result.stderr)
                 self.assertFalse(self.argv.exists())
 
+    def test_cluster_mapping_comma_is_rejected_without_echoing_path(self):
+        mapping = str(self.app / "private,mapping.json")
+        for option in (["--file", mapping], ["--file=" + mapping], ["-f", mapping]):
+            with self.subTest(option=option[0]):
+                result = self.run_launcher("--master", "yarn", "--deploy-mode", "cluster", *option)
+                self.assertEqual(2, result.returncode)
+                self.assertIn("commas", result.stderr)
+                self.assertNotIn(mapping, result.stdout + result.stderr)
+                self.assertFalse(self.argv.exists())
+
+    def test_default_client_overrides_properties_and_preserves_local_mapping(self):
+        config = self.spark / "conf"
+        config.mkdir()
+        (config / "spark-defaults.conf").write_text("spark.submit.deployMode cluster\nspark.master yarn\n")
+        properties = self.app / "spark.properties"
+        properties.write_text("spark.submit.deployMode cluster\nspark.master yarn\n")
+        mapping = str(self.app / "mapping,local#part.json")
+        for options in ([], ["--properties-file", str(properties)]):
+            with self.subTest(options=options):
+                result = self.run_launcher(*options, "--file", mapping)
+                self.assertEqual(0, result.returncode, result.stderr)
+                args = self.arguments()
+                jar = args.index(str(self.shaded))
+                self.assertEqual("client", args[args.index("--deploy-mode") + 1])
+                self.assertNotIn("--files", args[:jar])
+                self.assertEqual(["--file", mapping], args[jar + 1:])
+
+    def test_cluster_requires_a_command_line_master(self):
+        properties = self.app / "spark.properties"
+        properties.write_text("spark.master yarn\n")
+        result = self.run_launcher("--properties-file", str(properties),
+                                   "--deploy-mode", "cluster", "--file", "mapping.json")
+        self.assertEqual(2, result.returncode)
+        self.assertIn("requires --master", result.stderr)
+        self.assertFalse(self.argv.exists())
+
+    def test_cluster_accepts_command_line_master_conf(self):
+        for master in (["--conf", "spark.master=yarn"], ["--conf=spark.master=yarn"],
+                       ["-c", "spark.master=yarn"]):
+            with self.subTest(master=master):
+                result = self.run_launcher(*master, "--deploy-mode", "cluster", "--file", "mapping.json")
+                self.assertEqual(0, result.returncode, result.stderr)
+                args = self.arguments()
+                self.assertEqual("mapping.json", args[args.index("--files") + 1])
+
     def test_client_mapping_literal_hash_remains_a_local_path(self):
         mapping = self.app / "valid mapping#part.json"
         mapping.write_text("{}")
@@ -245,12 +291,13 @@ class SparkLauncherTest(unittest.TestCase):
     def test_engine_values_are_not_reclassified_as_loader_options(self):
         engine = ["-c", "--create-graph=true", "--driver-java-options", "--direct=false",
                   "--files", "--file=engine-owned.json", "--jars=/tmp/library with spaces.jar"]
-        result = self.run_launcher(*engine, "--deploy-mode=cluster", "--file=/tmp/input with spaces.json",
+        result = self.run_launcher(*engine, "--master", "yarn",
+                                   "--deploy-mode=cluster", "--file=/tmp/input with spaces.json",
                                    "--direct=false", "--batch-failure-fallback=true")
         self.assertEqual(0, result.returncode, result.stderr)
         args = self.arguments()
         jar = args.index(str(self.shaded))
-        self.assertEqual(engine[:4] + engine[6:] + ["--deploy-mode", "cluster", "--files",
+        self.assertEqual(engine[:4] + engine[6:] + ["--master", "yarn", "--deploy-mode", "cluster", "--files",
                          "--file=engine-owned.json,/tmp/input with spaces.json"], args[2:jar])
         self.assertEqual(["--direct", "false", "--batch-failure-fallback", "true",
                           "--file", "input with spaces.json"], args[jar + 1:])
