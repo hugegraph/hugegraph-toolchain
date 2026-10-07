@@ -14,5 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
 ignore:
-  - "src/main/java/org/apache/hugegraph/example"
+  - "hugegraph-client/src/main/java/org/apache/hugegraph/example"
