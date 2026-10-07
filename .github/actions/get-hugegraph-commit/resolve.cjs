@@ -19,8 +19,8 @@ module.exports = async function resolve(github, { repository, ref = '', pr = '',
   if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(repository)) {
     throw new Error('Invalid server repository');
   }
-  if (expectedCommit && !/^(?:[0-9a-f]{6}|[0-9a-f]{40})$/i.test(expectedCommit)) {
-    throw new Error('Expected commit must be a six-character or full SHA');
+  if (expectedCommit && !/^[0-9a-f]{40}$/i.test(expectedCommit)) {
+    throw new Error('Expected commit must be a full SHA');
   }
   if (ref && pr) throw new Error('Select either ref or server-pr-number');
   const [owner, repo] = repository.split('/');
@@ -46,23 +46,13 @@ module.exports = async function resolve(github, { repository, ref = '', pr = '',
   }
   if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('Server API returned an invalid commit SHA');
   if (expectedCommit) {
-    let expectedSha = expectedCommit;
-    if (expectedCommit.length === 6) {
-      // Resolve independently: a matching prefix alone does not establish identity.
-      const { data: expected } = await github.rest.repos.getCommit({ owner, repo, ref: expectedCommit });
-      expectedSha = expected.sha;
-      if (!/^[0-9a-f]{40}$/i.test(expectedSha) ||
-          !expectedSha.toLowerCase().startsWith(expectedCommit.toLowerCase())) {
-        throw new Error('Server API returned an invalid expected commit SHA');
-      }
-    }
-    if (sha.toLowerCase() !== expectedSha.toLowerCase()) {
+    if (sha.toLowerCase() !== expectedCommit.toLowerCase()) {
       throw new Error(`Server ref moved: expected ${expectedCommit.slice(0, 6)}, resolved ${sha.slice(0, 6)}`);
     }
   }
-  if (/^(?:[0-9a-f]{6}|[0-9a-f]{40})$/i.test(ref)) {
-    if (!sha.toLowerCase().startsWith(ref.toLowerCase())) {
-      throw new Error('Server API returned a commit outside the selected prefix');
+  if (/^[0-9a-f]{40}$/i.test(ref)) {
+    if (sha.toLowerCase() !== ref.toLowerCase()) {
+      throw new Error('Server API returned a commit different from the selected SHA');
     }
     fetchRef = sha;
   }
