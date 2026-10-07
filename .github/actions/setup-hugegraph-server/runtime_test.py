@@ -28,7 +28,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-SHA = 'a' * 40
+SHA = 'b12425c2032bf0d21a97b8221f42a18055c2982f'
 
 class RuntimeTests(unittest.TestCase):
     def setUp(self):
@@ -86,7 +86,8 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0)
         for field, wrong in [('repository','fork/hugegraph'), ('commit','b'*40), ('java','17'),
                               ('config','different'), ('source_url','https://example.invalid/release'),
-                              ('release_version','1.8.0'), ('official_sha512','bad'), ('sha256','bad')]:
+                              ('release_version','1.8.0'), ('source_repository','fork/hugegraph'),
+                              ('source_commit','b'*40), ('official_sha512','bad'), ('sha256','bad')]:
             self.manifest(**{field:wrong})
             self.assertNotEqual(self.run_script(self.action/'fixture.sh', env=env).returncode, 0, field)
         self.manifest()
@@ -241,6 +242,8 @@ esac
         self.assertEqual('1.7.0', self.release.VERSION)
         self.assertEqual('https://archive.apache.org/dist/incubator/hugegraph/1.7.0/' +
                          self.release.ARCHIVE_NAME, self.release.SOURCE_URL)
+        self.assertEqual('apache/hugegraph', self.release.REPOSITORY)
+        self.assertEqual(SHA, self.release.COMMIT)
         self.assertEqual(128, len(self.release.SHA512))
         self.assertEqual(self.release.SHA512,
                          self.release.identity('1.7.0')['official_sha512'])
@@ -250,6 +253,26 @@ esac
         archive.write_bytes(b'archive')
         with self.assertRaisesRegex(ValueError, 'SHA-512 mismatch'):
             self.release.verify(archive)
+
+    def test_release_rejects_wrong_caller_source_before_cache_or_download(self):
+        for name in ('curl', 'git', 'mvn'):
+            self.command(name, 'echo forbidden >> "$HOME/forbidden"; exit 99\n')
+        for field, wrong in (('FIXTURE_REPOSITORY', 'fork/hugegraph'),
+                             ('FIXTURE_COMMIT', 'a' * 40)):
+            with self.subTest(field=field):
+                env = dict(self.env, FIXTURE_MODE='build', **{field: wrong})
+                result = self.run_script(self.action / 'fixture.sh', env=env)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn('official Server release requires', result.stderr)
+                self.assertFalse((self.dir / 'forbidden').exists())
+                self.assertFalse((self.dir / 'hugegraph-fixture-cache').exists())
+                self.assertFalse((Path(self.env['FIXTURE_DIR']) / 'manifest.json').exists())
+                # Direct manifest callers must reject the same false source claim.
+                result = subprocess.run(['python3', str(self.action / 'manifest.py'), 'create'],
+                                        env=env, text=True, capture_output=True, timeout=20)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn('official Server release requires', result.stderr)
+                self.assertFalse((Path(self.env['FIXTURE_DIR']) / 'manifest.json').exists())
 
     def test_release_download_keeps_official_identity_and_never_builds(self):
         self.command('curl', 'printf "%s\\n" "$@" > "$HOME/download-args"\n'
@@ -263,6 +286,8 @@ esac
         self.assertFalse((self.dir / 'forbidden').exists())
         manifest = json.loads((Path(self.env['FIXTURE_DIR']) / 'manifest.json').read_text())
         self.assertEqual('asf-release', manifest['source_kind'])
+        self.assertEqual(self.release.REPOSITORY, manifest['source_repository'])
+        self.assertEqual(self.release.COMMIT, manifest['source_commit'])
         self.assertEqual(self.release.SOURCE_URL, manifest['source_url'])
         self.assertEqual(hashlib.sha512(b'archive').hexdigest(), manifest['official_sha512'])
         args = (self.dir / 'download-args').read_text()

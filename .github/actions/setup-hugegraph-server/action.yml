@@ -8,13 +8,13 @@ inputs:
     description: Workflow-local immutable fixture artifact name
     default: ''
   repository:
-    description: GitHub owner/repository containing the Server source
+    description: Server source repository (Java 11 release requires apache/hugegraph)
     default: apache/hugegraph
   fetch-ref:
     description: Fetchable source ref (must resolve to commit-id)
     default: ''
   commit-id:
-    description: Exact Server commit SHA
+    description: Exact Server commit SHA (Java 11 release requires the locked 1.7.0 commit)
     required: true
   java-version:
     description: JDK major used for the build and runtime

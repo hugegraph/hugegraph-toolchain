@@ -49,10 +49,14 @@ if sys.argv[1] == "inputs":
 root = pathlib.Path(os.environ["FIXTURE_DIR"])
 identity = {key.lower(): os.environ["FIXTURE_" + key] for key in
             ("REPOSITORY", "COMMIT", "JAVA", "CONFIG")}
-if identity["java"] == "11":
-    identity.update(release.identity(os.environ.get("FIXTURE_RELEASE_VERSION", release.VERSION)))
-else:
-    identity.update(source_kind="candidate-sdk")
+try:
+    if identity["java"] == "11":
+        identity.update(release.identity(os.environ.get("FIXTURE_RELEASE_VERSION", release.VERSION),
+                                        identity["repository"], identity["commit"]))
+    else:
+        identity.update(source_kind="candidate-sdk")
+except ValueError as error:
+    sys.exit(str(error))
 
 
 def digest():
