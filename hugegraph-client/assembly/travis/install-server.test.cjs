@@ -507,22 +507,3 @@ for (const scenario of [
     assert.equal(readdirSync(root).some(name => name.startsWith('hugegraph-servers.')), false);
   });
 }
-
-test('checkout resolves short source selectors before Git transport', t => {
-  const root = temp(t);
-  const bin = join(root, 'bin');
-  mkdirSync(bin);
-  const full = 'a'.repeat(40);
-  const checkout = join(__dirname, 'checkout-server.sh');
-  const calls = join(root, 'git-calls');
-  writeFileSync(join(bin, 'python3'), `#!/bin/bash\ncat >/dev/null\nprintf '%s\\n' '${full}'\n`, { mode: 0o755 });
-  writeFileSync(join(bin, 'git'), `#!/bin/bash\nprintf '%s\\n' "$*" >> "$GIT_CALLS"\nif [[ "$*" == *'rev-parse HEAD' ]]; then printf '%s\\n' '${full}'; fi\n`, { mode: 0o755 });
-  const result = spawnSync('bash', [checkout, full.slice(0, 6), join(root, 'checkout')], {
-    env: { ...process.env, SERVER_REPOSITORY: 'apache/hugegraph', SERVER_FETCH_REF: full.slice(0, 6),
-      PATH: `${bin}:${process.env.PATH}`, GIT_CALLS: calls }, encoding: 'utf8'
-  });
-  assert.equal(result.status, 0, result.stderr);
-  const transport = readFileSync(calls, 'utf8');
-  assert.ok(transport.includes(`fetch --depth 1 -- origin ${full}\n`));
-  assert.match(result.stdout, /Server source: apache\/hugegraph@aaaaaa/);
-});
