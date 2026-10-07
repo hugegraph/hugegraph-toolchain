@@ -44,7 +44,3 @@ HFile generation, HBase import, and backend readback still need their own valida
 ## Regression checks
 
 The ordinary Loader `UnitTestSuite` includes the Spark partition serialization and driver header preflight checks. Loader CI also runs the standalone launcher argument tests. The separate `spark-loader-ci` workflow builds with the default provided compile dependency and runs the shaded distribution through an official Spark 3.5.8 runtime against both the locked candidate server and official Server 1.7. Its independent executor gate checks UTF-8 vertex/edge data, graph readback, failed-load exit status, and cleanup; it does not exercise HBase bulkload.
-
-## Merge dependency
-
-Merge Toolchain PR #786 first, then synchronize this branch with the merged changes. This Spark branch does not change the old Flink launcher or shared parser error propagation; those changes belong to #786.
