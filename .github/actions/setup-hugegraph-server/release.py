@@ -27,8 +27,8 @@ VERSION = "1.7.0"
 REPOSITORY = "apache/hugegraph"
 COMMIT = "b12425c2032bf0d21a97b8221f42a18055c2982f"
 ARCHIVE_NAME = "apache-hugegraph-incubating-1.7.0.tar.gz"
-SOURCE_URL = "https://archive.apache.org/dist/incubator/hugegraph/1.7.0/" + ARCHIVE_NAME
-# Verified against SOURCE_URL + ".sha512" in the official ASF archive.
+SOURCE_URL = "https://downloads.apache.org/hugegraph/1.7.0/" + ARCHIVE_NAME
+# Verified against SOURCE_URL + ".sha512" in the official ASF distribution.
 SHA512 = ("ba093203e817f17582895ff10ceb0458498c886ec7a687fd0f3e5f56ba739454"
           "ec928a592bdad8a3685651dc9f8ef904d082f9530d4aae6a83b5d9d9626ad13f")
 
