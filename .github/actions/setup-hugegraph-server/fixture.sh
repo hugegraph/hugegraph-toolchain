@@ -41,6 +41,11 @@ export FIXTURE_REPOSITORY FIXTURE_COMMIT FIXTURE_JAVA FIXTURE_CONFIG FIXTURE_DIR
     exit 1
 }
 
+if [[ "$FIXTURE_JAVA" == 11 ]]; then
+    # Reject caller/source mismatch before restoring a cache or downloading bytes.
+    python3 "${FIXTURE_HELPER%/*}/release.py" validate
+fi
+
 fixture_validate_java() {
     actual_java=$(java -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*".*/\1/p' | head -1)
     [[ "$actual_java" == "$FIXTURE_JAVA" ]] || { echo 'Fixture JDK mismatch' >&2; return 1; }

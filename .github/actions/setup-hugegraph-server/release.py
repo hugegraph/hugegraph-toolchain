@@ -24,6 +24,8 @@ import sys
 import tempfile
 
 VERSION = "1.7.0"
+REPOSITORY = "apache/hugegraph"
+COMMIT = "b12425c2032bf0d21a97b8221f42a18055c2982f"
 ARCHIVE_NAME = "apache-hugegraph-incubating-1.7.0.tar.gz"
 SOURCE_URL = "https://archive.apache.org/dist/incubator/hugegraph/1.7.0/" + ARCHIVE_NAME
 # Verified against SOURCE_URL + ".sha512" in the official ASF archive.
@@ -31,10 +33,13 @@ SHA512 = ("ba093203e817f17582895ff10ceb0458498c886ec7a687fd0f3e5f56ba739454"
           "ec928a592bdad8a3685651dc9f8ef904d082f9530d4aae6a83b5d9d9626ad13f")
 
 
-def identity(version):
+def identity(version, repository=REPOSITORY, commit=COMMIT):
     if version != VERSION:
         raise ValueError("unsupported Server release version: " + version)
+    if repository != REPOSITORY or commit != COMMIT:
+        raise ValueError("official Server release requires " + REPOSITORY + "@" + COMMIT)
     return dict(source_kind="asf-release", release_version=VERSION,
+                source_repository=REPOSITORY, source_commit=COMMIT,
                 source_url=SOURCE_URL, official_sha512=SHA512)
 
 
@@ -69,12 +74,15 @@ def download(directory):
 
 if __name__ == "__main__":
     try:
-        identity(os.environ.get("FIXTURE_RELEASE_VERSION", VERSION))
-        if sys.argv[1] == "download":
+        identity(os.environ.get("FIXTURE_RELEASE_VERSION", VERSION),
+                 os.environ["FIXTURE_REPOSITORY"], os.environ["FIXTURE_COMMIT"])
+        if sys.argv[1] == "validate":
+            pass
+        elif sys.argv[1] == "download":
             download(pathlib.Path(os.environ["FIXTURE_DIR"]))
         elif sys.argv[1] == "name":
             print(ARCHIVE_NAME)
         else:
             raise ValueError("invalid release helper command")
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         sys.exit(str(error))
