@@ -122,12 +122,17 @@ def assert_safe_tar_member(member, work_dir):
             raise RuntimeError(f"Unsafe tar link outside work dir: {member.name}")
 
 
-def extract_tarball(tarball, work_dir):
-    with tarfile.open(tarball, "r:gz") as archive:
+def extract_archive(tarball, work_dir):
+    with tarfile.open(tarball) as archive:
         members = archive.getmembers()
         for member in members:
             assert_safe_tar_member(member, work_dir)
-        archive.extractall(work_dir, members)
+        # Recheck each member against links already written during extraction.
+        archive.extractall(work_dir, members, filter="data")
+
+
+def extract_tarball(tarball, work_dir):
+    extract_archive(tarball, work_dir)
     homes = [path for path in work_dir.iterdir()
              if path.is_dir() and path.name.startswith("apache-hugegraph-hubble-")]
     if not homes:
