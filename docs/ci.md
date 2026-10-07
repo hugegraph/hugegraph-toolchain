@@ -104,3 +104,5 @@ Validate policy and retry behavior locally:
 python3 -m unittest discover -s .github/scripts -p 'test_*.py'
 actionlint
 ```
+
+Upstream compatibility runs daily and on demand against the latest ASF master, resolved once to an immutable commit for each run. It reuses the SDK build, core compilation, Client HTTP tests, Loader and Hubble backend unit tests, and Tools functional tests; Hadoop, Spark/Flink engine matrices and frontend browser tests remain in module CI. This independent check does not change the locked Required CI baseline.
