@@ -54,6 +54,9 @@ SDK_MODULES+=,hugegraph-store/hg-store-client,hugegraph-struct
     -Dflatten.mode=resolveCiFriendliesOnly -DupdatePomFile=true \
     -DskipTests -Dmaven.javadoc.skip=true -ntp)
 ACTUAL_COMMIT=$(git -C "$SOURCE_DIR" rev-parse HEAD)
+if [[ "$SERVER_FETCH_REF" =~ ^([0-9a-fA-F]{6}|[0-9a-fA-F]{40})$ ]]; then
+    export SERVER_FETCH_REF=$ACTUAL_COMMIT
+fi
 python3 - "$SOURCE_DIR" "$CANDIDATE_REPO" "${SERVER_REPOSITORY:-apache/hugegraph}" \
     "$ACTUAL_COMMIT" "$JAVA_HOME" "$JAVA_VERSION" <<'PY_MANIFEST'
 import hashlib
