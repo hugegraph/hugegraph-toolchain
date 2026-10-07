@@ -103,6 +103,7 @@ jobs:
           mvn test -P kafka
 
       - name: Upload coverage to Codecov
+        continue-on-error: true
         uses: ./.github/actions/upload-coverage
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
