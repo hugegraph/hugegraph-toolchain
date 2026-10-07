@@ -32,7 +32,7 @@ import tempfile
 import time
 import uuid
 
-from verify_candidate_image_sdk import COMMIT, validate_sdk
+from verify_candidate_image_sdk import source_commit, validate_sdk
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -67,7 +67,7 @@ def digest(path):
 
 def prepare(module, commit, repository, server_archive, archive_sha, work, evidence):
     sdk, hashes = validate_sdk(repository)
-    if commit != COMMIT or sdk["commit"] != commit:
+    if commit != source_commit() or sdk["commit"] != commit:
         raise RuntimeError("Image source does not match the locked SDK commit")
     if not server_archive.is_file() or digest(server_archive) != archive_sha:
         raise RuntimeError("Missing or changed same-source server archive")

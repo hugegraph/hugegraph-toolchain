@@ -52,12 +52,14 @@ cp -a "$repository/org/apache/hugegraph" "$work/builder/repository/org/apache/"
 cp "$repository/candidate-sdk-manifest.json" "$work/builder/repository/"
 cat > "$work/builder/Dockerfile" <<'DOCKERFILE'
 FROM maven:3.9.11-eclipse-temurin-17
+ARG CANDIDATE_SOURCE_COMMIT
+ENV CANDIDATE_SOURCE_COMMIT=$CANDIDATE_SOURCE_COMMIT
 COPY repository /opt/candidate-m2
 DOCKERFILE
 builder="hugegraph-candidate-maven:$server_commit"
 phase="build candidate Maven image"
 phase_log="$evidence/builder.log"
-docker build -t "$builder" "$work/builder" > "$evidence/builder.log" 2>&1
+docker build --build-arg "CANDIDATE_SOURCE_COMMIT=$server_commit" -t "$builder" "$work/builder" > "$evidence/builder.log" 2>&1
 # These are fresh task-owned build inputs; retain the server archive and evidence.
 rm -rf -- "$work/builder"
 phase="build product image"

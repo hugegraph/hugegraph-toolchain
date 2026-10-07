@@ -33,6 +33,12 @@ import verify_candidate_image_sdk as sdk
 
 
 class ImageEvidenceTest(unittest.TestCase):
+    def setUp(self):
+        self.source_commit = "d9abcd" + "1" * 34
+        identity = patch.dict(os.environ, CANDIDATE_SOURCE_COMMIT=self.source_commit)
+        identity.start()
+        self.addCleanup(identity.stop)
+
     def fixture(self, root):
         repository = root / "m2"
         artifacts, modules = [], []
@@ -53,7 +59,7 @@ class ImageEvidenceTest(unittest.TestCase):
             modules.append({"group_id": "org.apache.hugegraph", "artifact_id": artifact,
                             "version": "1.7.0", "packaging": packaging,
                             "source_pom": source_pom, "files": files})
-        manifest = {"repository": sdk.REPOSITORY, "commit": sdk.COMMIT,
+        manifest = {"repository": sdk.REPOSITORY, "commit": self.source_commit,
                     "source_revision": "1.7.0", "java_version": "17",
                     "required_sdk_modules": modules, "artifacts": artifacts}
         self.write_manifest(repository, manifest)
@@ -106,13 +112,15 @@ class ImageEvidenceTest(unittest.TestCase):
             work, evidence = root / "work", root / "evidence"
             work.mkdir()
             evidence.mkdir()
-            images.prepare("loader", sdk.COMMIT, repository, archive, expected, work, evidence)
+            images.prepare("loader", self.source_commit, repository, archive, expected, work, evidence)
             output = json.loads((evidence / "manifest.json").read_text())
             self.assertEqual(expected, output["server_archive_sha256"])
-            self.assertEqual(sdk.COMMIT, output["server_commit"])
+            self.assertEqual(self.source_commit, output["server_commit"])
+            with self.assertRaisesRegex(RuntimeError, "locked SDK commit"):
+                images.prepare("loader", self.source_commit[:6], repository, archive, expected, work, evidence)
             archive.write_bytes(b"replacement archive")
             with self.assertRaisesRegex(RuntimeError, "changed same-source server archive"):
-                images.prepare("loader", sdk.COMMIT, repository, archive, expected, work, evidence)
+                images.prepare("loader", self.source_commit, repository, archive, expected, work, evidence)
 
     def test_runtime_hash_and_required_libraries_cannot_be_waived(self):
         expected = {artifact + "-1.7.0.jar": "candidate" for artifact in (*images.REQUIRED, "hugegraph-core")}
@@ -139,7 +147,7 @@ class ImageEvidenceTest(unittest.TestCase):
     def test_smoke_reports_failure_types_without_exposing_exception_details(self):
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory)
-            manifest = {"module": "loader", "image": "fixture", "server_commit": sdk.COMMIT,
+            manifest = {"module": "loader", "image": "fixture", "server_commit": self.source_commit,
                         "toolchain_commit": "fixture"}
             (evidence / "manifest.json").write_text(json.dumps(manifest))
             original_error = "https://user:password@example.invalid/?token=secret"
@@ -193,7 +201,7 @@ class ImageEvidenceTest(unittest.TestCase):
             environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ["PATH"],
                                RUNNER_TEMP=str(root))
             result = subprocess.run(["bash", str(images.ROOT / ".github/scripts/build-java17-image.sh"),
-                                     "loader", sdk.COMMIT, str(root / "repository"),
+                                     "loader", self.source_commit, str(root / "repository"),
                                      str(root / "server.tar.gz"), "fixture-sha", str(evidence)],
                                     cwd=images.ROOT, env=environment, capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 23)
