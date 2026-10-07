@@ -32,6 +32,26 @@ import java17_image as images
 import verify_candidate_image_sdk as sdk
 
 
+class ServerArchiveExtractionTest(unittest.TestCase):
+    def test_server_uses_shared_filtered_extraction_after_digest_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "server.tar.gz"
+            archive.write_bytes(b"fixture")
+            manifest = {"server_archive": str(archive),
+                        "server_archive_sha256": images.digest(archive)}
+            with patch.object(images.HTTP, "extract_archive",
+                              side_effect=RuntimeError("extraction stopped")) as extract:
+                with self.assertRaisesRegex(RuntimeError, "extraction stopped"):
+                    images.start_server(manifest, root / "runtime", root)
+                extract.assert_called_once_with(archive, root / "runtime")
+                extract.reset_mock()
+                archive.write_bytes(b"changed")
+                with self.assertRaisesRegex(RuntimeError, "changed after candidate build"):
+                    images.start_server(manifest, root / "runtime", root)
+                extract.assert_not_called()
+
+
 class ImageEvidenceTest(unittest.TestCase):
     def setUp(self):
         self.source_commit = "d9abcd" + "1" * 34

@@ -17,6 +17,8 @@
 #
 
 import importlib.util
+import io
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -27,6 +29,58 @@ SCRIPT = Path(__file__).with_name("run_live_hubble_smoke.py")
 SPEC = importlib.util.spec_from_file_location("run_live_hubble_smoke", SCRIPT)
 SMOKE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SMOKE)
+
+
+class ArchiveExtractionTest(unittest.TestCase):
+
+    def test_sequential_symlink_escape_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work = root / "runtime"
+            work.mkdir()
+            tarball = root / "escape.tar.gz"
+            with tarfile.open(tarball, "w:gz") as archive:
+                for name, target in (("pivot", "."), ("pivot/escape", "..")):
+                    member = tarfile.TarInfo(name)
+                    member.type = tarfile.SYMTYPE
+                    member.linkname = target
+                    archive.addfile(member)
+                member = tarfile.TarInfo("pivot/escape/escaped")
+                member.size = 7
+                archive.addfile(member, io.BytesIO(b"outside"))
+            # Each entry passes the old preflight before any links exist.
+            with tarfile.open(tarball) as archive:
+                for member in archive.getmembers():
+                    SMOKE.assert_safe_tar_member(member, work)
+
+            with self.assertRaises(tarfile.FilterError):
+                SMOKE.extract_archive(tarball, work)
+            self.assertFalse((root / "escaped").exists())
+
+    def test_internal_symbolic_and_hard_links_are_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work = root / "runtime"
+            work.mkdir()
+            tarball = root / "hubble.tar.gz"
+            home_name = "apache-hugegraph-hubble-fixture"
+            with tarfile.open(tarball, "w:gz") as archive:
+                member = tarfile.TarInfo(f"{home_name}/lib/payload")
+                member.size = 7
+                archive.addfile(member, io.BytesIO(b"fixture"))
+                for name, target, kind in (
+                        ("current", "lib", tarfile.SYMTYPE),
+                        ("copy", f"{home_name}/lib/payload", tarfile.LNKTYPE)):
+                    member = tarfile.TarInfo(f"{home_name}/{name}")
+                    member.type = kind
+                    member.linkname = target
+                    archive.addfile(member)
+
+            home = SMOKE.extract_tarball(tarball, work)
+            self.assertEqual(work / home_name, home)
+            self.assertTrue((home / "current").is_symlink())
+            self.assertEqual(b"fixture", (home / "current/payload").read_bytes())
+            self.assertEqual(b"fixture", (home / "copy").read_bytes())
 
 
 class HubbleReadinessTest(unittest.TestCase):

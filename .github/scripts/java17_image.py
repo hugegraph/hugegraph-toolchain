@@ -27,7 +27,6 @@ import shutil
 import socket
 import subprocess
 import sys
-import tarfile
 import tempfile
 import time
 import uuid
@@ -126,10 +125,7 @@ def start_server(manifest, runtime, evidence):
     archive = Path(manifest["server_archive"])
     if digest(archive) != manifest["server_archive_sha256"]:
         raise RuntimeError("Server archive changed after candidate build")
-    with tarfile.open(archive) as package:
-        for member in package.getmembers():
-            HTTP.assert_safe_tar_member(member, runtime)
-        package.extractall(runtime)
+    HTTP.extract_archive(archive, runtime)
     homes = list(runtime.glob("apache-hugegraph-*"))
     if len(homes) != 1 or not homes[0].is_dir():
         raise RuntimeError("Invalid server archive root")
