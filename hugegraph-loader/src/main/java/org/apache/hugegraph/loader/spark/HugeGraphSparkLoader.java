@@ -65,6 +65,7 @@ import org.slf4j.Logger;
 
 import java.io.Serializable;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -137,6 +138,7 @@ public class HugeGraphSparkLoader implements Serializable {
     }
 
     public void load() throws ExecutionException, InterruptedException {
+        checkLoadOptions(this.loadOptions);
         LoadMapping mapping = LoadMapping.of(this.loadOptions.file);
         List<InputStruct> structs = mapping.structs();
         checkHeaders(structs);
@@ -196,12 +198,24 @@ public class HugeGraphSparkLoader implements Serializable {
         }
     }
 
+    static void checkLoadOptions(LoadOptions options) {
+        if (options.incrementalMode || options.failureMode) {
+            throw new LoadException("Spark does not support --incremental-mode or --failure-mode; " +
+                                    "see docs/spark-java17.md");
+        }
+    }
+
     static void checkHeaders(List<InputStruct> structs) {
         for (InputStruct struct : structs) {
             switch (struct.input().type()) {
                 case FILE:
                 case HDFS:
                     FileSource source = struct.input().asFileSource();
+                    if (source.format() == FileFormat.TEXT &&
+                        !StandardCharsets.UTF_8.equals(Charset.forName(source.charset()))) {
+                        throw new LoadException("Spark TEXT input '%s' requires UTF-8 charset; " +
+                                                "see docs/spark-java17.md", source.path());
+                    }
                     if (source.format() != FileFormat.CSV &&
                         source.format() != FileFormat.TEXT) {
                         break;

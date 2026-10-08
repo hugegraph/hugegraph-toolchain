@@ -142,6 +142,47 @@ public class SparkRowTest {
         }
     }
 
+    @Test
+    public void testTextCharsetPreflightForFileAndHdfs() throws Exception {
+        for (String type : Arrays.asList("file", "hdfs")) {
+            for (String charset : Arrays.asList("UTF-8", "utf8")) {
+                HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
+                        "{\"vertices\":[" + headerMapping(type, "TEXT",
+                                "\"header\":[\"name\"],\"charset\":\"" + charset + "\"") + "]}").structs());
+            }
+            assertHeaderRejectedBeforeInitialization(type, "TEXT",
+                                                     "\"header\":[\"name\"],\"charset\":\"GBK\"");
+            try {
+                HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
+                        "{\"vertices\":[" + headerMapping(type, "TEXT",
+                                "\"header\":[\"name\"],\"charset\":\"GBK\"") + "]}").structs());
+                Assert.fail("Expected non-UTF-8 TEXT input rejection");
+            } catch (LoadException expected) {
+                Assert.assertTrue(expected.getMessage().contains("requires UTF-8 charset"));
+                Assert.assertTrue(expected.getMessage().contains(type + "-TEXT"));
+            }
+        }
+    }
+
+    @Test
+    public void testUnsupportedResumeModesRejectedBeforeMappingOrSpark() throws Exception {
+        HugeGraphSparkLoader.checkLoadOptions(new LoadOptions());
+        for (String mode : Arrays.asList("incrementalMode", "failureMode")) {
+            LoadOptions options = new LoadOptions();
+            set(options, mode, true);
+            HugeGraphSparkLoader loader = allocate(HugeGraphSparkLoader.class);
+            set(loader, "loadOptions", options);
+            // No mapping or executor is configured: load() must reject the option first.
+            try {
+                loader.load();
+                Assert.fail("Expected unsupported Spark resume mode rejection");
+            } catch (LoadException expected) {
+                Assert.assertTrue(expected.getMessage().contains("--incremental-mode"));
+                Assert.assertTrue(expected.getMessage().contains("--failure-mode"));
+            }
+        }
+    }
+
     private static void assertHeaderRejectedBeforeInitialization(String type, String format,
                                                                  String header) throws Exception {
         // The valid first mapping must not submit any partition before the second is checked.
