@@ -33,6 +33,26 @@ SPEC.loader.exec_module(SMOKE)
 
 class ArchiveExtractionTest(unittest.TestCase):
 
+    def test_missing_data_filter_fails_before_opening_archive(self):
+        with mock.patch.object(tarfile, "data_filter", None, create=True), \
+                mock.patch.object(tarfile, "open") as open_archive:
+            with self.assertRaisesRegex(RuntimeError, "tarfile.data_filter"):
+                SMOKE.extract_archive(Path("hubble.tar.gz"), Path("runtime"))
+            open_archive.assert_not_called()
+
+    def test_cli_rejects_unsupported_python_before_runtime_setup(self):
+        with mock.patch.object(tarfile, "data_filter", None, create=True), \
+                mock.patch("sys.argv", [str(SCRIPT), "hubble.tar.gz"]), \
+                mock.patch.object(SMOKE, "is_healthy") as is_healthy, \
+                mock.patch.object(tempfile, "mkdtemp") as create_work_dir, \
+                mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            with self.assertRaises(SystemExit) as error:
+                SMOKE.main()
+            self.assertEqual(2, error.exception.code)
+            self.assertIn("upgrade to the latest security patch", stderr.getvalue())
+            is_healthy.assert_not_called()
+            create_work_dir.assert_not_called()
+
     def test_sequential_symlink_escape_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
