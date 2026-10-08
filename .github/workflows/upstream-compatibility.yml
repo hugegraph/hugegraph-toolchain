@@ -9,8 +9,11 @@ on:
       - '.github/workflows/upstream-compatibility.yml'
       - '.github/actions/get-hugegraph-commit/**'
       - '.github/actions/setup-candidate-sdk/**'
+      - '.github/actions/setup-java-env/**'
+      - '.github/configs/settings.xml'
       - 'hugegraph-client/assembly/travis/install-candidate-sdk.sh'
       - 'hugegraph-client/assembly/travis/checkout-server.sh'
+      - 'hugegraph-client/assembly/travis/start-hugegraph-servers.sh'
       - '.github/scripts/verify_candidate_image_sdk.py'
 
 permissions:

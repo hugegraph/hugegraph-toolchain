@@ -17,6 +17,8 @@
 
 package org.apache.hugegraph.loader.test.unit;
 
+import org.apache.hugegraph.loader.spark.SparkPartitionWriterTest;
+import org.apache.hugegraph.loader.spark.SparkRowTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -27,6 +29,8 @@ import org.junit.runners.Suite;
         LoadOptionsTest.class,
         LoadContextTest.class,
         TaskManagerTest.class,
+        SparkPartitionWriterTest.class,
+        SparkRowTest.class,
         DateUtilTest.class,
         MappingConverterTest.class,
         LoadProgressTest.class,
