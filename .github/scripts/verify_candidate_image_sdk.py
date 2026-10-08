@@ -61,15 +61,15 @@ def source_commit():
     return expected
 
 
-def validate_sdk(repository):
+def validate_sdk(repository, expected_revision=None):
     try:
-        return _validate_sdk(Path(repository))
+        return _validate_sdk(Path(repository), expected_revision)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise RuntimeError("Invalid candidate SDK manifest or artifact metadata (" +
                            type(error).__name__ + ")") from None
 
 
-def _validate_sdk(repository):
+def _validate_sdk(repository, expected_revision=None):
     repository = Path(repository)
     manifest = json.loads((repository / "candidate-sdk-manifest.json").read_text())
     if (manifest["repository"], manifest["commit"]) != (REPOSITORY, source_commit()):
@@ -77,7 +77,10 @@ def _validate_sdk(repository):
     java_version = manifest["java_version"]
     if not isinstance(java_version, str) or not java_version.isdecimal():
         raise ValueError("Invalid Java version format")
-    if manifest["source_revision"] != "1.7.0" or java_version != "17":
+    revision = expected_revision or os.environ.get("CANDIDATE_SDK_VERSION", "1.7.0")
+    if not isinstance(revision, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.+-]*", revision):
+        raise ValueError("Invalid candidate SDK version")
+    if manifest["source_revision"] != revision or java_version != "17":
         raise RuntimeError("SDK revision or Java version does not match the candidate contract")
     modules = manifest["required_sdk_modules"]
     if len(modules) != len(REQUIRED_MODULES) or {m["source_pom"] for m in modules} != REQUIRED_MODULES:
@@ -87,7 +90,7 @@ def _validate_sdk(repository):
         raise RuntimeError("Duplicate SDK artifact paths")
     required_files = set()
     for module in modules:
-        if module["group_id"] != "org.apache.hugegraph" or module["version"] != "1.7.0":
+        if module["group_id"] != "org.apache.hugegraph" or module["version"] != revision:
             raise RuntimeError("Unexpected required SDK coordinates")
         artifact = module["artifact_id"]
         source_pom = module["source_pom"]
@@ -97,7 +100,7 @@ def _validate_sdk(repository):
         if artifact != expected_artifact or module["packaging"] != ("pom" if parent else "jar"):
             raise RuntimeError("Required SDK module does not match its source coordinates")
         extensions = {"pom", "jar"} if module["packaging"] == "jar" else {"pom"}
-        expected = {f"org/apache/hugegraph/{artifact}/1.7.0/{artifact}-1.7.0.{ext}"
+        expected = {f"org/apache/hugegraph/{artifact}/{revision}/{artifact}-{revision}.{ext}"
                     for ext in extensions}
         if set(module["files"]) != expected:
             raise RuntimeError("Required SDK module has missing or unexpected files")
@@ -160,16 +163,33 @@ def validate_distribution(repository, directory, module):
     return actual
 
 
+def configure_upstream(repository, environment):
+    """Select consumer coordinates only after verifying this run's SDK artifacts."""
+    repository = Path(repository)
+    revision = json.loads((repository / "candidate-sdk-manifest.json").read_text())["source_revision"]
+    manifest, jars = validate_sdk(repository, revision)
+    with Path(environment).open("a") as stream:
+        stream.write(f"CANDIDATE_SDK_VERSION={revision}\n")
+        stream.write(f"MAVEN_ARGS={os.environ.get('MAVEN_ARGS', '')} -Dhugegraph.version={revision}\n")
+    return manifest, jars
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository", type=Path)
     parser.add_argument("--distribution", type=Path)
+    parser.add_argument("--configure-upstream-env", type=Path)
     parser.add_argument("--module", choices=("loader", "tools", "hubble"))
     args = parser.parse_args()
     if bool(args.distribution) != bool(args.module):
         parser.error("--distribution and --module must be used together")
+    if args.configure_upstream_env and args.distribution:
+        parser.error("--configure-upstream-env cannot be combined with --distribution")
     try:
-        manifest, jars = validate_sdk(args.repository)
+        if args.configure_upstream_env:
+            manifest, jars = configure_upstream(args.repository, args.configure_upstream_env)
+        else:
+            manifest, jars = validate_sdk(args.repository)
         if args.distribution:
             validate_distribution(args.repository, args.distribution, args.module)
     except RuntimeError as error:
