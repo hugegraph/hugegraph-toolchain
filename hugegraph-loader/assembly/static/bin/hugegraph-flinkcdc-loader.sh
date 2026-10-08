@@ -15,6 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
+set -euo pipefail
+
 BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR=$(dirname "${BIN_DIR}")
 LIB_DIR=${APP_DIR}/lib

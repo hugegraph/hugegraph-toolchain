@@ -378,6 +378,18 @@ class SparkLauncherTest(unittest.TestCase):
         self.assertIn("Missing value for --password", result.stderr)
         self.assertFalse(self.argv.exists())
 
+    def test_legacy_cdc_missing_value_stops_before_command_construction(self):
+        source = Path(__file__).resolve().parents[3] / "assembly/static/bin"
+        launcher = self.app / "bin/hugegraph-flinkcdc-loader.sh"
+        shutil.copyfile(source / launcher.name, launcher)
+        for option in ("--password", "--file", "--batch-size"):
+            result = subprocess.run(["bash", str(launcher), option],
+                                    text=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, timeout=10)
+            self.assertEqual(2, result.returncode, result.stderr)
+            self.assertIn("Missing value for " + option, result.stderr)
+            self.assertEqual("", result.stdout)
+
     def test_help_does_not_consume_an_engine_parameter(self):
         result = self.run_launcher("--help", "--master", "local[1]")
         self.assertEqual(0, result.returncode, result.stderr)
