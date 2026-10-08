@@ -5371,3 +5371,510 @@ Copyright 2001-2019 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
+
+========================================================================
+Flink CDC runtime dependency notices
+========================================================================
+
+========================================================================
+Inherited shaded payload: jakarta.xml.bind:jakarta.xml.bind-api:2.3.2 / META-INF/NOTICE.md
+========================================================================
+
+# Notices for Eclipse Project for JAXB
+
+This content is produced and maintained by the Eclipse Project for JAXB project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jaxb
+
+## Trademarks
+
+Eclipse Project for JAXB is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Distribution License v. 1.0 which is available
+at http://www.eclipse.org/org/documents/edl-v10.php.
+
+SPDX-License-Identifier: BSD-3-Clause
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/jaxb-api
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+None
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+========================================================================
+Inherited shaded payload: commons-lang:commons-lang:2.6 / META-INF/NOTICE.txt
+========================================================================
+
+Apache Commons Lang
+Copyright 2001-2011 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+========================================================================
+com.fasterxml.jackson.module:jackson-module-afterburner:2.21.4 / META-INF/NOTICE
+========================================================================
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers, as well as supported
+commercially by FasterXML.com.
+
+## Licensing
+
+Jackson core and extension components (as well their dependencies) may be licensed under
+different licenses.
+To find the details that apply to this artifact see the accompanying LICENSE file.
+For more information, including possible other licensing options, contact
+FasterXML.com (http://fasterxml.com).
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+========================================================================
+io.swagger.core.v3:swagger-annotations:2.2.8 / META-INF/NOTICE
+========================================================================
+
+Swagger Core - swagger-annotations
+Copyright (c) 2015. SmartBear Software Inc.
+Swagger Core - swagger-annotations  is licensed under Apache 2.0 license.
+Copy of the Apache 2.0 license can be found in `LICENSE` file.
+
+========================================================================
+jakarta.ws.rs:jakarta.ws.rs-api:2.1.6 / META-INF/NOTICE.md
+========================================================================
+
+# Notices for the Jakarta RESTful Web Services Project
+
+This content is produced and maintained by the **Jakarta RESTful Web Services**
+project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jaxrs
+
+## Trademarks
+
+**Jakarta RESTful Web Services** is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License, version 2 with the GNU Classpath Exception which is
+available at https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/jaxrs-api
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+javaee-api (7.0)
+
+* License: Apache-2.0 AND W3C
+
+JUnit (4.11)
+
+* License: Common Public License 1.0
+
+Mockito (2.16.0)
+
+* Project: http://site.mockito.org
+* Source: https://github.com/mockito/mockito/releases/tag/v2.16.0
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+
+========================================================================
+org.apache.flink:flink-cdc-common:3.6.0-2.2 / META-INF/NOTICE
+========================================================================
+
+
+flink-cdc-common
+Copyright 2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+========================================================================
+org.apache.flink:flink-cdc-flink2-compat:3.6.0-2.2 / META-INF/NOTICE
+========================================================================
+
+
+flink-cdc-flink2-compat
+Copyright 2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+========================================================================
+org.apache.flink:flink-cdc-runtime:3.6.0-2.2 / META-INF/NOTICE
+========================================================================
+
+
+flink-cdc-runtime
+Copyright 2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+========================================================================
+org.apache.flink:flink-connector-debezium:3.6.0-2.2 / META-INF/NOTICE
+========================================================================
+
+
+flink-connector-debezium
+Copyright 2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+========================================================================
+org.apache.flink:flink-connector-mysql-cdc:3.6.0-2.2 / META-INF/NOTICE
+========================================================================
+
+
+flink-connector-mysql-cdc
+Copyright 2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+========================================================================
+org.apache.flink:flink-shaded-guava:31.1-jre-17.0 / META-INF/NOTICE
+========================================================================
+
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for Apache Flink-shaded
+// ------------------------------------------------------------------
+
+Apache Flink-shaded
+Copyright 2006-2023 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+flink-shaded-guava-30
+Copyright 2014-2021 The Apache Software Foundation
+
+This project bundles the following dependencies under the Apache Software License 2.0 (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+- com.google.guava:guava:31.1-jre
+- com.google.guava:failureaccess:1.0.1
+
+
+========================================================================
+org.apache.flink:flink-shaded-guava:33.4.0-jre-20.0 / META-INF/NOTICE
+========================================================================
+
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for Apache Flink-shaded
+// ------------------------------------------------------------------
+
+Apache Flink-shaded
+Copyright 2006-2025 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+flink-shaded-guava-33
+Copyright 2014-2023 The Apache Software Foundation
+
+This project bundles the following dependencies under the Apache Software License 2.0 (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+- com.google.guava:guava:33.4.0-jre
+- com.google.guava:failureaccess:1.0.2
+
+
+========================================================================
+org.apache.kafka:connect-api:3.2.0 / NOTICE
+org.apache.kafka:connect-file:3.2.0 / NOTICE
+org.apache.kafka:connect-json:3.2.0 / NOTICE
+org.apache.kafka:connect-runtime:3.2.0 / NOTICE
+org.apache.kafka:connect-transforms:3.2.0 / NOTICE
+org.apache.kafka:kafka-clients:3.2.0 / NOTICE
+org.apache.kafka:kafka-tools:3.2.0 / NOTICE
+========================================================================
+
+Apache Kafka
+Copyright 2022 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+This distribution has a binary dependency on jersey, which is available under the CDDL
+License. The source code of jersey can be found at https://github.com/jersey/jersey/.
+
+This distribution has a binary test dependency on jqwik, which is available under
+the Eclipse Public License 2.0. The source code can be found at
+https://github.com/jlink/jqwik.
+
+The streams-scala (streams/streams-scala) module was donated by Lightbend and the original code was copyrighted by them:
+Copyright (C) 2018 Lightbend Inc. <https://www.lightbend.com>
+Copyright (C) 2017-2018 Alexis Seigneurin.
+
+This project contains the following code copied from Apache Hadoop:
+clients/src/main/java/org/apache/kafka/common/utils/PureJavaCrc32C.java
+Some portions of this file Copyright (c) 2004-2006 Intel Corporation and licensed under the BSD license.
+
+This project contains the following code copied from Apache Hive:
+streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
+
+========================================================================
+org.apache.kafka:connect-api:3.9.2 / NOTICE
+org.apache.kafka:connect-file:3.9.2 / NOTICE
+org.apache.kafka:connect-json:3.9.2 / NOTICE
+org.apache.kafka:connect-runtime:3.9.2 / NOTICE
+org.apache.kafka:connect-transforms:3.9.2 / NOTICE
+org.apache.kafka:kafka-clients:3.9.2 / NOTICE
+========================================================================
+
+Apache Kafka
+Copyright 2026 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+This distribution has a binary dependency on jersey, which is available under the CDDL
+License. The source code of jersey can be found at https://github.com/jersey/jersey/.
+
+This distribution has a binary test dependency on jqwik, which is available under
+the Eclipse Public License 2.0. The source code can be found at
+https://github.com/jlink/jqwik.
+
+The streams-scala (streams/streams-scala) module was donated by Lightbend and the original code was copyrighted by them:
+Copyright (C) 2018 Lightbend Inc. <https://www.lightbend.com>
+Copyright (C) 2017-2018 Alexis Seigneurin.
+
+This project contains the following code copied from Apache Hadoop:
+clients/src/main/java/org/apache/kafka/common/utils/PureJavaCrc32C.java
+Some portions of this file Copyright (c) 2004-2006 Intel Corporation and licensed under the BSD license.
+
+This project contains the following code copied from Apache Hive:
+streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
+
+========================================================================
+org.apache.maven:maven-artifact:3.8.4 / META-INF/NOTICE
+========================================================================
+
+
+Maven Artifact
+Copyright 2001-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+========================================================================
+org.apache.maven:maven-artifact:3.9.6 / META-INF/NOTICE
+========================================================================
+
+Maven Artifact
+Copyright 2001-2023 The Apache Software Foundation
+
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+========================================================================
+org.codehaus.plexus:plexus-utils:3.3.0 / META-INF/NOTICE
+org.codehaus.plexus:plexus-utils:3.5.1 / META-INF/NOTICE
+========================================================================
+
+This product includes software developed by the Indiana University
+  Extreme! Lab (http://www.extreme.indiana.edu/).
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+This product includes software developed by
+ThoughtWorks (http://www.thoughtworks.com).
+
+This product includes software developed by
+javolution (http://javolution.org/).
+
+This product includes software developed by
+Rome (https://rome.dev.java.net/).
+
+========================================================================
+org.glassfish.jersey.containers:jersey-container-servlet:2.34 / META-INF/NOTICE.md
+org.glassfish.jersey.inject:jersey-hk2:2.34 / META-INF/NOTICE.md
+========================================================================
+
+# Notice for Jersey
+This content is produced and maintained by the Eclipse Jersey project.
+
+*  Project home: https://projects.eclipse.org/projects/ee4j.jersey
+
+## Trademarks
+Eclipse Jersey is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License, version 2 with the GNU Classpath Exception which is
+available at https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/jersey
+
+## Third-party Content
+
+Angular JS, v1.6.6
+* License MIT (http://www.opensource.org/licenses/mit-license.php)
+* Project: http://angularjs.org
+* Coyright: (c) 2010-2017 Google, Inc.
+
+aopalliance Version 1
+* License: all the source code provided by AOP Alliance is Public Domain.
+* Project: http://aopalliance.sourceforge.net
+* Copyright: Material in the public domain is not protected by copyright
+
+Bean Validation API 2.0.2
+* License: Apache License, 2.0
+* Project: http://beanvalidation.org/1.1/
+* Copyright: 2009, Red Hat, Inc. and/or its affiliates, and individual contributors
+* by the @authors tag.
+
+Hibernate Validator CDI, 6.1.2.Final
+* License: Apache License, 2.0
+* Project: https://beanvalidation.org/
+* Repackaged in org.glassfish.jersey.server.validation.internal.hibernate
+
+Bootstrap v3.3.7
+* License: MIT license (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+* Project: http://getbootstrap.com
+* Copyright: 2011-2016 Twitter, Inc
+
+Google Guava Version 18.0
+* License: Apache License, 2.0
+* Copyright (C) 2009 The Guava Authors
+
+javax.inject Version: 1
+* License: Apache License, 2.0
+* Copyright (C) 2009 The JSR-330 Expert Group
+
+Javassist Version 3.25.0-GA
+* License: Apache License, 2.0
+* Project: http://www.javassist.org/
+* Copyright (C) 1999- Shigeru Chiba. All Rights Reserved.
+
+Jackson JAX-RS Providers Version 2.10.1
+* License: Apache License, 2.0
+* Project: https://github.com/FasterXML/jackson-jaxrs-providers
+* Copyright: (c) 2009-2011 FasterXML, LLC. All rights reserved unless otherwise indicated.
+
+jQuery v1.12.4
+* License: jquery.org/license
+* Project: jquery.org
+* Copyright: (c) jQuery Foundation
+
+jQuery Barcode plugin 0.3
+* License: MIT & GPL (http://www.opensource.org/licenses/mit-license.php & http://www.gnu.org/licenses/gpl.html)
+* Project:  http://www.pasella.it/projects/jQuery/barcode
+* Copyright: (c) 2009 Antonello Pasella antonello.pasella@gmail.com
+
+JSR-166 Extension - JEP 266
+* License: CC0
+* No copyright
+* Written by Doug Lea with assistance from members of JCP JSR-166 Expert Group and released to the public domain, as explained at http://creativecommons.org/publicdomain/zero/1.0/
+
+KineticJS, v4.7.1
+* License: MIT license (http://www.opensource.org/licenses/mit-license.php)
+* Project: http://www.kineticjs.com, https://github.com/ericdrowell/KineticJS
+* Copyright: Eric Rowell
+
+org.objectweb.asm Version 8.0
+* License: Modified BSD (http://asm.objectweb.org/license.html)
+* Copyright (c) 2000-2011 INRIA, France Telecom. All rights reserved.
+
+org.osgi.core version 6.0.0
+* License: Apache License, 2.0
+* Copyright (c) OSGi Alliance (2005, 2008). All Rights Reserved.
+
+org.glassfish.jersey.server.internal.monitoring.core
+* License: Apache License, 2.0
+* Copyright (c) 2015-2018 Oracle and/or its affiliates. All rights reserved.
+* Copyright 2010-2013 Coda Hale and Yammer, Inc.
+
+W3.org documents
+* License: W3C License
+* Copyright: Copyright (c) 1994-2001 World Wide Web Consortium, (Massachusetts Institute of Technology, Institut National de Recherche en Informatique et en Automatique, Keio University). All Rights Reserved. http://www.w3.org/Consortium/Legal/

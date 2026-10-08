@@ -56,6 +56,15 @@ public class VertexBuilder extends ElementBuilder<Vertex> {
 
     @Override
     public List<Vertex> build(String[] names, Object[] values) {
+        return this.build(names, values, true);
+    }
+
+    // Reuse the endpoint identity path, without properties or the ingestion prefilter.
+    public List<Vertex> buildIdentity(String[] names, Object[] values) {
+        return this.build(names, values, false);
+    }
+
+    private List<Vertex> build(String[] names, Object[] values, boolean withProperty) {
         VertexKVPairs kvPairs = null;
         // If it's Vertex OLAP properties, VertexOlapKVPairs parsing is needed
         if (this.verifyOlapVertexBuilder()) {
@@ -67,7 +76,7 @@ public class VertexBuilder extends ElementBuilder<Vertex> {
 
         kvPairs.headerCaseSensitive(this.headerCaseSensitive());
         kvPairs.extractFromVertex(names, values);
-        return kvPairs.buildVertices(true);
+        return kvPairs.buildVertices(withProperty);
     }
 
     @Override

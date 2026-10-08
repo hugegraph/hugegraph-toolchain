@@ -403,7 +403,6 @@ See licenses/ for text of these licenses.
 	(Apache License, Version 2.0) * opencsv (net.sf.opencsv:opencsv:2.3 - http://opencsv.sf.net)
 	(Apache License, Version 2.0) * snappy-java (org.xerial.snappy:snappy-java:1.1.8.2 - https://github.com/xerial/snappy-java)
 	(Apache License, Version 2.0) * snappy-java (org.xerial.snappy:snappy-java:1.1.8.4 - https://github.com/xerial/snappy-java)
-	(Apache License, Version 2.0) * Jetty :: Asynchronous HTTP Client (org.eclipse.jetty:jetty-client:9.4.33.v20201020 - https://eclipse.org/jetty/jetty-client)
 	(Apache License, Version 2.0) * Jetty :: Asynchronous HTTP Client (org.eclipse.jetty:jetty-client:9.4.40.v20210413 - https://eclipse.org/jetty/jetty-client)
 	(Apache License, Version 2.0) * Jetty :: Http Utility (org.eclipse.jetty:jetty-http:9.4.40.v20210413 - https://eclipse.org/jetty/jetty-http)
 	(Apache License, Version 2.0) * Jetty :: IO Utility (org.eclipse.jetty:jetty-io:9.4.40.v20210413 - https://eclipse.org/jetty/jetty-io)
@@ -1084,3 +1083,153 @@ represented as byte-identical Maven Central 1.7.0 artifacts.
         Apache-2.0 terms above
     (Apache-2.0) org.apiguardian:apiguardian-api:1.1.2
         licenses/LICENSE-jackson-datatype-jdk8.txt
+
+========================================================================
+Flink CDC runtime dependency additions
+========================================================================
+
+The exact runtime union adds the components below. Versions retained by other
+modules remain listed separately. Apache-2.0 terms are reproduced above;
+other complete grants and bundled attributions are in the referenced files.
+Eclipse/Jersey/HK2/JAX-RS components use EPL-2.0, Jetty uses Apache-2.0,
+JavaBeans Activation 1.1.1 uses CDDL-1.0, and Reflections uses WTFPL.
+Zstd JNI and its bundled native Zstandard library use BSD-2-Clause.
+Flink engine and MySQL JDBC driver are supplied by the deployment environment;
+the runtime dependency model and Loader shaded artifact exclude those inputs.
+The MySQL binlog connector is an Apache-2.0 component, distinct from the JDBC driver.
+Required full notices are reproduced in the main distribution NOTICE.
+The supplement also retains the actual shaded payload's inherited license
+resources for JAXB/Commons, gRPC native code, Groovy, PostgreSQL SCRAM/stringprep,
+DataNucleus ASM and the Arrow Apache header template. These preserve baseline
+terms and attributions; they are not new CDC dependency identities.
+
+    (Apache-2.0) at.yawk.lz4:lz4-java:1.10.1
+        Apache-2.0 terms above
+    (Apache-2.0) ch.qos.reload4j:reload4j:1.2.19
+        licenses/LICENSE-listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.txt
+    (Apache-2.0) ch.qos.reload4j:reload4j:1.2.25
+        licenses/LICENSE-listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.txt
+    (Apache-2.0) com.esri.geometry:esri-geometry-api:2.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.12.3
+        Apache-2.0 terms above
+    (Apache-2.0) com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.3
+        licenses/LICENSE-jackson-core.txt
+    (Apache-2.0) com.fasterxml.jackson.module:jackson-module-afterburner:2.21.4
+        licenses/LICENSE-flink-final-third-party.txt
+    (BSD-2-Clause) com.github.luben:zstd-jni:1.5.0-2
+        licenses/LICENSE-flink-final-third-party.txt, licenses/LICENSE-hubble-java17-third-party.txt
+    (BSD-2-Clause) com.github.luben:zstd-jni:1.5.0-4
+        licenses/LICENSE-flink-final-third-party.txt, licenses/LICENSE-hubble-java17-third-party.txt
+    (Apache-2.0) com.zaxxer:HikariCP:4.0.3
+        Apache-2.0 terms above
+    (Apache-2.0) com.zendesk:mysql-binlog-connector-java:0.27.2
+        Apache-2.0 terms above
+    (Apache-2.0) io.debezium:debezium-api:1.9.8.Final
+        Apache-2.0 terms above
+    (Apache-2.0) io.debezium:debezium-connector-mysql:1.9.8.Final
+        Apache-2.0 terms above
+    (Apache-2.0) io.debezium:debezium-core:1.9.8.Final
+        Apache-2.0 terms above
+    (Apache-2.0) io.debezium:debezium-ddl-parser:1.9.8.Final
+        Apache-2.0 terms above
+    (Apache-2.0) io.debezium:debezium-embedded:1.9.8.Final
+        Apache-2.0 terms above
+    (Apache-2.0) io.swagger.core.v3:swagger-annotations:2.2.8
+        licenses/LICENSE-flink-final-third-party.txt
+    (EPL-2.0) jakarta.ws.rs:jakarta.ws.rs-api:2.1.6
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (CDDL-1.0) javax.activation:activation:1.1.1
+        licenses/LICENSE-flink-final-third-party.txt
+    (EPL-2.0) javax.ws.rs:javax.ws.rs-api:2.1.1
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (MIT) net.sourceforge.argparse4j:argparse4j:0.7.0
+        licenses/LICENSE-flink-final-third-party.txt
+    (BSD-3-Clause) org.antlr:antlr4-runtime:4.8
+        licenses/LICENSE-java17-candidate-sdk.txt
+    (Apache-2.0) org.apache.flink:flink-cdc-common:3.6.0-2.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.flink:flink-cdc-flink2-compat:3.6.0-2.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.flink:flink-cdc-runtime:3.6.0-2.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.flink:flink-connector-debezium:3.6.0-2.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.flink:flink-connector-mysql-cdc:3.6.0-2.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.flink:flink-shaded-guava:31.1-jre-17.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.flink:flink-shaded-guava:33.4.0-jre-20.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-api:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-api:3.9.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-file:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-file:3.9.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-json:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-json:3.9.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-runtime:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-runtime:3.9.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-transforms:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:connect-transforms:3.9.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:kafka-clients:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:kafka-clients:3.9.2
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.kafka:kafka-tools:3.2.0
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.maven:maven-artifact:3.8.4
+        Apache-2.0 terms above
+    (Apache-2.0) org.apache.maven:maven-artifact:3.9.6
+        Apache-2.0 terms above
+    (Apache-2.0) org.bitbucket.b_c:jose4j:0.7.9
+        Apache-2.0 terms above
+    (Apache-2.0) org.bitbucket.b_c:jose4j:0.9.6
+        Apache-2.0 terms above
+    (Apache-2.0) org.codehaus.plexus:plexus-utils:3.3.0
+        Apache-2.0 terms above, licenses/LICENSE-flink-final-third-party.txt
+    (Apache-2.0) org.codehaus.plexus:plexus-utils:3.5.1
+        Apache-2.0 terms above, licenses/LICENSE-flink-final-third-party.txt
+    (Apache-2.0) org.eclipse.jetty:jetty-alpn-client:12.0.36
+        Apache-2.0 terms above
+    (Apache-2.0) org.eclipse.jetty:jetty-client:12.0.36
+        Apache-2.0 terms above
+    (Apache-2.0) org.eclipse.jetty:jetty-client:9.4.44.v20210927
+        licenses/LICENSE-jetty-client.txt
+    (Apache-2.0) org.eclipse.jetty:jetty-continuation:9.4.44.v20210927
+        licenses/LICENSE-jetty-client.txt
+    (Apache-2.0) org.eclipse.jetty:jetty-continuation:9.4.57.v20241219
+        licenses/LICENSE-jetty-client.txt
+    (Apache-2.0) org.eclipse.jetty:jetty-servlets:9.4.44.v20210927
+        licenses/LICENSE-jetty-client.txt
+    (Apache-2.0) org.eclipse.jetty:jetty-servlets:9.4.57.v20241219
+        licenses/LICENSE-jetty-client.txt
+    (EPL-2.0) org.glassfish.hk2.external:aopalliance-repackaged:2.6.1
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.hk2.external:jakarta.inject:2.6.1
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.hk2:hk2-api:2.6.1
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.hk2:hk2-locator:2.6.1
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.hk2:hk2-utils:2.6.1
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.jersey.containers:jersey-container-servlet:2.34
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.jersey.containers:jersey-container-servlet:3.1.11
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (EPL-2.0) org.glassfish.jersey.inject:jersey-hk2:2.34
+        licenses/LICENSE-hubble-java17-third-party.txt
+    (WTFPL) org.reflections:reflections:0.10.2
+        licenses/LICENSE-flink-final-third-party.txt
+    (WTFPL) org.reflections:reflections:0.9.12
+        licenses/LICENSE-flink-final-third-party.txt

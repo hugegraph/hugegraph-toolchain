@@ -69,7 +69,8 @@ CP="$CP":$(find -L ${LIB} -name 'hugegraph*.jar' | sort | tr '\n' ':')
 # Add the remaining jars in lib.
 CP="$CP":$(find -L ${LIB} -name '*.jar' \
                 \! -name 'hugegraph*' \
-                \! -name 'log4j-slf4j-impl*.jar' | sort | tr '\n' ':')
+                \! -name 'log4j-slf4j-impl*.jar' \
+                \! -name 'apache-hugegraph-loader-*-shaded.jar' | sort | tr '\n' ':')
 
 export LOADER_CLASSPATH="${CLASSPATH:-}:$CP"
 
