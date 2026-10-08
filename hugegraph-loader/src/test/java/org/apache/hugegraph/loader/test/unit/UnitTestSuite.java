@@ -32,6 +32,7 @@ import org.junit.runners.Suite;
         SparkPartitionWriterTest.class,
         SparkRowTest.class,
         DateUtilTest.class,
+        ParquetUtilTest.class,
         MappingConverterTest.class,
         LoadProgressTest.class,
         RangesTimerTest.class,

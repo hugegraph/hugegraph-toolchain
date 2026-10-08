@@ -79,7 +79,7 @@ public class ParquetUtil {
             julianDay += int96Bytes[index] & 0xFF;
         }
 
-        // Find nanos since midday (since Julian days start at midday)
+        // Parquet INT96 stores nanoseconds since midnight.
         long nanos = 0;
         // Continue from the index we got to
         while (index > 0) {
@@ -90,7 +90,7 @@ public class ParquetUtil {
 
         LocalDateTime timestamp = LocalDate.MIN.with(JulianFields.JULIAN_DAY,
                                                      julianDay)
-                                               .atTime(LocalTime.NOON)
+                                               .atTime(LocalTime.MIDNIGHT)
                                                .plusNanos(nanos);
         return Date.from(timestamp.atZone(ZoneId.systemDefault()).toInstant());
     }
