@@ -421,6 +421,89 @@ class PolicyTest(unittest.TestCase):
             finally:
                 os.chdir(old)
 
+    def test_regular_pr_recovers_stale_event_base_with_real_git(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
+            git("init", "-q")
+            git("config", "user.email", "ci@example.invalid")
+            git("config", "user.name", "CI")
+            (root / "README.md").write_text("base")
+            (root / "hugegraph-hubble").mkdir()
+            (root / "hugegraph-hubble/README.md").write_text("packaged docs")
+            git("add", ".")
+            git("commit", "-qm", "base")
+            anchor = git("rev-parse", "HEAD")
+            git("checkout", "-qb", "feature")
+            (root / "hugegraph-loader").mkdir()
+            (root / "hugegraph-loader/A.java").write_text("source")
+            git("add", ".")
+            git("commit", "-qm", "feature")
+            head = git("rev-parse", "HEAD")
+            old_merge = git("commit-tree", git("rev-parse", "HEAD^{tree}"),
+                            "-p", anchor, "-p", head, "-m", "old merge")
+            git("checkout", "-qb", "target", anchor)
+            (root / "README.md").write_text("advanced master")
+            git("commit", "-qam", "advance target")
+            canonical = git("rev-parse", "HEAD")
+            git("merge", "--no-ff", "-qm", "current merge", "feature")
+            merge = git("rev-parse", "HEAD")
+            live = self.live_pr()
+            live["head"]["sha"] = head
+            live["base"].update(sha=anchor, ref="target")
+            event = {"pull_request": json.loads(json.dumps(dict(live, number=7)))}
+            live.update(merge_commit_sha=merge)
+            ref = {"object": {"type": "commit", "sha": canonical}}
+            def fetch(path):
+                if path == "repos/apache/t/pulls/7":
+                    return live
+                self.assertEqual("repos/apache/t/git/ref/heads/target", path)
+                return ref
+            old = os.getcwd()
+            try:
+                os.chdir(root)
+                # Neither event nor REST snapshot has stack metadata. The real
+                # checkout merges the current canonical target with the same head.
+                plan = policy.create_plan("toolchain", event, "apache/t", fetch)
+                self.assertEqual(canonical, plan["base"])
+                self.assertEqual("target", plan["baseBranch"])
+                self.assertNotIn("stack", plan)
+                self.assertEqual(["hubble", "loader"], plan["selected"])
+                results = {suite: {"result": "success"} for suite in plan["expected"]}
+                results.update(plan={"result": "success"}, fixture={"result": "success"},
+                               **{"hubble-fixture": {"result": "success"}})
+                report = policy.gate(plan, results, fetch)
+                self.assertEqual(canonical, report["base"])
+                self.assertEqual("target", report["baseBranch"])
+                for key, value in [("merge_commit_sha", old_merge),
+                                   ("state", "closed"),
+                                   ("head", dict(live["head"], sha=anchor)),
+                                   ("base", dict(live["base"], ref="other"))]:
+                    original = live[key]
+                    live[key] = value
+                    with self.subTest(field=key), self.assertRaises(policy.StaleInputError):
+                        policy.create_plan("toolchain", event, "apache/t", fetch)
+                    with self.subTest(gate=key), self.assertRaises(policy.StaleInputError):
+                        policy.gate(plan, results, fetch)
+                    live[key] = original
+                ref["object"]["sha"] = anchor
+                with self.assertRaises(policy.StaleInputError):
+                    policy.create_plan("toolchain", event, "apache/t", fetch)
+                with self.assertRaises(policy.StaleInputError):
+                    policy.gate(plan, results, fetch)
+                ref["object"]["sha"] = canonical
+                # A rerun of an old checkout cannot claim the fresh merge.
+                git("checkout", "--detach", "-q", old_merge)
+                with self.assertRaises(policy.StaleInputError):
+                    policy.gate(plan, results, lambda _: dict(live, head=dict(live["head"], sha=anchor)))
+                stale_event = json.loads(json.dumps(event))
+                stale_event["pull_request"]["base"]["sha"] = canonical
+                with self.assertRaises(policy.StaleInputError):
+                    policy.create_plan("toolchain", stale_event, "apache/t", fetch)
+            finally:
+                os.chdir(old)
+
     def test_native_stack_canonical_base_and_gate_freshness(self):
         # Reproduce GitHub native stacks: REST base.sha can remain at the old
         # head, while the merge's first parent wraps the actual branch head.
