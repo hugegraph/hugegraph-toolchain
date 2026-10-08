@@ -70,3 +70,5 @@ actionlint
 ```
 
 Upstream compatibility runs daily and on demand against the latest ASF master, resolved once to an immutable commit for each run. It reuses the SDK build, core compilation, Client HTTP tests, Loader and Hubble backend unit tests, and Tools functional tests; Hadoop, Spark/Flink engine matrices and frontend browser tests remain in module CI. This independent check does not change the locked Module validation baseline.
+
+The floating upstream check selects `hugegraph.version` from the verified SDK manifest for every consumer build and test. The same version is passed to SDK packaging verification through `CANDIDATE_SDK_VERSION`; provenance, local-install and artifact-hash checks remain enforced. This lets Server master advance its Maven version without accidentally testing a released SDK. Fixed-baseline jobs retain their default SDK version.
