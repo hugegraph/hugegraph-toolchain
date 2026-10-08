@@ -28,6 +28,7 @@ REPOSITORY = "apache/hugegraph"
 COMMIT = "b12425c2032bf0d21a97b8221f42a18055c2982f"
 ARCHIVE_NAME = "apache-hugegraph-incubating-1.7.0.tar.gz"
 SOURCE_URL = "https://downloads.apache.org/hugegraph/1.7.0/" + ARCHIVE_NAME
+ARCHIVE_URL = "https://archive.apache.org/dist/hugegraph/1.7.0/" + ARCHIVE_NAME
 # Verified against SOURCE_URL + ".sha512" in the official ASF distribution.
 SHA512 = ("ba093203e817f17582895ff10ceb0458498c886ec7a687fd0f3e5f56ba739454"
           "ec928a592bdad8a3685651dc9f8ef904d082f9530d4aae6a83b5d9d9626ad13f")
@@ -62,10 +63,18 @@ def download(directory):
     os.close(descriptor)
     path = pathlib.Path(temporary)
     try:
-        subprocess.run(["curl", "--fail", "--location", "--show-error", "--silent",
-                        "--connect-timeout", "20", "--max-time", "900", "--retry", "2",
-                        "--proto", "=https", "--proto-redir", "=https",
-                        "--output", str(path), SOURCE_URL], check=True)
+        command = ["curl", "--fail", "--location", "--show-error", "--silent",
+                   "--connect-timeout", "20", "--max-time", "900", "--retry", "2",
+                   "--proto", "=https", "--proto-redir", "=https",
+                   "--output", str(path)]
+        try:
+            subprocess.run(command + [SOURCE_URL], check=True)
+        except subprocess.CalledProcessError:
+            # Superseded releases leave downloads but remain in the ASF archive.
+            # The manifest identity stays canonical regardless of transport.
+            print("ASF distribution download failed; trying the official archive", file=sys.stderr)
+            subprocess.run(command + [ARCHIVE_URL], check=True)
+        # A checksum mismatch is fatal; never hide it by trying another source.
         verify(path)
         path.replace(directory / "server.tar.gz")
     finally:
