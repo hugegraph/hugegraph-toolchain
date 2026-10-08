@@ -143,24 +143,38 @@ public class SparkRowTest {
     }
 
     @Test
-    public void testTextCharsetPreflightForFileAndHdfs() throws Exception {
-        for (String type : Arrays.asList("file", "hdfs")) {
-            for (String charset : Arrays.asList("UTF-8", "utf8")) {
-                HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
-                        "{\"vertices\":[" + headerMapping(type, "TEXT",
-                                "\"header\":[\"name\"],\"charset\":\"" + charset + "\"") + "]}").structs());
+    public void testFileCharsetPreflightBeforeSparkStarts() throws Exception {
+        String oldMaster = System.getProperty("spark.master");
+        String oldDeployMode = System.getProperty("spark.submit.deployMode");
+        System.setProperty("spark.master", "invalid-charset-preflight-master");
+        System.setProperty("spark.submit.deployMode", "client");
+        try {
+            for (String type : Arrays.asList("file", "hdfs")) {
+                for (String format : Arrays.asList("CSV", "JSON", "TEXT")) {
+                    for (String charset : Arrays.asList("UTF-8", "utf8")) {
+                        HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
+                                "{\"vertices\":[" + headerMapping(type, format,
+                                        "\"header\":[\"name\"],\"charset\":\"" + charset + "\"") +
+                                "]}").structs());
+                    }
+                    for (String charset : Arrays.asList("GBK", "UTF-16")) {
+                        String options = "\"header\":[\"name\"],\"charset\":\"" + charset + "\"";
+                        assertHeaderRejectedBeforeInitialization(type, format, options);
+                        try {
+                            HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
+                                    "{\"vertices\":[" + headerMapping(type, format, options) +
+                                    "]}").structs());
+                            Assert.fail("Expected non-UTF-8 input rejection");
+                        } catch (LoadException expected) {
+                            Assert.assertTrue(expected.getMessage().contains("requires UTF-8 charset"));
+                            Assert.assertTrue(expected.getMessage().contains(type + "-" + format));
+                        }
+                    }
+                }
             }
-            assertHeaderRejectedBeforeInitialization(type, "TEXT",
-                                                     "\"header\":[\"name\"],\"charset\":\"GBK\"");
-            try {
-                HugeGraphSparkLoader.checkHeaders(MappingUtil.parse(
-                        "{\"vertices\":[" + headerMapping(type, "TEXT",
-                                "\"header\":[\"name\"],\"charset\":\"GBK\"") + "]}").structs());
-                Assert.fail("Expected non-UTF-8 TEXT input rejection");
-            } catch (LoadException expected) {
-                Assert.assertTrue(expected.getMessage().contains("requires UTF-8 charset"));
-                Assert.assertTrue(expected.getMessage().contains(type + "-TEXT"));
-            }
+        } finally {
+            restoreProperty("spark.master", oldMaster);
+            restoreProperty("spark.submit.deployMode", oldDeployMode);
         }
     }
 

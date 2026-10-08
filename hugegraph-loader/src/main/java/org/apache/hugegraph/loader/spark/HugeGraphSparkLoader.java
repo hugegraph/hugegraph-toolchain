@@ -211,10 +211,13 @@ public class HugeGraphSparkLoader implements Serializable {
                 case FILE:
                 case HDFS:
                     FileSource source = struct.input().asFileSource();
-                    if (source.format() == FileFormat.TEXT &&
+                    if ((source.format() == FileFormat.TEXT ||
+                         source.format() == FileFormat.CSV ||
+                         source.format() == FileFormat.JSON) &&
                         !StandardCharsets.UTF_8.equals(Charset.forName(source.charset()))) {
-                        throw new LoadException("Spark TEXT input '%s' requires UTF-8 charset; " +
-                                                "see docs/spark-java17.md", source.path());
+                        throw new LoadException("Spark %s input '%s' requires UTF-8 charset; " +
+                                                "see docs/spark-java17.md",
+                                                source.format(), source.path());
                     }
                     if (source.format() != FileFormat.CSV &&
                         source.format() != FileFormat.TEXT) {
