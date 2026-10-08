@@ -33,6 +33,10 @@ runs:
         # Reuse third-party dependencies, never a previously installed HugeGraph SDK.
         rm -rf -- "$HOME/.m2/repository/org/apache/hugegraph"
         rm -f -- "$HOME/.m2/repository/candidate-sdk-manifest.json"
+        # Cached failed downloads must not suppress checking a recovered repository.
+        if [[ -d "$HOME/.m2/repository" ]]; then
+          find "$HOME/.m2/repository" -type f -name '*.lastUpdated' -delete
+        fi
         maven_version=$(mvn -version | sed $'s/\033\\[[0-9;]*m//g' | sed -n 's/^Apache Maven \([0-9.]*\).*/\1/p' | head -1)
         if [[ ! "$maven_version" =~ ^([0-9]+)\.([0-9]+)\. ]] ||
            (( 10#${BASH_REMATCH[1]:-0} < 3 ||
