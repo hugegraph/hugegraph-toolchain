@@ -133,3 +133,5 @@ Server 1.7 compatibility CI uses the pinned official ASF 1.7.0 binary archive. T
 ## 5. License
 
 hugegraph-loader is licensed under Apache 2.0 License.
+
+See the [Flink CDC Java 17 validation](docs/flink-cdc-java17.md) for its current limits and launcher syntax.

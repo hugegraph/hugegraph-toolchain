@@ -118,6 +118,16 @@ public class EdgeBuilder extends ElementBuilder<Edge> {
         return edges;
     }
 
+    public Map<String, Object> identityProperties(Edge edge) {
+        Map<String, Object> properties = new HashMap<>();
+        for (String key : this.edgeLabel.sortKeys()) {
+            Object value = edge.property(key);
+            E.checkArgumentNotNull(value, "The edge identity requires sort key '%s'", key);
+            properties.put(key, value);
+        }
+        return properties;
+    }
+
     private EdgeKVPairs newEdgeKVPairs() {
         EdgeKVPairs kvPairs = new EdgeKVPairs();
         kvPairs.source = this.newKVPairs(this.sourceLabel,

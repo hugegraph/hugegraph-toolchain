@@ -113,8 +113,8 @@
         <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
         <jacoco.version>0.8.15</jacoco.version>
-        <flink.version>1.13.5</flink.version>
-        <flinkcdc.version>2.2.1</flinkcdc.version>
+        <flink.version>2.2.1</flink.version>
+        <flinkcdc.version>3.6.0-2.2</flinkcdc.version>
         <spark.version>3.2.2</spark.version>
         <spark.scope>provided</spark.scope>
         <flink.scope>provided</flink.scope>
