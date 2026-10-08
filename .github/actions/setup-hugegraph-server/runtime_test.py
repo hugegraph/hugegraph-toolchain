@@ -295,6 +295,32 @@ esac
         self.assertIn('--proto\n=https', args)
         self.assertIn(self.release.SOURCE_URL, args)
 
+    def test_release_archive_fallback_keeps_canonical_identity(self):
+        self.command('curl', 'printf "%s\\n" "$@" >> "$HOME/download-args"\n'
+                     'if [[ ! -f "$HOME/primary-failed" ]]; then\n'
+                     '  touch "$HOME/primary-failed"; exit 22\nfi\n'
+                     'while [[ $# -gt 0 ]]; do\n'
+                     '  if [[ "$1" == --output ]]; then printf archive > "$2"; exit 0; fi\n'
+                     '  shift\ndone\nexit 1\n')
+        result = self.run_script(self.action / 'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
+        self.assertEqual(0, result.returncode, result.stderr)
+        args = (self.dir / 'download-args').read_text()
+        self.assertLess(args.index(self.release.SOURCE_URL), args.index(self.release.ARCHIVE_URL))
+        manifest = json.loads((Path(self.env['FIXTURE_DIR']) / 'manifest.json').read_text())
+        self.assertEqual(self.release.SOURCE_URL, manifest['source_url'])
+        self.assertEqual(hashlib.sha512(b'archive').hexdigest(), manifest['official_sha512'])
+
+    def test_release_bad_checksum_does_not_try_another_source(self):
+        self.command('curl', 'printf "%s\\n" "$@" >> "$HOME/download-args"\n'
+                     'while [[ $# -gt 0 ]]; do\n'
+                     '  if [[ "$1" == --output ]]; then printf tampered > "$2"; exit 0; fi\n'
+                     '  shift\ndone\nexit 1\n')
+        result = self.run_script(self.action / 'fixture.sh', env=dict(self.env, FIXTURE_MODE='build'))
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('SHA-512 mismatch', result.stderr)
+        self.assertNotIn(self.release.ARCHIVE_URL, (self.dir / 'download-args').read_text())
+        self.assertFalse((Path(self.env['FIXTURE_DIR']) / 'server.tar.gz').exists())
+
     def test_release_failure_never_falls_back_to_source_or_publishes_cache(self):
         self.command('curl', 'echo download >> "$HOME/downloads"; exit 22\n')
         for name in ('git', 'mvn'):
