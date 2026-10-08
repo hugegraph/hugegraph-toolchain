@@ -23,13 +23,13 @@ if [[ $# -ne 3 || "$2" != /* || -e "$2" || "$3" != /* || ! -d "$3" || -e "$3/org
 fi
 
 if [[ -z "${JAVA_HOME:-}" || ! -x "$JAVA_HOME/bin/java" ]]; then
-    echo "Set JAVA_HOME to an installed JDK 17 or newer before building the candidate SDK" >&2
+    echo "Set JAVA_HOME to an installed JDK 17 before building the candidate SDK" >&2
     exit 1
 fi
 JAVA_VERSION=$("$JAVA_HOME/bin/java" -XshowSettings:properties -version 2>&1 |
     awk -F ' = ' '/java.specification.version =/ {print $2}')
-if [[ ! "$JAVA_VERSION" =~ ^[0-9]+$ || "$JAVA_VERSION" -lt 17 ]]; then
-    echo "Candidate SDK requires JDK 17 or newer, found: $JAVA_VERSION" >&2
+if [[ ! "$JAVA_VERSION" =~ ^[0-9]+$ || "$JAVA_VERSION" -ne 17 ]]; then
+    echo "Candidate SDK requires JDK 17, found: $JAVA_VERSION" >&2
     exit 1
 fi
 export PATH="$JAVA_HOME/bin:$PATH"
@@ -41,16 +41,22 @@ SERVER_FETCH_REF=${SERVER_FETCH_REF:-$1}
 export SERVER_REPOSITORY SERVER_FETCH_REF
 CANDIDATE_REPO=$3
 bash "$SCRIPT_DIR/checkout-server.sh" "$1" "$SOURCE_DIR"
-# Install the Server distribution's dependency reactor so all SDK modules share one source.
+# Install the SDK and Server distribution dependency closure from one source.
+# Server cluster tests pull an unrelated released Toolchain/SDK back into this build.
 # The fixture installers retain package-only semantics and use another repository.
-# Flatten the root too: license metadata rebuilds installed parent models, whose
-# raw ${revision} otherwise becomes an invalid artifact request outside the reactor.
+SDK_MODULES=hugegraph-server/hugegraph-dist,hugegraph-pd/hg-pd-client
+SDK_MODULES+=,hugegraph-store/hg-store-client,hugegraph-struct
+# Flatten the root too: its installed ${revision} otherwise breaks dependency
+# model reconstruction while remote-resources generates license metadata.
 (cd "$SOURCE_DIR" && mvn "-Dmaven.repo.local=$CANDIDATE_REPO" \
-    org.codehaus.mojo:flatten-maven-plugin:1.2.7:flatten install \
-    -pl hugegraph-server/hugegraph-dist -am \
+    -pl "$SDK_MODULES" -am \
+    org.codehaus.mojo:flatten-maven-plugin:1.3.0:flatten install \
     -Dflatten.mode=resolveCiFriendliesOnly -DupdatePomFile=true \
     -DskipTests -Dmaven.javadoc.skip=true -ntp)
 ACTUAL_COMMIT=$(git -C "$SOURCE_DIR" rev-parse HEAD)
+if [[ "$SERVER_FETCH_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    export SERVER_FETCH_REF=$ACTUAL_COMMIT
+fi
 python3 - "$SOURCE_DIR" "$CANDIDATE_REPO" "${SERVER_REPOSITORY:-apache/hugegraph}" \
     "$ACTUAL_COMMIT" "$JAVA_HOME" "$JAVA_VERSION" <<'PY_MANIFEST'
 import hashlib

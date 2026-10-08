@@ -39,9 +39,8 @@ COPY .github/scripts/verify_candidate_image_sdk.py /pkg/.github/scripts/
 RUN mkdir -p /opt/candidate-m2 \
     && if [ ! -f /opt/candidate-m2/candidate-sdk-manifest.json ]; then \
          SERVER_REPOSITORY=apache/hugegraph \
-         SERVER_FETCH_REF=d9abcd4317fb36128e7e4d209139ec7f3a28cdfc \
          bash /pkg/hugegraph-client/assembly/travis/install-candidate-sdk.sh \
-           d9abcd4317fb36128e7e4d209139ec7f3a28cdfc /opt/candidate-source /opt/candidate-m2; \
+           e62c961e00221569d4f955abbadf60faee45b283 /opt/candidate-source /opt/candidate-m2; \
        fi \
     && python3 /pkg/.github/scripts/verify_candidate_image_sdk.py /opt/candidate-m2
 

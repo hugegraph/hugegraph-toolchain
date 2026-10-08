@@ -45,8 +45,16 @@ module.exports = async function resolve(github, { repository, ref = '', pr = '',
     sha = commit.sha;
   }
   if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('Server API returned an invalid commit SHA');
-  if (expectedCommit && sha.toLowerCase() !== expectedCommit.toLowerCase()) {
-    throw new Error(`Server ref moved: expected ${expectedCommit}, resolved ${sha}`);
+  if (expectedCommit) {
+    if (sha.toLowerCase() !== expectedCommit.toLowerCase()) {
+      throw new Error(`Server ref moved: expected ${expectedCommit.slice(0, 6)}, resolved ${sha.slice(0, 6)}`);
+    }
+  }
+  if (/^[0-9a-f]{40}$/i.test(ref)) {
+    if (sha.toLowerCase() !== ref.toLowerCase()) {
+      throw new Error('Server API returned a commit different from the selected SHA');
+    }
+    fetchRef = sha;
   }
   return { sha, fetchRef };
 };

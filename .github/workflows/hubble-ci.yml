@@ -87,15 +87,6 @@ jobs:
         with:
           node-version: '18.20.8'
 
-      # we also should cache python & yarn & downloads to avoid useless work
-      - name: Cache Maven packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
       - name: Cache Node modules
         uses: actions/cache@v6
         with:
@@ -249,6 +240,7 @@ jobs:
           retention-days: 14
 
       - name: Upload coverage to Codecov
+        continue-on-error: true
         uses: ./.github/actions/upload-coverage
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

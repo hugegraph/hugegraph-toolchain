@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/hugegraph/hugegraph-client/branch/master/graph/badge.svg)](https://codecov.io/gh/hugegraph/hugegraph-client)
 [![Maven Central](https://img.shields.io/maven-central/v/org.apache.hugegraph/hugegraph-client)](https://mvnrepository.com/artifact/org.apache.hugegraph/hugegraph-client)
 
-hugegraph-client is a Java-written client of [HugeGraph](https://github.com/hugegraph/hugegraph), providing operations of graph, schema, gremlin, variables and traversals etc. All these operations are interpreted and translated into RESTful requests to HugeGraph Server. Besides, hugegraph-client also checks arguments, serializes and deserializes structures and encapsulates server exceptions.
+hugegraph-client is a Java-written client of [HugeGraph](https://github.com/apache/hugegraph), providing operations of graph, schema, gremlin, variables and traversals etc. All these operations are interpreted and translated into RESTful requests to HugeGraph Server. Besides, hugegraph-client also checks arguments, serializes and deserializes structures and encapsulates server exceptions.
 
 ## Features
 

@@ -20,6 +20,7 @@
 import copy
 import json
 import os
+from unittest.mock import patch
 from pathlib import Path
 import shutil
 import subprocess
@@ -43,7 +44,7 @@ class CandidateParentModelTest(unittest.TestCase):
             settings.write_text("<settings/>")
             header = '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
             flatten = ('<plugin><groupId>org.codehaus.mojo</groupId><artifactId>flatten-maven-plugin</artifactId>'
-                       '<version>1.2.7</version><configuration><updatePomFile>true</updatePomFile>'
+                       '<version>1.3.0</version><configuration><updatePomFile>true</updatePomFile>'
                        '<flattenMode>resolveCiFriendliesOnly</flattenMode></configuration><executions>'
                        '<execution><phase>process-resources</phase><goals><goal>flatten</goal></goals>'
                        '</execution></executions></plugin>')
@@ -78,7 +79,7 @@ class CandidateParentModelTest(unittest.TestCase):
                                            "-Dmaven.repo.local=" + str(root / "m2"), "-B", "-ntp", *arguments],
                                           cwd=source, capture_output=True, text=True, timeout=240)
 
-                goals = (["org.codehaus.mojo:flatten-maven-plugin:1.2.7:flatten", "install",
+                goals = (["org.codehaus.mojo:flatten-maven-plugin:1.3.0:flatten", "install",
                           "-Dflatten.mode=resolveCiFriendliesOnly", "-DupdatePomFile=true"]
                          if fixed else ["install"])
                 literal_request = group + ":root:pom:${revision}"
@@ -106,6 +107,12 @@ class CandidateParentModelTest(unittest.TestCase):
 
 
 class CandidateDistributionTest(unittest.TestCase):
+    def setUp(self):
+        self.source_commit = sdk.COMMIT
+        context = patch.dict(os.environ, {"CANDIDATE_SOURCE_COMMIT": self.source_commit})
+        context.start()
+        self.addCleanup(context.stop)
+
     def fixture(self, root):
         repository = root / "m2"
         artifacts, modules = [], []
@@ -126,7 +133,7 @@ class CandidateDistributionTest(unittest.TestCase):
             modules.append({"group_id": "org.apache.hugegraph", "artifact_id": artifact,
                             "version": "1.7.0", "packaging": packaging,
                             "source_pom": source_pom, "files": files})
-        manifest = {"repository": sdk.REPOSITORY, "commit": sdk.COMMIT,
+        manifest = {"repository": sdk.REPOSITORY, "commit": self.source_commit,
                     "source_revision": "1.7.0", "java_version": "17",
                     "required_sdk_modules": modules, "artifacts": artifacts}
         self.write_manifest(repository, manifest)
@@ -259,6 +266,53 @@ class CandidateDistributionTest(unittest.TestCase):
             common.write_bytes(b"replaced Server SDK input")
             with self.assertRaisesRegex(RuntimeError, "SDK artifact hash mismatch"):
                 sdk.validate_distribution(repository, directory, "hubble")
+
+    def test_source_context_preserves_full_identity_checks(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            manifest["commit"] = sdk.COMMIT[:6] + "b" * 34
+            self.write_manifest(repository, manifest)
+            with self.assertRaisesRegex(RuntimeError, "SDK source does not match"):
+                sdk.validate_sdk(repository)
+            with patch.dict(os.environ, {"CANDIDATE_SOURCE_COMMIT": sdk.COMMIT[:6]}):
+                with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
+                    sdk.validate_sdk(repository)
+
+    def test_explicit_resolved_context_supports_latest_master_provenance(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            selected = "b" * 40
+            manifest["commit"] = selected
+            self.write_manifest(repository, manifest)
+            with patch.dict(os.environ, {"CANDIDATE_SOURCE_COMMIT": selected}):
+                sdk.validate_sdk(repository)
+            with self.assertRaisesRegex(RuntimeError, "SDK source does not match"):
+                sdk.validate_sdk(repository)
+
+    def test_standalone_packaging_uses_the_local_lock(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, _ = self.fixture(Path(temporary))
+            with patch.dict(os.environ, {}, clear=True):
+                sdk.validate_sdk(repository)
+
+    def test_candidate_manifest_requires_the_supported_build_jdk(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary))
+            for version in ("11", "18", "21"):
+                with self.subTest(version=version):
+                    manifest["java_version"] = version
+                    self.write_manifest(repository, manifest)
+                    with self.assertRaisesRegex(RuntimeError, "Java version"):
+                        sdk.validate_sdk(repository)
+            for version in (17.9, 17, True, "17.0"):
+                with self.subTest(version=version):
+                    manifest["java_version"] = version
+                    self.write_manifest(repository, manifest)
+                    with self.assertRaisesRegex(RuntimeError, "Invalid candidate SDK manifest"):
+                        sdk.validate_sdk(repository)
+            manifest["java_version"] = "17"
+            self.write_manifest(repository, manifest)
+            sdk.validate_sdk(repository)
 
     def test_malformed_manifests_have_controlled_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -122,12 +122,28 @@ def assert_safe_tar_member(member, work_dir):
             raise RuntimeError(f"Unsafe tar link outside work dir: {member.name}")
 
 
-def extract_tarball(tarball, work_dir):
-    with tarfile.open(tarball, "r:gz") as archive:
+def require_safe_archive_extraction():
+    if not callable(getattr(tarfile, "data_filter", None)):
+        raise RuntimeError(
+            "Safe archive extraction requires Python with tarfile.data_filter; "
+            "upgrade to the latest security patch of Python 3.10 or newer "
+            "(extraction filters first appeared in 3.9.17, 3.10.12 and 3.11.4). "
+            "Unfiltered extraction is not supported."
+        )
+
+
+def extract_archive(tarball, work_dir):
+    require_safe_archive_extraction()
+    with tarfile.open(tarball) as archive:
         members = archive.getmembers()
         for member in members:
             assert_safe_tar_member(member, work_dir)
-        archive.extractall(work_dir, members)
+        # Recheck each member against links already written during extraction.
+        archive.extractall(work_dir, members, filter="data")
+
+
+def extract_tarball(tarball, work_dir):
+    extract_archive(tarball, work_dir)
     homes = [path for path in work_dir.iterdir()
              if path.is_dir() and path.name.startswith("apache-hugegraph-hubble-")]
     if not homes:
@@ -748,6 +764,12 @@ def main():
     parser.add_argument("--password", default=os.environ.get("HUBBLE_PASSWORD",
                                                             "pa"))
     args = parser.parse_args()
+
+    if not args.skip_start:
+        try:
+            require_safe_archive_extraction()
+        except RuntimeError as exc:
+            parser.error(str(exc))
 
     hubble_url = args.hubble_url.rstrip("/")
     server_url = args.server_url.rstrip("/")

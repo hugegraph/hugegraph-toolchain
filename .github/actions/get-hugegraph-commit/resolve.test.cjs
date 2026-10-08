@@ -57,7 +57,7 @@ test('resolves PR head from the selected repository', async () => {
 
 test('rejects invalid or ambiguous selectors before calling GitHub', async () => {
   for (const input of [{ repository: '../repo' }, { ref: 'master', pr: '42' },
-    { pr: '1.5' }, { pr: '0' }, { expectedCommit: 'short' }]) {
+    { pr: '1.5' }, { pr: '0' }, { expectedCommit: 'short' }, { expectedCommit: sha.slice(0, 6) }]) {
     const { github, calls } = client();
     await assert.rejects(resolve(github, { repository: 'apache/hugegraph', ...input }));
     assert.equal(calls.length, 0);
@@ -70,4 +70,13 @@ test('fails closed for a moved branch or API error', async () => {
     expectedCommit: '0'.repeat(40) }), /Server ref moved/);
   github.rest.repos.getCommit = async () => { throw new Error('Not Found'); };
   await assert.rejects(resolve(github, { repository: 'example/server', ref: 'missing' }), /Not Found/);
+});
+
+test('verifies a full commit selector and fetch identity', async () => {
+  const { github, calls } = client();
+  assert.deepEqual(await resolve(github, { repository: 'apache/hugegraph',
+    ref: sha, expectedCommit: sha }), { sha, fetchRef: sha });
+  assert.deepEqual(calls, [['commit', { owner: 'apache', repo: 'hugegraph', ref: sha }]]);
+  await assert.rejects(resolve(github, { repository: 'apache/hugegraph',
+    ref: 'b'.repeat(40) }), /different from the selected SHA/);
 });

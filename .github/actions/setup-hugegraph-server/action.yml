@@ -1,5 +1,5 @@
 name: Setup HugeGraph Server
-description: Build an immutable fixture once, or start an independent test service
+description: Prepare an immutable release or candidate fixture, or start an independent test service
 inputs:
   mode:
     description: 'standalone (legacy), build (upload), or start (download)'
@@ -8,17 +8,20 @@ inputs:
     description: Workflow-local immutable fixture artifact name
     default: ''
   repository:
-    description: GitHub owner/repository containing the Server source
+    description: Server source repository (Java 11 release requires apache/hugegraph)
     default: apache/hugegraph
   fetch-ref:
     description: Fetchable source ref (must resolve to commit-id)
     default: ''
   commit-id:
-    description: Exact Server commit SHA
+    description: Exact Server commit SHA (Java 11 release requires the locked 1.7.0 commit)
     required: true
   java-version:
     description: JDK major used for the build and runtime
     default: '11'
+  release-version:
+    description: Fixed official Server release used by Java 11 compatibility fixtures
+    default: '1.7.0'
   java-home:
     description: Optional fixture JDK scoped to this subprocess; keeps Toolchain JDK unchanged
     default: ''
@@ -37,12 +40,12 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: ${{ runner.temp }}/hugegraph-fixture
-    - name: Restore exact Server build cache
+    - name: Restore exact Server fixture cache
       if: inputs.mode == 'build'
       uses: actions/cache@v4
       with:
         path: ~/hugegraph-fixture-cache
-        key: server-fixture-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.repository }}-${{ inputs.commit-id }}-jdk${{ inputs.java-version }}-${{ hashFiles('.github/actions/setup-hugegraph-server/action.yml', '.github/actions/setup-hugegraph-server/fixture.sh', '.github/actions/setup-hugegraph-server/manifest.py', '.github/actions/setup-java-env/action.yml', '.github/configs/settings.xml', 'hugegraph-client/assembly/travis/checkout-server.sh', 'hugegraph-client/assembly/travis/start-hugegraph-servers.sh', 'hugegraph-*/assembly/travis/install-hugegraph-from-source.sh', 'hugegraph-hubble/hubble-dist/assembly/travis/download-hugegraph.sh') }}
+        key: server-fixture-v2-${{ runner.os }}-${{ runner.arch }}-${{ inputs.repository }}-${{ inputs.commit-id }}-release${{ inputs.release-version }}-jdk${{ inputs.java-version }}-${{ hashFiles('.github/actions/setup-hugegraph-server/action.yml', '.github/actions/setup-hugegraph-server/fixture.sh', '.github/actions/setup-hugegraph-server/manifest.py', '.github/actions/setup-hugegraph-server/release.py', '.github/actions/setup-java-env/action.yml', '.github/configs/settings.xml', 'hugegraph-client/assembly/travis/checkout-server.sh', 'hugegraph-client/assembly/travis/install-candidate-sdk.sh', 'hugegraph-client/assembly/travis/start-hugegraph-servers.sh', 'hugegraph-*/assembly/travis/install-hugegraph-from-source.sh', 'hugegraph-hubble/hubble-dist/assembly/travis/download-hugegraph.sh') }}
     - name: Prepare fixture or start service
       shell: bash
       env:
@@ -50,9 +53,10 @@ runs:
         FIXTURE_REPOSITORY: ${{ inputs.repository }}
         FIXTURE_COMMIT: ${{ inputs.commit-id }}
         FIXTURE_REF: ${{ inputs.fetch-ref }}
-        FIXTURE_BUILD_INPUTS: ${{ hashFiles('.github/actions/setup-hugegraph-server/action.yml', '.github/actions/setup-hugegraph-server/fixture.sh', '.github/actions/setup-hugegraph-server/manifest.py', '.github/actions/setup-java-env/action.yml', '.github/configs/settings.xml', 'hugegraph-client/assembly/travis/checkout-server.sh', 'hugegraph-client/assembly/travis/start-hugegraph-servers.sh', 'hugegraph-*/assembly/travis/install-hugegraph-from-source.sh', 'hugegraph-hubble/hubble-dist/assembly/travis/download-hugegraph.sh') }}
+        FIXTURE_BUILD_INPUTS: ${{ hashFiles('.github/actions/setup-hugegraph-server/action.yml', '.github/actions/setup-hugegraph-server/fixture.sh', '.github/actions/setup-hugegraph-server/manifest.py', '.github/actions/setup-hugegraph-server/release.py', '.github/actions/setup-java-env/action.yml', '.github/configs/settings.xml', 'hugegraph-client/assembly/travis/checkout-server.sh', 'hugegraph-client/assembly/travis/install-candidate-sdk.sh', 'hugegraph-client/assembly/travis/start-hugegraph-servers.sh', 'hugegraph-*/assembly/travis/install-hugegraph-from-source.sh', 'hugegraph-hubble/hubble-dist/assembly/travis/download-hugegraph.sh') }}
         FIXTURE_PLATFORM: ${{ runner.os }}-${{ runner.arch }}
         FIXTURE_JAVA: ${{ inputs.java-version }}
+        FIXTURE_RELEASE_VERSION: ${{ inputs.release-version }}
         FIXTURE_JAVA_HOME: ${{ inputs.java-home }}
         ISOLATE_FIXTURE_REPO: ${{ inputs.isolate-maven-repo }}
         FIXTURE_DIR: ${{ runner.temp }}/hugegraph-fixture
@@ -85,6 +89,10 @@ runs:
           export TRAVIS_DIR
           server_build=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/hugegraph-build.XXXXXX")
           cd "$server_build"
+          if [[ "$FIXTURE_MODE" == standalone ]]; then
+            FIXTURE_MODE=build bash "$FIXTURE_ACTION/fixture.sh"
+            export FIXTURE_MODE=start
+          fi
           if [[ -f "$TRAVIS_DIR/install-hugegraph-from-source.sh" ]]; then
             bash "$TRAVIS_DIR/install-hugegraph-from-source.sh" "$FIXTURE_COMMIT"
           else

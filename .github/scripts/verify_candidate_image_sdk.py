@@ -20,10 +20,12 @@
 import argparse
 import hashlib
 import json
+import os
+import re
 from pathlib import Path
 
 REPOSITORY = "apache/hugegraph"
-COMMIT = "d9abcd4317fb36128e7e4d209139ec7f3a28cdfc"
+COMMIT = "e62c961e00221569d4f955abbadf60faee45b283"
 REQUIRED_MODULES = {
     "pom.xml", "hugegraph-commons/pom.xml", "hugegraph-server/pom.xml",
     "hugegraph-pd/pom.xml", "hugegraph-store/pom.xml",
@@ -51,6 +53,14 @@ def digest(path):
     return checksum.hexdigest()
 
 
+def source_commit():
+    # The SDK action exports the full identity already verified by the source resolver.
+    expected = os.environ.get("CANDIDATE_SOURCE_COMMIT", COMMIT)
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{40}", expected):
+        raise ValueError("Invalid resolved Server source identity")
+    return expected
+
+
 def validate_sdk(repository):
     try:
         return _validate_sdk(Path(repository))
@@ -62,9 +72,12 @@ def validate_sdk(repository):
 def _validate_sdk(repository):
     repository = Path(repository)
     manifest = json.loads((repository / "candidate-sdk-manifest.json").read_text())
-    if (manifest["repository"], manifest["commit"]) != (REPOSITORY, COMMIT):
+    if (manifest["repository"], manifest["commit"]) != (REPOSITORY, source_commit()):
         raise RuntimeError("SDK source does not match the locked candidate")
-    if manifest["source_revision"] != "1.7.0" or int(manifest["java_version"]) < 17:
+    java_version = manifest["java_version"]
+    if not isinstance(java_version, str) or not java_version.isdecimal():
+        raise ValueError("Invalid Java version format")
+    if manifest["source_revision"] != "1.7.0" or java_version != "17":
         raise RuntimeError("SDK revision or Java version does not match the candidate contract")
     modules = manifest["required_sdk_modules"]
     if len(modules) != len(REQUIRED_MODULES) or {m["source_pom"] for m in modules} != REQUIRED_MODULES:
@@ -161,4 +174,4 @@ if __name__ == "__main__":
             validate_distribution(args.repository, args.distribution, args.module)
     except RuntimeError as error:
         parser.exit(1, str(error) + "\n")
-    print(f"Verified {manifest['repository']}@{manifest['commit']}: {len(jars)} candidate JARs")
+    print(f"Verified {manifest['repository']}@{manifest['commit'][:6]}: {len(jars)} candidate JARs")

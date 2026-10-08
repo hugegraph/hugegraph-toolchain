@@ -41,7 +41,7 @@ git -C "$CHECKOUT_DIR" fetch --depth 1 -- origin "$SERVER_FETCH_REF"
 git -C "$CHECKOUT_DIR" checkout --detach FETCH_HEAD
 ACTUAL_COMMIT=$(git -C "$CHECKOUT_DIR" rev-parse HEAD)
 if [[ "$ACTUAL_COMMIT" != "$(printf '%s' "$COMMIT_ID" | tr '[:upper:]' '[:lower:]')" ]]; then
-    echo "Server checkout mismatch: expected $COMMIT_ID, got $ACTUAL_COMMIT" >&2
+    echo "Server checkout mismatch: expected ${COMMIT_ID:0:6}, got ${ACTUAL_COMMIT:0:6}" >&2
     exit 1
 fi
-printf 'Server source: %s@%s\n' "$SERVER_REPOSITORY" "$ACTUAL_COMMIT"
+printf 'Server source: %s@%s\n' "$SERVER_REPOSITORY" "${ACTUAL_COMMIT:0:6}"

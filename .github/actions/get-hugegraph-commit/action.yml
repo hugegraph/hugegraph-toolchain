@@ -47,7 +47,7 @@ runs:
             core.exportVariable('COMMIT_REF', result.fetchRef);
             core.setOutput('commit_id', result.sha);
             core.setOutput('fetch_ref', result.fetchRef);
-            core.info(`Server baseline: ${process.env.SERVER_REPOSITORY} ${result.fetchRef} (${result.sha})`);
+            core.info(`Server baseline: ${process.env.SERVER_REPOSITORY} ${/^[0-9a-f]{40}$/i.test(result.fetchRef) ? result.fetchRef.slice(0, 6) : result.fetchRef} (${result.sha.slice(0, 6)})`);
           } catch (error) {
             core.setFailed(`Failed to get HugeGraph commit: ${error.message}`);
           }

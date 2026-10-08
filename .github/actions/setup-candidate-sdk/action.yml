@@ -6,11 +6,11 @@ inputs:
     description: 'GitHub owner/repository for the candidate SDK'
     default: 'apache/hugegraph'
   ref:
-    description: 'Fetchable candidate source ref'
-    default: 'd9abcd4317fb36128e7e4d209139ec7f3a28cdfc'
+    description: 'Immutable candidate source commit'
+    default: 'e62c961e00221569d4f955abbadf60faee45b283'
   expected-commit:
-    description: 'Locked full candidate source commit'
-    default: 'd9abcd4317fb36128e7e4d209139ec7f3a28cdfc'
+    description: 'Locked candidate source commit'
+    default: 'e62c961e00221569d4f955abbadf60faee45b283'
 
 outputs:
   repository:
@@ -55,9 +55,18 @@ runs:
       run: |
         candidate_repo=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-m2.XXXXXX")
         server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-build.XXXXXX")
+        source_dir="$server_build/source"
+        if [[ -d "$HOME/.m2/repository" ]]; then
+          rsync -a --exclude='/org/apache/hugegraph/' --exclude='/candidate-sdk-manifest.json' \
+            "$HOME/.m2/repository/" "$candidate_repo/"
+        fi
         bash "$GITHUB_WORKSPACE/hugegraph-client/assembly/travis/install-candidate-sdk.sh" \
-          "$SERVER_COMMIT" "$server_build/hugegraph" "$candidate_repo"
-        archives=("$server_build"/hugegraph/hugegraph-server/apache-hugegraph-*.tar.gz)
+          "$SERVER_COMMIT" "$source_dir" "$candidate_repo"
+        # Retain downloaded third-party inputs for the existing Maven cache.
+        mkdir -p "$HOME/.m2/repository"
+        rsync -a --exclude='/org/apache/hugegraph/' --exclude='/candidate-sdk-manifest.json' \
+          "$candidate_repo/" "$HOME/.m2/repository/"
+        archives=("$source_dir"/hugegraph-server/apache-hugegraph-*.tar.gz)
         if [[ ${#archives[@]} -ne 1 || ! -f "${archives[0]}" ]]; then
           printf 'Expected one candidate server archive, found: %s\n' "${archives[*]}" >&2
           exit 1

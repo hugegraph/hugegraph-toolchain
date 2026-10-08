@@ -23,14 +23,18 @@ import pathlib
 import re
 import sys
 
+import release
+
 if sys.argv[1] == "inputs":
     repo = pathlib.Path(__file__).resolve().parents[3]
     patterns = (
         '.github/actions/setup-hugegraph-server/action.yml',
         '.github/actions/setup-hugegraph-server/fixture.sh',
         '.github/actions/setup-hugegraph-server/manifest.py',
+        '.github/actions/setup-hugegraph-server/release.py',
         '.github/actions/setup-java-env/action.yml', '.github/configs/settings.xml',
         'hugegraph-client/assembly/travis/checkout-server.sh',
+        'hugegraph-client/assembly/travis/install-candidate-sdk.sh',
         'hugegraph-client/assembly/travis/start-hugegraph-servers.sh',
         'hugegraph-*/assembly/travis/install-hugegraph-from-source.sh',
         'hugegraph-hubble/hubble-dist/assembly/travis/download-hugegraph.sh',
@@ -45,6 +49,16 @@ if sys.argv[1] == "inputs":
 root = pathlib.Path(os.environ["FIXTURE_DIR"])
 identity = {key.lower(): os.environ["FIXTURE_" + key] for key in
             ("REPOSITORY", "COMMIT", "JAVA", "CONFIG")}
+try:
+    if identity["java"] == "11":
+        identity.update(release.identity(os.environ.get("FIXTURE_RELEASE_VERSION", release.VERSION),
+                                        identity["repository"], identity["commit"]))
+    else:
+        identity.update(source_kind="candidate-sdk")
+except ValueError as error:
+    sys.exit(str(error))
+
+
 def digest():
     h = hashlib.sha256()
     with (root / "server.tar.gz").open("rb") as stream:
@@ -52,6 +66,8 @@ def digest():
             h.update(chunk)
     return h.hexdigest()
 try:
+    if identity["java"] == "11":
+        release.verify(root / "server.tar.gz")
     if sys.argv[1] == "create":
         data = dict(identity, archive_name=os.environ["FIXTURE_ARCHIVE_NAME"], sha256=digest())
         (root / "manifest.json").write_text(json.dumps(data, sort_keys=True) + "\n")
@@ -63,6 +79,8 @@ try:
             raise ValueError("fixture origin, commit, JDK or build configuration mismatch")
         if not re.fullmatch(r"apache-hugegraph-[A-Za-z0-9_.-]+\.tar\.gz", data.get("archive_name", "")):
             raise ValueError("invalid archive name")
+        if identity["java"] == "11" and data.get("archive_name") != release.ARCHIVE_NAME:
+            raise ValueError("official Server release archive name mismatch")
         if data.get("sha256") != digest():
             raise ValueError("fixture checksum mismatch")
         if sys.argv[1] == "name":
