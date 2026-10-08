@@ -279,14 +279,38 @@ def require_current_pr(plan, fetch):
             or live["head"]["ref"] != plan["branch"]
             or live["base"]["repo"]["full_name"] != plan["repository"]):
         raise StaleInputError("PR inputs changed; refresh the branch and start a new PR run")
-    if "stack" in plan:
-        # Native stacks can leave REST base.sha at an older snapshot. The actual
-        # branch ref, rather than that snapshot, identifies the tested base.
+    if "baseBranch" in plan:
+        # Event and REST base.sha can be older snapshots. The actual branch
+        # ref, rather than those snapshots, identifies the tested base.
         ref = fetch(f"repos/{plan['repository']}/git/ref/heads/{quote(plan['baseBranch'], safe='')}")
-        if (live.get("stack") != plan["stack"] or live["base"].get("ref") != plan["baseBranch"]
+        if (live.get("stack") != plan.get("stack") or live["base"].get("ref") != plan["baseBranch"]
                 or ref.get("object", {}).get("sha") != plan["base"]
                 or live.get("merge_commit_sha") != plan["testedMergeSHA"]):
-            raise StaleInputError("PR stack or canonical base changed; start a new PR run")
+            raise StaleInputError("PR merge or canonical base changed; start a new PR run")
+
+
+def record_current_merge(plan, event_pr, parents, fetch):
+    """Recover an older event base only from GitHub's current merge identity."""
+    try:
+        live = fetch(f"repos/{plan['repository']}/pulls/{plan['pr']}")
+        if live.get("stack") is not None:
+            record_stack_merge(plan, event_pr, parents, fetch)
+            return
+        branch = live["base"]["ref"]
+        if not branch or event_pr["base"]["ref"] != branch:
+            raise StaleInputError("PR target branch changed; start a new PR run")
+        ref = fetch(f"repos/{plan['repository']}/git/ref/heads/{quote(branch, safe='')}")
+        canonical = ref["object"]["sha"]
+        if (event_pr.get("stack") is not None
+                or ref["object"].get("type") != "commit" or not canonical
+                or live.get("merge_commit_sha") != plan["testedMergeSHA"]
+                or parents != [canonical, plan["head"]]
+                or git("merge-base", plan["base"], canonical) != plan["base"]):
+            raise StaleInputError("checkout lacks a valid current PR merge identity")
+        plan.update(base=canonical, baseBranch=branch)
+        require_current_pr(plan, fetch)
+    except (ValueError, KeyError, TypeError, AttributeError, subprocess.SubprocessError, OSError) as error:
+        raise StaleInputError("current PR merge identity could not be verified") from error
 
 
 def record_stack_merge(plan, event_pr, parents, fetch):
@@ -343,7 +367,7 @@ def create_plan(project, event, repository, fetch=api, external_inputs=None):
                 raise StaleInputError("PR event has an empty input identity")
             parents = git("show", "-s", "--format=%P", plan["testedMergeSHA"]).split()
             if parents != [plan["base"], plan["head"]]:
-                record_stack_merge(plan, pr, parents, fetch)
+                record_current_merge(plan, pr, parents, fetch)
             else:
                 require_current_pr(plan, fetch)
             # head/base objects must exist locally; workflow fetches both before planning.
@@ -424,8 +448,10 @@ def write_summary(plan, results=None):
 def result_report(plan, results):
     report = {key: plan[key] for key in ["schema", "repository", "project", "pr", "source", "branch", "base",
                                         "head", "testedMergeSHA", "externalInputs"]}
+    if "baseBranch" in plan:
+        report["baseBranch"] = plan["baseBranch"]
     if "stack" in plan:
-        report.update(baseBranch=plan["baseBranch"], stack=plan["stack"])
+        report["stack"] = plan["stack"]
     report.update(runID=int(os.environ.get("GITHUB_RUN_ID", "0")),
                   runAttempt=int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")),
                   executed=plan["expected"], results=results)
