@@ -124,6 +124,8 @@ docker exec -it loader bin/hugegraph-loader.sh -g hugegraph -f example/file/stru
 
 ## 4. Doc
 
+For Spark execution, see [Spark Loader on Java 17](docs/spark-java17.md) for the tested engine version, launcher usage, and the separate HBase bulkload boundary.
+
 The [loader homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-loader/) contains more information about it. 
 
 Server 1.7 compatibility CI uses the pinned official ASF 1.7.0 binary archive. The fixture cache verifies the release version, official source URL, official SHA-512 and cached archive SHA-256 before startup. A failed download does not fall back to rebuilding the release tag. Unpublished candidate SDKs and their Server fixture continue to use the locked ASF source build.

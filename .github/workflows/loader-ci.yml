@@ -60,6 +60,9 @@ jobs:
           java-version: ${{ matrix.JAVA_VERSION }}
           distribution: 'temurin'
 
+      - name: Test Spark launcher arguments
+        run: python3 hugegraph-loader/src/test/python/test_spark_launcher.py
+
       - name: Install locked candidate SDK
         id: candidate-sdk
         uses: ./.github/actions/setup-candidate-sdk
