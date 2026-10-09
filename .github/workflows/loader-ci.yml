@@ -71,6 +71,25 @@ jobs:
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader -am -Dmaven.javadoc.skip=true -DskipTests -ntp
 
+      - name: Test ordinary Loader Parquet distribution
+        run: |
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          import subprocess
+          distributions = [p for p in Path('hugegraph-loader').glob('apache-hugegraph-loader-*') if p.is_dir()]
+          if len(distributions) != 1:
+              raise RuntimeError('Expected exactly one assembled Loader distribution')
+          jars = sorted((distributions[0] / 'lib').glob('*.jar'))
+          binding = [p for p in jars if p.name.startswith('log4j-slf4j-impl')]
+          sdk = [p for p in jars if p.name.startswith('hugegraph')]
+          shaded = [p for p in jars if p.name.startswith('apache-hugegraph-loader-')
+                    and p.name.endswith('-shaded.jar')]
+          other = [p for p in jars if p not in binding + sdk + shaded]
+          classpath = ':'.join(map(str, [Path('hugegraph-loader/target/test-classes')] + binding + sdk + other))
+          subprocess.run(['java', '-Xmx128m', '-cp', classpath,
+                          'org.apache.hugegraph.loader.test.unit.ParquetRuntimeTest'], check=True)
+          PYCODE
+
       - name: Prepare HDFS from the pinned Hadoop image
         timeout-minutes: 18
         run: bash "$TRAVIS_DIR/start-hdfs-ci.sh"

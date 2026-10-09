@@ -33,6 +33,8 @@ import org.junit.runners.Suite;
         SparkRowTest.class,
         DateUtilTest.class,
         ParquetUtilTest.class,
+        ProtobufRuntimeTest.class,
+        ParquetRuntimeTest.class,
         MappingConverterTest.class,
         LoadProgressTest.class,
         RangesTimerTest.class,
