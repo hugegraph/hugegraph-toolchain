@@ -20,11 +20,13 @@
 import copy
 import json
 import os
+import re
 from unittest.mock import patch
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 import uuid
 import xml.etree.ElementTree as ET
@@ -55,7 +57,7 @@ class CandidateParentModelTest(unittest.TestCase):
                 root_pom = (header + '<parent><groupId>org.apache</groupId><artifactId>apache</artifactId>'
                             '<version>23</version></parent><groupId>' + group + '</groupId>'
                             '<artifactId>root</artifactId><version>${revision}</version><packaging>pom</packaging>'
-                            '<properties><revision>1.7.0</revision></properties><modules><module>dependency</module>'
+                            '<properties><revision>1.8.0</revision></properties><modules><module>dependency</module>'
                             '<module>consumer</module></modules><build><plugins><plugin>'
                             '<artifactId>maven-remote-resources-plugin</artifactId><version>3.3.0</version>'
                             '</plugin></plugins></build></project>')
@@ -67,7 +69,7 @@ class CandidateParentModelTest(unittest.TestCase):
                     directory.mkdir()
                     body = flatten if module == "dependency" else ""
                     dependency = (('<dependencies><dependency><groupId>' + group + '</groupId>'
-                                   '<artifactId>dependency</artifactId><version>1.7.0</version>'
+                                   '<artifactId>dependency</artifactId><version>1.8.0</version>'
                                    '</dependency></dependencies>') if module == "consumer" else "")
                     (directory / "pom.xml").write_text(header + parent + '<artifactId>' + module + '</artifactId>'
                                                       + dependency + '<build><plugins>' + body
@@ -99,7 +101,7 @@ class CandidateParentModelTest(unittest.TestCase):
                     self.assertNotIn("Failed to build parent project", output)
                     version = ET.parse(source / ".flattened-pom.xml").getroot().findtext(
                         "{http://maven.apache.org/POM/4.0.0}version")
-                    self.assertEqual("1.7.0", version)
+                    self.assertEqual("1.8.0", version)
                 else:
                     self.assertIn(literal_request, output)
                 for path, original in original_poms.items():
@@ -116,18 +118,18 @@ class CandidateParentModelTest(unittest.TestCase):
             group = "org.example.candidatesdk.g" + uuid.uuid4().hex
             repository = Path.home() / ".m2/repository" / group.replace(".", "/")
             self.addCleanup(shutil.rmtree, repository, True)
-            artifact = repository / "sdk/1.8.0"
+            artifact = repository / "sdk/1.9.0"
             artifact.mkdir(parents=True)
             header = '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
-            (artifact / "sdk-1.8.0.pom").write_text(
+            (artifact / "sdk-1.9.0.pom").write_text(
                 header + '<groupId>' + group + '</groupId><artifactId>sdk</artifactId>'
-                '<version>1.8.0</version></project>')
-            with zipfile.ZipFile(artifact / "sdk-1.8.0.jar", "w") as jar:
+                '<version>1.9.0</version></project>')
+            with zipfile.ZipFile(artifact / "sdk-1.9.0.jar", "w") as jar:
                 jar.writestr("sdk-source.txt", "selected upstream revision")
-            (artifact / "_remote.repositories").write_text("sdk-1.8.0.pom>=\nsdk-1.8.0.jar>=\n")
+            (artifact / "_remote.repositories").write_text("sdk-1.9.0.pom>=\nsdk-1.9.0.jar>=\n")
             pom = root / "pom.xml"
             pom.write_text(header + '<groupId>org.example.consumer</groupId><artifactId>consumer</artifactId>'
-                           '<version>1</version><properties><hugegraph.version>1.7.0</hugegraph.version>'
+                           '<version>1</version><properties><hugegraph.version>1.8.0</hugegraph.version>'
                            '</properties><dependencies><dependency><groupId>' + group + '</groupId>'
                            '<artifactId>sdk</artifactId><version>${hugegraph.version}</version></dependency>'
                            '</dependencies></project>')
@@ -136,7 +138,7 @@ class CandidateParentModelTest(unittest.TestCase):
             command = [os.environ["CANDIDATE_SDK_MAVEN_TEST"], "-o", "-ntp", "--settings", str(settings),
                        "-f", str(pom), "org.apache.maven.plugins:maven-dependency-plugin:3.1.1:build-classpath",
                        "-Dmdep.outputFile=" + str(root / "classpath")]
-            env = dict(os.environ, MAVEN_ARGS="-Dhugegraph.version=1.8.0")
+            env = dict(os.environ, MAVEN_ARGS="-Dhugegraph.version=1.9.0")
             # Warm only Maven's public plugin dependencies when this opt-in
             # regression runs on a fresh machine; coordinate checks stay offline.
             prepared = subprocess.run([arg for arg in command if arg != "-o"], env=env,
@@ -146,11 +148,33 @@ class CandidateParentModelTest(unittest.TestCase):
             env["MAVEN_ARGS"] = ""
             wrong = subprocess.run(command, env=env, capture_output=True, text=True, timeout=90)
             self.assertNotEqual(0, wrong.returncode, wrong.stdout + wrong.stderr)
-            self.assertIn(group + ":sdk:jar:1.7.0", wrong.stdout + wrong.stderr)
-            env["MAVEN_ARGS"] = "-Dhugegraph.version=1.8.0"
+            self.assertIn(group + ":sdk:jar:1.8.0", wrong.stdout + wrong.stderr)
+            env["MAVEN_ARGS"] = "-Dhugegraph.version=1.9.0"
             selected = subprocess.run(command, env=env, capture_output=True, text=True, timeout=90)
             self.assertEqual(0, selected.returncode, selected.stdout + selected.stderr)
-            self.assertEqual(str(artifact / "sdk-1.8.0.jar"), (root / "classpath").read_text().strip())
+            self.assertEqual(str(artifact / "sdk-1.9.0.jar"), (root / "classpath").read_text().strip())
+
+    @unittest.skipUnless(os.environ.get("CANDIDATE_SDK_MAVEN_TEST"),
+                         "Set CANDIDATE_SDK_MAVEN_TEST for the aggregate-coordinate regression")
+    def test_toolchain_dist_coordinate_keeps_the_release_archive_name(self):
+        # Exercise Maven's real reactor selector and interpolation without packaging the full distribution.
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "effective-pom.xml"
+            source = Path(__file__).resolve().parents[2]
+            result = subprocess.run([os.environ["CANDIDATE_SDK_MAVEN_TEST"], "-f", str(source / "pom.xml"),
+                                     "-pl", ":hugegraph-toolchain-dist", "-ntp", "-B",
+                                     "org.apache.maven.plugins:maven-help-plugin:3.2.0:effective-pom",
+                                     "-Doutput=" + str(output)], capture_output=True, text=True, timeout=90)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            model = ET.parse(output).getroot()
+            ns = "{http://maven.apache.org/POM/4.0.0}"
+            self.assertEqual("org.apache.hugegraph", model.findtext(ns + "groupId"))
+            self.assertEqual("hugegraph-toolchain-dist", model.findtext(ns + "artifactId"))
+            self.assertEqual("1.8.0", model.findtext(ns + "version"))
+            properties = model.find(ns + "properties")
+            self.assertEqual("hugegraph-toolchain", properties.findtext(ns + "release.name"))
+            self.assertEqual("apache-hugegraph-toolchain-1.8.0", properties.findtext(ns + "final.name"))
+            self.assertEqual("hugegraph-toolchain-dist-1.8.0", model.findtext(ns + "build/" + ns + "finalName"))
 
 
 class CandidateDistributionTest(unittest.TestCase):
@@ -160,7 +184,7 @@ class CandidateDistributionTest(unittest.TestCase):
         context.start()
         self.addCleanup(context.stop)
 
-    def fixture(self, root, revision="1.7.0"):
+    def fixture(self, root, revision="1.8.0"):
         repository = root / "m2"
         artifacts, modules = [], []
         for source_pom in sorted(sdk.REQUIRED_MODULES):
@@ -189,17 +213,24 @@ class CandidateDistributionTest(unittest.TestCase):
     def test_floating_sdk_version_preserves_verified_coordinates_and_maven_arguments(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            repository, manifest = self.fixture(root, "1.8.0")
+            repository, manifest = self.fixture(root, "1.9.0-SNAPSHOT")
             environment = root / "github-env"
             # Fixed-baseline validation must still reject the newer revision.
             with self.assertRaises(RuntimeError):
                 sdk.validate_sdk(repository)
-            original = "--settings settings.xml -Dmaven.repo.local=" + str(repository)
-            with patch.dict(os.environ, {"MAVEN_ARGS": original}):
+            original = "--settings settings.xml -Dmaven.repo.local=/old -Dhugegraph.version=1.8.0"
+            with patch.dict(os.environ, {"MAVEN_ARGS": original, "MAVEN_OPTS": "-Xmx1g -Dsdk.validation.mode=release"}):
                 sdk.configure_upstream(repository, environment)
             lines = dict(line.split("=", 1) for line in environment.read_text().splitlines())
-            self.assertEqual("1.8.0", lines["CANDIDATE_SDK_VERSION"])
-            self.assertEqual(original + " -Dhugegraph.version=1.8.0", lines["MAVEN_ARGS"])
+            self.assertEqual("1.9.0-SNAPSHOT", lines["CANDIDATE_SDK_VERSION"])
+            for key in ("MAVEN_ARGS", "MAVEN_OPTS"):
+                self.assertIn("-Dmaven.repo.local=" + str(repository), lines[key])
+                self.assertIn("-Dhugegraph.version=1.9.0-SNAPSHOT", lines[key])
+                self.assertIn("-Dsdk.validation.mode=candidate", lines[key])
+                for property_name in ("maven.repo.local", "hugegraph.version", "sdk.validation.mode"):
+                    self.assertEqual(1, lines[key].count("-D" + property_name + "="))
+            self.assertIn("--settings settings.xml", lines["MAVEN_ARGS"])
+            self.assertIn("-Xmx1g", lines["MAVEN_OPTS"])
             with patch.dict(os.environ, lines):
                 sdk.validate_sdk(repository)
                 distribution = self.distribution(root, repository, manifest)
@@ -228,6 +259,16 @@ class CandidateDistributionTest(unittest.TestCase):
             self.assertIn("cannot be combined", result.stderr)
             self.assertFalse(environment.exists())
 
+    def test_floating_distribution_cli_uses_its_explicit_sdk_version(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repository, manifest = self.fixture(root, "1.9.0-SNAPSHOT")
+            distribution = self.distribution(root, repository, manifest)
+            result = subprocess.run(["python3", sdk.__file__, str(repository), "--version", "1.9.0-SNAPSHOT",
+                                     "--distribution", str(distribution), "--module", "hubble"],
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(0, result.returncode, result.stderr)
+
     def write_manifest(self, repository, manifest):
         (repository / "candidate-sdk-manifest.json").write_text(json.dumps(manifest))
 
@@ -250,7 +291,7 @@ class CandidateDistributionTest(unittest.TestCase):
             directory = self.distribution(root, repository, manifest)
             for module in ("loader", "tools", "hubble"):
                 self.assertEqual(9, len(sdk.validate_distribution(repository, directory, module)))
-            common = directory / "lib/hugegraph-common-1.7.0.jar"
+            common = directory / "lib/hugegraph-common-1.8.0.jar"
             common.write_bytes(b"Central artifact with the same GAV")
             with self.assertRaisesRegex(RuntimeError, "changed packaged"):
                 sdk.validate_distribution(repository, directory, "loader")
@@ -261,7 +302,7 @@ class CandidateDistributionTest(unittest.TestCase):
                 root = Path(temporary)
                 repository, manifest = self.fixture(root)
                 directory = self.distribution(root, repository, manifest)
-                common = directory / "lib/hugegraph-common-1.7.0.jar"
+                common = directory / "lib/hugegraph-common-1.8.0.jar"
                 if scenario == "missing":
                     common.unlink()
                 elif scenario in ("old_version", "duplicate"):
@@ -278,7 +319,7 @@ class CandidateDistributionTest(unittest.TestCase):
                     (directory / "candidate-sdk-manifest.json").unlink()
                 else:
                     common.unlink()
-                    common.symlink_to(repository / "org/apache/hugegraph/hugegraph-common/1.7.0/hugegraph-common-1.7.0.jar")
+                    common.symlink_to(repository / "org/apache/hugegraph/hugegraph-common/1.8.0/hugegraph-common-1.8.0.jar")
                 with self.assertRaises(RuntimeError):
                     sdk.validate_distribution(repository, directory, "loader")
 
@@ -287,7 +328,7 @@ class CandidateDistributionTest(unittest.TestCase):
             root = Path(temporary)
             repository, manifest = self.fixture(root)
             directory = self.distribution(root, repository, manifest)
-            (directory / "lib/hugegraph-core-1.7.0.jar").unlink()
+            (directory / "lib/hugegraph-core-1.8.0.jar").unlink()
             sdk.validate_distribution(repository, directory, "tools")
             with self.assertRaisesRegex(RuntimeError, "hugegraph-core"):
                 sdk.validate_distribution(repository, directory, "hubble")
@@ -298,7 +339,7 @@ class CandidateDistributionTest(unittest.TestCase):
                 root = Path(temporary)
                 repository, manifest = self.fixture(root)
                 directory = self.distribution(root, repository, manifest)
-                pom = repository / "org/apache/hugegraph/hugegraph/1.7.0/hugegraph-1.7.0.pom"
+                pom = repository / "org/apache/hugegraph/hugegraph/1.8.0/hugegraph-1.8.0.pom"
                 if scenario == "wrong_source":
                     manifest["commit"] = "0" * 40
                 elif scenario == "false_origin":
@@ -318,13 +359,8 @@ class CandidateDistributionTest(unittest.TestCase):
             root = Path(temporary)
             repository, manifest = self.fixture(root)
             outputs = []
-            server_dist = repository / "org/apache/hugegraph/hugegraph-dist/1.7.0/hugegraph-dist-1.7.0.jar"
-            server_dist.parent.mkdir(parents=True)
-            server_dist.write_bytes(b"locked Server distribution")
-            manifest["artifacts"].append({"path": str(server_dist.relative_to(repository)),
-                                          "sha256": sdk.digest(server_dist), "source_reactor_install": True})
             for artifact, extension in (("hugegraph-toolchain", "pom"),
-                                        ("hugegraph-dist", "jar"),
+                                        ("hugegraph-toolchain-dist", "jar"),
                                         ("hugegraph-client", "jar"),
                                         ("hugegraph-loader", "jar"),
                                         ("hubble-be", "jar")):
@@ -334,27 +370,47 @@ class CandidateDistributionTest(unittest.TestCase):
                 manifest["artifacts"].append({"path": str(path.relative_to(repository)),
                                               "sha256": sdk.digest(path), "source_reactor_install": True})
                 outputs.append(path)
+            # The distinct Server dist coordinate is an immutable source input.
+            server_dist = repository / "org/apache/hugegraph/hugegraph-dist/1.8.0/hugegraph-dist-1.8.0.jar"
+            server_dist.parent.mkdir(parents=True, exist_ok=True)
+            server_dist.write_bytes(b"locked Server distribution")
+            manifest["artifacts"].append({"path": str(server_dist.relative_to(repository)),
+                                          "sha256": sdk.digest(server_dist), "source_reactor_install": True})
             self.write_manifest(repository, manifest)
             directory = self.distribution(root, repository, manifest)
-            # The aggregate Toolchain dist JAR is not a module runtime library.
+            # Aggregate dist JARs are not module runtime libraries.
             (directory / "lib/hugegraph-dist-1.8.0.jar").unlink()
+            (directory / "lib/hugegraph-toolchain-dist-1.8.0.jar").unlink()
             before = (repository / "candidate-sdk-manifest.json").read_bytes()
             for path in outputs:
                 # Simulate parent/Client install, then Loader install, then Hubble install.
                 path.write_bytes(b"new reactor output after compile")
-                if path.suffix == ".jar" and path.name != "hugegraph-dist-1.8.0.jar":
+                if path.suffix == ".jar" and path.name != "hugegraph-toolchain-dist-1.8.0.jar":
                     shutil.copyfile(path, directory / "lib" / path.name)
                 for module in ("loader", "tools", "hubble"):
                     sdk.validate_distribution(repository, directory, module)
             self.assertEqual(before, (repository / "candidate-sdk-manifest.json").read_bytes())
+            self.assertEqual(b"locked Server distribution", server_dist.read_bytes())
             server_dist.write_bytes(b"overwritten Server distribution")
             with self.assertRaisesRegex(RuntimeError, "SDK artifact hash mismatch"):
                 sdk.validate_sdk(repository)
             server_dist.write_bytes(b"locked Server distribution")
-            common = repository / "org/apache/hugegraph/hugegraph-common/1.7.0/hugegraph-common-1.7.0.jar"
+            common = repository / "org/apache/hugegraph/hugegraph-common/1.8.0/hugegraph-common-1.8.0.jar"
             common.write_bytes(b"replaced Server SDK input")
             with self.assertRaisesRegex(RuntimeError, "SDK artifact hash mismatch"):
                 sdk.validate_distribution(repository, directory, "hubble")
+
+    def test_legacy_dist_output_at_another_revision_does_not_change_server_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, manifest = self.fixture(Path(temporary), "1.9.0-SNAPSHOT")
+            legacy = repository / "org/apache/hugegraph/hugegraph-dist/1.8.0/hugegraph-dist-1.8.0.jar"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_bytes(b"legacy Toolchain output")
+            manifest["artifacts"].append({"path": str(legacy.relative_to(repository)),
+                                          "sha256": sdk.digest(legacy), "source_reactor_install": True})
+            self.write_manifest(repository, manifest)
+            legacy.write_bytes(b"updated legacy Toolchain output")
+            sdk.validate_sdk(repository, "1.9.0-SNAPSHOT")
 
     def test_source_context_preserves_full_identity_checks(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -422,6 +478,206 @@ class CandidateDistributionTest(unittest.TestCase):
             self.assertEqual(1, result.returncode)
             self.assertNotIn("Traceback", result.stderr)
             self.assertNotIn("secret", result.stderr)
+
+
+class ReleaseDistributionTest(unittest.TestCase):
+    def fixture(self, root, version="1.8.0"):
+        repository, directory = root / "m2", root / "distribution"
+        library = directory / "lib"
+        library.mkdir(parents=True)
+        for artifact in ("hugegraph-common", "hg-pd-common", "hg-pd-client", "hg-pd-grpc", "hugegraph-core"):
+            parent = repository / "org/apache/hugegraph" / artifact / version
+            parent.mkdir(parents=True)
+            pom = ('<project xmlns="http://maven.apache.org/POM/4.0.0"><parent>'
+                   '<groupId>org.apache.hugegraph</groupId><artifactId>hugegraph</artifactId>'
+                   '<version>' + version + '</version></parent><artifactId>' + artifact + '</artifactId></project>')
+            (parent / (artifact + "-" + version + ".pom")).write_text(pom)
+            jar = parent / (artifact + "-" + version + ".jar")
+            jar.write_bytes(artifact.encode())
+            shutil.copyfile(jar, library / jar.name)
+        (library / "hugegraph-client-1.8.0.jar").write_bytes(b"Toolchain output")
+        return repository, directory
+
+    def test_release_uses_exact_maven_artifacts_without_a_candidate_manifest(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, directory = self.fixture(Path(temporary))
+            for module in ("loader", "tools", "hubble"):
+                self.assertEqual(5, len(sdk.validate_release_sdk(repository, "1.8.0", directory, module)))
+            command = ["python3", str(Path(sdk.__file__)), str(repository), "--mode", "release",
+                       "--version", "1.8.0", "--distribution", str(directory), "--module", "hubble"]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=5)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("release SDK 1.8.0", result.stdout)
+
+    def test_release_rejects_missing_mixed_and_replaced_sdk_inputs(self):
+        scenarios = ("missing_jar", "missing_pom", "missing_library", "mixed_version", "duplicate_version",
+                     "replaced_library", "stale_repo_manifest", "stale_package_manifest", "wrong_pom_version",
+                     "invalid_pom", "repository_symlink", "package_symlink", "library_directory_symlink")
+        for scenario in scenarios:
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                repository, directory = self.fixture(root)
+                common = repository / "org/apache/hugegraph/hugegraph-common/1.8.0/hugegraph-common-1.8.0.jar"
+                packaged = directory / "lib" / common.name
+                pom = common.with_suffix(".pom")
+                if scenario == "missing_jar":
+                    common.unlink()
+                elif scenario == "missing_pom":
+                    pom.unlink()
+                elif scenario == "missing_library":
+                    packaged.unlink()
+                elif scenario in ("mixed_version", "duplicate_version"):
+                    old = packaged.with_name("hugegraph-common-1.7.0.jar")
+                    shutil.copyfile(packaged, old)
+                    if scenario == "mixed_version":
+                        packaged.unlink()
+                elif scenario == "replaced_library":
+                    packaged.write_bytes(b"Other repository's same GAV")
+                elif scenario in ("stale_repo_manifest", "stale_package_manifest"):
+                    target = repository if scenario == "stale_repo_manifest" else directory
+                    (target / "candidate-sdk-manifest.json").write_text("{}")
+                elif scenario == "wrong_pom_version":
+                    pom.write_text(pom.read_text().replace("1.8.0", "1.7.0"))
+                elif scenario == "invalid_pom":
+                    pom.write_text("<project>")
+                elif scenario == "repository_symlink":
+                    common.unlink()
+                    common.symlink_to(packaged)
+                elif scenario == "library_directory_symlink":
+                    external = root / "external-library"
+                    (directory / "lib").rename(external)
+                    (directory / "lib").symlink_to(external, target_is_directory=True)
+                else:
+                    packaged.unlink()
+                    packaged.symlink_to(common)
+                with self.assertRaises(RuntimeError):
+                    sdk.validate_release_sdk(repository, "1.8.0", directory, "loader")
+
+    def test_release_hubble_requires_core_but_loader_does_not(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, directory = self.fixture(Path(temporary))
+            (directory / "lib/hugegraph-core-1.8.0.jar").unlink()
+            sdk.validate_release_sdk(repository, "1.8.0", directory, "loader")
+            with self.assertRaisesRegex(RuntimeError, "hugegraph-core"):
+                sdk.validate_release_sdk(repository, "1.8.0", directory, "hubble")
+
+    def test_release_requires_transitive_pd_common_library(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, directory = self.fixture(Path(temporary))
+            (directory / "lib/hg-pd-common-1.8.0.jar").unlink()
+            for module in ("loader", "tools", "hubble"):
+                with self.subTest(module=module), self.assertRaisesRegex(RuntimeError, "hg-pd-common"):
+                    sdk.validate_release_sdk(repository, "1.8.0", directory, module)
+
+    def test_sdk_rejects_unresolved_and_unspecified_versions(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, directory = self.fixture(Path(temporary))
+            with self.assertRaisesRegex(RuntimeError, "concrete non-SNAPSHOT version"):
+                sdk.validate_release_sdk(repository, "${revision}", directory, "loader")
+            result = subprocess.run(["python3", str(Path(sdk.__file__)), str(repository), "--mode", "release"],
+                                    capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("--version is required", result.stderr)
+
+    def test_release_rejects_snapshot_even_with_matching_artifacts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository, directory = self.fixture(Path(temporary), "1.9.0-SNAPSHOT")
+            with self.assertRaisesRegex(RuntimeError, "concrete non-SNAPSHOT version"):
+                sdk.validate_release_sdk(repository, "1.9.0-SNAPSHOT", directory, "hubble")
+            command = ["python3", str(Path(sdk.__file__)), str(repository), "--mode", "release",
+                       "--version", "1.9.0-SNAPSHOT", "--distribution", str(directory), "--module", "hubble"]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("concrete non-SNAPSHOT version", result.stderr)
+
+
+class SDKActionTest(unittest.TestCase):
+    def test_source_build_defaults_agree_without_changing_historical_runtime_fixture(self):
+        root = Path(__file__).resolve().parents[2]
+        action = (root / ".github/actions/setup-candidate-sdk/action.yml").read_text()
+        defaults = re.findall(r"default: '([0-9a-f]{40})'", action)
+        self.assertEqual([sdk.COMMIT, sdk.COMMIT], defaults)
+        for name in (".github/workflows/ci.yml", ".github/workflows/java17-images-ci.yml",
+                     "hugegraph-loader/Dockerfile", "hugegraph-hubble/Dockerfile"):
+            self.assertIn(sdk.COMMIT, (root / name).read_text())
+        for name in ("hugegraph-loader/Dockerfile", "hugegraph-hubble/Dockerfile"):
+            self.assertIn("-Dhugegraph.version=1.8.0 -Dsdk.validation.mode=candidate", (root / name).read_text())
+        upstream = (root / ".github/workflows/upstream-compatibility.yml").read_text()
+        self.assertIn("ref: master", upstream)
+        self.assertNotIn("validation-mode: release", upstream)
+        release = (root / ".github/actions/setup-hugegraph-server/release.py").read_text()
+        self.assertIn('VERSION = "1.7.0"', release)
+        self.assertIn('apache-hugegraph-incubating-1.7.0.tar.gz', release)
+
+    def run_action(self, root, revision, corrupt=None):
+        fixture = root / "fixture"
+        candidate = CandidateDistributionTest()
+        candidate.source_commit = sdk.COMMIT if revision == "1.8.0" else "b" * 40
+        repository, manifest = candidate.fixture(fixture, revision)
+        if corrupt == "source":
+            manifest["commit"] = "0" * 40
+        elif corrupt == "module":
+            manifest["required_sdk_modules"].pop()
+        elif corrupt == "hash":
+            (repository / manifest["artifacts"][0]["path"]).write_bytes(b"changed SDK")
+        elif corrupt == "origin":
+            manifest["artifacts"][0]["source_reactor_install"] = False
+        candidate.write_manifest(repository, manifest)
+        workspace = root / "workspace"
+        installer = workspace / "hugegraph-client/assembly/travis/install-candidate-sdk.sh"
+        installer.parent.mkdir(parents=True)
+        installer.write_text('#!/bin/bash\nset -euo pipefail\n'
+                             'cp -R "$SDK_FIXTURE/." "$3/"\n'
+                             'mkdir -p "$2/hugegraph-server"\n'
+                             'printf archive > "$2/hugegraph-server/apache-hugegraph-fixture.tar.gz"\n')
+        verifier = workspace / ".github/scripts/verify_candidate_image_sdk.py"
+        verifier.parent.mkdir(parents=True)
+        shutil.copyfile(sdk.__file__, verifier)
+        runner = root / "runner"
+        runner.mkdir()
+        home = root / "home"
+        home.mkdir()
+        environment, output = root / "env", root / "output"
+        action = (Path(__file__).resolve().parents[2] / ".github/actions/setup-candidate-sdk/action.yml").read_text()
+        script = textwrap.dedent(action.split("      run: |\n", 1)[1].split("\n    - name:", 1)[0])
+        env = dict(os.environ, HOME=str(home), RUNNER_TEMP=str(runner), GITHUB_WORKSPACE=str(workspace),
+                   GITHUB_ENV=str(environment), GITHUB_OUTPUT=str(output), SDK_FIXTURE=str(repository),
+                   SERVER_COMMIT=candidate.source_commit, SERVER_REPOSITORY=sdk.REPOSITORY,
+                   SERVER_FETCH_REF=candidate.source_commit, MAVEN_OPTS="-Xmx1g",
+                   MAVEN_ARGS="-ntp --settings settings.xml")
+        result = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=10)
+        variables = dict(line.split("=", 1) for line in environment.read_text().splitlines()) if environment.exists() else {}
+        outputs = dict(line.split("=", 1) for line in output.read_text().splitlines()) if output.exists() else {}
+        return result, variables, outputs
+
+    def test_action_verifies_pinned_and_floating_sdk_before_selecting_consumer_coordinates(self):
+        for revision in ("1.8.0", "1.9.0", "1.9.0-SNAPSHOT"):
+            with self.subTest(revision=revision), tempfile.TemporaryDirectory() as temporary:
+                result, variables, outputs = self.run_action(Path(temporary), revision)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                for key in ("MAVEN_ARGS", "MAVEN_OPTS"):
+                    self.assertIn("-Dmaven.repo.local=" + outputs["maven-repo"], variables[key])
+                    self.assertIn("-Dhugegraph.version=" + revision, variables[key])
+                    self.assertIn("-Dsdk.validation.mode=candidate", variables[key])
+                self.assertEqual(revision, variables["CANDIDATE_SDK_VERSION"])
+                manifest = Path(outputs["manifest"])
+                self.assertTrue(manifest.is_file())
+                self.assertEqual(revision, json.loads(manifest.read_text())["source_revision"])
+                self.assertEqual(manifest.parent, Path(outputs["maven-repo"]))
+                # The distribution uses exactly the SDK version configured by this action.
+                with patch.dict(os.environ, variables):
+                    sdk.validate_sdk(outputs["maven-repo"])
+                self.assertEqual(sdk.digest(Path(outputs["archive"])), outputs["archive-sha256"])
+                with self.assertRaises(RuntimeError):
+                    sdk.validate_release_sdk(outputs["maven-repo"], revision)
+
+    def test_action_rejects_unresolved_version_or_unverified_source_without_exporting_environment(self):
+        for revision, corrupt in (("${revision}", None), ("1.8.0", "source"), ("1.8.0", "module"),
+                                  ("1.9.0-SNAPSHOT", "hash"), ("1.9.0-SNAPSHOT", "origin")):
+            with self.subTest(revision=revision, corrupt=corrupt), tempfile.TemporaryDirectory() as temporary:
+                result, variables, _ = self.run_action(Path(temporary), revision, corrupt)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual({}, variables)
 
 
 if __name__ == "__main__":

@@ -427,6 +427,8 @@
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-exec</artifactId>
             <version>${hive.version}</version>
+            <!-- Keep Hive's embedded old Guava out of the shared Loader classpath. -->
+            <classifier>core</classifier>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
@@ -734,6 +736,10 @@
                                 <exec executable="python3" failonerror="true">
                                     <arg value="${project.basedir}/../.github/scripts/verify_candidate_image_sdk.py"/>
                                     <arg value="${settings.localRepository}"/>
+                                    <arg value="--mode"/>
+                                    <arg value="${sdk.validation.mode}"/>
+                                    <arg value="--version"/>
+                                    <arg value="${hugegraph.version}"/>
                                     <arg value="--distribution"/>
                                     <arg value="${project.basedir}/${final.name}"/>
                                     <arg value="--module"/>

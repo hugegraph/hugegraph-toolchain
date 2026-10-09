@@ -1,5 +1,5 @@
 name: 'Setup same-source candidate SDK'
-description: 'Build a locked Java 17 server reactor outside the workspace in an isolated Maven repository'
+description: 'Build a same-source Java 17 SDK outside the workspace in an isolated Maven repository'
 
 inputs:
   repository:
@@ -7,10 +7,10 @@ inputs:
     default: 'apache/hugegraph'
   ref:
     description: 'Immutable candidate source commit'
-    default: 'e62c961e00221569d4f955abbadf60faee45b283'
+    default: '68855199031d5801edb4fe41b2bacbacffe8fe68'
   expected-commit:
     description: 'Locked candidate source commit'
-    default: 'e62c961e00221569d4f955abbadf60faee45b283'
+    default: '68855199031d5801edb4fe41b2bacbacffe8fe68'
 
 outputs:
   repository:
@@ -53,6 +53,7 @@ runs:
         SERVER_REPOSITORY: ${{ steps.source.outputs.repository }}
         SERVER_FETCH_REF: ${{ steps.source.outputs.fetch_ref }}
       run: |
+        set -euo pipefail
         candidate_repo=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-m2.XXXXXX")
         server_build=$(mktemp -d "$RUNNER_TEMP/hugegraph-candidate-build.XXXXXX")
         source_dir="$server_build/source"
@@ -76,17 +77,14 @@ runs:
           printf 'Candidate SDK installer did not produce a provenance manifest\n' >&2
           exit 1
         fi
+        CANDIDATE_SOURCE_COMMIT="$SERVER_COMMIT" \
+          python3 "$GITHUB_WORKSPACE/.github/scripts/verify_candidate_image_sdk.py" "$candidate_repo" \
+          --configure-upstream-env "$GITHUB_ENV"
         manifest_artifact_id=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
         archive_sha=$(sha256sum "${archives[0]}" | cut -d ' ' -f 1)
         printf 'archive-sha256=%s\nmanifest=%s\n' "$archive_sha" \
           "$manifest" >> "$GITHUB_OUTPUT"
         printf 'manifest-artifact-id=%s\n' "$manifest_artifact_id" >> "$GITHUB_OUTPUT"
-        # Keep subprocess Maven repository isolation aligned with CLI arguments.
-        {
-          printf 'MAVEN_OPTS=%s -Dmaven.repo.local=%s\n' "${MAVEN_OPTS:-}" "$candidate_repo"
-          printf 'MAVEN_ARGS=%s -Dmaven.repo.local=%s\n' "${MAVEN_ARGS:-}" "$candidate_repo"
-          printf 'CANDIDATE_SOURCE_COMMIT=%s\n' "$SERVER_COMMIT"
-        } >> "$GITHUB_ENV"
         printf 'archive=%s\nmaven-repo=%s\n' "${archives[0]}" "$candidate_repo" >> "$GITHUB_OUTPUT"
     - name: Retain candidate SDK provenance
       uses: actions/upload-artifact@v7

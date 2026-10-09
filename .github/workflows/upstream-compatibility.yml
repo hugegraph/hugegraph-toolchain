@@ -53,13 +53,6 @@ jobs:
           ref: ${{ steps.upstream.outputs.commit_id }}
           expected-commit: ${{ steps.upstream.outputs.commit_id }}
 
-      - name: Select verified SDK version for all consumer builds and tests
-        env:
-          CANDIDATE_REPO: ${{ steps.sdk.outputs.maven-repo }}
-        run: >-
-          python3 .github/scripts/verify_candidate_image_sdk.py "$CANDIDATE_REPO"
-          --configure-upstream-env "$GITHUB_ENV"
-
       - name: Compile core consumers
         run: |
           mvn install -pl hugegraph-client,hugegraph-loader,hugegraph-tools,hugegraph-spark-connector -am -DskipTests -Dmaven.javadoc.skip=true -ntp

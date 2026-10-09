@@ -29,7 +29,7 @@ Required:
 - Spark 3.5.8 with Scala 2.12 (built with Scala 2.12.18)
 - Maven 3.6.3+
 
-The default Maven commands below use published Common 1.7.0, whose request bodies depend on the JVM default charset. Retain the UTF-8 submission options below when running this build on Java 17. The isolated same-source candidate SDK used by CI supplies a Common implementation that uses the declared request-body charset and defaults to UTF-8.
+The default Maven commands below compile against Common 1.8.0, which uses the declared request-body charset and defaults to UTF-8. Retain the UTF-8 submission options below to keep Spark drivers and executors consistent. The compile-time SDK version is independent of the Server version used by the runtime compatibility tests.
 
 To build without executing tests:
 
@@ -43,7 +43,7 @@ To build with default tests:
 mvn clean package
 ```
 
-The integration tests clear the configured graph before writing vertices and edges through Spark. Use a disposable server and graph. The defaults are `http://127.0.0.1:8080` and `hugegraph`; set `-Dhugegraph.test.url=... -Dhugegraph.test.graph=...` to select another target. The Surefire JVM starts with `-Dfile.encoding=UTF-8` so these fixtures do not depend on the caller's locale. The default Spark master is `local[2]`. `-Dspark.test.master=...` accepts only `local` or `local[...]`, for example `local[4]` or `local[*]`; remote masters and `local-cluster` are rejected because the Maven fixture does not distribute connector classes or dependencies to separate executors. CI runs this embedded fixture. Packaged `spark-submit` runs with separate executor JVMs and the assembly's SLF4J provider check are manual validation, not automated CI gates.
+The integration tests clear the configured graph before writing vertices and edges through Spark. Use a disposable server and graph. The defaults are `http://127.0.0.1:8080` and `hugegraph`; set `-Dhugegraph.test.url=... -Dhugegraph.test.graph=...` to select another target. The Surefire JVM starts with `-Dfile.encoding=UTF-8` so these fixtures do not depend on the caller's locale. The default Spark master is `local[2]`. `-Dspark.test.master=...` accepts only `local` or `local[...]`, for example `local[4]` or `local[*]`; remote masters and `local-cluster` are rejected because the Maven fixture does not distribute connector classes or dependencies to separate executors. CI runs this embedded fixture against both the locked Server 1.8 source build on Java 17 and the official Server 1.7 binary on its Java 11 JVM; the connector compiles against SDK 1.8.0 and runs on Java 17 in both lanes. Packaged `spark-submit` runs with separate executor JVMs and the assembly's SLF4J provider check are manual validation, not automated CI gates.
 
 HTTPS tests require an explicit trust store shared by the readback client and local Spark writers:
 
@@ -79,7 +79,7 @@ spark-submit --deploy-mode client --driver-class-path "$DRIVER_GUAVA_JAR" \
   /path/to/your-application.jar
 ```
 
-Omit the UTF-8 driver and executor options only when the connector and Java Client were built using the isolated same-source candidate SDK. The default Maven build still requires them.
+The explicit UTF-8 driver and executor options above remain the recommended submission configuration.
 
 For cluster deploy mode, provision Guava on the remote driver and use its readable absolute path in `--driver-class-path`; copying it to executors does not provision the driver.
 
