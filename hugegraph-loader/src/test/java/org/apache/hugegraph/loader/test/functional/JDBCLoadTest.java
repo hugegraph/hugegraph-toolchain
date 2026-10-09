@@ -17,14 +17,25 @@
 
 package org.apache.hugegraph.loader.test.functional;
 
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hugegraph.loader.HugeGraphLoader;
+import org.apache.hugegraph.loader.reader.jdbc.JDBCFetcher;
+import org.apache.hugegraph.loader.source.jdbc.JDBCSource;
+import org.apache.hugegraph.loader.util.DataTypeUtil;
+import org.apache.hugegraph.structure.constant.DataType;
+import org.apache.hugegraph.structure.schema.PropertyKey;
+import org.apache.hugegraph.util.JsonUtil;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Vertex;
 import org.apache.hugegraph.testutil.Assert;
@@ -259,6 +270,50 @@ public class JDBCLoadTest extends LoadTest {
         Assert.assertEquals(8, vertices.size());
         assertContains(vertices, "person", "age", "29");
         assertContains(vertices, "software", "price", "199.67");
+    }
+
+    @Test
+    public void testJdbcDateTimeUsesNativeTimestamp() throws Exception {
+        // DATETIME is a LocalDateTime in Connector/J 8, not a java.sql.Timestamp.
+        String table = "(SELECT CAST('2024-02-29 12:34:56.123456' AS DATETIME(6)) AS datetime, " +
+                       "CAST('1969-12-31 23:59:59.999999' AS DATETIME(6)) AS before_epoch, " +
+                       "CAST('2024-02-29' AS DATE) AS day, " +
+                       "CAST('12:34:56' AS TIME) AS clock) temporal_fixture";
+        JDBCSource source = JsonUtil.fromJson(JsonUtil.toJson(Map.of(
+                "vendor", "mysql", "driver", DRIVER, "url", DB_URL,
+                "database", DATABASE, "table", table,
+                "username", USER, "password", PASS)), JDBCSource.class);
+        JDBCFetcher fetcher = new JDBCFetcher(source);
+        try {
+            Timestamp[] expected = new Timestamp[3];
+            Object expectedTime;
+            try (Statement statement = fetcher.getConn().createStatement();
+                 ResultSet result = statement.executeQuery(fetcher.buildSql())) {
+                Assert.assertTrue(result.next());
+                Assert.assertTrue(result.getObject(1) instanceof LocalDateTime);
+                Assert.assertTrue(result.getObject(2) instanceof LocalDateTime);
+                for (int i = 0; i < expected.length; i++) {
+                    expected[i] = result.getTimestamp(i + 1);
+                }
+                expectedTime = result.getObject(4);
+            }
+            Object[] values = fetcher.nextBatch().get(0).values();
+            PropertyKey property = new PropertyKey("temporal_value") {
+                @Override
+                public DataType dataType() {
+                    return DataType.DATE;
+                }
+            };
+            for (int i = 0; i < expected.length; i++) {
+                Date converted = (Date) DataTypeUtil.convert(values[i], property, source);
+                Assert.assertEquals(expected[i].getTime(), converted.getTime());
+            }
+            Assert.assertEquals(123456000, ((Timestamp) values[0]).getNanos());
+            Assert.assertEquals(999999000, ((Timestamp) values[1]).getNanos());
+            Assert.assertEquals(expectedTime, values[3]);
+        } finally {
+            fetcher.close();
+        }
     }
 
     // removed because not implemented in new version of loader
