@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-ARG MAVEN_BUILDER_IMAGE=maven:3.9.11-eclipse-temurin-17
+ARG MAVEN_BUILDER_IMAGE=public.ecr.aws/docker/library/maven@sha256:e4a7ace3dc0d645ed97f8d9ad0b0d3f0b14fa8d150138f27f116d7105a639b82
 FROM --platform=$BUILDPLATFORM ${MAVEN_BUILDER_IMAGE} AS build
 
 WORKDIR /pkg
@@ -49,7 +49,7 @@ RUN set -x \
        -Dmaven.javadoc.skip=true -DskipTests -ntp \
     && python3 /pkg/.github/scripts/verify_candidate_image_sdk.py /opt/candidate-m2
 
-FROM eclipse-temurin:17-jre-jammy
+FROM public.ecr.aws/docker/library/eclipse-temurin@sha256:8993f1aed8b25fcea7a7047a7949c1866fa558fc6830d938c22c4f13b26be9d7
 
 RUN set -x \
     && apt-get -q update \
