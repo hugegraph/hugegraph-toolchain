@@ -27,6 +27,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.nio.file.Paths;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -1865,7 +1867,40 @@ public class FileLoadTest extends LoadTest {
                 "--batch-insert-threads", "2",
                 "--max-parse-errors", "3"
         };
-        loadWithAuth(args);
+        Assert.assertFalse(loadWithAuth(args));
+    }
+
+    @Test(timeout = 120000)
+    public void testCliReturnsFailureForParseErrors() throws Exception {
+        ioUtil.write("vertex_person.csv",
+                     "name,age,city",
+                     "tom,24,Hongkong",
+                     "jerry,18");
+        List<String> command = new ArrayList<>(Arrays.asList(
+                Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp", System.getProperty("surefire.test.class.path",
+                                         System.getProperty("java.class.path")),
+                HugeGraphLoader.class.getName(),
+                "-f", structPath("too_few_columns/struct.json"),
+                "-s", configPath("too_few_columns/schema.groovy"),
+                "-g", GRAPH, "-h", SERVER,
+                "--username", "admin", "--password", "pa",
+                "--max-parse-errors", "3"));
+        File output = File.createTempFile("loader-cli-", ".log");
+        Process process = new ProcessBuilder(command).redirectErrorStream(true)
+                                                     .redirectOutput(output).start();
+        try {
+            Assert.assertTrue(process.waitFor(90, TimeUnit.SECONDS));
+            Assert.assertEquals(1, process.exitValue());
+            Assert.assertEquals(1, CLIENT.graph().listVertices().size());
+            File[] failures = FileUtils.getFile(structPath(
+                    "too_few_columns/struct/failure-data")).listFiles();
+            Assert.assertNotNull(failures);
+            Assert.assertTrue(Arrays.stream(failures).anyMatch(file -> file.length() > 0));
+        } finally {
+            process.destroyForcibly();
+            FileUtils.deleteQuietly(output);
+        }
     }
 
     @Test

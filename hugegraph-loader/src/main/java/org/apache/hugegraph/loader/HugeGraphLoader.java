@@ -117,11 +117,18 @@ public final class HugeGraphLoader {
             return;
         }
 
+        boolean success = false;
         try {
-            loader.load();
+            success = loader.load();
         } finally {
-            loader.shutdown();
-            GlobalExecutorManager.shutdown(loader.options.shutdownTimeout);
+            try {
+                loader.shutdown();
+            } finally {
+                GlobalExecutorManager.shutdown(loader.options.shutdownTimeout);
+            }
+        }
+        if (!success) {
+            System.exit(1);
         }
     }
 
@@ -211,7 +218,7 @@ public final class HugeGraphLoader {
             // Print load summary
             Printer.printSummary(this.context);
         } catch (Throwable t) {
-            this.context.occurredError();
+            this.context.failLoading(t);
 
             if (t instanceof ServerException) {
                 ServerException e = (ServerException) t;
@@ -227,7 +234,7 @@ public final class HugeGraphLoader {
             throw LoadUtil.targetRuntimeException(t);
         }
 
-        return true;
+        return this.context.noError();
     }
 
     public void shutdown() {
@@ -900,18 +907,34 @@ public final class HugeGraphLoader {
             return;
         }
         LOG.info("Stop loading then shutdown HugeGraphLoader");
+        boolean tasksStopped = this.manager == null;
+        boolean interrupted = Thread.currentThread().isInterrupted();
         try {
             this.context.stopLoading();
             if (this.manager != null) {
                 // Wait all insert tasks stopped before exit
-                this.manager.waitFinished();
-                this.manager.shutdown();
+                try {
+                    this.manager.waitFinished();
+                } finally {
+                    this.manager.shutdown();
+                    tasksStopped = true;
+                }
             }
         } finally {
+            interrupted |= Thread.currentThread().isInterrupted();
             try {
-                this.context.unsetLoadingMode();
+                // Keep dependencies alive if cancellation could not terminate the workers.
+                if (tasksStopped) {
+                    try {
+                        this.context.unsetLoadingMode();
+                    } finally {
+                        this.context.close();
+                    }
+                }
             } finally {
-                this.context.close();
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }

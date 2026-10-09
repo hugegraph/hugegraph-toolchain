@@ -50,6 +50,7 @@ public final class LoadContext implements Cloneable {
     private volatile boolean closed;
     private volatile boolean stopped;
     private volatile boolean noError;
+    private volatile Throwable failure;
     private final LoadOptions options;
     private final LoadSummary summary;
     // The old progress just used to read
@@ -124,6 +125,20 @@ public final class LoadContext implements Cloneable {
 
     public void occurredError() {
         this.noError = false;
+    }
+
+    public synchronized void failLoading(Throwable failure) {
+        this.occurredError();
+        this.stopLoading();
+        if (this.failure == null) {
+            this.failure = failure;
+        }
+    }
+
+    public void throwIfFailed() {
+        if (this.failure != null) {
+            throw new LoadException("Loading failed without recoverable progress", this.failure);
+        }
     }
 
     public LoadOptions options() {
@@ -215,21 +230,38 @@ public final class LoadContext implements Cloneable {
         }
         try (HugeClient secondary = this.indirectClient != this.client ? this.indirectClient : null;
              HugeClient primary = this.client) {
+            RuntimeException loggerFailure = null;
             for (FailLogger logger : this.loggers.values()) {
-                logger.close();
+                try {
+                    logger.close();
+                } catch (RuntimeException e) {
+                    if (loggerFailure == null) {
+                        loggerFailure = e;
+                    } else {
+                        loggerFailure.addSuppressed(e);
+                    }
+                }
+            }
+            if (loggerFailure != null) {
+                throw loggerFailure;
             }
             LOG.info("Close all failure loggers successfully");
 
+            this.throwIfFailed();
             this.newProgress.plusVertexLoaded(this.summary.vertexLoaded());
             this.newProgress.plusEdgeLoaded(this.summary.edgeLoaded());
             if (this.client != null) {
                 try {
                     this.newProgress.write(this);
                 } catch (IOException e) {
-                    LOG.error("Failed to write load progress", e);
+                    this.occurredError();
+                    throw new LoadException("Failed to write load progress", e);
                 }
                 LOG.info("Write load progress successfully");
             }
+        } catch (RuntimeException e) {
+            this.occurredError();
+            throw e;
         } finally {
             this.closed = true;
         }
