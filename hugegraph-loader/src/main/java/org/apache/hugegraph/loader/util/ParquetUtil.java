@@ -17,16 +17,20 @@
 
 package org.apache.hugegraph.loader.util;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.JulianFields;
 import java.util.Date;
 
 import org.apache.hugegraph.loader.exception.LoadException;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.io.api.Binary;
+import org.apache.parquet.schema.LogicalTypeAnnotation;
+import org.apache.parquet.schema.LogicalTypeAnnotation.TimestampLogicalTypeAnnotation;
 import org.apache.parquet.schema.Type;
 
 public class ParquetUtil {
@@ -41,13 +45,27 @@ public class ParquetUtil {
         if (group.getFieldRepetitionCount(fieldName) == 0) {
             return null;
         }
+        LogicalTypeAnnotation logicalType =
+                fieldType.asPrimitiveType().getLogicalTypeAnnotation();
         Object object;
         switch (fieldType.asPrimitiveType().getPrimitiveTypeName()) {
             case INT32:
-                object = group.getInteger(fieldName, 0);
+                int integer = group.getInteger(fieldName, 0);
+                if (logicalType instanceof LogicalTypeAnnotation.DateLogicalTypeAnnotation) {
+                    object = Date.from(LocalDate.ofEpochDay(integer)
+                            .atStartOfDay(ZoneId.systemDefault()).toInstant());
+                } else {
+                    object = integer;
+                }
                 break;
             case INT64:
-                object = group.getLong(fieldName, 0);
+                long number = group.getLong(fieldName, 0);
+                if (logicalType instanceof TimestampLogicalTypeAnnotation) {
+                    object = dateFromTimestamp(number,
+                            (TimestampLogicalTypeAnnotation) logicalType);
+                } else {
+                    object = number;
+                }
                 break;
             case INT96:
                 object = dateFromInt96(group.getInt96(fieldName, 0));
@@ -66,6 +84,33 @@ public class ParquetUtil {
                 break;
         }
         return object;
+    }
+
+    private static Date dateFromTimestamp(long value,
+                                          TimestampLogicalTypeAnnotation type) {
+        long unitsPerSecond;
+        switch (type.getUnit()) {
+            case MILLIS:
+                unitsPerSecond = 1000L;
+                break;
+            case MICROS:
+                unitsPerSecond = 1000000L;
+                break;
+            case NANOS:
+                unitsPerSecond = 1000000000L;
+                break;
+            default:
+                throw new LoadException("Unsupported timestamp unit %s", type.getUnit());
+        }
+        Instant instant = Instant.ofEpochSecond(
+                Math.floorDiv(value, unitsPerSecond),
+                Math.floorMod(value, unitsPerSecond) * (1000000000L / unitsPerSecond));
+        if (!type.isAdjustedToUTC()) {
+            // Local timestamps have the same wall-clock semantics as INT96.
+            instant = LocalDateTime.ofInstant(instant, ZoneOffset.UTC)
+                                   .atZone(ZoneId.systemDefault()).toInstant();
+        }
+        return Date.from(instant);
     }
 
     private static Date dateFromInt96(Binary value) {

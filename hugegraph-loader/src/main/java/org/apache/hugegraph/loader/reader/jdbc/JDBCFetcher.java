@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -111,6 +112,10 @@ public class JDBCFetcher extends Fetcher {
                 Object[] values = new Object[n];
                 for (int i = 1; i <= n; i++) {
                     Object value = result.getObject(i);
+                    if (value instanceof LocalDateTime) {
+                        // Let the JDBC driver retain its configured time-zone conversion.
+                        value = result.getTimestamp(i);
+                    }
                     if (value == null) {
                         value = Constants.NULL_STR;
                     }

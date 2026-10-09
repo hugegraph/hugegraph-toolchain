@@ -18,17 +18,27 @@
 package org.apache.hugegraph.loader.test.unit;
 
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
 import java.nio.ByteOrder;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.TimeZone;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hugegraph.loader.util.ParquetUtil;
 import org.apache.hugegraph.testutil.Assert;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
 import org.apache.parquet.io.api.Binary;
+import org.apache.parquet.hadoop.ParquetReader;
+import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.example.ExampleParquetWriter;
+import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.MessageTypeParser;
 import org.junit.Test;
@@ -51,6 +61,76 @@ public class ParquetUtilTest {
     @Test
     public void testInt96BeforeUnixEpoch() {
         assertTimestamp(LocalDate.of(1969, 12, 31), LocalTime.MIDNIGHT);
+    }
+
+    @Test
+    public void testLogicalDatesFromParquetFile() throws Exception {
+        TimeZone previous = TimeZone.getDefault();
+        Path directory = Files.createTempDirectory("parquet-dates-");
+        Path file = directory.resolve("dates.parquet");
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"));
+            MessageType schema = MessageTypeParser.parseMessageType(
+                    "message dates { " +
+                    "required int32 day (DATE); " +
+                    "required int64 millis (TIMESTAMP(MILLIS,true)); " +
+                    "required int64 micros (TIMESTAMP(MICROS,true)); " +
+                    "required int64 nanos (TIMESTAMP(NANOS,true)); " +
+                    "required int64 local_micros (TIMESTAMP(MICROS,false)); " +
+                    "optional int32 missing (DATE); " +
+                    "required int32 number; " +
+                    "required int64 time (TIME(MICROS,true)); }");
+            Configuration conf = new Configuration();
+            conf.set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
+            org.apache.hadoop.fs.Path path =
+                    new org.apache.hadoop.fs.Path(file.toUri());
+            long[] values = {-1L, 1500000000123456L};
+            try (ParquetWriter<Group> writer = ExampleParquetWriter.builder(path)
+                    .withConf(conf).withType(schema).build()) {
+                for (long value : values) {
+                    Group group = new SimpleGroupFactory(schema).newGroup();
+                    group.add("day", value < 0 ? -1 : 17365);
+                    group.add("millis", Math.floorDiv(value, 1000L));
+                    group.add("micros", value);
+                    group.add("nanos", value * 1000L + 999L);
+                    group.add("local_micros", value);
+                    group.add("number", 123);
+                    group.add("time", 123456L);
+                    writer.write(group);
+                }
+            }
+            try (ParquetReader<Group> reader = ParquetReader
+                    .builder(new GroupReadSupport(), path).withConf(conf).build()) {
+                for (long value : values) {
+                    Group group = reader.read();
+                    long expectedMillis = Math.floorDiv(value, 1000L);
+                    long expectedDay = LocalDate.ofEpochDay(value < 0 ? -1 : 17365)
+                            .atStartOfDay(ZoneId.systemDefault()).toInstant()
+                            .toEpochMilli();
+                    assertDate(expectedDay, ParquetUtil.convertObject(group, 0));
+                    assertDate(expectedMillis, ParquetUtil.convertObject(group, 1));
+                    assertDate(expectedMillis, ParquetUtil.convertObject(group, 2));
+                    assertDate(expectedMillis, ParquetUtil.convertObject(group, 3));
+                    long expectedLocal = Instant.ofEpochMilli(expectedMillis)
+                            .atOffset(ZoneOffset.UTC).toLocalDateTime()
+                            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                    assertDate(expectedLocal, ParquetUtil.convertObject(group, 4));
+                    Assert.assertNull(ParquetUtil.convertObject(group, 5));
+                    Assert.assertEquals(123, ParquetUtil.convertObject(group, 6));
+                    Assert.assertEquals(123456L, ParquetUtil.convertObject(group, 7));
+                }
+                Assert.assertNull(reader.read());
+            }
+        } finally {
+            TimeZone.setDefault(previous);
+            Files.deleteIfExists(file);
+            Files.deleteIfExists(directory);
+        }
+    }
+
+    private static void assertDate(long expectedMillis, Object actual) {
+        Assert.assertTrue(actual instanceof Date);
+        Assert.assertEquals(expectedMillis, ((Date) actual).getTime());
     }
 
     private static void assertTimestamp(LocalDate day, LocalTime time) {
