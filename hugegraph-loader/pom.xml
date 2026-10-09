@@ -58,6 +58,41 @@
     </properties>
 
     <dependencies>
+        <!-- PD discovery needs protobuf 3; HBase otherwise selects protobuf 2.5.0. -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.22.3</version>
+        </dependency>
+        <!-- Parquet is also an ordinary Loader format, independent of Spark. -->
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-hadoop</artifactId>
+            <version>1.12.2</version>
+            <exclusions>
+                <!-- Keep the existing Loader compression-library versions. -->
+                <exclusion>
+                    <groupId>org.xerial.snappy</groupId>
+                    <artifactId>snappy-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.luben</groupId>
+                    <artifactId>zstd-jni</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.version}</version>
+            <!-- Parquet needs the format classes; Hadoop common/HDFS are already declared. -->
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <!-- use a fixed jackson for loader -->
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>

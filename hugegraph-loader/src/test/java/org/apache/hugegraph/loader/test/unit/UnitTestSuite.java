@@ -34,6 +34,8 @@ import org.junit.runners.Suite;
         DateUtilTest.class,
         ParquetUtilTest.class,
         JDBCFetcherTest.class,
+        ProtobufRuntimeTest.class,
+        ParquetRuntimeTest.class,
         MappingConverterTest.class,
         LoadProgressTest.class,
         RangesTimerTest.class,

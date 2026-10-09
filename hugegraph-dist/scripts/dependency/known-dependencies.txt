@@ -569,7 +569,13 @@ ow2-asm-6.2.jar
 paranamer-2.3.jar
 parboiled-core-1.1.8.jar
 parboiled-core-1.2.0.jar
+parquet-column-1.12.2.jar
+parquet-common-1.12.2.jar
+parquet-encoding-1.12.2.jar
+parquet-format-structures-1.12.2.jar
+parquet-hadoop-1.12.2.jar
 parquet-hadoop-bundle-1.10.0.jar
+parquet-jackson-1.12.2.jar
 perfmark-api-0.25.0.jar
 plexus-utils-3.3.0.jar
 plexus-utils-3.5.1.jar
