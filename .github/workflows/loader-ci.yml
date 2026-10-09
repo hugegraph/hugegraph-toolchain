@@ -32,7 +32,7 @@ jobs:
         SERVER_BASELINE: ['candidate', 'release-1.7']
     services:
       mysql:
-        image: mysql:8.0
+        image: public.ecr.aws/docker/library/mysql@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
