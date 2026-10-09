@@ -79,7 +79,7 @@ jobs:
           docker run --rm --network none --memory 512m --entrypoint java \
             -v "$PWD/${jobs[0]}:/job.jar:ro" \
             -v "$PWD/hugegraph-loader/target/test-classes:/probe:ro" \
-            "flink:${FLINK_VERSION}-java17" -Xmx256m -XX:ActiveProcessorCount=2 -cp /probe \
+            "public.ecr.aws/docker/library/flink@sha256:140c3909f06cbea741be78fc630e809fae9dadcbfa492a684acf39efbbf68946" -Xmx256m -XX:ActiveProcessorCount=2 -cp /probe \
             org.apache.hugegraph.loader.flink.PackagedCdcClassLoadingProbe /job.jar /opt/flink/lib
 
       - name: Verify packaged CDC snapshot and recovery
