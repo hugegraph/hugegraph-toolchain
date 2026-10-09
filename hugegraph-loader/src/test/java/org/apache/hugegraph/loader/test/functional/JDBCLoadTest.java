@@ -31,11 +31,12 @@ import java.util.Map;
 
 import org.apache.hugegraph.loader.HugeGraphLoader;
 import org.apache.hugegraph.loader.reader.jdbc.JDBCFetcher;
+import org.apache.hugegraph.loader.source.InputSource;
 import org.apache.hugegraph.loader.source.jdbc.JDBCSource;
 import org.apache.hugegraph.loader.util.DataTypeUtil;
 import org.apache.hugegraph.structure.constant.DataType;
 import org.apache.hugegraph.structure.schema.PropertyKey;
-import org.apache.hugegraph.util.JsonUtil;
+import org.apache.hugegraph.loader.util.JsonUtil;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Vertex;
 import org.apache.hugegraph.testutil.Assert;
@@ -275,16 +276,23 @@ public class JDBCLoadTest extends LoadTest {
     @Test
     public void testJdbcDateTimeUsesNativeTimestamp() throws Exception {
         // DATETIME is a LocalDateTime in Connector/J 8, not a java.sql.Timestamp.
-        String table = "(SELECT CAST('2024-02-29 12:34:56.123456' AS DATETIME(6)) AS datetime, " +
-                       "CAST('1969-12-31 23:59:59.999999' AS DATETIME(6)) AS before_epoch, " +
-                       "CAST('2024-02-29' AS DATE) AS day, " +
-                       "CAST('12:34:56' AS TIME) AS clock) temporal_fixture";
-        JDBCSource source = JsonUtil.fromJson(JsonUtil.toJson(Map.of(
-                "vendor", "mysql", "driver", DRIVER, "url", DB_URL,
+        String table = "loader_temporal_fixture";
+        JDBCSource source = (JDBCSource) JsonUtil.fromJson(JsonUtil.toJson(Map.of(
+                "type", "jdbc", "vendor", "mysql", "driver", DRIVER, "url", DB_URL,
                 "database", DATABASE, "table", table,
-                "username", USER, "password", PASS)), JDBCSource.class);
+                "username", USER, "password", PASS)), InputSource.class);
+        source.check();
         JDBCFetcher fetcher = new JDBCFetcher(source);
         try {
+            // The fixture belongs to this connection and disappears when it closes.
+            try (Statement statement = fetcher.getConn().createStatement()) {
+                statement.execute("CREATE TEMPORARY TABLE " + table + " (" +
+                                  "`datetime` DATETIME(6), before_epoch DATETIME(6), " +
+                                  "`day` DATE, clock TIME)");
+                statement.execute("INSERT INTO " + table + " VALUES (" +
+                                  "'2024-02-29 12:34:56.123456', " +
+                                  "'1969-12-31 23:59:59.999999', '2024-02-29', '12:34:56')");
+            }
             Timestamp[] expected = new Timestamp[3];
             Object expectedTime;
             try (Statement statement = fetcher.getConn().createStatement();
