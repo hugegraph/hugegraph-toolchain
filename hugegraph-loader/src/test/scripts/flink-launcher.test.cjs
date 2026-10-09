@@ -31,7 +31,8 @@ test('CDC launcher keeps argument boundaries and does not expose arguments', t =
   const script = join(root, 'loader/bin/hugegraph-flinkcdc-loader.sh');
   copyFileSync(resolve(__dirname, '../../../assembly/static/bin/hugegraph-flinkcdc-loader.sh'), script);
   const argsFile = join(root, 'args');
-  writeFileSync(join(root, 'flink/bin/flink'), '#!/bin/bash\nprintf "%s\\0" "$@" > "$PROBE_ARGS"\n', { mode: 0o755 });
+  writeFileSync(join(root, 'flink/bin/flink'), '#!/bin/bash\nprintf "%s\\0" "$@" > "$PROBE_ARGS"\n' +
+    'exit "${PROBE_EXIT_CODE:-0}"\n', { mode: 0o755 });
   const jar = join(root, 'loader/lib/apache-hugegraph-loader-1.8.0-shaded.jar');
   const run = (args, extra = {}) => spawnSync('bash', [script, ...args], {
     env: { ...process.env, FLINK_HOME: join(root, 'flink'), PROBE_ARGS: argsFile, ...extra }, encoding: 'utf8'
@@ -51,6 +52,9 @@ test('CDC launcher keeps argument boundaries and does not expose arguments', t =
   assert.deepEqual(readFileSync(argsFile, 'utf8').split('\0').slice(0, -1),
     ['run', '-c', 'org.apache.hugegraph.loader.flink.HugeGraphFlinkCDCLoader', jar,
       '--file', 'mapping.json', '--graph', 'fixture']);
+  const rejected = run(['--file'], { PROBE_EXIT_CODE: '2' });
+  assert.equal(rejected.status, 2, rejected.stderr);
+  assert.equal(rejected.stdout, '');
   assert.notEqual(run([], { FLINK_HOME: '' }).status, 0);
   writeFileSync(join(root, 'loader/lib/apache-hugegraph-loader-extra-shaded.jar'), 'fixture');
   assert.notEqual(run([]).status, 0);
