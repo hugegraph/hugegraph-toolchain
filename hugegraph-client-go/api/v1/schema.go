@@ -120,7 +120,12 @@ type SchemaResponseData struct {
 
 func (r SchemaRequest) Do(ctx context.Context, transport api.Transport) (*SchemaResponse, error) {
 
-    req, err := api.NewRequest("GET", fmt.Sprintf("/graphs/%s/schema", transport.GetConfig().Graph), nil, r.Body)
+    config := transport.GetConfig()
+    path := fmt.Sprintf("/graphs/%s/schema", config.Graph)
+    if len(config.GraphSpace) > 0 {
+        path = fmt.Sprintf("/graphspaces/%s%s", config.GraphSpace, path)
+    }
+    req, err := api.NewRequest("GET", path, nil, r.Body)
     if err != nil {
         return nil, err
     }

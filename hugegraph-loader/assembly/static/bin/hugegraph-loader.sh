@@ -26,7 +26,7 @@ abs_path() {
 }
 
 BIN=$(abs_path)
-TOP="$(cd ${BIN}/../ && pwd)"
+TOP="$(cd "${BIN}/../" && pwd)"
 CONF="$TOP/conf"
 LIB="$TOP/lib"
 NATIVE="$TOP/native"
@@ -37,9 +37,6 @@ LOG="$TOP/logs"
 if [ -n "$BASH_VERSION" ]; then
     set -eo pipefail
 fi
-
-export VARS="$*"
-
 
 # Use JAVA_HOME if set, otherwise look for java in PATH
 if [ -n "$JAVA_HOME" ]; then
@@ -63,11 +60,11 @@ if [ -z "${JAVA:-}" ] || ! command -v "$JAVA" >/dev/null 2>&1; then
 fi
 
 # Add the slf4j-log4j12 binding
-CP=$(find -L ${LIB} -name 'log4j-slf4j-impl*.jar' | sort | tr '\n' ':')
+CP=$(find -L "$LIB" -name 'log4j-slf4j-impl*.jar' | sort | tr '\n' ':')
 # Add the jars in lib that start with "hugegraph"
-CP="$CP":$(find -L ${LIB} -name 'hugegraph*.jar' | sort | tr '\n' ':')
+CP="$CP":$(find -L "$LIB" -name 'hugegraph*.jar' | sort | tr '\n' ':')
 # Add the remaining jars in lib.
-CP="$CP":$(find -L ${LIB} -name '*.jar' \
+CP="$CP":$(find -L "$LIB" -name '*.jar' \
                 \! -name 'hugegraph*' \
                 \! -name 'log4j-slf4j-impl*.jar' \
                 \! -name 'apache-hugegraph-loader-*-shaded.jar' | sort | tr '\n' ':')
@@ -83,11 +80,11 @@ if [ "$JAVA_MAJOR" -ge 17 ] 2>/dev/null; then
 fi
 
 # Xmx needs to be set so that it is big enough to cache all the vertexes in the run
-export JVM_OPTS="$JVM_OPTS -Xmx10g -cp $LOADER_CLASSPATH"
+export JVM_OPTS="$JVM_OPTS -Xmx10g"
 
 # Uncomment to enable debugging
 #JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=1414"
 
-exec "$JAVA" -Dname="HugeGraphLoader" -Dloader.home.path=${TOP} -Dlog4j.configurationFile=${CONF}/log4j2.xml \
--Djava.library.path=${NATIVE} \
-${JVM_OPTS} org.apache.hugegraph.loader.HugeGraphLoader ${VARS}
+exec "$JAVA" -Dname="HugeGraphLoader" "-Dloader.home.path=${TOP}" \
+"-Dlog4j.configurationFile=${CONF}/log4j2.xml" "-Djava.library.path=${NATIVE}" \
+${JVM_OPTS} -cp "$LOADER_CLASSPATH" org.apache.hugegraph.loader.HugeGraphLoader "$@"

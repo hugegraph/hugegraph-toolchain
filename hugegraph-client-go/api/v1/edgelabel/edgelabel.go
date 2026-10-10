@@ -193,7 +193,12 @@ func (r CreateRequest) Do(ctx context.Context, transport api.Transport) (*Create
     }
     reader := strings.NewReader(string(byteBody))
 
-    req, err := api.NewRequest("POST", fmt.Sprintf("/graphs/%s/schema/edgelabels", transport.GetConfig().Graph), nil, reader)
+    config := transport.GetConfig()
+    path := fmt.Sprintf("/graphs/%s/schema/edgelabels", config.Graph)
+    if len(config.GraphSpace) > 0 {
+        path = fmt.Sprintf("/graphspaces/%s%s", config.GraphSpace, path)
+    }
+    req, err := api.NewRequest("POST", path, nil, reader)
     if err != nil {
         return nil, err
     }
@@ -227,7 +232,12 @@ func (r DeleteByNameRequest) Do(ctx context.Context, transport api.Transport) (*
     if len(r.name) <= 0 {
         return nil, errors.New("delete by name ,please set name")
     }
-    req, err := api.NewRequest("DELETE", fmt.Sprintf("/graphs/%s/schema/edgelabels/%s", transport.GetConfig().Graph, r.name), nil, r.Body)
+    config := transport.GetConfig()
+    path := fmt.Sprintf("/graphs/%s/schema/edgelabels/%s", config.Graph, r.name)
+    if len(config.GraphSpace) > 0 {
+        path = fmt.Sprintf("/graphspaces/%s%s", config.GraphSpace, path)
+    }
+    req, err := api.NewRequest("DELETE", path, nil, r.Body)
     if err != nil {
         return nil, err
     }
@@ -258,7 +268,12 @@ func (r DeleteByNameRequest) Do(ctx context.Context, transport api.Transport) (*
 }
 func (g GetAllRequest) Do(ctx context.Context, transport api.Transport) (*GetAllResponse, error) {
 
-    req, err := api.NewRequest("GET", fmt.Sprintf("/graphs/%s/schema/edgelabels", transport.GetConfig().Graph), nil, nil)
+    config := transport.GetConfig()
+    path := fmt.Sprintf("/graphs/%s/schema/edgelabels", config.Graph)
+    if len(config.GraphSpace) > 0 {
+        path = fmt.Sprintf("/graphspaces/%s%s", config.GraphSpace, path)
+    }
+    req, err := api.NewRequest("GET", path, nil, nil)
     if err != nil {
         return nil, err
     }

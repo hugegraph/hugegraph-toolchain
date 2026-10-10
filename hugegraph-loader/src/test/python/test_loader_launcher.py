@@ -26,7 +26,7 @@ class LoaderLauncherTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="loader-java-")
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.tools = self.root / "tools"
         self.tools.mkdir()
         for name in ("dirname", "readlink", "find", "sort", "tr", "awk"):
@@ -42,14 +42,18 @@ class LoaderLauncherTest(unittest.TestCase):
         shutil.copyfile(source, self.launcher)
         self.record = self.root / "java-arguments.txt"
 
-    def run_launcher(self, java_home=None):
-        env = dict(os.environ, PATH=str(self.tools), JAVA_RECORD=str(self.record))
+    def run_launcher(self, java_home=None, arguments=None, extra_env=None, shell=None):
+        env = dict(os.environ, PATH=str(self.tools), JAVA_RECORD=str(self.record),
+                   JVM_OPTS="", CLASSPATH="")
+        env.update(extra_env or {})
         env.pop("JAVA_HOME", None)
         env.pop("JAVA", None)
         if java_home is not None:
             env["JAVA_HOME"] = str(java_home)
-        return subprocess.run([self.bash, str(self.launcher), "--help"], env=env,
-                              text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+        command = [shell or self.bash, str(self.launcher),
+                   *(arguments if arguments is not None else ["--help"])]
+        return subprocess.run(command, env=env, cwd=self.root, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=10)
 
     def install_java(self, directory, major):
         directory.mkdir(parents=True, exist_ok=True)
@@ -59,8 +63,11 @@ class LoaderLauncherTest(unittest.TestCase):
                         f"  printf 'openjdk version \"{major}.0.1\"\\n' >&2\n"
                         "  exit 0\n"
                         "fi\n"
-                        "printf '%s\\n' \"$@\" > \"$JAVA_RECORD\"\n")
+                        "printf '%s\\0' \"$@\" > \"$JAVA_RECORD\"\n")
         java.chmod(0o755)
+
+    def read_arguments(self):
+        return self.record.read_bytes().decode().split("\0")[:-1]
 
     def test_missing_java_on_path_has_actionable_diagnostic(self):
         result = self.run_launcher()
@@ -79,7 +86,7 @@ class LoaderLauncherTest(unittest.TestCase):
         self.install_java(self.tools, 11)
         result = self.run_launcher()
         self.assertEqual(0, result.returncode, result.stderr)
-        arguments = self.record.read_text().splitlines()
+        arguments = self.read_arguments()
         self.assertNotIn("--add-opens=java.base/java.net=ALL-UNNAMED", arguments)
         self.assertIn("org.apache.hugegraph.loader.HugeGraphLoader", arguments)
 
@@ -88,9 +95,61 @@ class LoaderLauncherTest(unittest.TestCase):
         self.install_java(home / "bin", 17)
         result = self.run_launcher(home)
         self.assertEqual(0, result.returncode, result.stderr)
-        arguments = self.record.read_text().splitlines()
+        arguments = self.read_arguments()
         self.assertIn("--add-opens=java.base/java.net=ALL-UNNAMED", arguments)
         self.assertIn("org.apache.hugegraph.loader.HugeGraphLoader", arguments)
+
+    def test_application_arguments_keep_boundaries_and_literals(self):
+        self.install_java(self.tools, 17)
+        for name in ("data-a.csv", "data-b.csv"):
+            (self.root / name).touch()
+        expected = ["--file", "mapping with spaces.json", "--password", "",
+                    "--file", "data-*.csv", "--token", "fake token with spaces"]
+        for shell in (self.bash, shutil.which("sh")):
+            with self.subTest(shell=shell):
+                result = self.run_launcher(arguments=expected, shell=shell)
+                self.assertEqual(0, result.returncode, result.stderr)
+                arguments = self.read_arguments()
+                main = arguments.index("org.apache.hugegraph.loader.HugeGraphLoader")
+                self.assertEqual(expected, arguments[main + 1:])
+
+    def test_release_paths_with_spaces_preserve_properties_and_classpath(self):
+        self.app = self.app.rename(self.root / "loader release with spaces")
+        self.launcher = self.app / "bin/hugegraph-loader.sh"
+        home = self.root / "java home with spaces"
+        self.install_java(home / "bin", 17)
+        included = ["log4j-slf4j-impl-fixture.jar", "hugegraph-client.jar",
+                    "dependency with spaces.jar"]
+        shaded = "apache-hugegraph-loader-fixture-shaded.jar"
+        for name in included + [shaded]:
+            (self.app / "lib" / name).touch()
+        for shell in (self.bash, shutil.which("sh")):
+            with self.subTest(shell=shell):
+                result = self.run_launcher(home, shell=shell)
+                self.assertEqual(0, result.returncode, result.stderr)
+                arguments = self.read_arguments()
+                self.assertIn("-Dloader.home.path=" + str(self.app), arguments)
+                self.assertIn("-Dlog4j.configurationFile=" + str(self.app / "conf/log4j2.xml"), arguments)
+                self.assertIn("-Djava.library.path=" + str(self.app / "native"), arguments)
+                cp = arguments.index("-cp")
+                self.assertEqual("org.apache.hugegraph.loader.HugeGraphLoader", arguments[cp + 2])
+                classpath = arguments[cp + 1].split(":")
+                expected = [str(self.app / "lib" / name) for name in included]
+                self.assertEqual(expected, [entry for entry in classpath if entry])
+                self.assertNotIn(str(self.app / "lib" / shaded), classpath)
+
+    def test_external_classpath_with_spaces_stays_one_argument(self):
+        self.install_java(self.tools, 17)
+        external = str(self.root / "external jars/custom.jar")
+        result = self.run_launcher(extra_env={"CLASSPATH": external,
+                                             "JVM_OPTS": "-Xms16m -Dprobe=value"})
+        self.assertEqual(0, result.returncode, result.stderr)
+        arguments = self.read_arguments()
+        self.assertIn("-Xms16m", arguments)
+        self.assertIn("-Dprobe=value", arguments)
+        cp = arguments.index("-cp")
+        self.assertTrue(arguments[cp + 1].startswith(external + ":"), arguments)
+        self.assertEqual("org.apache.hugegraph.loader.HugeGraphLoader", arguments[cp + 2])
 
 
 if __name__ == "__main__":
