@@ -27,6 +27,8 @@ import org.junit.runners.Suite;
     CommandTest.class,
     BackupRestoreTest.class,
     BackupRestoreSafetyTest.class,
+    RetryManagerTest.class,
+    RestoreFailureTest.class,
     HdfsDirectoryTest.class
 })
 public class FuncTestSuite {
