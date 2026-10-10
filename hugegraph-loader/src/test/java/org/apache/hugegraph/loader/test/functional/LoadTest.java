@@ -188,7 +188,9 @@ public class LoadTest {
                 if (failure == null) {
                     throw e;
                 }
-                failure.addSuppressed(e);
+                if (e != failure) {
+                    failure.addSuppressed(e);
+                }
             } finally {
                 GlobalExecutorManager.shutdown(loader.context().options().shutdownTimeout);
             }
