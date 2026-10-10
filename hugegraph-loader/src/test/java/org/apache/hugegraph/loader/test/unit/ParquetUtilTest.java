@@ -17,6 +17,8 @@
 
 package org.apache.hugegraph.loader.test.unit;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +32,11 @@ import java.util.Date;
 import java.util.TimeZone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hugegraph.loader.progress.InputItemProgress;
+import org.apache.hugegraph.loader.reader.Readable;
+import org.apache.hugegraph.loader.reader.file.ParquetFileLineFetcher;
+import org.apache.hugegraph.loader.source.file.FileSource;
+import org.apache.hugegraph.loader.util.DateUtil;
 import org.apache.hugegraph.loader.util.ParquetUtil;
 import org.apache.hugegraph.testutil.Assert;
 import org.apache.parquet.example.data.Group;
@@ -120,6 +127,85 @@ public class ParquetUtilTest {
                     Assert.assertEquals(123456L, ParquetUtil.convertObject(group, 7));
                 }
                 Assert.assertNull(reader.read());
+            }
+        } finally {
+            TimeZone.setDefault(previous);
+            Files.deleteIfExists(file);
+            Files.deleteIfExists(directory);
+        }
+    }
+
+    @Test
+    public void testParquetFetcherUsesSourceTimeZone() throws Exception {
+        assertSourceTimeZone("GMT+8");
+    }
+
+    @Test
+    public void testParquetFetcherAcceptsShortTimeZone() throws Exception {
+        assertSourceTimeZone("PST");
+    }
+
+    private static void assertSourceTimeZone(String timeZone) throws Exception {
+        TimeZone previous = TimeZone.getDefault();
+        Path directory = Files.createTempDirectory("parquet-source-zone-");
+        Path file = directory.resolve("dates.parquet");
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+            Assert.assertTrue(DateUtil.checkTimeZone(timeZone));
+            MessageType schema = MessageTypeParser.parseMessageType(
+                    "message dates { " +
+                    "required int32 day (DATE); " +
+                    "required int64 local_micros (TIMESTAMP(MICROS,false)); " +
+                    "required int64 utc_micros (TIMESTAMP(MICROS,true)); }");
+            Configuration conf = new Configuration();
+            conf.set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
+            org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(file.toUri());
+            try (ParquetWriter<Group> writer = ExampleParquetWriter.builder(path)
+                    .withConf(conf).withType(schema).build()) {
+                Group group = new SimpleGroupFactory(schema).newGroup();
+                group.add("day", -1);
+                group.add("local_micros", -1L);
+                group.add("utc_micros", -1L);
+                writer.write(group);
+            }
+            FileSource source = new FileSource();
+            source.timeZone(timeZone);
+            source.header(new String[]{"day", "local_micros", "utc_micros"});
+            Readable readable = new Readable() {
+                @Override
+                public String name() {
+                    return file.getFileName().toString();
+                }
+
+                @Override
+                public org.apache.hadoop.fs.Path path() {
+                    return path;
+                }
+
+                @Override
+                public InputStream open() throws IOException {
+                    return Files.newInputStream(file);
+                }
+
+                @Override
+                public InputItemProgress inputItemProgress() {
+                    return null;
+                }
+            };
+            ParquetFileLineFetcher fetcher = new ParquetFileLineFetcher(source, conf);
+            fetcher.openReader(readable);
+            try {
+                Object[] values = fetcher.fetch().values();
+                ZoneId sourceZone = TimeZone.getTimeZone(timeZone).toZoneId();
+                assertDate(LocalDate.of(1969, 12, 31).atStartOfDay(sourceZone)
+                                    .toInstant().toEpochMilli(), values[0]);
+                assertDate(Instant.ofEpochMilli(-1L).atOffset(ZoneOffset.UTC)
+                                  .toLocalDateTime().atZone(sourceZone)
+                                  .toInstant().toEpochMilli(), values[1]);
+                assertDate(-1L, values[2]);
+                Assert.assertNull(fetcher.fetch());
+            } finally {
+                fetcher.closeReader();
             }
         } finally {
             TimeZone.setDefault(previous);

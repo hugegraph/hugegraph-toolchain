@@ -36,6 +36,10 @@ import org.apache.parquet.schema.Type;
 public class ParquetUtil {
 
     public static Object convertObject(Group group, int fieldIndex) {
+        return convertObject(group, fieldIndex, ZoneId.systemDefault());
+    }
+
+    public static Object convertObject(Group group, int fieldIndex, ZoneId timeZone) {
         Type fieldType = group.getType().getType(fieldIndex);
         if (!fieldType.isPrimitive()) {
             throw new LoadException("Unsupported rich object type %s", fieldType);
@@ -53,7 +57,7 @@ public class ParquetUtil {
                 int integer = group.getInteger(fieldName, 0);
                 if (logicalType instanceof LogicalTypeAnnotation.DateLogicalTypeAnnotation) {
                     object = Date.from(LocalDate.ofEpochDay(integer)
-                            .atStartOfDay(ZoneId.systemDefault()).toInstant());
+                            .atStartOfDay(timeZone).toInstant());
                 } else {
                     object = integer;
                 }
@@ -62,7 +66,7 @@ public class ParquetUtil {
                 long number = group.getLong(fieldName, 0);
                 if (logicalType instanceof TimestampLogicalTypeAnnotation) {
                     object = dateFromTimestamp(number,
-                            (TimestampLogicalTypeAnnotation) logicalType);
+                            (TimestampLogicalTypeAnnotation) logicalType, timeZone);
                 } else {
                     object = number;
                 }
@@ -87,7 +91,8 @@ public class ParquetUtil {
     }
 
     private static Date dateFromTimestamp(long value,
-                                          TimestampLogicalTypeAnnotation type) {
+                                          TimestampLogicalTypeAnnotation type,
+                                          ZoneId timeZone) {
         long unitsPerSecond;
         switch (type.getUnit()) {
             case MILLIS:
@@ -106,9 +111,9 @@ public class ParquetUtil {
                 Math.floorDiv(value, unitsPerSecond),
                 Math.floorMod(value, unitsPerSecond) * (1000000000L / unitsPerSecond));
         if (!type.isAdjustedToUTC()) {
-            // Local timestamps have the same wall-clock semantics as INT96.
+            // Local timestamps encode a wall-clock time in the source time zone.
             instant = LocalDateTime.ofInstant(instant, ZoneOffset.UTC)
-                                   .atZone(ZoneId.systemDefault()).toInstant();
+                                   .atZone(timeZone).toInstant();
         }
         return Date.from(instant);
     }
