@@ -586,6 +586,7 @@ protobuf-java-2.5.0.jar
 protobuf-java-3.17.3.jar
 protobuf-java-3.19.6.jar
 protobuf-java-3.22.3.jar
+protobuf-java-3.25.9.jar
 protobuf-java-util-3.17.2.jar
 query-13.6.0.jar
 re2j-1.1.jar

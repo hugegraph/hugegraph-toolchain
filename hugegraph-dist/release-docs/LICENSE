@@ -1332,3 +1332,12 @@ Fastutil provides type-specific collection implementations.
 Copyright: 2002-2014 Sebastiano Vigna
 Home page: http://fasutil.di.unimi.it/
 License: http://www.apache.org/licenses/LICENSE-2.0.html
+
+========================================================================
+Ordinary Loader protobuf runtime security update
+========================================================================
+
+The ordinary Loader selects com.google.protobuf:protobuf-java:3.25.9.
+Its BSD-3-Clause grant is reproduced in
+licenses/LICENSE-protobuf-java-3.25.9.txt from the official v25.9 release:
+https://raw.githubusercontent.com/protocolbuffers/protobuf/v25.9/LICENSE
