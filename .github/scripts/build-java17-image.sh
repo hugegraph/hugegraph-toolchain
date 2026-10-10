@@ -51,7 +51,7 @@ python3 "$root/.github/scripts/java17_image.py" prepare \
 cp -a "$repository/org/apache/hugegraph" "$work/builder/repository/org/apache/"
 cp "$repository/candidate-sdk-manifest.json" "$work/builder/repository/"
 cat > "$work/builder/Dockerfile" <<'DOCKERFILE'
-FROM public.ecr.aws/docker/library/maven@sha256:e4a7ace3dc0d645ed97f8d9ad0b0d3f0b14fa8d150138f27f116d7105a639b82
+FROM maven:3.9.11-eclipse-temurin-17
 ARG CANDIDATE_SOURCE_COMMIT
 ENV CANDIDATE_SOURCE_COMMIT=$CANDIDATE_SOURCE_COMMIT
 COPY repository /opt/candidate-m2
