@@ -35,10 +35,8 @@ from urllib.parse import urlsplit
 import uuid
 import xml.etree.ElementTree as ET
 
-FLINK_IMAGE = ("public.ecr.aws/docker/library/flink@"
-               "sha256:140c3909f06cbea741be78fc630e809fae9dadcbfa492a684acf39efbbf68946")
-MYSQL_IMAGE = ("public.ecr.aws/docker/library/mysql@"
-               "sha256:9c3380eac945af0736031b200027f581925927c81e010056214a4bd6b6693714")
+FLINK_IMAGE = "flink:2.2.1-java17"
+MYSQL_IMAGE = "mysql:8.0.44"
 JDBC_COORDINATE = "mysql:mysql-connector-java:8.0.28"
 JDBC_SHA256 = "a00ccdf537ff50e50067b989108c2235197ffb65e197149bbb669db843cd1c3e"
 GRAPHS = ("flink_initial", "flink_rebuild")
