@@ -17,10 +17,16 @@
 
 package org.apache.hugegraph.loader.test.unit;
 
+import java.io.ByteArrayInputStream;
+import java.util.Arrays;
+
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestHeaderProto;
 import org.apache.hugegraph.pd.grpc.discovery.Query;
 import org.apache.hugegraph.testutil.Assert;
 import org.junit.Test;
+
+import com.google.protobuf.DiscardUnknownFieldsParser;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ProtobufRuntimeTest {
 
@@ -43,5 +49,19 @@ public class ProtobufRuntimeTest {
         RequestHeaderProto decoded = RequestHeaderProto.parseFrom(header.toByteArray());
         Assert.assertEquals(header, decoded);
         Assert.assertEquals("getFileInfo", decoded.getMethodName());
+    }
+
+    @Test
+    public void testDeepUnknownGroupsRejected() throws Exception {
+        // Unknown field 15, wire type START_GROUP: reproduce CVE-2024-7254.
+        byte[] payload = new byte[100000];
+        Arrays.fill(payload, (byte) 0x7B);
+        try {
+            DiscardUnknownFieldsParser.wrap(Query.parser())
+                    .parseFrom(new ByteArrayInputStream(payload));
+            Assert.fail("Expected unknown-group recursion limit");
+        } catch (InvalidProtocolBufferException expected) {
+            Assert.assertTrue(expected.getMessage().contains("too many levels of nesting"));
+        }
     }
 }

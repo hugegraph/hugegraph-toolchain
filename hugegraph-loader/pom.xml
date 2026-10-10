@@ -62,7 +62,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.22.3</version>
+            <version>3.25.9</version>
         </dependency>
         <!-- Parquet is also an ordinary Loader format, independent of Spark. -->
         <dependency>
