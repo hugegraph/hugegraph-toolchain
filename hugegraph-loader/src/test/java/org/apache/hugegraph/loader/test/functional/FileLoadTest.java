@@ -1875,7 +1875,7 @@ public class FileLoadTest extends LoadTest {
         ioUtil.write("vertex_person.csv",
                      "name,age,city",
                      "tom,24,Hongkong",
-                     "jerry,18");
+                     "jerry,not-an-int,Beijing");
         List<String> command = new ArrayList<>(Arrays.asList(
                 Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
                 "-cp", System.getProperty("surefire.test.class.path",

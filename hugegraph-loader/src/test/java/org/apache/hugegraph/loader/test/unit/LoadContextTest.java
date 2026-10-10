@@ -36,6 +36,7 @@ import org.apache.hugegraph.loader.builder.SchemaCache;
 import org.apache.hugegraph.loader.constant.ElemType;
 import org.apache.hugegraph.loader.exception.LoadException;
 import org.apache.hugegraph.loader.exception.InsertException;
+import org.apache.hugegraph.loader.exception.ParseException;
 import org.apache.hugegraph.loader.executor.LoadContext;
 import org.apache.hugegraph.loader.executor.LoadOptions;
 import org.apache.hugegraph.loader.failure.FailLogger;
@@ -313,6 +314,36 @@ public class LoadContextTest {
         }
         Assert.assertFalse(context.noError());
         Assert.assertEquals(1, client.closeCalls);
+        Assert.assertFalse(new File(LoadProgress.format(context.options(), "test")).exists());
+    }
+
+    @Test
+    public void testParseFailureKeepsOriginalExceptionAndPreventsProgress() throws Exception {
+        RecordingClient client = allocate(RecordingClient.class);
+        RecordingClient indirect = allocate(RecordingClient.class);
+        LoadContext context = this.context(client, indirect);
+        ParseException failure = new ParseException("invalid-row", "original parse error");
+        context.failLoading(failure);
+        context.failLoading(new LoadException("later failure"));
+        try {
+            context.throwIfFailed();
+            Assert.fail("Expected original parse failure");
+        } catch (ParseException expected) {
+            Assert.assertSame(failure, expected);
+        }
+        try {
+            context.close();
+            Assert.fail("Expected original parse failure during close");
+        } catch (ParseException expected) {
+            Assert.assertSame(failure, expected);
+            Assert.assertEquals("original parse error", expected.getMessage());
+        }
+        Assert.assertFalse(context.noError());
+        Assert.assertTrue(context.stopped());
+        Assert.assertTrue(context.closed());
+        Assert.assertEquals(1, client.closeCalls);
+        Assert.assertEquals(1, indirect.closeCalls);
+        Assert.assertEquals(0L, context.newProgress().vertexLoaded());
         Assert.assertFalse(new File(LoadProgress.format(context.options(), "test")).exists());
     }
 

@@ -136,6 +136,9 @@ public final class LoadContext implements Cloneable {
     }
 
     public void throwIfFailed() {
+        if (this.failure instanceof RuntimeException) {
+            throw (RuntimeException) this.failure;
+        }
         if (this.failure != null) {
             throw new LoadException("Loading failed without recoverable progress", this.failure);
         }
