@@ -328,6 +328,20 @@ public class TaskManagerTest {
 
     @Test
     public void testStopCheckTimingInSubmitBatch() throws Exception {
+        this.assertStoppedBatch(false, true);
+    }
+
+    @Test(timeout = 15000)
+    public void testReadLimitStopDoesNotFailWaitingBatch() throws Exception {
+        this.assertStoppedBatch(true, false);
+    }
+
+    @Test(timeout = 15000)
+    public void testErrorAfterReadLimitFailsWaitingBatch() throws Exception {
+        this.assertStoppedBatch(true, true);
+    }
+
+    private void assertStoppedBatch(boolean readLimit, boolean failed) throws Exception {
         LoadOptions options = new LoadOptions();
         options.batchFailureFallback = false;
         options.batchInsertThreads = 1;
@@ -374,7 +388,14 @@ public class TaskManagerTest {
                 Thread.sleep(10);
             }
             Assert.assertTrue(semaphore.hasQueuedThreads());
-            context.stopLoading();
+            if (readLimit) {
+                context.stopLoadingAtReadLimit();
+                if (failed) {
+                    context.occurredError();
+                }
+            } else {
+                context.stopLoading();
+            }
             semaphore.release(1 + options.batchInsertThreads);
 
             blocked.get(5, TimeUnit.SECONDS);
@@ -382,6 +403,14 @@ public class TaskManagerTest {
             taskManager.waitFinished();
 
             Assert.assertTrue(context.stopped());
+            Assert.assertEquals(!failed, context.noError());
+            Assert.assertEquals(failed ? batch.size() : 0L, metrics.insertFailure(mapping));
+            if (!failed) {
+                context.failureLogger(struct).close();
+                Assert.assertFalse(failureFile(context, struct).exists());
+            } else {
+                assertFailureLines(context, struct, "line1", "line2");
+            }
             Assert.assertEquals(0L, flightingCount(metrics));
             int expectedPermits = 1 + options.batchInsertThreads;
             Assert.assertEquals(expectedPermits,
@@ -805,7 +834,7 @@ public class TaskManagerTest {
         LoadContext context = (LoadContext) allocateInstance(LoadContext.class);
         setField(context, "timestamp", "test");
         setField(context, "closed", false);
-        setField(context, "stopped", false);
+        setField(context, "stopReason", null);
         setField(context, "noError", true);
         setField(context, "options", options);
         setField(context, "summary", new LoadSummary());

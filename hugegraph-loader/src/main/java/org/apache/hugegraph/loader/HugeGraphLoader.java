@@ -804,7 +804,7 @@ public final class HugeGraphLoader {
                 this.handleParseFailure();
                 if (reachedMaxReadLines) {
                     LOG.warn("Read lines exceed limit, stopped loading tasks");
-                    this.context.stopLoading();
+                    this.context.stopLoadingAtReadLimit();
                 }
                 lines = new ArrayList<>(batchSize);
                 batchStartTime = System.currentTimeMillis();

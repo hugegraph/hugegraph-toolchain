@@ -44,11 +44,16 @@ public final class LoadContext implements Cloneable {
 
     private static final Logger LOG = Log.logger(LoadContext.class);
 
+    private enum StopReason {
+        READ_LIMIT,
+        OTHER
+    }
+
     // The time at the beginning of loading, accurate to seconds
     private final String timestamp;
 
     private volatile boolean closed;
-    private volatile boolean stopped;
+    private volatile StopReason stopReason;
     private volatile boolean noError;
     private volatile Throwable failure;
     private final LoadOptions options;
@@ -83,7 +88,7 @@ public final class LoadContext implements Cloneable {
     private LoadContext(LoadOptions options, SchemaCache schemaCache) {
         this.timestamp = DateUtil.now("yyyyMMdd-HHmmss");
         this.closed = false;
-        this.stopped = false;
+        this.stopReason = null;
         this.noError = true;
         this.options = options;
         this.summary = new LoadSummary();
@@ -112,19 +117,32 @@ public final class LoadContext implements Cloneable {
     }
 
     public boolean stopped() {
-        return this.stopped;
+        return this.stopReason != null;
     }
 
-    public void stopLoading() {
-        this.stopped = true;
+    public synchronized void stopLoading() {
+        this.stopReason = StopReason.OTHER;
+    }
+
+    public synchronized void stopLoadingAtReadLimit() {
+        if (this.stopReason == null) {
+            this.stopReason = this.noError ? StopReason.READ_LIMIT : StopReason.OTHER;
+        }
+    }
+
+    public boolean stoppedAtReadLimit() {
+        return this.stopReason == StopReason.READ_LIMIT;
     }
 
     public boolean noError() {
         return this.noError;
     }
 
-    public void occurredError() {
+    public synchronized void occurredError() {
         this.noError = false;
+        if (this.stopReason == StopReason.READ_LIMIT) {
+            this.stopReason = StopReason.OTHER;
+        }
     }
 
     public synchronized void failLoading(Throwable failure) {

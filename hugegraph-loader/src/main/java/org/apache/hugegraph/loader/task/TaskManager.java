@@ -255,8 +255,10 @@ public final class TaskManager {
         }
         if (this.context.stopped()) {
             try {
-                this.recordFailedBatch(struct, mapping, batch,
-                                       new LoadException("Loading stopped before batch submission"));
+                if (!this.context.stoppedAtReadLimit()) {
+                    this.recordFailedBatch(struct, mapping, batch,
+                                           new LoadException("Loading stopped before batch submission"));
+                }
             } finally {
                 this.batchSemaphore.release();
             }

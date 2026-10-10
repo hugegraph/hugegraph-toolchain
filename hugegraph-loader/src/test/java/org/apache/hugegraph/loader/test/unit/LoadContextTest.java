@@ -76,6 +76,56 @@ public class LoadContextTest {
     }
 
     @Test
+    public void testReadLimitStopPreservesSuccess() throws Exception {
+        LoadContext context = this.readLimitContext();
+        context.stopLoadingAtReadLimit();
+        Assert.assertTrue(context.stopped());
+        Assert.assertTrue(context.stoppedAtReadLimit());
+        Assert.assertTrue(context.noError());
+        context.throwIfFailed();
+        context.stopLoading();
+        Assert.assertTrue(context.stopped());
+        Assert.assertFalse(context.stoppedAtReadLimit());
+        Assert.assertTrue(context.noError());
+    }
+
+    @Test
+    public void testErrorsOverrideReadLimitStop() throws Exception {
+        LoadContext context = this.readLimitContext();
+        context.stopLoadingAtReadLimit();
+        context.occurredError();
+        Assert.assertTrue(context.stopped());
+        Assert.assertFalse(context.stoppedAtReadLimit());
+        Assert.assertFalse(context.noError());
+        context.stopLoadingAtReadLimit();
+        Assert.assertFalse(context.stoppedAtReadLimit());
+    }
+
+    @Test
+    public void testReadLimitDoesNotOverrideEarlierErrorOrStop() throws Exception {
+        LoadContext context = this.readLimitContext();
+        context.occurredError();
+        Assert.assertFalse(context.stopped());
+        context.stopLoadingAtReadLimit();
+        Assert.assertTrue(context.stopped());
+        Assert.assertFalse(context.stoppedAtReadLimit());
+        Assert.assertFalse(context.noError());
+
+        LoadContext stopped = this.readLimitContext();
+        stopped.stopLoading();
+        stopped.stopLoadingAtReadLimit();
+        Assert.assertFalse(stopped.stoppedAtReadLimit());
+    }
+
+    private LoadContext readLimitContext() throws IOException {
+        LoadOptions options = new LoadOptions();
+        options.file = this.folder.newFile().getAbsolutePath();
+        return LoadContext.forOffline(options, new SchemaCache(Collections.emptyList(),
+                                                               Collections.emptyList(),
+                                                               Collections.emptyList()));
+    }
+
+    @Test
     public void testCloseDistinctClientsOnce() throws Exception {
         RecordingClient client = allocate(RecordingClient.class);
         RecordingClient indirect = allocate(RecordingClient.class);
