@@ -29,6 +29,7 @@ import java.util.TimeZone;
 
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.loader.HugeGraphLoader;
+import org.apache.hugegraph.loader.task.GlobalExecutorManager;
 import org.apache.hugegraph.structure.constant.T;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Vertex;
@@ -149,7 +150,7 @@ public class LoadTest {
     /**
      * Entry point for running the HugeGraphLoader with authentication parameters.
      * This method appends authentication arguments (username and password) to the
-     * provided command-line arguments and then invokes {@link HugeGraphLoader#main(String[])}
+     * provided command-line arguments and then invokes {@link HugeGraphLoader#load()}
      * to start the data loading process.
      * Specifically, it appends:
      * --username admin
@@ -161,11 +162,11 @@ public class LoadTest {
      * The choice of "pa" is arbitrary and intended to facilitate automated testing.
      * @param args the original command-line arguments passed to the program.
      *             These arguments are extended with authentication information
-     *             before being passed to {@code HugeGraphLoader.main()}.
+     *             before being passed to {@code HugeGraphLoader.load()}.
      *
-     * @see HugeGraphLoader#main(String[])
+     * @see HugeGraphLoader#load()
      */
-    public static void loadWithAuth(String[] args) {
+    public static boolean loadWithAuth(String[] args) {
         ArrayList<String> list = new ArrayList<>(Arrays.asList(args));
         list.add("--username");
         list.add("admin");
@@ -173,6 +174,26 @@ public class LoadTest {
         list.add("pa");
         args = (String[]) list.toArray(new String[list.size()]);
 
-        HugeGraphLoader.main(args);
+        HugeGraphLoader loader = new HugeGraphLoader(args);
+        Throwable failure = null;
+        try {
+            return loader.load();
+        } catch (RuntimeException | Error e) {
+            failure = e;
+            throw e;
+        } finally {
+            try {
+                loader.shutdown();
+            } catch (RuntimeException | Error e) {
+                if (failure == null) {
+                    throw e;
+                }
+                if (e != failure) {
+                    failure.addSuppressed(e);
+                }
+            } finally {
+                GlobalExecutorManager.shutdown(loader.context().options().shutdownTimeout);
+            }
+        }
     }
 }
