@@ -21,9 +21,12 @@ import {syntaxHighlighting, HighlightStyle} from '@codemirror/language';
 import {basicSetup, EditorView} from 'codemirror';
 import React, {useRef, useEffect} from 'react';
 import {placeholder as cmplaceholder} from '@codemirror/view';
+import {Annotation, Transaction} from '@codemirror/state';
 import syntaxConfig from './syntax';
 import {tags} from '@lezer/highlight';
 import {useTranslation} from 'react-i18next';
+
+const controlledValueSync = Annotation.define();
 
 const CodeEditor = ({
     value,
@@ -39,7 +42,8 @@ const CodeEditor = ({
     const {t} = useTranslation();
     const editor = useRef();
     const cm = useRef();
-    const initialValue = useRef(value || '');
+    const currentValue = useRef(value ?? '');
+    currentValue.current = value ?? '';
     const onChangeRef = useRef(onChange);
     const executionShortcutRef = useRef(onExecutionShortcut);
     onChangeRef.current = onChange;
@@ -71,7 +75,7 @@ const CodeEditor = ({
         ]);
 
         cm.current = new EditorView({
-            doc: initialValue.current,
+            doc: currentValue.current,
             extensions: [
                 !readOnly
                     ? EditorView.domEventHandlers({
@@ -112,7 +116,9 @@ const CodeEditor = ({
                     'aria-label': ariaLabel,
                 }) : [],
                 EditorView.updateListener.of(e => {
-                    if (onChangeRef.current) {
+                    if (e.docChanged && onChangeRef.current && e.transactions.some(transaction => (
+                        transaction.docChanged && !transaction.annotation(controlledValueSync)
+                    ))) {
                         onChangeRef.current(e.state.doc.toString());
                     }
                 }),
@@ -138,8 +144,6 @@ const CodeEditor = ({
             parent: editor.current,
         });
 
-        // onChange && EditorView.updateListener.of(e => onChange(e.state.doc.toString()));
-
         return () => {
             cm.current.destroy();
         };
@@ -147,9 +151,10 @@ const CodeEditor = ({
         resolvedPlaceholder]);
 
     useEffect(() => {
-        if (value !== null && cm.current.state.doc && value !== cm.current.state.doc.toString()) {
+        if (value != null && cm.current.state.doc && value !== cm.current.state.doc.toString()) {
             cm.current.dispatch({
                 changes: {from: 0, to: cm.current.state.doc.length, insert: value},
+                annotations: [controlledValueSync.of(true), Transaction.addToHistory.of(false)],
             });
         }
     }, [value]);
