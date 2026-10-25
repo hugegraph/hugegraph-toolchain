@@ -57,11 +57,10 @@ const VertexTable = ({canWrite = true}) => {
             checkUsage: api.manage.checkMetaVertex,
             inUseKey: 'schema.vertex.in_use',
             asyncDeletion: true,
+            onProgress: removedNames => setSelectedItems(current =>
+                current.filter(name => !removedNames.includes(name))),
             onRefresh: () => setRefresh(value => !value),
-            onComplete: () => {
-                setSelectedItems(current => current.filter(name => !names.includes(name)));
-                setRefresh(value => !value);
-            },
+            onComplete: () => setRefresh(value => !value),
         });
     }, [graph, graphspace, t]);
 
