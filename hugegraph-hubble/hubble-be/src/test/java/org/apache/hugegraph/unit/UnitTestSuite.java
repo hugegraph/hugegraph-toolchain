@@ -138,6 +138,7 @@ import org.junit.runners.Suite;
     UrlUtilTest.class,
     UserCsvImportTest.class,
     EntityUtilTest.class,
+    VertexLabelStyleDefaultsTest.class,
     org.apache.hugegraph.util.HubbleDateTimeTest.class,
     HubbleUtilTest.class,
     DirectVermeerServiceTest.class,

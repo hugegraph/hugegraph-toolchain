@@ -165,7 +165,7 @@ settings:
 packageExtensionsChecksum: sha256-n8wn9Ol1zspxuMVFwXmVVKvkxPwBpXOMNTcJ5KFflDs=
 
 patchedDependencies:
-  '@antv/g6@5.1.1': 14dba4e62477cacc60223c193dd8795d68b83d278b55c958f87a944efad0d57f
+  '@antv/g6@5.1.1': a36f126c9a2046a104399de4a1e9a37338a8414fcc594d46d93600c5873352a3
 
 importers:
 
@@ -182,7 +182,7 @@ importers:
         version: 4.6.0
       '@antv/g6':
         specifier: 5.1.1
-        version: 5.1.1(patch_hash=14dba4e62477cacc60223c193dd8795d68b83d278b55c958f87a944efad0d57f)
+        version: 5.1.1(patch_hash=a36f126c9a2046a104399de4a1e9a37338a8414fcc594d46d93600c5873352a3)
       '@antv/x6':
         specifier: 3.1.8
         version: 3.1.8
@@ -3992,7 +3992,7 @@ snapshots:
       '@babel/runtime': 7.29.10
       tslib: 2.8.1
 
-  '@antv/g6@5.1.1(patch_hash=14dba4e62477cacc60223c193dd8795d68b83d278b55c958f87a944efad0d57f)':
+  '@antv/g6@5.1.1(patch_hash=a36f126c9a2046a104399de4a1e9a37338a8414fcc594d46d93600c5873352a3)':
     dependencies:
       '@antv/algorithm': 0.1.26
       '@antv/component': 2.1.12
