@@ -162,6 +162,10 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
           pnpm exec playwright install --with-deps chromium
 
+      - name: Route not-found marker regression
+        working-directory: hugegraph-hubble/hubble-fe
+        run: node --test ../hubble-dist/assembly/travis/run_ui_browser_smoke.browser.test.js
+
       - name: Real public graph PNG contract
         working-directory: hugegraph-hubble/hubble-fe
         run: node scripts/run-png-contract.mjs --output-dir ../target/hubble-png-contract
