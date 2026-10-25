@@ -17,7 +17,7 @@
  */
 
 import {Table, Row, Col, Space, Button, message} from 'antd';
-import {useState, useCallback, useEffect, useRef} from 'react';
+import {useState, useCallback, useEffect, useLayoutEffect, useRef} from 'react';
 import {EditPropertyLayer} from './EditLayer';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
@@ -34,13 +34,15 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
     const [selectedItems, setSelectedItems] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
-    const scopeRef = useRef(`${graphspace}:${graph}`);
-    scopeRef.current = `${graphspace}:${graph}`;
+    const scopeRef = useRef(null);
+    useLayoutEffect(() => {
+        scopeRef.current = `${graphspace}:${graph}`;
+        return () => {
+            scopeRef.current = null;
+        };
+    }, [graphspace, graph]);
 
     useEffect(() => setSelectedItems([]), [graphspace, graph]);
-    useEffect(() => () => {
-        scopeRef.current = null;
-    }, []);
 
     const removeProperty = useCallback(names => {
         const operationScope = `${graphspace}:${graph}`;
