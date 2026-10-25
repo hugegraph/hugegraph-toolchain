@@ -97,11 +97,16 @@ test('delivers current handlers and raw records while hiding the React tooltip o
     await flush();
 });
 
-test.each(['interactive', 'preview', 'thumbnail'] as const)('%s owns its observer and only thumbnails fit on resize', async preset => {
+test.each(['interactive', 'preview', 'thumbnail'] as const)('%s owns its observer and only thumbnails refit on subsequent resize', async preset => {
     const {unmount} = render(<GraphCanvas data={data} preset={preset} />);
     const observer = observers[0]; const target = observer.observe.mock.calls[0][0];
-    act(() => observer.callback([{target, contentRect: {width: 640, height: 240}}] as ResizeObserverEntry[], {} as ResizeObserver));
+    await act(async () => observer.callback([{target, contentRect: {width: 640, height: 240}}] as ResizeObserverEntry[], {} as ResizeObserver));
     expect(controllers[0].resize).toHaveBeenCalledWith(640, 240);
+    // JSDOM initially reports a hidden host. Every preset fits its first positive size.
+    expect(controllers[0].fitView).toHaveBeenCalledTimes(1);
+    controllers[0].fitView.mockClear();
+    await act(async () => observer.callback([{target, contentRect: {width: 800, height: 320}}] as ResizeObserverEntry[], {} as ResizeObserver));
+    expect(controllers[0].resize).toHaveBeenLastCalledWith(800, 320);
     expect(controllers[0].fitView).toHaveBeenCalledTimes(preset === 'thumbnail' ? 1 : 0);
     unmount();
     expect(observer.disconnect).toHaveBeenCalledTimes(1);

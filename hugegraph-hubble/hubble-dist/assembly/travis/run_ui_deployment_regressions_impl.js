@@ -40,8 +40,8 @@ const graphsBySpace = {
     soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
 };
 const now = 1792757451000;
-const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNAVAILABLE', reason: 'pd_metrics_unmapped', observed_at: now, fresh: false, stale: false } } });
-const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 3, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
+const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
+const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
 const task = { id: 80001, task_name: 'g.V().limit(100002)', task_type: 'gremlin', task_status: 'failed', task_create: now - 49000, task_update: now - 45602 };
 const taskResult = { ...task, task_result: 'org.apache.hugegraph.exception.LimitExceedException: Task result size 77849617 exceeded limit 16777216 bytes' };
 function pageResult(records, selected) { return { records, total: records.length, current: 1, size: 100, pages: 1, selected: records.find(x => x.name === selected) ?? null }; }
@@ -177,7 +177,10 @@ async function screenshot(page, name) {
             .forEach(element => element.scrollTo(0, 0));
     });
     if (name !== 'failure' && !name.startsWith('failure-')) {
-        await page.getByRole('tooltip').waitFor({state: 'hidden'});
+        // Preserve the preview-details popover intentionally opened by its scenario.
+        await page.getByRole('tooltip').filter({
+            hasNotText: '可缩小查询范围或仅返回所需属性',
+        }).first().waitFor({state: 'hidden'});
         const toasts = await page.locator('.ant-message-error').allTextContents();
         assert.deepEqual(toasts, [], 'Unexpected error toast: ' + toasts.join('; '));
     }
@@ -351,7 +354,8 @@ catch (e) {
             await page.getByText('尚未采集系统指标', { exact: false }).first().waitFor();
             assert.equal(await page.getByText(/来源可能在发现节点前/).count(), 0);
             await page.getByText('http://pd-service:8620', { exact: true }).waitFor();
-            await page.getByText(/本次快照受影响节点:\s*3/).waitFor();
+            await page.getByText(/受影响的 PD 采集端点:\s*1/).waitFor();
+            await page.getByText(/Hubble 只采集一个匹配的 PD 成员的系统指标/).waitFor();
             await page.getByText('没有匹配节点', { exact: true }).waitFor();
             await page.getByText('0 / 3', { exact: true }).waitFor();
             for (const member of source.diagnostics.pd_metric_mapping.members) {
