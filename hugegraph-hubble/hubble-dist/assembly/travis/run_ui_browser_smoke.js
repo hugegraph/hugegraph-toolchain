@@ -130,6 +130,12 @@ async function waitForRequiredResponse(page, requiredRequest) {
   }
 }
 
+async function isNotFoundPage(page) {
+  // Query text and history can legitimately contain 404 (for example 0.404s).
+  // Only the visible route-level error surface identifies the not-found page.
+  return page.getByTestId('not-found-surface').isVisible();
+}
+
 function apiEntryPassed(entry) {
   return Boolean(entry && entry.ok && entry.businessStatus === 200);
 }
@@ -238,7 +244,7 @@ async function main() {
         matchedApis,
         rawI18nKeyFound: rawKeyPattern.test(text),
         routeTextMatched,
-        notFoundPage: /404|页面不存在|Not Found/.test(text),
+        notFoundPage: await isNotFoundPage(page),
         requestCount: network.length
       });
     }
@@ -281,6 +287,7 @@ module.exports = {
   createApiEntry,
   chromiumExecutablePath,
   loadPlaywright,
+  isNotFoundPage,
   matchesRequiredApi,
   readBusinessStatus,
   waitForRequiredResponse
