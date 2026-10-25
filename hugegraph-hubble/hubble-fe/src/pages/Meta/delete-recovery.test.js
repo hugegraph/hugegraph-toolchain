@@ -83,14 +83,42 @@ test.each(tables)('%s selection cannot carry a same-name key into another graph 
         await waitFor(() => expect(checkbox).not.toBeChecked());
     });
 
+test.each(tables)('%s delayed deletion cannot clear the new graph scope selection',
+    async (_name, Table, operation) => {
+        const type = operation.replace('delMeta', '');
+        let resolveList;
+        api.manage[`getMeta${type}List`].mockImplementationOnce(() =>
+            new Promise(resolve => {
+                resolveList = resolve;
+            }));
+        const view = render(<Table />);
+        let row = screen.getByRole('row', {name: /audit_label/});
+        let checkbox = within(row).getByRole('checkbox');
+        fireEvent.click(checkbox);
+        fireEvent.click(within(row).getByRole('button', {name: /^common\.(?:action\.)?delete$/}));
+        const close = jest.fn();
+        act(() => Modal.confirm.mock.calls[0][0].onOk(close));
+        await waitFor(() => expect(resolveList).toBeDefined());
+
+        mockScope = {graphspace: 'OTHER', graph: 'audit'};
+        view.rerender(<Table />);
+        row = screen.getByRole('row', {name: /audit_label/});
+        checkbox = within(row).getByRole('checkbox');
+        await waitFor(() => expect(checkbox).not.toBeChecked());
+        fireEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+
+        await act(async () => resolveList({status: 200, data: {records: [], total: 0}}));
+        await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+        expect(checkbox).toBeChecked();
+    });
+
 test.each(tables)('%s batch completion clears the checkbox of a same-name replacement',
     async (_name, Table, operation) => {
         api.manage[operation].mockImplementation(async () => {
             existing[operation.replace('delMeta', '')] = [];
             return {status: 200};
         });
-        // The table mock keeps a same-name row visible after the confirmed delete.
-        // Its selection must reflect the cleared operation state, not a cached key.
         render(<Table />);
         const checkbox = within(screen.getByRole('row', {name: /audit_label/})).getByRole('checkbox');
         fireEvent.click(checkbox);
@@ -178,9 +206,9 @@ test.each(tables)('%s deletion keeps confirmation retryable on business and tran
             if (_name === 'property') act(() => onOk(close));
             else {
                 const content = Modal.confirm.mock.results[0].value.update.mock.calls.at(-1)[0].content;
-                const view = render(content);
+                const retryView = render(content);
                 fireEvent.click(screen.getByRole('button', {name: 'schema.delete_retry'}));
-                view.unmount();
+                retryView.unmount();
             }
         };
         retry();
