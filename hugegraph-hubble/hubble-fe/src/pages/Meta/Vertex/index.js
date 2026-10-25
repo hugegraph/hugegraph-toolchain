@@ -17,7 +17,7 @@
  */
 
 import {Table, Space, Button, message} from 'antd';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import RowActionButton from '../../../components/RowActionButton';
@@ -37,6 +37,13 @@ const VertexTable = ({canWrite = true}) => {
     const [propertyList, setPropertyList] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
+    const scopeRef = useRef(`${graphspace}:${graph}`);
+    scopeRef.current = `${graphspace}:${graph}`;
+
+    useEffect(() => setSelectedItems([]), [graphspace, graph]);
+    useEffect(() => () => {
+        scopeRef.current = null;
+    }, []);
 
     const fetchPage = useCallback(params => api.manage.getMetaVertexList(
         graphspace, graph, params
@@ -45,7 +52,9 @@ const VertexTable = ({canWrite = true}) => {
         fetchPage, {identityKey: `${graphspace}:${graph}`, refreshKey: refresh}
     );
 
-    const removeVertex = useCallback((names, isBatch) => {
+    const removeVertex = useCallback(names => {
+        const operationScope = `${graphspace}:${graph}`;
+        const isCurrentScope = () => scopeRef.current === operationScope;
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.vertex.delete_confirm'),
@@ -55,10 +64,16 @@ const VertexTable = ({canWrite = true}) => {
             checkUsage: api.manage.checkMetaVertex,
             inUseKey: 'schema.vertex.in_use',
             asyncDeletion: true,
-            onRefresh: () => setRefresh(value => !value),
+            onProgress: removedNames => {
+                if (!isCurrentScope()) return;
+                setSelectedItems(current =>
+                    current.filter(name => !removedNames.includes(name)));
+            },
+            onRefresh: () => {
+                if (isCurrentScope()) setRefresh(value => !value);
+            },
             onComplete: () => {
-                if (isBatch) setSelectedItems([]);
-                setRefresh(value => !value);
+                if (isCurrentScope()) setRefresh(value => !value);
             },
         });
     }, [graph, graphspace, t]);
@@ -93,7 +108,7 @@ const VertexTable = ({canWrite = true}) => {
             return;
         }
 
-        removeVertex(selectedItems, true);
+        removeVertex(selectedItems);
     }, [selectedItems, removeVertex, t]);
 
     const columns = [
@@ -179,6 +194,7 @@ const VertexTable = ({canWrite = true}) => {
                 dataSource={data}
                 rowSelection={canWrite ? {
                     type: 'checkbox',
+                    selectedRowKeys: selectedItems,
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },
