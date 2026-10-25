@@ -22,7 +22,10 @@ HUBBLE_URL=http://127.0.0.1:3000 \
   node hugegraph-hubble/hubble-dist/assembly/travis/run_ui_graphspace_crud.js
 ```
 
-The runner requires the frontend's Playwright dependency and `/usr/bin/chromium`.
+The runner uses the shared Playwright loader and Chromium discovery. Set
+`PLAYWRIGHT_NODE_MODULES` for an external install, and `CHROME_PATH`,
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` or `--chromium-executable` for an executable;
+otherwise Playwright's managed browser or platform defaults are used.
 It uses stateful mocked APIs for GraphSpace CRUD, failures, delayed writes and
 pagination; it never sends CRUD requests to a real backend. Fixture results do not
 establish live-cluster acceptance or production performance.

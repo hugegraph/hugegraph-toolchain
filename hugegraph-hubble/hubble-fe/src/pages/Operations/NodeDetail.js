@@ -33,7 +33,7 @@ import {
 import {formatMetricValue, formatObservedAt, selectAttentionSources} from './topology';
 import {operationsReturnTo} from './navigation';
 import SourceDiagnostics from './SourceDiagnostics';
-import {ReadinessPanel} from './Readiness';
+import {ReadinessPanel, markNodeReadinessStale} from './Readiness';
 import './operations.scss';
 
 const GROUPS_BY_TYPE = {
@@ -466,6 +466,10 @@ const NodeDetail = () => {
             }
             if ([401, 403].includes(requestError?.status)) {
                 setData(null);
+            }
+            else {
+                setData(snapshot => snapshot && {...snapshot, stale: true,
+                    node: markNodeReadinessStale(snapshot.node)});
             }
             setError(requestError);
         }

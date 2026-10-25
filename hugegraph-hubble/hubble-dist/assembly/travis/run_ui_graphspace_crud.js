@@ -22,9 +22,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
-const hubbleRoot = path.resolve(__dirname, '../../..');
-const {chromium} = require(path.join(hubbleRoot, 'hubble-fe/node_modules/playwright'));
-const base = process.env.HUBBLE_URL || 'http://127.0.0.1:3000';
+const {loadPlaywright, chromiumExecutablePath} = require('./run_ui_browser_smoke');
+const base = (process.env.HUBBLE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const output = process.env.HUBBLE_UI_EVIDENCE_DIR
     || path.join(os.tmpdir(), 'hubble-graphspace-crud');
 fs.mkdirSync(output, {recursive: true});
@@ -114,9 +113,8 @@ async function step(id, description, work) {
     await work();
     const interactionMs = Date.now() - start;
     await page.mouse.move(20, 20);
-    await page.waitForTimeout(200);
     const screenshot = `${id}.png`;
-    await page.screenshot({path: path.join(output, screenshot), fullPage: true});
+    await page.screenshot({path: path.join(output, screenshot), fullPage: true, animations: 'disabled'});
     checks.push({id, description, status: 'passed', screenshot, interaction_ms: interactionMs,
         focused_control: await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 350))});
     console.log(`CAPTURE ${id}: ${description} (${interactionMs} ms)`);
@@ -147,7 +145,9 @@ async function messageGone() {
 let browser;
 (async () => {
     try {
-        browser = await chromium.launch({headless: true, executablePath: '/usr/bin/chromium', args: ['--no-sandbox']});
+        const {chromium} = await loadPlaywright();
+        browser = await chromium.launch({headless: true,
+            executablePath: chromiumExecutablePath(), args: ['--no-sandbox']});
         const context = await browser.newContext({viewport: {width: 1440, height: 1000}, timezoneId: 'Asia/Taipei'});
         await context.addInitScript(() => {
             localStorage.setItem('languageType', 'zh-CN');

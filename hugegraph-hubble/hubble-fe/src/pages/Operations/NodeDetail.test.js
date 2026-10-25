@@ -252,6 +252,26 @@ test('keeps the snapshot visible and reports a refresh failure', async () => {
     expect(screen.queryByText('secret')).not.toBeInTheDocument();
 });
 
+test('keeps old readiness stale through a retry until a successful node response arrives', async () => {
+    const ready = {...response, stale: false,
+        node: {...response.node, readiness: {status: 'READY', stale: false, observed_at: 1000}}};
+    let finishRetry;
+    getNode.mockResolvedValueOnce(ready).mockRejectedValueOnce(new Error('offline'))
+        .mockReturnValueOnce(new Promise(resolve => {finishRetry = resolve;}));
+    renderDetail();
+    const panel = await screen.findByRole('region', {name: 'Service readiness'});
+    expect(within(panel).getByText('Ready', {exact: true})).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', {name: /Refresh/}));
+    await waitFor(() => expect(within(panel).getByText('Refresh needed')).toBeVisible());
+    expect(within(panel).queryByText('Ready', {exact: true})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: /Refresh/}));
+    expect(within(panel).getByText('Refresh needed')).toBeVisible();
+
+    await act(async () => finishRetry(ready));
+    expect(within(panel).getByText('Ready', {exact: true})).toBeVisible();
+});
+
 test('recovers an initial node failure and keeps a canonical node-list action', async () => {
     getNode.mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce(response);
 

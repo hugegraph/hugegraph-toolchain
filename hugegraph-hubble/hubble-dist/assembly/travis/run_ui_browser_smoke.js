@@ -42,7 +42,7 @@ function argValue(name, fallback) {
 function chromiumExecutablePath() {
   const configured = argValue('--chromium-executable',
                               process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
-                              process.env.CHROME_PATH || '');
+                              process.env.CHROME_PATH || process.env.CHROMIUM_PATH || '');
   if (configured) {
     return configured;
   }

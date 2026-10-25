@@ -572,6 +572,7 @@
       "computer_legacy_ready": "下方算法使用 Computer 兼容接口，任务不会发送到 Vermeer",
       "computer_legacy_unavailable": "当前图无法使用 Computer 兼容接口。请检查已有 Computer 部署",
       "computer_checking": "正在检查 Computer 兼容接口…",
+      "computer_select_graph": "请先选择图空间和图，再检查 Computer 兼容接口",
       "computer_legacy_docs": "Computer 配置文档",
       "api_docs": "查看此算法的官方 API 文档",
       "api_source": "查看官方实现/API 源码",

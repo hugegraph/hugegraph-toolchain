@@ -172,8 +172,9 @@ const OlapFormHome = props => {
     const isEmptyBasicOlap = _.isEmpty(visibleGroups);
     const vermeerStatus = !isVermeer ? 'vermeer_unavailable'
         : graphStatus === GRAPH_LOAD_STATUS.LOADED ? 'vermeer_ready' : 'vermeer_load_first';
-    const computerStatus = computerAvailable === false ? 'computer_legacy_unavailable'
-        : computerAvailable === true ? 'computer_legacy_ready' : 'computer_checking';
+    const computerStatus = !graphSpace || !graph ? 'computer_select_graph'
+        : computerAvailable === false ? 'computer_legacy_unavailable'
+            : computerAvailable === true ? 'computer_legacy_ready' : 'computer_checking';
 
     return (
         <div>

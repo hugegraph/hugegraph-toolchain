@@ -24,6 +24,9 @@ const readinessKey = readiness => readiness.stale ? 'stale'
     : readiness.reason === 'readiness_not_probed' ? 'not_probed'
         : readiness.status?.toLowerCase() ?? 'unknown';
 
+const markNodeReadinessStale = node => node?.readiness
+    ? {...node, readiness: {...node.readiness, stale: true}} : node;
+
 const readinessLabel = (readiness, t) => readiness ? t(
     `operations.readiness_${readinessKey(readiness)}`,
     {defaultValue: t('operations.readiness_unknown')}
@@ -86,4 +89,4 @@ const ReadinessPanel = ({readiness}) => {
     );
 };
 
-export {ReadinessStatus, ReadinessPanel, readinessLabel};
+export {ReadinessStatus, ReadinessPanel, readinessLabel, markNodeReadinessStale};

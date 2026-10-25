@@ -15,13 +15,13 @@ following frontend changes together:
 - [#88](https://github.com/hugegraph/hugegraph-toolchain/pull/88): complete card
   navigation and stale-editor isolation (functional revision `1597ad22`).
 
-Use a frontend containing those changes or their later fixes; this runner's
-branch alone does not provide them. Timeouts waiting for quiet query notices,
-submitted-task discovery or PD mapping details can indicate a missing dependency,
-not a new regression. This remains an explicitly invoked integration fixture
-until those dependencies are present in the CI frontend; do not add a permanently
-failing invocation to the single-PR gate. Fixtures do not establish acceptance of
-a live PD/Store/Server cluster or replace the packaged distribution gate.
+Those frontend changes and their later fixes are included in this branch through
+the ASF master merges. Run against a frontend built from the same revision as the
+runner. This remains an explicitly invoked integration fixture: unlike the
+self-contained 404-marker test, it needs a running frontend at `HUBBLE_URL`.
+Adding it to `hubble-ci.yml` also requires starting and waiting for that frontend.
+Fixtures do not establish acceptance of a live PD/Store/Server cluster or replace
+the packaged distribution gate.
 
 Install the frontend dependencies and start Hubble's frontend. Then, from
 `hugegraph-hubble`, run:

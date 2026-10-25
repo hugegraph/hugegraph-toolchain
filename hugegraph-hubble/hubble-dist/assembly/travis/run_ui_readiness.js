@@ -28,7 +28,7 @@ const now = Date.now();
 const acceptedScreenshots = [];
 const available = {availability:'AVAILABLE',observed_at:now,last_success_at:now,fresh:true,stale:false};
 const nodes = [
-{id:'server-1',name:'Server 1',type:'SERVER',status:'UP',observed_at:now,metrics:{system:{basic:{processors:8}},backend:{graphs:2}},metric_statuses:{system:available,backend:available}},
+{id:'server-1',name:'Server 1',type:'SERVER',status:'UP',observed_at:now,metrics:{system:{basic:{processors:8}},backend:{graphs:2}},metric_statuses:{system:available,backend:available},readiness:{status:'READY',stale:false,observed_at:now}},
 {id:'pd-1',name:'PD 1',type:'PD',role:'FOLLOWER',status:'UP',observed_at:now,metrics:{system:{}},metric_statuses:{system:available},readiness:{status:'NOT_READY',state:'STATE_FOLLOWER',reason:'pd_quorum_not_ready',observed_at:now,diagnostics:{request_path:'/v1/ready',http_status:503}}},
 {id:'pd-2',name:'PD 2',type:'PD',role:'LEADER',status:'UP',observed_at:now,metrics:{},metric_statuses:{system:{availability:'UNSUPPORTED',reason:'metrics_not_collected'}},readiness:{status:'UNKNOWN',reason:'readiness_not_probed',diagnostics:{}}},
 {id:'store-1',name:'Store 1',type:'STORE',status:'UP',observed_at:now,metrics:{system:{},drive:{},raft:{},backend:{leaders:3}},metric_statuses:{system:available,drive:available,raft:available,backend:available},readiness:{status:'NOT_READY',state:'STARTING',reason:'store_starting',observed_at:now,diagnostics:{request_path:'/-/state',http_status:200}}}
@@ -69,6 +69,7 @@ async function fixture(browser, name, role) {
   scopes:{all_graphspaces:role !== 'USER',admin_graphspaces:[],write_graphspaces:[],
    graph_resources:authenticated ? 'SERVER_AUTHORIZED' : 'SERVER_ANONYMOUS'}};
  const result = {name,mode:authContext.mode,role,checks:[],requests:[],contexts:[],pageErrors:[],unexpected:[]};
+ const failNext = new Set();
  const context = await browser.newContext({viewport:{width:1440,height:1100}});
  // No user, config, token or graph context is preseeded: AUTH must use the login form.
  await context.addInitScript(() => localStorage.setItem('languageType','zh-CN'));
@@ -90,6 +91,7 @@ async function fixture(browser, name, role) {
    else {data = user;headers['set-cookie'] = `HUBBLE_READINESS_SESSION=${session}; Path=/; HttpOnly; SameSite=Lax`;}
   }
   else if(authenticated && !signedIn) {status = 401;data = null;}
+  else if(failNext.delete(p)) {status = 503;data = null;}
   else if(p === '/auth/context') {data = authContext;result.contexts.push(authContext);}
   else if(p === '/auth/status') data = authenticated ? (role === 'SUPERADMIN' ? 'ADMIN' : 'USER') : {};
   else if(p === '/graphspaces') {
@@ -120,7 +122,7 @@ async function fixture(browser, name, role) {
  const page = await context.newPage();
  page.on('pageerror',error => result.pageErrors.push(error.message));
  page.setDefaultTimeout(15000);
- return {context,page,result,username,authenticated,authContext};
+ return {context,page,result,username,authenticated,authContext,failNext};
 }
 
 async function login(item, redirect) {
@@ -163,6 +165,27 @@ async function readinessFlows(item) {
  await page.getByRole('heading',{name:'集群概览',exact:true}).waitFor();
  await page.getByText('服务: 未就绪',{exact:true}).first().waitFor();
  await capture(page,(authenticated ? 'auth-' : '')+'overview');result.checks.push('overview');
+ await page.goto(base+'/operations/overview?view=nodes');
+ await page.getByLabel('服务: 已就绪',{exact:true}).first().waitFor();
+ item.failNext.add('/operations/overview');
+ await page.getByRole('button',{name:'刷新',exact:true}).click();
+ await page.getByLabel('服务: 待刷新',{exact:true}).first().waitFor();
+ assert.equal(await page.getByLabel('服务: 已就绪',{exact:true}).count(),0);
+ await capture(page,(authenticated ? 'auth-' : '')+'overview-refresh-failed');
+ await page.getByRole('button',{name:'刷新',exact:true}).click();
+ await page.getByLabel('服务: 已就绪',{exact:true}).first().waitFor();
+ result.checks.push('overview-readiness-refresh-recovery');
+ await page.goto(base+'/operations/nodes/server-1');
+ const panel = page.getByRole('region',{name:'服务就绪状态'});
+ await panel.getByText('已就绪',{exact:true}).waitFor();
+ item.failNext.add('/operations/nodes/server-1');
+ await page.getByRole('button',{name:'刷新',exact:true}).click();
+ await panel.getByText('待刷新',{exact:true}).waitFor();
+ assert.equal(await panel.getByText('已就绪',{exact:true}).count(),0);
+ await capture(page,(authenticated ? 'auth-' : '')+'node-refresh-failed');
+ await page.getByRole('button',{name:'刷新',exact:true}).click();
+ await panel.getByText('已就绪',{exact:true}).waitFor();
+ result.checks.push('node-readiness-refresh-recovery');
 }
 
 async function choose(page, label, value) {

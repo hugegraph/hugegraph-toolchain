@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within, waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import GraphAnalysisContext from '../../Context';
 import AsyncTaskDetail from './index';
@@ -44,13 +44,14 @@ beforeAll(() => {
     }));
 });
 
-const renderDetail = (record = {}) => render(
+const detail = (record = {}, context = {}) => (
     <MemoryRouter future={{v7_startTransition: true, v7_relativeSplatPath: true}}>
         <GraphAnalysisContext.Provider
             value={{
                 graphSpace: 'DEFAULT',
                 graph: 'hugegraph',
                 isVermeer: false,
+                ...context,
             }}
         >
             <AsyncTaskDetail
@@ -75,6 +76,19 @@ const renderDetail = (record = {}) => render(
         </GraphAnalysisContext.Provider>
     </MemoryRouter>
 );
+
+const renderDetail = (record, context) => render(detail(record, context));
+
+it('waits for engine discovery before offering task type filters without hiding task rows', async () => {
+    const view = renderDetail({}, {vermeerReady: false});
+    const header = () => screen.getByRole('columnheader', {name: /analysis.async_task.column.task_type/});
+    expect(screen.getByText('g.V().count()')).toBeVisible();
+    expect(within(header()).queryByRole('button')).not.toBeInTheDocument();
+
+    view.rerender(detail({}, {vermeerReady: true, isVermeer: true}));
+    fireEvent.click(within(header()).getByRole('button'));
+    await waitFor(() => expect(screen.getByText('analysis.async_task.type.vermeer_compute')).toBeVisible());
+});
 
 it('opens Vermeer results and disables unsupported task deletion', () => {
     renderDetail({id: -12, task_type: 'vermeer-task:compute'});
