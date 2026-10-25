@@ -16,7 +16,8 @@
  * under the License.
  */
 
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {message} from 'antd';
 import {EditLayer} from './EditLayer';
 import * as api from '../../api';
 import {isAuthEnabled} from '../../utils/config';
@@ -55,6 +56,142 @@ beforeEach(() => {
         addListener: jest.fn(),
         removeListener: jest.fn(),
     }));
+});
+
+test('ignores an older detail response after switching GraphSpaces', async () => {
+    let resolveOld;
+    api.manage.getGraphSpace
+        .mockReturnValueOnce(new Promise(resolve => {resolveOld = resolve;}))
+        .mockResolvedValueOnce({status: 200, data: {
+            name: 'current', nickname: 'Current', auth: false, storage_limit: 10,
+        }});
+    const callbacks = {onCancel: jest.fn(), refresh: jest.fn()};
+    const {rerender} = render(<EditLayer visible detail={{name: 'old'}} {...callbacks} />);
+    expect(screen.getByRole('button', {name: 'common.action.save'})).toBeDisabled();
+    expect(screen.getByPlaceholderText('graphspace.form.name_placeholder')).toBeDisabled();
+
+    rerender(<EditLayer visible detail={{name: 'current'}} {...callbacks} />);
+    await waitFor(() => expect(document.querySelector('#control-hooks_storage_limit')).toHaveValue('10'));
+    fireEvent.change(document.querySelector('#control-hooks_storage_limit'), {target: {value: '20'}});
+    await act(async () => resolveOld({status: 200, data: {
+        name: 'old', nickname: 'Old', auth: true, storage_limit: 917,
+    }}));
+    expect(document.querySelector('#control-hooks_storage_limit')).toHaveValue('20');
+    expect(screen.getByPlaceholderText('graphspace.form.id_placeholder')).toHaveValue('current');
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
+    await waitFor(() => expect(api.manage.updateGraphSpace).toHaveBeenCalledWith(
+        'current', expect.objectContaining({storage_limit: 20, auth: false}), expect.anything()
+    ));
+});
+
+test('ignores a closed editor response when creating a new GraphSpace', async () => {
+    let resolveOld;
+    api.manage.getGraphSpace.mockReturnValueOnce(new Promise(resolve => {resolveOld = resolve;}));
+    const callbacks = {onCancel: jest.fn(), refresh: jest.fn()};
+    const {rerender} = render(<EditLayer visible detail={{name: 'old'}} {...callbacks} />);
+    rerender(<EditLayer visible={false} detail={{name: 'old'}} {...callbacks} />);
+    rerender(<EditLayer visible detail={{}} {...callbacks} />);
+    fireEvent.change(screen.getByPlaceholderText('graphspace.form.id_placeholder'), {
+        target: {value: 'new_space'},
+    });
+    await act(async () => resolveOld({status: 200, data: {
+        name: 'old', auth: true, storage_limit: 917,
+    }}));
+    expect(screen.getByPlaceholderText('graphspace.form.id_placeholder')).toHaveValue('new_space');
+    expect(document.querySelector('#control-hooks_storage_limit')).toHaveValue('10240');
+});
+
+test('submits once while keeping the resource form mounted and retryable after failure', async () => {
+    let finish;
+    api.manage.addGraphSpace.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    render(<EditLayer visible detail={{}} onCancel={jest.fn()} refresh={jest.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText('graphspace.form.id_placeholder'), {
+        target: {value: 'once'},
+    });
+    fireEvent.click(screen.getByText('graphspace.form.advanced_title'));
+    const advanced = document.querySelector('details');
+    const quota = document.querySelector('#control-hooks_storage_limit');
+    fireEvent.change(quota, {target: {value: '25'}});
+    const create = screen.getByRole('button', {name: 'common.action.create'});
+    fireEvent.click(create);
+    fireEvent.click(create);
+    await waitFor(() => expect(api.manage.addGraphSpace).toHaveBeenCalledTimes(1));
+    expect(quota).toBeInTheDocument();
+    expect(quota).toBeDisabled();
+    expect(advanced).toHaveAttribute('open');
+    expect(screen.getByRole('button', {name: /Cancel|common.action.cancel/})).toBeDisabled();
+    await act(async () => finish({status: 503}));
+    expect(quota).toBeInTheDocument();
+    expect(quota).toBeEnabled();
+    expect(quota).toHaveValue('25');
+    expect(advanced).toHaveAttribute('open');
+});
+
+test('an old save completion does not close a newly opened editor', async () => {
+    let finish;
+    api.manage.addGraphSpace.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    api.manage.getGraphSpace.mockResolvedValueOnce({status: 200, data: {
+        name: 'current', nickname: 'Current', auth: false, storage_limit: 10,
+    }});
+    const onCancel = jest.fn();
+    const refresh = jest.fn();
+    const {rerender} = render(<EditLayer visible detail={{}} onCancel={onCancel} refresh={refresh} />);
+    fireEvent.change(screen.getByPlaceholderText('graphspace.form.id_placeholder'), {
+        target: {value: 'first'},
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.create'}));
+    await waitFor(() => expect(api.manage.addGraphSpace).toHaveBeenCalledTimes(1));
+    rerender(<EditLayer visible detail={{name: 'current'}} onCancel={onCancel} refresh={refresh} />);
+    await waitFor(() => expect(document.querySelector('#control-hooks_storage_limit')).toHaveValue('10'));
+    await act(async () => finish({status: 200}));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText('graphspace.form.id_placeholder')).toHaveValue('current');
+});
+
+test.each(['response', 'transport'])('refreshes partially applied %s failures without losing the form', async failure => {
+    api.manage.getGraphSpace.mockResolvedValue({status: 200, data: {
+        name: 'partial', nickname: 'Partial', auth: false, storage_limit: 10,
+    }});
+    let storedQuota = 10;
+    api.manage.updateGraphSpace.mockImplementationOnce(async (_, values) => {
+        storedQuota = values.storage_limit;
+        if (failure === 'transport') throw new Error('Admin update failed');
+        return {status: 503};
+    });
+    const onCancel = jest.fn();
+    const refresh = jest.fn(() => expect(storedQuota).toBe(25));
+    // Static toast portals are covered by the browser fixture. Keep this test
+    // focused on the editor's actual async save/refresh and retry lifecycle.
+    const feedback = [
+        jest.spyOn(message, 'error').mockImplementation(() => {}),
+        jest.spyOn(message, 'success').mockImplementation(() => {}),
+    ];
+    try {
+        await act(async () => {
+            render(<EditLayer visible detail={{name: 'partial'}} onCancel={onCancel} refresh={refresh} />);
+        });
+        const quota = document.querySelector('#control-hooks_storage_limit');
+        const alias = screen.getByPlaceholderText('graphspace.form.name_placeholder');
+        const save = screen.getByText('common.action.save').closest('button');
+        expect(quota).toHaveValue('10');
+        await act(async () => {
+            fireEvent.change(quota, {target: {value: '25'}});
+            fireEvent.change(alias, {target: {value: 'RetryAlias'}});
+        });
+        await act(async () => {fireEvent.click(save);});
+        expect(refresh).toHaveBeenCalledTimes(1);
+        expect(onCancel).not.toHaveBeenCalled();
+        expect(quota).toBeEnabled();
+        expect(quota).toHaveValue('25');
+        expect(alias).toHaveValue('RetryAlias');
+        await act(async () => {fireEvent.click(save);});
+        expect(api.manage.updateGraphSpace).toHaveBeenCalledTimes(2);
+        expect(api.manage.updateGraphSpace.mock.calls[1][1]).toMatchObject({storage_limit: 25, nickname: 'RetryAlias'});
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    } finally {
+        feedback.forEach(spy => spy.mockRestore());
+    }
 });
 
 test('uses the shared keyboard-focusable help affordance for every field label', () => {

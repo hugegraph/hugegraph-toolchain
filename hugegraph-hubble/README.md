@@ -9,6 +9,10 @@ graph data load, schema management, graph relationship analysis, and graphical d
 
 ## Graph-space quotas and usage
 
+The [GraphSpace interactions and fixture runner](docs/graphspace-interactions.md)
+guide covers card navigation, editing, failure recovery, pagination and the
+repeatable stateful API fixture.
+
 New graph spaces start with 128 CPU cores, 128 GB memory, 128 compute CPU cores,
 128 GB compute memory, 10240 GB storage and 100 graphs. Server also defaults the
 role limit to 100. Existing spaces retain their configured limits. Large finite
@@ -76,6 +80,7 @@ remain unverified because no live cluster is configured in this test environment
 ## Product Tour
 
 For Hubble and the Go computing engine, see the [Vermeer development environment](docs/vermeer-development.md).
+The [Vermeer-first OLAP guide](docs/vermeer-first-olap.md) covers engine labels, loading, and the optional Computer compatibility path.
 
 ![Vermeer PageRank task results](docs/images/vermeer/async-results.png)
 
@@ -869,6 +874,19 @@ node --test hubble-dist/assembly/travis/ui_auth.test.js \
   hubble-dist/assembly/travis/run_ui_full_acceptance.test.js
 python3 hubble-dist/assembly/travis/test_run_live_hubble_smoke.py
 ```
+
+The [Operations diagnostics guide](docs/operations-diagnostics-20261023.md) explains
+collection health, Server/Store request evidence and PD address matching. Run its
+[browser fixture](hubble-dist/assembly/travis/run_ui_operations_diagnostics.js)
+against a running frontend, keeping generated reports and screenshots outside Git:
+
+```bash
+HUBBLE_UI_EVIDENCE_DIR=/tmp/hubble-operations-diagnostics \
+node hubble-dist/assembly/travis/run_ui_operations_diagnostics.js
+```
+
+Set `HUBBLE_URL` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` as needed. The runner uses
+deterministic API fixtures; it does not establish deployment or multi-Server acceptance.
 
 The [service readiness contract](docs/service-readiness-20261023.md) explains
 why registered `UP` nodes can report a service as not ready, the bounded PD/Store

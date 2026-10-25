@@ -641,14 +641,20 @@ public class LiveOperationsCollector implements OperationsCollector {
                 Node node = nodes.get(i);
                 if ("PD".equals(node.getType())) {
                     Map<String, MetricStatus> statuses = new LinkedHashMap<>(node.getMetricStatuses());
-                    statuses.put("system", unsupportedMetric(now, "pd_metrics_unmapped"));
+                    statuses.put("system", unsupportedMetric(now, "metrics_not_collected"));
                     nodes.set(i, copyNode(node, node.getMetrics(), statuses));
                 }
             }
+            Map<String, Object> details = new LinkedHashMap<>(status.getDiagnostics());
+            // Only the configured endpoint is scraped; unmatched members have
+            // no attributed metric request or node-level failure.
+            details.put("affected_node_count", 1);
+            details.put("failed_metric_groups", List.of("system"));
+            details.put("pd_metric_mapping", this.parser.pdMetricMappingDiagnostics(cluster, this.pdBase));
             return new SourceStatus("PARTIAL", status.getStatus(), now,
                                     status.getLastSuccessAt(), false, false,
                                     preferredReason(status,
-                                                    "pd_metrics_unmapped"), status.getDiagnostics());
+                                                    "pd_metrics_unmapped"), details);
         }
         Map<String, Object> system = null;
         MetricStatus selectedStatus;
