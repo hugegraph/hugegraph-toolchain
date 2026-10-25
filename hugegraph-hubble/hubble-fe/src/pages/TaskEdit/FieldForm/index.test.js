@@ -16,7 +16,7 @@
  */
 
 import {Form} from 'antd';
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import FieldForm from './index';
 import * as api from '../../../api';
 
@@ -134,4 +134,50 @@ it('clears the selection error before entering with a different data source', as
     );
     expect(document.activeElement).not.toBe(oldError.parentElement);
     expect(onFormFinish).not.toHaveBeenCalled();
+});
+
+it('does not submit fields selected for a previous data source', async () => {
+    let resolveB;
+    const pendingB = new Promise(resolve => {
+        resolveB = resolve;
+    });
+    api.manage.getDatasourceSchema.mockImplementation(id => id === 'A'
+        ? Promise.resolve({status: 200, data: ['old_field']}) : pendingB);
+    const onFormFinish = jest.fn();
+    const view = datasourceID => (
+        <Form.Provider onFormFinish={onFormFinish}>
+            <FieldForm visible prev={jest.fn()} datasourceID={datasourceID} />
+        </Form.Provider>
+    );
+    const {rerender} = render(view('A'));
+    const selectField = async name => {
+        const field = await screen.findByText(name);
+        fireEvent.click(field.closest('.ant-tree-treenode')
+            .querySelector('.ant-tree-checkbox'));
+        fireEvent.click(screen.getByLabelText('task.edit.select_source_fields'));
+        expect(await screen.findAllByText(name)).toHaveLength(2);
+    };
+    const next = () => fireEvent.click(screen.getByText('common.action.next').closest('button'));
+
+    await selectField('old_field');
+    rerender(view('B'));
+    expect(screen.queryByText('old_field')).not.toBeInTheDocument();
+    next();
+    // This suite uses the actual required rule. Observe completed validation,
+    // rather than an immediately passing negative assertion during submission.
+    const error = await screen.findByText('task.edit.select_source_fields');
+    await waitFor(() => expect(error.closest('[role="alert"]').parentElement).toHaveFocus());
+    expect(onFormFinish).not.toHaveBeenCalled();
+
+    await act(async () => {
+        resolveB({status: 200, data: ['new_field']});
+        await pendingB;
+    });
+    await selectField('new_field');
+    expect(screen.queryByText('old_field')).not.toBeInTheDocument();
+    next();
+    await waitFor(() => expect(onFormFinish).toHaveBeenCalledWith(
+        'field_form',
+        expect.objectContaining({values: expect.objectContaining({target_keys: ['new_field']})})
+    ));
 });

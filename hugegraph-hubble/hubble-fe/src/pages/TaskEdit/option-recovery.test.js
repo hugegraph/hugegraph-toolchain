@@ -15,7 +15,7 @@
  * under the License.
  */
 
-import {Form, Modal, message} from 'antd';
+import {Modal, message} from 'antd';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import BaseForm from './BaseForm';
@@ -496,39 +496,6 @@ it('clears stale fields and retries the selected data source schema', async () =
     expect(await screen.findByText('id')).toBeInTheDocument();
     expect(screen.getByText('name')).toBeInTheDocument();
     expect(screen.queryByText('Could not load source fields.')).not.toBeInTheDocument();
-});
-
-it('does not submit fields selected for a previous data source', async () => {
-    const pendingB = deferred();
-    api.manage.getDatasourceSchema.mockImplementation(id => {
-        if (id === 'A') {
-            return Promise.resolve({status: 200, data: ['old_field']});
-        }
-        return pendingB.promise;
-    });
-    const onFormFinish = jest.fn();
-    const {rerender} = render(
-        <Form.Provider onFormFinish={onFormFinish}>
-            <FieldForm visible prev={jest.fn()} datasourceID='A' />
-        </Form.Provider>
-    );
-
-    expect(await screen.findByText('old_field')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tree').querySelector('.ant-tree-checkbox'));
-    fireEvent.click(screen.getByRole('button', {name: 'task.edit.select_source_fields'}));
-    expect(await screen.findAllByText('old_field')).toHaveLength(2);
-
-    rerender(
-        <Form.Provider onFormFinish={onFormFinish}>
-            <FieldForm visible prev={jest.fn()} datasourceID='B' />
-        </Form.Provider>
-    );
-    fireEvent.click(screen.getByRole('button', {name: 'common.action.next'}));
-    await waitFor(() => expect(onFormFinish).not.toHaveBeenCalled());
-    await act(async () => {
-        pendingB.resolve({status: 200, data: ['new_field']});
-        await pendingB.promise;
-    });
 });
 
 it('recovers PD graph-space and graph option failures without stale overwrite', async () => {
