@@ -322,6 +322,8 @@ catch (e) {
                 assert.deepEqual(state.calls.filter(x => x.method === 'DELETE').at(-1).names, ['PartialB']);
                 assert.equal(properties.find(x => x.name === 'PartialA')?.data_type, 'INT');
                 await page.getByRole('row').filter({hasText: 'PartialA'}).waitFor();
+                assert.equal(await page.getByRole('row').filter({hasText: 'PartialA'})
+                    .getByRole('checkbox').isChecked(), false);
                 assert.equal(await page.getByRole('row').filter({hasText: 'PartialB'}).count(), 0);
                 await page.waitForFunction(() => !document.querySelector('.ant-message-error'));
                 await screenshot(page, '11-batch-retry-recreated-schema-preserved');

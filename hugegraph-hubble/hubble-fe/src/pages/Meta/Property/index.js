@@ -152,6 +152,7 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
                 dataSource={data}
                 rowSelection={noHeader || !canWrite ? null : {
                     type: 'checkbox',
+                    selectedRowKeys: selectedItems,
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },
