@@ -97,6 +97,10 @@ public class GraphService {
         this.checkParamsValid(client, entity, false);
         GraphManager graph = client.graph();
         Vertex vertex = this.buildVertex(client, entity);
+        if (vertex.id() != null) {
+            // The schema-resolved ID must retain its number/string type in the SDK path.
+            return graph.appendVertexProperty(vertex);
+        }
         return graph.updateVertexProperty(vertexId, vertex);
     }
 
