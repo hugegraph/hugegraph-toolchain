@@ -17,6 +17,7 @@
  */
 
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {MemoryRouter} from 'react-router-dom';
 import AsyncTaskResult, {AsyncTaskResultContent} from './index';
 import * as api from '../../../api/index';
@@ -40,6 +41,13 @@ jest.mock('react-i18next', () => ({
         'analysis.async_task.result_back': 'Back to task management',
         'analysis.async_task.result_context': 'DEFAULT / hugegraph / Task 9',
         'analysis.async_task.result_failure_title': 'Task failed',
+        'analysis.async_task.vermeer_failure_unknown_title': 'The upstream service returned no specific reason',
+        'analysis.async_task.vermeer_failure_unknown_description': 'Checks, not a confirmed diagnosis',
+        'analysis.async_task.vermeer_failure_logs_hint': 'Check Worker and Store logs',
+        'analysis.async_task.vermeer_failure_connection_hint': 'Verify service addresses and authentication',
+        'analysis.async_task.vermeer_failure_namespace_hint': 'Verify Store pd.cluster matches Server',
+        'analysis.async_task.vermeer_failure_up_hint': 'UP does not confirm computation success',
+        'analysis.async_task.raw_error': 'Original error',
         'analysis.async_task.result_size_limit_title': 'Task result exceeds the server limit',
         'analysis.async_task.result_size_limit_description': `Result ${values?.size} MiB exceeds ${values?.limit} MiB`,
         'analysis.async_task.refine_query': 'Refine query',
@@ -164,4 +172,59 @@ it('does not classify unrelated task failures as a result size limit', async () 
     expect(await screen.findByRole('alert')).toHaveTextContent('Task failed');
     expect(screen.getByText('Query timed out')).toBeInTheDocument();
     expect(screen.queryByText('Task result exceeds the server limit')).not.toBeInTheDocument();
+});
+
+const opaqueRpcFailure = 'read vertex error: rpc error: code = Unknown desc = \n\t';
+
+it.each(['vermeer-task:load', 'vermeer-task:compute'])(
+    'provides actionable checks for an empty upstream reason on %s', async taskType => {
+        api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {
+            task_status: 'failed', task_type: taskType, task_result: opaqueRpcFailure,
+        }});
+        renderResult();
+
+        const failure = await screen.findByRole('alert');
+        expect(failure).toHaveTextContent('The upstream service returned no specific reason');
+        expect(failure).toHaveTextContent('Checks, not a confirmed diagnosis');
+        expect(failure).toHaveTextContent('Check Worker and Store logs');
+        expect(failure).toHaveTextContent('Verify service addresses and authentication');
+        expect(failure).toHaveTextContent('Verify Store pd.cluster matches Server');
+        expect(failure).toHaveTextContent('UP does not confirm computation success');
+        expect(screen.getByText(opaqueRpcFailure.trim())).toBeInTheDocument();
+        expect(screen.queryByRole('link', {name: 'Refine query'})).not.toBeInTheDocument();
+    }
+);
+
+it('copies the unchanged original upstream error including its trailing whitespace', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {writeText}});
+    api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {
+        task_status: 'failed', task_type: 'vermeer-task:load', task_result: opaqueRpcFailure,
+    }});
+    renderResult();
+
+    await screen.findByText('Original error');
+    await userEvent.click(screen.getByRole('button', {name: /copy/i}));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(opaqueRpcFailure));
+});
+
+it.each([
+    ['gremlin', 'failed', opaqueRpcFailure],
+    [undefined, 'failed', opaqueRpcFailure],
+    ['vermeer-task:other', 'failed', opaqueRpcFailure],
+    ['vermeer-task:load', 'success', opaqueRpcFailure],
+    ['vermeer-task:compute', 'running', opaqueRpcFailure],
+    ['vermeer-task:load', 'failed', 'rpc error: code = Unknown desc = permission denied'],
+    ['vermeer-task:load', 'failed', 'rpc error: code = Unavailable desc = '],
+    ['vermeer-task:load', 'failed', 'Unknown failure'],
+    ['vermeer-task:load', 'failed', 'rpc error: code = Unknown desc = \nuseful detail'],
+])('does not invent a diagnosis for type=%s status=%s result=%s', async (taskType, status, result) => {
+    api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {
+        task_status: status, task_type: taskType, task_result: result,
+    }});
+    renderResult();
+
+    await screen.findByText(result.replace(/\s+/g, ' ').trim());
+    expect(screen.queryByText('The upstream service returned no specific reason')).not.toBeInTheDocument();
+    expect(screen.queryByText('Original error')).not.toBeInTheDocument();
 });
