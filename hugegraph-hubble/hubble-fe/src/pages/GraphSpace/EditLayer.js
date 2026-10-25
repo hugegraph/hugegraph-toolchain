@@ -114,10 +114,12 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                 refresh();
                 onCancel();
             } else {
+                refresh();
                 message.error(t('common.msg.operation_failed'));
             }
         } catch (error) {
             if (isCurrent() && !error?.errorFields) {
+                refresh();
                 message.error(t('common.msg.operation_failed'));
             }
         } finally {

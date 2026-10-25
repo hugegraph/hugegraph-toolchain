@@ -61,7 +61,7 @@ test('opens the GraphSpace from header whitespace, creation date, body and enter
         screen.getByText(/2026-10-23 graphspace.card.created/),
         screen.getByRole('button', {name: 'Space'}),
         container.querySelector('.card_content'),
-        screen.getByRole('button', {name: 'graphspace.card.enter'}),
+        screen.getByRole('link', {name: 'graphspace.card.enter'}),
     ]) {
         mockNavigate.mockClear();
         await userEvent.click(target);
@@ -101,6 +101,37 @@ test('keeps statistics help available through icon clicks and the keyboard witho
     expect(await screen.findByRole('tooltip')).toHaveTextContent('graphspace.card.daily_update');
     expect(screen.getByRole('tooltip')).toHaveTextContent('graphspace.card.last_update');
     await userEvent.keyboard('{Enter} ');
+    expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test('keeps tooltip content and its portal arrow separate from card navigation', async () => {
+    render(<GraphSpaceCard item={{
+        name: 'space', nickname: 'Space',
+        statistic: {vertex: 12, edge: 3, date: '2026-10-23'},
+    }} />);
+    fireEvent.focus(screen.getByLabelText('graphspace.card.statistic_help'));
+    const tooltip = await screen.findByRole('tooltip');
+    fireEvent.click(tooltip.querySelector('div'));
+    const arrow = tooltip.closest('.ant-tooltip').querySelector('.ant-tooltip-arrow');
+    expect(arrow).not.toBeNull();
+    fireEvent.click(arrow);
+    expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test.each([
+    {ctrlKey: true}, {metaKey: true}, {shiftKey: true}, {altKey: true}, {button: 1},
+])('preserves native link activation for %j', options => {
+    render(<GraphSpaceCard item={{name: 'space', nickname: 'Space'}} />);
+    const link = screen.getByRole('link', {name: 'graphspace.card.enter'});
+    expect(link).toHaveAttribute('href', '/graphspace/space');
+    let preventedByCard;
+    document.addEventListener('click', event => {
+        preventedByCard = event.defaultPrevented;
+        // Avoid JSDOM attempting the browser's default navigation after checking it.
+        event.preventDefault();
+    }, {once: true});
+    fireEvent.click(link, {button: 0, ...options});
+    expect(preventedByCard).toBe(false);
     expect(mockNavigate).not.toHaveBeenCalled();
 });
 

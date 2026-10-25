@@ -148,6 +148,37 @@ test('an old save completion does not close a newly opened editor', async () => 
     expect(screen.getByPlaceholderText('graphspace.form.id_placeholder')).toHaveValue('current');
 });
 
+test.each(['response', 'transport'])('refreshes partially applied %s failures without losing the form', async failure => {
+    api.manage.getGraphSpace.mockResolvedValue({status: 200, data: {
+        name: 'partial', nickname: 'Partial', auth: false, storage_limit: 10,
+    }});
+    let storedQuota = 10;
+    api.manage.updateGraphSpace.mockImplementationOnce(async (_, values) => {
+        storedQuota = values.storage_limit;
+        if (failure === 'transport') throw new Error('Admin update failed');
+        return {status: 503};
+    });
+    const onCancel = jest.fn();
+    const refresh = jest.fn(() => expect(storedQuota).toBe(25));
+    render(<EditLayer visible detail={{name: 'partial'}} onCancel={onCancel} refresh={refresh} />);
+    const quota = document.querySelector('#control-hooks_storage_limit');
+    await waitFor(() => expect(quota).toHaveValue('10'));
+    fireEvent.change(quota, {target: {value: '25'}});
+    fireEvent.change(screen.getByPlaceholderText('graphspace.form.name_placeholder'), {
+        target: {value: 'RetryAlias'},
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(quota).toBeEnabled();
+    expect(quota).toHaveValue('25');
+    expect(screen.getByPlaceholderText('graphspace.form.name_placeholder')).toHaveValue('RetryAlias');
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
+    await waitFor(() => expect(api.manage.updateGraphSpace).toHaveBeenCalledTimes(2));
+    expect(api.manage.updateGraphSpace.mock.calls[1][1]).toMatchObject({storage_limit: 25, nickname: 'RetryAlias'});
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+});
+
 test('uses the shared keyboard-focusable help affordance for every field label', () => {
     render(
         <EditLayer visible detail={{}} onCancel={jest.fn()} refresh={jest.fn()} />

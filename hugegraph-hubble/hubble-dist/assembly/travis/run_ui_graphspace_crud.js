@@ -32,12 +32,13 @@ const checks = [];
 const errors = [];
 const unexpected = new Set();
 const state = {spaces: [space('DEFAULT', '默认图空间'), space('soc_graph', '记忆库')],
-    fail: null, writes: [], requests: [], delayedSave: null};
+    fail: null, writes: [], requests: [], delayedSave: null, failAfterUpdate: false};
 function space(name, nickname) {
     return {name, nickname, create_time: '2026-10-23', auth: true,
         max_graph_number: 100, max_role_number: 100, cpu_limit: 64, memory_limit: 128,
         compute_cpu_limit: 0, compute_memory_limit: 0, storage_limit: 100,
-        storage_used_kb: 1024, description: '', graphspace_admin: []};
+        storage_used_kb: 1024, description: '', graphspace_admin: [],
+        statistic: {vertex: 12, edge: 3, date: '2026-10-23'}};
 }
 function paged(records, url) {
     const current = Number(url.searchParams.get('page_no') || 1);
@@ -88,6 +89,11 @@ async function fixture(route) {
             if (state.delayedSave) await state.delayedSave;
             Object.assign(data, values);
             state.writes.push({method, name, values});
+            if (state.failAfterUpdate) {
+                state.failAfterUpdate = false;
+                return route.fulfill({status: 503, contentType: 'application/json',
+                    body: JSON.stringify({status: 503, message: 'Fixture: admin update failed after quota persisted'})});
+            }
         } else if (method === 'DELETE') {
             state.spaces = state.spaces.filter(s => s.name !== id);
             state.writes.push({method, name});
@@ -162,6 +168,36 @@ let browser;
             await card('记忆库').waitFor();
             await page.getByRole('button', {name: '创建图空间', exact: true}).focus();
             assert(await page.getByRole('button', {name: '创建图空间', exact: true}).evaluate(el => el === document.activeElement));
+        });
+        await step('01a-help-tooltip', 'Tooltip contents and portal arrow do not navigate away from the cards', async () => {
+            const listUrl = page.url();
+            const help = card('记忆库').getByRole('button', {name: '点边统计说明'});
+            await help.focus();
+            const tooltip = page.getByRole('tooltip');
+            await tooltip.waitFor({state: 'visible'});
+            await tooltip.getByText('点边数每日更新', {exact: true}).click();
+            assert.equal(page.url(), listUrl);
+            await help.focus();
+            await tooltip.waitFor({state: 'visible'});
+            // Tooltip arrows are pointer-transparent; dispatch directly to check
+            // their portal event boundary without clicking the card underneath.
+            await page.locator('.ant-tooltip:visible .ant-tooltip-arrow').dispatchEvent('click');
+            assert.equal(page.url(), listUrl);
+            assert(await card('记忆库').isVisible());
+        });
+        await step('01b-native-links', 'Ctrl and middle-click open native GraphSpace links in new tabs', async () => {
+            const listUrl = page.url();
+            await page.mouse.click(20, 20);
+            const enter = card('记忆库').getByRole('link', {name: '进入图空间'});
+            assert.equal(await enter.getAttribute('href'), '/graphspace/soc_graph');
+            for (const options of [{modifiers: ['Control']}, {button: 'middle'}]) {
+                const [opened] = await Promise.all([context.waitForEvent('page'), enter.click(options)]);
+                await opened.waitForLoadState('domcontentloaded');
+                assert.equal(new URL(opened.url()).pathname, '/graphspace/soc_graph');
+                assert.equal(page.url(), listUrl);
+                await opened.close();
+            }
+            await page.getByRole('button', {name: '创建图空间', exact: true}).focus();
         });
         await step('02-invalid-create', 'Keyboard create opens modal; invalid name is rejected inline', async () => {
             await page.keyboard.press('Enter');
@@ -304,6 +340,39 @@ let browser;
             await card('记忆库').waitFor();
             assert(!state.spaces.some(s => s.name === 'filler_11'));
             assert(await page.locator('.ant-pagination-item-1.ant-pagination-item-active').count());
+        });
+        await messageGone();
+        await step('20-partial-save', 'Failed admin update refreshes stored quota without closing the edited form', async () => {
+            await edit('记忆库');
+            await dialog().getByText('高级部署与资源限制', {exact: true}).click();
+            await quotaField().fill('40');
+            const listsBefore = state.requests.filter(r => r.method === 'GET' && r.name === '/graphspaces').length;
+            state.failAfterUpdate = true;
+            const refreshed = page.waitForResponse(r => {
+                const url = new URL(r.url());
+                return /\/graphspaces$/.test(url.pathname) && r.request().method() === 'GET';
+            });
+            await dialog().getByRole('button', {name: /保\s*存/, exact: true}).click();
+            await refreshed;
+            await page.locator('.ant-message-error').waitFor();
+            assert.equal(state.spaces.find(s => s.name === 'soc_graph').storage_limit, 40);
+            assert(state.requests.filter(r => r.method === 'GET' && r.name === '/graphspaces').length > listsBefore);
+            assert(await dialog().isVisible());
+            assert.equal(await quotaField().inputValue(), '40');
+            assert(await quotaField().isEditable());
+        });
+        await step('21-partial-cancel', 'Cancelling the failed save reveals the quota already persisted by the server', async () => {
+            await dialog().getByRole('button', {name: /取\s*消/, exact: true}).click();
+            await card('记忆库').getByText('1 MB / 40 GB').waitFor();
+        });
+        await messageGone();
+        await step('22-partial-retry', 'A later save remains retryable after the partial failure', async () => {
+            await edit('记忆库');
+            await dialog().getByText('高级部署与资源限制', {exact: true}).click();
+            await quotaField().fill('45');
+            await dialog().getByRole('button', {name: /保\s*存/, exact: true}).click();
+            await card('记忆库').getByText('1 MB / 45 GB').waitFor();
+            assert.equal(state.spaces.find(s => s.name === 'soc_graph').storage_limit, 45);
         });
         assert.deepEqual(errors, []);
         assert.deepEqual([...unexpected], []);

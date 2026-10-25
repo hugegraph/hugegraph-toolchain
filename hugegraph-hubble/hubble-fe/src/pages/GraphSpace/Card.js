@@ -87,11 +87,23 @@ const GraphSpaceCard = ({
     }, [item, navigate]);
 
     const handleCardClick = useCallback(event => {
-        // Dropdown menus use a portal, but their clicks still bubble through
-        // the card in React. Keep those actions separate from navigation.
-        if (event.target.closest('a, button, [role="menu"], [role="menuitem"]')) {
+        // Portal contents still bubble through the card's React tree, including
+        // tooltip arrows outside their semantic content. They do not navigate.
+        if (!event.currentTarget.contains(event.target)
+            || event.target.closest('a, button, [role="menu"], [role="menuitem"]')) {
             return;
         }
+        handleGotoGraph();
+    }, [handleGotoGraph]);
+
+    const handleEnterClick = useCallback(event => {
+        // Preserve the anchor's native modified/middle-click behavior while
+        // ordinary activation uses the client router without a full reload.
+        if (event.defaultPrevented || event.button !== 0
+            || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+        }
+        event.preventDefault();
         handleGotoGraph();
     }, [handleGotoGraph]);
 
@@ -177,7 +189,9 @@ const GraphSpaceCard = ({
 
             extra={(
                 <Space.Compact>
-                    <Button onClick={handleGotoGraph}>{t('graphspace.card.enter')}</Button>
+                    <Button href={`/graphspace/${item.name}`} onClick={handleEnterClick}>
+                        {t('graphspace.card.enter')}
+                    </Button>
                     <Dropdown menu={getMenu(item)} trigger={['click']}>
                         <Button icon={<EllipsisOutlined />} aria-label={t('common.action.more')} />
                     </Dropdown>
