@@ -17,6 +17,12 @@ the dialog shows that the result is unconfirmed. **Check status** only reads the
 keeps failed async tasks recoverable without silently resubmitting while checking status.
 Errors share a localized notification key. No Server/PD/Store code or cache protocol changes.
 
+The current vertex/edge deletion response does not expose the accepted task ID.
+**Check status** therefore reconciles target existence, not whether that task is
+running or failed. Inspect the Server's tasks or logs and confirm the task has
+stopped before explicitly retrying; retrying a running task can queue duplicate
+work. Returning and linking the task ID requires a separate backend API change.
+
 ## Trusted schema snapshots
 
 A throwing completion callback does not leave an already completed confirmation open.
