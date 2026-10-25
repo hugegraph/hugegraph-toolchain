@@ -70,15 +70,15 @@ test('refits once when a hidden interactive host first receives a positive size'
     expect(controller.fitView).not.toHaveBeenCalled();
 
     await act(async () => {
-        observerCallback([{target: host, contentRect: {width: 640, height: 240}}]
-            as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+        const entries = [{target: host, contentRect: {width: 640, height: 240}}] as unknown as ResizeObserverEntry[];
+        observerCallback(entries, {} as ResizeObserver);
     });
     expect(controller.resize).toHaveBeenLastCalledWith(640, 240);
     expect(controller.fitView).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-        observerCallback([{target: host, contentRect: {width: 800, height: 320}}]
-            as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+        const entries = [{target: host, contentRect: {width: 800, height: 320}}] as unknown as ResizeObserverEntry[];
+        observerCallback(entries, {} as ResizeObserver);
     });
     expect(controller.resize).toHaveBeenCalledTimes(2);
     expect(controller.resize).toHaveBeenLastCalledWith(800, 320);
