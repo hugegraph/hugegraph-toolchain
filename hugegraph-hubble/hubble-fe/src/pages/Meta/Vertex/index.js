@@ -47,7 +47,7 @@ const VertexTable = ({canWrite = true}) => {
         fetchPage, {identityKey: `${graphspace}:${graph}`, refreshKey: refresh}
     );
 
-    const removeVertex = useCallback((names, isBatch) => {
+    const removeVertex = useCallback(names => {
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.vertex.delete_confirm'),
@@ -94,7 +94,7 @@ const VertexTable = ({canWrite = true}) => {
             return;
         }
 
-        removeVertex(selectedItems, true);
+        removeVertex(selectedItems);
     }, [selectedItems, removeVertex, t]);
 
     const columns = [
