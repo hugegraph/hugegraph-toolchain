@@ -37,7 +37,7 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
 
     useEffect(() => setSelectedItems([]), [graphspace, graph]);
 
-    const removeProperty = useCallback((names, isBatch) => {
+    const removeProperty = useCallback(names => {
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.property.delete_confirm'),
@@ -85,7 +85,7 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
             return;
         }
 
-        removeProperty(selectedItems, true);
+        removeProperty(selectedItems);
     }, [removeProperty, selectedItems, t]);
 
     const rowKey = useCallback(item => item.name, []);
