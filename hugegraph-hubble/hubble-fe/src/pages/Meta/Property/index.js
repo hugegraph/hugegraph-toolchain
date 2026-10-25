@@ -17,7 +17,7 @@
  */
 
 import {Table, Row, Col, Space, Button, message} from 'antd';
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useEffect, useRef} from 'react';
 import {EditPropertyLayer} from './EditLayer';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
@@ -34,8 +34,17 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
     const [selectedItems, setSelectedItems] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
+    const scopeRef = useRef(`${graphspace}:${graph}`);
+    scopeRef.current = `${graphspace}:${graph}`;
 
-    const removeProperty = useCallback((names, isBatch) => {
+    useEffect(() => setSelectedItems([]), [graphspace, graph]);
+    useEffect(() => () => {
+        scopeRef.current = null;
+    }, []);
+
+    const removeProperty = useCallback(names => {
+        const operationScope = `${graphspace}:${graph}`;
+        const isCurrentScope = () => scopeRef.current === operationScope;
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.property.delete_confirm'),
@@ -44,10 +53,22 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
             remove: api.manage.delMetaProperty,
             checkUsage: api.manage.checkMetaProperty,
             inUseKey: 'schema.property.in_use',
-            onRefresh: () => setRefresh(value => !value),
+            onProgress: removedNames => {
+                if (!isCurrentScope()) {
+                    return;
+                }
+                setSelectedItems(current =>
+                    current.filter(name => !removedNames.includes(name)));
+            },
+            onRefresh: () => {
+                if (isCurrentScope()) {
+                    setRefresh(value => !value);
+                }
+            },
             onComplete: () => {
-                if (isBatch) setSelectedItems([]);
-                setRefresh(value => !value);
+                if (isCurrentScope()) {
+                    setRefresh(value => !value);
+                }
             },
         });
     }, [graph, graphspace, t]);
@@ -84,7 +105,7 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
             return;
         }
 
-        removeProperty(selectedItems, true);
+        removeProperty(selectedItems);
     }, [removeProperty, selectedItems, t]);
 
     const rowKey = useCallback(item => item.name, []);
@@ -152,6 +173,7 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
                 dataSource={data}
                 rowSelection={noHeader || !canWrite ? null : {
                     type: 'checkbox',
+                    selectedRowKeys: selectedItems,
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },

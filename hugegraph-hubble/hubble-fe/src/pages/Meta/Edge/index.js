@@ -18,7 +18,7 @@
 
 import {Table, Row, Col, Space, Button, message, Tooltip} from 'antd';
 import {EditEdgeLayer} from './EditLayer';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import useMetaTable from '../common/useMetaTable';
@@ -37,6 +37,13 @@ const EdgeTable = ({canWrite = true}) => {
     const [vertexList, setVertexList] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
+    const scopeRef = useRef(`${graphspace}:${graph}`);
+    scopeRef.current = `${graphspace}:${graph}`;
+
+    useEffect(() => setSelectedItems([]), [graphspace, graph]);
+    useEffect(() => () => {
+        scopeRef.current = null;
+    }, []);
 
     const fetchPage = useCallback(params => api.manage.getMetaEdgeList(
         graphspace, graph, params
@@ -45,7 +52,9 @@ const EdgeTable = ({canWrite = true}) => {
         fetchPage, {identityKey: `${graphspace}:${graph}`, refreshKey: refresh}
     );
 
-    const removeEdge = useCallback((names, isBatch) => {
+    const removeEdge = useCallback(names => {
+        const operationScope = `${graphspace}:${graph}`;
+        const isCurrentScope = () => scopeRef.current === operationScope;
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.edge.delete_confirm'),
@@ -53,10 +62,22 @@ const EdgeTable = ({canWrite = true}) => {
             list: api.manage.getMetaEdgeList,
             remove: api.manage.delMetaEdge,
             asyncDeletion: true,
-            onRefresh: () => setRefresh(value => !value),
+            onProgress: removedNames => {
+                if (!isCurrentScope()) {
+                    return;
+                }
+                setSelectedItems(current =>
+                    current.filter(name => !removedNames.includes(name)));
+            },
+            onRefresh: () => {
+                if (isCurrentScope()) {
+                    setRefresh(value => !value);
+                }
+            },
             onComplete: () => {
-                if (isBatch) setSelectedItems([]);
-                setRefresh(value => !value);
+                if (isCurrentScope()) {
+                    setRefresh(value => !value);
+                }
             },
         });
     }, [graph, graphspace, t]);
@@ -85,7 +106,7 @@ const EdgeTable = ({canWrite = true}) => {
             return;
         }
 
-        removeEdge(selectedItems, true);
+        removeEdge(selectedItems);
     }, [removeEdge, selectedItems, t]);
 
     const handleRefresh = useCallback(() => {
@@ -203,6 +224,7 @@ const EdgeTable = ({canWrite = true}) => {
                 dataSource={data}
                 rowSelection={canWrite ? {
                     type: 'checkbox',
+                    selectedRowKeys: selectedItems,
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },
