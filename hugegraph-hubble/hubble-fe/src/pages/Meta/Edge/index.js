@@ -18,7 +18,7 @@
 
 import {Table, Row, Col, Space, Button, message, Tooltip} from 'antd';
 import {EditEdgeLayer} from './EditLayer';
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useState, useEffect, useCallback, useLayoutEffect, useRef} from 'react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import useMetaTable from '../common/useMetaTable';
@@ -37,13 +37,15 @@ const EdgeTable = ({canWrite = true}) => {
     const [vertexList, setVertexList] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
-    const scopeRef = useRef(`${graphspace}:${graph}`);
-    scopeRef.current = `${graphspace}:${graph}`;
+    const scopeRef = useRef(null);
+    useLayoutEffect(() => {
+        scopeRef.current = `${graphspace}:${graph}`;
+        return () => {
+            scopeRef.current = null;
+        };
+    }, [graphspace, graph]);
 
     useEffect(() => setSelectedItems([]), [graphspace, graph]);
-    useEffect(() => () => {
-        scopeRef.current = null;
-    }, []);
 
     const fetchPage = useCallback(params => api.manage.getMetaEdgeList(
         graphspace, graph, params

@@ -17,7 +17,7 @@
  */
 
 import {Table, Space, Button, message} from 'antd';
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useState, useEffect, useCallback, useLayoutEffect, useRef} from 'react';
 import {useParams} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import RowActionButton from '../../../components/RowActionButton';
@@ -37,13 +37,15 @@ const VertexTable = ({canWrite = true}) => {
     const [propertyList, setPropertyList] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
-    const scopeRef = useRef(`${graphspace}:${graph}`);
-    scopeRef.current = `${graphspace}:${graph}`;
+    const scopeRef = useRef(null);
+    useLayoutEffect(() => {
+        scopeRef.current = `${graphspace}:${graph}`;
+        return () => {
+            scopeRef.current = null;
+        };
+    }, [graphspace, graph]);
 
     useEffect(() => setSelectedItems([]), [graphspace, graph]);
-    useEffect(() => () => {
-        scopeRef.current = null;
-    }, []);
 
     const fetchPage = useCallback(params => api.manage.getMetaVertexList(
         graphspace, graph, params

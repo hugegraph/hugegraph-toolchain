@@ -17,6 +17,7 @@
 
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {Modal, message} from 'antd';
+import {createContext, startTransition, Suspense, useContext, useState} from 'react';
 import PropertyTable from './Property';
 import VertexTable from './Vertex';
 import EdgeTable from './Edge';
@@ -25,7 +26,8 @@ import * as api from '../../api';
 jest.mock('react-i18next', () => ({useTranslation: () => ({t: key => key})}));
 let mockScope;
 let mockTableData;
-jest.mock('react-router-dom', () => ({useParams: () => mockScope}));
+const MockScopeContext = createContext(null);
+jest.mock('react-router-dom', () => ({useParams: () => useContext(MockScopeContext) || mockScope}));
 jest.mock('./Property/EditLayer', () => ({EditPropertyLayer: () => null}));
 jest.mock('./Vertex/EditLayer', () => ({EditVertexLayer: () => null}));
 jest.mock('./Edge/EditLayer', () => ({EditEdgeLayer: () => null}));
@@ -111,6 +113,57 @@ test.each(tables)('%s delayed deletion cannot clear the new graph scope selectio
         await act(async () => resolveList({status: 200, data: {records: [], total: 0}}));
         await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
         expect(checkbox).toBeChecked();
+    });
+
+test.each(tables)('%s suspended scope render cannot invalidate the still-committed deletion scope',
+    async (_name, Table, operation) => {
+        const type = operation.replace('delMeta', '');
+        let resolveList;
+        api.manage[`getMeta${type}List`].mockImplementationOnce(() =>
+            new Promise(resolve => {
+                resolveList = resolve;
+            }));
+        const pendingScope = new Promise(() => {});
+        const attemptedScope = jest.fn();
+        const SuspendNewScope = ({scope}) => {
+            if (scope.graphspace === 'OTHER') {
+                attemptedScope();
+                throw pendingScope;
+            }
+            return null;
+        };
+        const SwitchableTable = () => {
+            const [scope, setScope] = useState(mockScope);
+            return <>
+                <button onClick={() => startTransition(() =>
+                    setScope({graphspace: 'OTHER', graph: 'audit'}))}>Switch graph scope</button>
+                <Suspense fallback={<span>Loading graph scope</span>}>
+                    <MockScopeContext.Provider value={scope}>
+                        <Table />
+                        <SuspendNewScope scope={scope} />
+                    </MockScopeContext.Provider>
+                </Suspense>
+            </>;
+        };
+        render(<SwitchableTable />);
+        const row = screen.getByRole('row', {name: /audit_label/});
+        const checkbox = within(row).getByRole('checkbox');
+        fireEvent.click(checkbox);
+        fireEvent.click(within(row).getByRole('button', {name: /^common\.(?:action\.)?delete$/}));
+        const close = jest.fn();
+        act(() => Modal.confirm.mock.calls[0][0].onOk(close));
+        await waitFor(() => expect(resolveList).toBeDefined());
+
+        fireEvent.click(screen.getByRole('button', {name: 'Switch graph scope'}));
+        await waitFor(() => expect(attemptedScope).toHaveBeenCalled());
+        // A transition keeps the old table committed while the next scope suspends.
+        expect(screen.queryByText('Loading graph scope')).not.toBeInTheDocument();
+        expect(row).toBeVisible();
+        expect(checkbox).toBeChecked();
+
+        await act(async () => resolveList({status: 200, data: {records: [], total: 0}}));
+        await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(checkbox).not.toBeChecked());
     });
 
 test.each(tables)('%s batch completion clears the checkbox of a same-name replacement',
