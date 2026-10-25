@@ -47,7 +47,7 @@ const EdgeTable = ({canWrite = true}) => {
         fetchPage, {identityKey: `${graphspace}:${graph}`, refreshKey: refresh}
     );
 
-    const removeEdge = useCallback((names, isBatch) => {
+    const removeEdge = useCallback(names => {
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.edge.delete_confirm'),
@@ -86,7 +86,7 @@ const EdgeTable = ({canWrite = true}) => {
             return;
         }
 
-        removeEdge(selectedItems, true);
+        removeEdge(selectedItems);
     }, [removeEdge, selectedItems, t]);
 
     const handleRefresh = useCallback(() => {
