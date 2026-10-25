@@ -21,8 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const assert = require('node:assert/strict');
-const hubbleRoot = path.resolve(__dirname, '../../..');
-const { chromium } = require(path.join(hubbleRoot, 'hubble-fe/node_modules/playwright'));
+const {loadPlaywright, chromiumExecutablePath} = require('./run_ui_browser_smoke');
 const base = (process.env.HUBBLE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const output = process.env.HUBBLE_UI_EVIDENCE_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'hubble-deployment-ui-'));
 fs.mkdirSync(output, { recursive: true });
@@ -49,13 +48,38 @@ function pageResult(records, selected) { return { records, total: records.length
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0 };
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
         const req = route.request();
         const url = new URL(req.url());
         const p = url.pathname.replace(/^\/api\/v[\d.]+/, '');
         const method = req.method();
+        // These responses must prove the submitted task's scope, not merely its URL suffix.
+        if (/\/(?:async-tasks(?:\/|$)|gremlin-query\/async-task$)/.test(p)) {
+            const prefix = '/graphspaces/soc_graph/graphs/hugegraph/';
+            const endpoint = p.startsWith(prefix) ? p.slice(prefix.length) : '';
+            const submission = endpoint === 'gremlin-query/async-task';
+            const lookup = endpoint === 'async-tasks/ids';
+            const result = endpoint === `async-tasks/${task.id}`;
+            const list = endpoint === 'async-tasks';
+            let body;
+            if (submission && method === 'POST') {
+                try { body = req.postDataJSON(); } catch (_) { /* Reject malformed fixture input. */ }
+            }
+            const valid = submission
+                ? method === 'POST' && body?.content === task.task_name
+                : state.taskSubmitted && method === 'GET' && (result || list ||
+                    (lookup && url.searchParams.getAll('ids').length === 1 &&
+                        url.searchParams.get('ids') === String(task.id)));
+            if (!valid) {
+                unexpected.add(`${method} ${p}${url.search}`);
+                await route.fulfill({status: 404, contentType: 'application/json',
+                    body: JSON.stringify({status: 404, message: 'Unexpected task fixture request'})});
+                return;
+            }
+            if (submission) state.taskSubmitted = true;
+        }
         let data;
         if (p === '/config')
             data = { pd_enabled: true, auth_enabled: auth, server_capabilities_verified: true, graph_create_enabled: true, cypher_enabled: false };
@@ -152,12 +176,16 @@ async function screenshot(page, name) {
         document.querySelectorAll('main, [role=main], .ant-layout-content')
             .forEach(element => element.scrollTo(0, 0));
     });
-    await page.waitForTimeout(250);
     if (name !== 'failure' && !name.startsWith('failure-')) {
         const toasts = await page.locator('.ant-message-error').allTextContents();
         assert.deepEqual(toasts, [], 'Unexpected error toast: ' + toasts.join('; '));
     }
-    await page.screenshot({path: path.join(output, name + '.png'), fullPage: true});
+    await page.screenshot({path: path.join(output, name + '.png'), fullPage: true, animations: 'disabled'});
+}
+async function waitForInputValue(page, input, expected) {
+    await input.waitFor({state: 'attached'});
+    await page.waitForFunction(([element, value]) => element.value === value,
+        [await input.elementHandle(), expected]);
 }
 async function check(name, fn) { try {
     await fn();
@@ -170,9 +198,8 @@ catch (e) {
     throw e;
 } }
 (async () => {
-    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
-        (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
-    const browser = await chromium.launch({ headless: true, executablePath, args: ['--no-sandbox'] });
+    const {chromium} = await loadPlaywright();
+    const browser = await chromium.launch({ headless: true, executablePath: chromiumExecutablePath(), args: ['--no-sandbox'] });
     try {
         const { page, state } = await setup(browser, true);
         await check('authenticated login and GraphSpace/account visibility', async () => {
@@ -200,8 +227,9 @@ catch (e) {
                 else if (target === 'title')
                     await card().getByText('记忆库', { exact: true }).click();
                 else if (target === 'enter')
-                    await card().getByRole('button', { name: '进入图空间' }).click();
+                    await card().getByText('进入图空间', {exact: true}).click();
                 else
+                    // This case intentionally checks the noninteractive header hit area.
                     await card().locator('.ant-card-head').click({ position: { x: 12, y: 12 } });
                 await page.waitForURL('**/graphspace/soc_graph');
             }
@@ -213,10 +241,9 @@ catch (e) {
             assert(new URL(page.url()).pathname === '/graphspace');
             await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
             await page.getByRole('dialog').waitFor();
-            await page.locator('#control-hooks_storage_limit').waitFor({ state: 'attached' });
-            await page.waitForFunction(() => document.querySelector('#control-hooks_storage_limit')?.value === '10');
+            const quota = page.getByRole('dialog').getByPlaceholder('例如：10240', {exact: true});
+            await waitForInputValue(page, quota, '10');
             await page.getByRole('dialog').getByText('高级部署与资源限制', { exact: true }).click();
-            const quota = page.locator('#control-hooks_storage_limit');
             assert(await quota.isEditable());
             await quota.fill('25');
             assert.equal(await quota.inputValue(), '25');
@@ -239,21 +266,22 @@ catch (e) {
             const nextCard = page.locator('.ant-card').filter({ has: page.getByText('记忆库', { exact: true }) }).first();
             await nextCard.getByRole('button', { name: '更多' }).click();
             await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
-            await page.waitForFunction(() => document.querySelector('#control-hooks_name')?.value === 'soc_graph');
+            const name = page.getByRole('dialog').getByPlaceholder('例如：demo_space（全局唯一）', {exact: true});
+            await waitForInputValue(page, name, 'soc_graph');
             release();
             await (await staleResponse).finished();
             await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-            assert.equal(await page.locator('#control-hooks_name').inputValue(), 'soc_graph');
-            assert.equal(await page.locator('#control-hooks_storage_limit').inputValue(), '10');
+            assert.equal(await name.inputValue(), 'soc_graph');
+            assert.equal(await page.getByRole('dialog').getByPlaceholder('例如：10240', {exact: true}).inputValue(), '10');
             await page.getByRole('button', { name: /取\s*消/ }).click();
         });
         await check('Graph context switches via actual header selectors', async () => {
             await page.goto(base + '/gremlin/DEFAULT/hugegraph');
             await page.getByRole('button', { name: '执行查询', exact: true }).waitFor();
             await page.getByRole('combobox', { name: '当前 GraphSpace', exact: true }).click();
-            await page.locator('.ant-select-item-option').filter({ hasText: '记忆库' }).click();
+            await page.getByRole('option', {name: /记忆库/}).click();
             await page.getByRole('combobox', { name: '当前图', exact: true }).click();
-            await page.locator('.ant-select-item-option').filter({ hasText: '测试图' }).click();
+            await page.getByRole('option', {name: /测试图/}).click();
             await page.waitForURL('**/gremlin/soc_graph/second');
             await screenshot(page, 'graph-context-switch');
         });

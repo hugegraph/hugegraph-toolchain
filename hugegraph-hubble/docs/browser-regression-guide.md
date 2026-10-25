@@ -6,8 +6,22 @@ The manual Chromium runner exercises the running frontend with controlled API
 responses. It covers authenticated and anonymous visibility, GraphSpace
 navigation and editing, graph switching, query notices and counts, delayed
 task discovery, result-size guidance and PD diagnostics. It requires the
-corresponding frontend features; fixtures do not establish acceptance of a live
-PD/Store/Server cluster or replace the packaged distribution gate.
+following frontend changes together:
+
+- [#86](https://github.com/hugegraph/hugegraph-toolchain/pull/86): quiet query
+  previews/counts and graph-scoped task discovery (functional revision `656f1bc7`).
+- [#87](https://github.com/hugegraph/hugegraph-toolchain/pull/87): actionable PD
+  diagnostics and member comparisons (functional revision `7f883baa`).
+- [#88](https://github.com/hugegraph/hugegraph-toolchain/pull/88): complete card
+  navigation and stale-editor isolation (functional revision `1597ad22`).
+
+Use a frontend containing those changes or their later fixes; this runner's
+branch alone does not provide them. Timeouts waiting for quiet query notices,
+submitted-task discovery or PD mapping details can indicate a missing dependency,
+not a new regression. This remains an explicitly invoked integration fixture
+until those dependencies are present in the CI frontend; do not add a permanently
+failing invocation to the single-PR gate. Fixtures do not establish acceptance of
+a live PD/Store/Server cluster or replace the packaged distribution gate.
 
 Install the frontend dependencies and start Hubble's frontend. Then, from
 `hugegraph-hubble`, run:
@@ -19,14 +33,26 @@ HUBBLE_UI_EVIDENCE_DIR=/tmp/hubble-deployment-ui \
 ```
 
 The runner accepts `HUBBLE_URL` with or without a trailing slash. It uses
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when configured, an available system
-Chromium, or Playwright's managed browser.
+the shared browser smoke helpers. Set `PLAYWRIGHT_NODE_MODULES` when Playwright
+is installed outside the frontend dependency directory. Choose an executable
+with `--chromium-executable`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` or
+`CHROME_PATH`; otherwise the helper uses its platform defaults or Playwright's
+managed browser, without forcing an unrelated system Chromium.
 
 Keep the output directory outside Git. Each invocation replaces the previous
 `browser-report.json` and known scenario/failure screenshots while preserving
 unrelated files. Startup failures produce a fresh failed report; a child that
 exits without a report is not treated as successful. Diagnostic screenshots
-include context and page indices so one page cannot overwrite another.
+include context and page indices so one page cannot overwrite another. Screenshots
+disable animations and use settled UI state rather than a fixed sleep. The header
+whitespace check intentionally targets the noninteractive card hit area; other
+controls prefer accessible roles, visible text and stable form placeholders.
+
+Task fixtures accept submission, lookup, list and result requests only for
+`soc_graph/hugegraph` and task `80001`. Lookups must request that exact ID, and the
+submission must contain the scenario's query. Mismatched scope, IDs, methods or
+submission content are recorded as unexpected requests and return no task data;
+a stale-context request cannot turn this scenario green.
 
 Retain run reports, screenshots and performance samples in external CI artifacts
 or PR attachments. Record the actual frontend revision, runner revision and
