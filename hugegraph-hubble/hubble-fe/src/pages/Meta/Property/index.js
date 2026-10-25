@@ -17,7 +17,7 @@
  */
 
 import {Table, Row, Col, Space, Button, message} from 'antd';
-import {useState, useCallback, useEffect} from 'react';
+import {useState, useCallback, useEffect, useRef} from 'react';
 import {EditPropertyLayer} from './EditLayer';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
@@ -34,10 +34,17 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
     const [selectedItems, setSelectedItems] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
+    const scopeRef = useRef(`${graphspace}:${graph}`);
+    scopeRef.current = `${graphspace}:${graph}`;
 
     useEffect(() => setSelectedItems([]), [graphspace, graph]);
+    useEffect(() => () => {
+        scopeRef.current = null;
+    }, []);
 
     const removeProperty = useCallback(names => {
+        const operationScope = `${graphspace}:${graph}`;
+        const isCurrentScope = () => scopeRef.current === operationScope;
         confirmSchemaDeletion({
             graphspace, graph, names, t,
             title: t('schema.property.delete_confirm'),
@@ -46,10 +53,23 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
             remove: api.manage.delMetaProperty,
             checkUsage: api.manage.checkMetaProperty,
             inUseKey: 'schema.property.in_use',
-            onProgress: removedNames => setSelectedItems(current =>
-                current.filter(name => !removedNames.includes(name))),
-            onRefresh: () => setRefresh(value => !value),
-            onComplete: () => setRefresh(value => !value),
+            onProgress: removedNames => {
+                if (!isCurrentScope()) {
+                    return;
+                }
+                setSelectedItems(current =>
+                    current.filter(name => !removedNames.includes(name)));
+            },
+            onRefresh: () => {
+                if (isCurrentScope()) {
+                    setRefresh(value => !value);
+                }
+            },
+            onComplete: () => {
+                if (isCurrentScope()) {
+                    setRefresh(value => !value);
+                }
+            },
         });
     }, [graph, graphspace, t]);
 
