@@ -17,6 +17,7 @@
  */
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {message} from 'antd';
 import {EditLayer} from './EditLayer';
 import * as api from '../../api';
 import {isAuthEnabled} from '../../utils/config';
@@ -160,23 +161,37 @@ test.each(['response', 'transport'])('refreshes partially applied %s failures wi
     });
     const onCancel = jest.fn();
     const refresh = jest.fn(() => expect(storedQuota).toBe(25));
-    render(<EditLayer visible detail={{name: 'partial'}} onCancel={onCancel} refresh={refresh} />);
-    const quota = document.querySelector('#control-hooks_storage_limit');
-    await waitFor(() => expect(quota).toHaveValue('10'));
-    fireEvent.change(quota, {target: {value: '25'}});
-    fireEvent.change(screen.getByPlaceholderText('graphspace.form.name_placeholder'), {
-        target: {value: 'RetryAlias'},
-    });
-    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
-    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
-    expect(onCancel).not.toHaveBeenCalled();
-    expect(quota).toBeEnabled();
-    expect(quota).toHaveValue('25');
-    expect(screen.getByPlaceholderText('graphspace.form.name_placeholder')).toHaveValue('RetryAlias');
-    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
-    await waitFor(() => expect(api.manage.updateGraphSpace).toHaveBeenCalledTimes(2));
-    expect(api.manage.updateGraphSpace.mock.calls[1][1]).toMatchObject({storage_limit: 25, nickname: 'RetryAlias'});
-    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+    // Static toast portals are covered by the browser fixture. Keep this test
+    // focused on the editor's actual async save/refresh and retry lifecycle.
+    const feedback = [
+        jest.spyOn(message, 'error').mockImplementation(() => {}),
+        jest.spyOn(message, 'success').mockImplementation(() => {}),
+    ];
+    try {
+        await act(async () => {
+            render(<EditLayer visible detail={{name: 'partial'}} onCancel={onCancel} refresh={refresh} />);
+        });
+        const quota = document.querySelector('#control-hooks_storage_limit');
+        const alias = screen.getByPlaceholderText('graphspace.form.name_placeholder');
+        const save = screen.getByText('common.action.save').closest('button');
+        expect(quota).toHaveValue('10');
+        await act(async () => {
+            fireEvent.change(quota, {target: {value: '25'}});
+            fireEvent.change(alias, {target: {value: 'RetryAlias'}});
+        });
+        await act(async () => {fireEvent.click(save);});
+        expect(refresh).toHaveBeenCalledTimes(1);
+        expect(onCancel).not.toHaveBeenCalled();
+        expect(quota).toBeEnabled();
+        expect(quota).toHaveValue('25');
+        expect(alias).toHaveValue('RetryAlias');
+        await act(async () => {fireEvent.click(save);});
+        expect(api.manage.updateGraphSpace).toHaveBeenCalledTimes(2);
+        expect(api.manage.updateGraphSpace.mock.calls[1][1]).toMatchObject({storage_limit: 25, nickname: 'RetryAlias'});
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    } finally {
+        feedback.forEach(spy => spy.mockRestore());
+    }
 });
 
 test('uses the shared keyboard-focusable help affordance for every field label', () => {
