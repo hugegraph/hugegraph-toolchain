@@ -8,6 +8,10 @@ HugeGraph-Tools is a customizable command line utility for deploying, managing a
 - Manage graphs and query with Gremlin from multiple HugeGraph databases easily.
 - Backup/restore graph schema and graph data from/to HugeGraph databases conveniently, also support backup periodically
 
+## Backup and migration failures
+
+If a vertex or edge data page still fails after retries, backup fails and `migrate` does not start restoring the target. Partial backup files and shard diagnostics are retained for inspection; use a new backup directory when retrying. Use `migrate --keep-local-data` to retain the local backup after a successful restore, and verify the target data before switching applications to it.
+
 ## Learn More
 
 The [tools homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-tools/) contains more information about it. 

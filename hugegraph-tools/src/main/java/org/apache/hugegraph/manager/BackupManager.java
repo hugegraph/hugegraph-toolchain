@@ -232,6 +232,7 @@ public class BackupManager extends BackupRestoreBaseManager {
                 backupVertexShard(shard);
             } catch (Throwable e) {
                 this.logExceptionWithShard(e, HugeType.VERTEX, shard);
+                throw e;
             }
         });
     }
@@ -242,6 +243,7 @@ public class BackupManager extends BackupRestoreBaseManager {
                 backupEdgeShard(shard);
             } catch (Throwable e) {
                 this.logExceptionWithShard(e, HugeType.EDGE, shard);
+                throw e;
             }
         });
     }
@@ -352,6 +354,7 @@ public class BackupManager extends BackupRestoreBaseManager {
         } else {
             this.logExceptionWithShard(e, type, shard);
         }
+        throw e;
     }
 
     private void logTimeoutShard(HugeType type, Shard shard) {
