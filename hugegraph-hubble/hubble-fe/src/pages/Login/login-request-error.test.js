@@ -132,14 +132,14 @@ describe('Login request errors', () => {
         const view = value => <MemoryRouter><ConfigConnectionContext.Provider value={value}>
             <Login />
         </ConfigConnectionContext.Provider></MemoryRouter>;
-        const {rerender, container} = render(view({status: 'verified', retrying: false, retry}));
+        const {rerender} = render(view({status: 'verified', retrying: false, retry}));
         await userEvent.type(screen.getByLabelText('login.username'), 'admin');
         await userEvent.type(screen.getByLabelText('login.password'), 'fixture-only');
         rerender(view({status: 'unverified', retrying: false, retry}));
         expect(screen.getByRole('status')).toHaveTextContent('login.connection.unverified_title');
-        expect(screen.getByRole('button', {name: 'login.submit'})).toBeDisabled();
-        await act(async () => { fireEvent.submit(container.querySelector('form')); });
-        expect(api.auth.login).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', {name: 'login.submit'})).toBeEnabled();
+        expect(screen.getByLabelText('login.username')).toBeEnabled();
+        expect(screen.getByLabelText('login.password')).toBeEnabled();
         await userEvent.click(screen.getByRole('button', {name: 'login.connection.retry'}));
         expect(retry).toHaveBeenCalledTimes(1);
         expect(api.auth.login).not.toHaveBeenCalled();
@@ -148,6 +148,41 @@ describe('Login request errors', () => {
         expect(screen.getByLabelText('login.username')).toHaveValue('admin');
         expect(screen.getByLabelText('login.password')).toHaveValue('fixture-only');
         expect(screen.getByRole('button', {name: 'login.submit'})).toBeEnabled();
+    });
+
+    it('can sign in while an anonymous capability probe stays unverified', async () => {
+        api.auth.login.mockResolvedValue({status: 200, data: {user_name: 'admin'}});
+        api.config.getConfig.mockResolvedValue({status: 200, data: {
+            auth_enabled: true, server_capabilities_verified: false,
+        }});
+        render(<MemoryRouter><ConfigConnectionContext.Provider value={{status: 'unverified'}}>
+            <Login />
+        </ConfigConnectionContext.Provider></MemoryRouter>);
+
+        await userEvent.type(screen.getByLabelText('login.username'), 'admin');
+        await userEvent.type(screen.getByLabelText('login.password'), 'fixture-only');
+        await userEvent.click(screen.getByRole('button', {name: 'login.submit'}));
+
+        await waitFor(() => expect(api.auth.login).toHaveBeenCalledWith({
+            user_name: 'admin', user_password: 'fixture-only',
+        }));
+        await waitFor(() => expect(replaceBrowserLocation).toHaveBeenCalledWith('/navigation'));
+        expect(userUtil.setUser).toHaveBeenCalledWith({user_name: 'admin'});
+    });
+
+    it('blocks sign-in only when connection settings are unavailable', async () => {
+        const {container} = render(<MemoryRouter>
+            <ConfigConnectionContext.Provider value={{status: 'unavailable'}}>
+                <Login />
+            </ConfigConnectionContext.Provider>
+        </MemoryRouter>);
+
+        expect(screen.getByRole('status')).toHaveTextContent('login.connection.unavailable_title');
+        expect(screen.getByRole('button', {name: 'login.submit'})).toBeDisabled();
+        expect(screen.getByLabelText('login.username')).toBeDisabled();
+        expect(screen.getByLabelText('login.password')).toBeDisabled();
+        await act(async () => { fireEvent.submit(container.querySelector('form')); });
+        expect(api.auth.login).not.toHaveBeenCalled();
     });
 
     it('lets users choose a language before authentication', async () => {

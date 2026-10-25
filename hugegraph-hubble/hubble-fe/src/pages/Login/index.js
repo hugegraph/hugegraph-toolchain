@@ -59,7 +59,8 @@ const Login = () => {
     const location = useLocation();
     const {t} = useTranslation();
     const {status, retrying, retry} = useConfigConnection();
-    const connectionBlocked = status === 'unverified' || status === 'unavailable';
+    const showConnectionStatus = status === 'unverified' || status === 'unavailable';
+    const connectionBlocked = status === 'unavailable';
 
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -148,7 +149,7 @@ const Login = () => {
                         <h1 className={style.title}>{t('login.title')}</h1>
                         <p>{t('login.form_hint')}</p>
                     </header>
-                    {connectionBlocked && <section className={style.connectionStatus}
+                    {showConnectionStatus && <section className={style.connectionStatus}
                         role='status' aria-live='polite' aria-atomic='true'>
                         <h2>{t(`login.connection.${status}_title`)}</h2>
                         <p>{t(`login.connection.${status}_description`)}</p>
