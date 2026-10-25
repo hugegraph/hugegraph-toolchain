@@ -186,7 +186,8 @@ const SourceDiagnostics = ({sources = {}, sourceName, nodes = [], focus = false,
                             {t('operations.reason_cluster_not_ready')}
                         </p>}
                         {source.diagnostics?.affected_node_count > 0 && (
-                            <p>{t('operations.diagnostic_affected_nodes')}: {source.diagnostics.affected_node_count}
+                            <p>{t(unmappedPd ? 'operations.diagnostic_pd_affected_endpoint'
+                                : 'operations.diagnostic_affected_nodes')}: {source.diagnostics.affected_node_count}
                                 {' · '}{t('operations.diagnostic_failed_groups')}: {
                                     source.diagnostics.failed_metric_groups?.map(group => t(`operations.metric_${group}`,
                                         {defaultValue: group})).join(', ')

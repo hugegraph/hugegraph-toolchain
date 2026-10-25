@@ -522,6 +522,14 @@ TLS SNI and certificate hostname verification.
 
 ### Cluster source diagnostics
 
+PD member discovery uses the lightweight `/v1/members` endpoint for members,
+leader and cluster state. It does not call `/v1/cluster` or fall back to that
+endpoint when discovery fails, so discovering nodes does not scan every graph
+partition. Optional aggregate fields absent from the member response, including
+graph, partition and replica counts and data state, remain unavailable rather
+than zero. Store counts and capacity still come from the existing `/v1/stores`
+response; Hubble does not request the heavy summary to fill the remaining cards.
+
 Cluster Overview distinguishes node reachability from collection quality. A
 Store source with failed or partial collection shows an amber attention status,
 even when its last topology status remains `UP`. **Inspect Store source** opens
@@ -856,6 +864,11 @@ node hubble-dist/assembly/travis/run_ui_operations_diagnostics.js
 Set `HUBBLE_URL` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` as needed. The runner uses
 deterministic API fixtures; it does not establish deployment or multi-Server acceptance.
 
+The [service readiness contract](docs/service-readiness-20261023.md) explains
+why registered `UP` nodes can report a service as not ready, the bounded PD/Store
+probes, and the reproducible Chromium checks. Screenshots stay outside Git and
+are linked through the pull request's regression record.
+
 ## Doc
 
 [The hubble homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-hubble/) contains more information about it.
@@ -887,3 +900,7 @@ cleanup and final status writes; inspect task metadata and Server loading mode b
 ## Graph switching
 
 Query execution waits until the graph context matches the current route, including keyboard shortcuts during a graph switch. Standalone Server 1.5 supports core graph, schema and data operations; GraphSpace management and PD mode require a newer server.
+
+## Query and submitted-task feedback
+
+See [query and submitted-task feedback](docs/query-task-feedback.md) for preview limits, task discovery, and failed-result recovery.

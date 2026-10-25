@@ -127,6 +127,23 @@ test.each([false, true])('excludes intentionally uncollected PD followers (stale
     expect(screen.queryByText(/PD follower/)).not.toBeInTheDocument();
 });
 
+test.each([false, true])('keeps an unmapped PD scrape source-wide instead of failing every member (stale=%s)', stale => {
+    render(<SourceDiagnostics sourceName='pd' sources={{pd: {
+        status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped',
+        diagnostics: {affected_node_count: 1, failed_metric_groups: ['system']},
+    }}} nodes={[1, 2, 3].map(id => ({id: `pd-${id}`, type: 'PD', name: `PD ${id}`, metric_statuses: {
+        system: {availability: 'UNSUPPORTED', reason: 'metrics_not_collected', stale},
+    }}))} />);
+
+    fireEvent.click(screen.getByText('Check addresses and how to fix'));
+    expect(screen.getByText(/Affected PD collection endpoints: 1/)).toBeVisible();
+    expect(screen.getByText(/Hubble collects system metrics from only the one matched PD member/)).toBeVisible();
+    expect(screen.queryByText(/Affected nodes across this snapshot/)).not.toBeInTheDocument();
+    for (const id of [1, 2, 3]) {
+        expect(screen.queryByText(new RegExp(`PD ${id} · system`))).not.toBeInTheDocument();
+    }
+});
+
 test.each(['UNAVAILABLE', 'UNSUPPORTED'])(
     'explains unmapped PD metrics and shows discovered node details (%s)', availability => {
         render(<SourceDiagnostics sourceName='pd' complete sources={{pd: {

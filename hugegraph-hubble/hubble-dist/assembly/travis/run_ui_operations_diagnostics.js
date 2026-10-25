@@ -51,11 +51,12 @@ const store = {id: 'store-1', name: 'Store 1', type: 'STORE', status: 'UP',
     }), backend: available, drive: available, raft: available}};
 const pds = [1, 2, 3].map(n => ({id: `pd-${n}`, name: `PD ${n}`, type: 'PD',
     status: 'UP', role: n === 1 ? 'LEADER' : 'FOLLOWER', observed_at: now, metrics: {},
-    metric_statuses: {system: failed('pd_metrics_unmapped')}}));
+    metric_statuses: {system: {availability: 'UNSUPPORTED', reason: 'metrics_not_collected',
+        observed_at: now, fresh: false, stale: false}}}));
 const pdSource = {status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped',
     observed_at: now, last_success_at: now, fresh: false, stale: false,
     cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal',
-    diagnostics: {affected_node_count: 3, failed_metric_groups: ['system'],
+    diagnostics: {affected_node_count: 1, failed_metric_groups: ['system'],
         pd_metric_mapping: {configured_origin: 'http://pd-service:8620', status: 'no_match',
             matched_nodes: 0, discovered_nodes: 3, omitted_members: 0,
             members: pds.map(node => ({node_id: node.id,
@@ -193,6 +194,11 @@ async function check(name, action) {
             await disclosure.click();
             await page.getByText('http://pd-service:8620', {exact: true}).waitFor();
             await page.getByText('尚未采集系统指标', {exact: false}).first().waitFor();
+            await page.getByText(/受影响的 PD 采集端点: 1/).waitFor();
+            await page.getByText(/Hubble 只采集一个匹配的 PD 成员/).waitFor();
+            for (const member of pds) {
+                assert.equal(await page.getByText(`${member.name} · system`, {exact: true}).count(), 0);
+            }
             await capture(page, '05-pd-diagnostics-expanded');
         });
         await check('ownership keeps multiple node failures attached to their nodes and groups', async () => {

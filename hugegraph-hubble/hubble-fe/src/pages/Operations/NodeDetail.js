@@ -33,6 +33,7 @@ import {
 import {formatMetricValue, formatObservedAt, selectAttentionSources} from './topology';
 import {operationsReturnTo} from './navigation';
 import SourceDiagnostics from './SourceDiagnostics';
+import {ReadinessPanel} from './Readiness';
 import './operations.scss';
 
 const GROUPS_BY_TYPE = {
@@ -599,6 +600,7 @@ const NodeDetail = () => {
                     ].filter(Boolean)}
                 />
             </section>
+            <ReadinessPanel readiness={node.readiness} />
             <section
                 className='operations-metric-grid'
                 aria-label={t('operations.node_metrics')}

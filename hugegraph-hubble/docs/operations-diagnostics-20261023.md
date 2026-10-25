@@ -25,6 +25,10 @@ without treating a collection failure as a process outage.
    origin/path match results and matched/discovered counts. It names the relevant
    `pd.server` / `server.protocol` settings and restart/refresh steps. Endpoint
    ambiguity is preserved; metrics are never assigned to a leader by guesswork.
+   Hubble collects system metrics only from the one PD member matched to its
+   configured endpoint. Other discovered members are intentionally not scraped.
+   An unmapped endpoint creates one source collection issue, not a failed metric
+   request for every discovered PD member; their registration status stays intact.
 
 ## Access and endpoint matching
 
@@ -53,7 +57,7 @@ as a successful but empty PD topology.
 ## Verification and limits
 
 - Backend collector/parser tests cover unmatched identities, canonical matches,
-  ambiguous identities, three healthy PD nodes with unavailable metrics, bounded
+  ambiguous identities, three healthy PD nodes without attributed metric failures, bounded
   diagnostic membership, and redaction of URL credentials, parameters and paths.
 - Frontend tests cover disclosures, visible request evidence and failed-graph
   counts, independent topology health, current-source scoping and timestamp labels.

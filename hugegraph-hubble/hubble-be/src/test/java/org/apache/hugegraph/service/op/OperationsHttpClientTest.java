@@ -37,6 +37,37 @@ import org.apache.hugegraph.testutil.Assert;
 
 public class OperationsHttpClientTest {
 
+    @Test
+    public void testReadinessProbeReadsBounded503BodyWhileOrdinaryGetRejectsIt() throws IOException {
+        HttpServer server = server(503, "{\"ready\":false}", null, null);
+        OperationsHttpClient client = new OperationsHttpClient(1000, 1000, 64);
+        try {
+            OperationsHttpClient.ProbeResponse response = client.probe(
+                    uri(server, "/v1/ready"), null, null, Collections.emptySet());
+            Assert.assertEquals(503, response.getStatus());
+            Assert.assertEquals("{\"ready\":false}", response.getBody());
+            Assert.assertThrows(UpstreamRequestException.class, () ->
+                    client.get(uri(server, "/v1/ready"), null, null));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    public void testReadinessProbeKeepsResponseAndOriginLimits() throws IOException {
+        HttpServer server = server(503, "0123456789", null, null);
+        OperationsHttpClient client = new OperationsHttpClient(1000, 1000, 8);
+        try {
+            Assert.assertThrows(UpstreamResponseTooLargeException.class, () ->
+                    client.probe(uri(server, "/v1/ready"), null, null, Collections.emptySet()));
+            Assert.assertThrows(IllegalArgumentException.class, () ->
+                    client.probe(uri(server, "/v1/ready"), null, null,
+                                 Collections.singleton("http://127.0.0.1:1")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void testRejectsNonHttpTarget() {
         OperationsHttpClient.validateTarget(URI.create("file:///etc/passwd"),
@@ -135,7 +166,7 @@ public class OperationsHttpClientTest {
         try (MockedStatic<InetAddress> dns = Mockito.mockStatic(InetAddress.class)) {
             dns.when(() -> InetAddress.getAllByName(host))
                .thenThrow(new UnknownHostException(host));
-            for (String path : new String[]{"/v1/cluster", "/v1/stores", "/actuator/prometheus"}) {
+            for (String path : new String[]{"/v1/members", "/v1/stores", "/actuator/prometheus"}) {
                 UpstreamRequestException error = (UpstreamRequestException) Assert.assertThrows(
                         UpstreamRequestException.class, () -> client.get(URI.create(
                         "http://" + host + ":8620" + path + "?token=private-query"),
@@ -151,7 +182,7 @@ public class OperationsHttpClientTest {
     @Test
     public void testRejectedDnsAnswersKeepOnlySafeRequestPaths() {
         OperationsHttpClient client = new OperationsHttpClient(1000, 1000, 64);
-        for (String path : new String[]{"/v1/cluster", "/v1/stores", "/actuator/prometheus"}) {
+        for (String path : new String[]{"/v1/members", "/v1/stores", "/actuator/prometheus"}) {
             UpstreamRequestException error = (UpstreamRequestException) Assert.assertThrows(
                     UpstreamRequestException.class, () -> client.get(URI.create(
                     "http://localhost:8620" + path + "?token=private-query"),

@@ -17,9 +17,13 @@
 
 package org.apache.hugegraph.test.functional;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,14 +54,19 @@ public class BackupFailureTest {
 
     private HttpServer server;
     private final AtomicInteger shardRequests = new AtomicInteger();
+    private final AtomicInteger pageRequests = new AtomicInteger();
     private volatile int shardStatus;
     private volatile String shardBody;
+    private volatile String pageBody;
     private volatile int schemaStatus;
+    private volatile boolean successfulFirstPage;
+    private boolean recordTimeout;
 
     @Before
     public void setup() throws Exception {
         this.shardStatus = 500;
         this.shardBody = ERROR;
+        this.pageBody = ERROR;
         this.schemaStatus = 200;
         this.server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         this.server.createContext("/", exchange -> {
@@ -67,11 +76,27 @@ public class BackupFailureTest {
             if (path.endsWith("/versions")) {
                 response = "{\"versions\":{\"core\":\"1.8.0\",\"api\":\"0.71\"}}";
             } else if (path.endsWith("/graphs/hugegraph")) {
-                response = "{\"name\":\"hugegraph\",\"backend\":\"memory\"}";
-            } else if (path.endsWith("/vertices/shards")) {
+                String backend = this.successfulFirstPage ? "rocksdb" : "memory";
+                response = "{\"name\":\"hugegraph\",\"backend\":\"" + backend + "\"}";
+            } else if (path.endsWith("/vertices/shards") ||
+                       path.endsWith("/edges/shards")) {
                 this.shardRequests.incrementAndGet();
                 status = this.shardStatus;
                 response = this.shardBody;
+            } else if (path.endsWith("/vertices/scan") ||
+                       path.endsWith("/edges/scan")) {
+                int request = this.pageRequests.incrementAndGet();
+                status = 500;
+                response = this.pageBody;
+                if (this.successfulFirstPage && request == 1) {
+                    status = 200;
+                    response = "{\"vertices\":[{\"id\":1,\"label\":\"person\"," +
+                               "\"properties\":{}}],\"page\":\"next\"}";
+                } else if (this.successfulFirstPage && request > 3) {
+                    // Keep a regression finite if the previous page is retried.
+                    status = 200;
+                    response = "{\"vertices\":[],\"page\":null}";
+                }
             } else if (path.endsWith("/schema/propertykeys")) {
                 status = this.schemaStatus;
                 response = status == 200 ? "{\"propertykeys\":[]}" : ERROR;
@@ -127,6 +152,87 @@ public class BackupFailureTest {
             manager.close();
         }
         Assert.assertEquals(2, this.shardRequests.get());
+    }
+
+    @Test
+    public void testVertexPageFailureFailsBackup() throws Exception {
+        this.assertPageFailure(HugeType.VERTEX);
+    }
+
+    @Test
+    public void testEdgePageFailureFailsBackup() throws Exception {
+        this.assertPageFailure(HugeType.EDGE);
+    }
+
+    @Test
+    public void testSecondVertexPageFailureFailsBackup() throws Exception {
+        this.successfulFirstPage = true;
+        this.assertPageFailure(HugeType.VERTEX);
+    }
+
+    @Test
+    public void testFailureStillPrintsRecordedTimeoutGuidance() throws Exception {
+        // Another shard's timeout diagnostics must remain visible when this page fails.
+        this.recordTimeout = true;
+        this.pageBody = "{\"exception\":\"java.lang.IllegalStateException\"," +
+                        "\"message\":\"Too many records\"}";
+        String output = this.capturePageFailure(HugeType.VERTEX);
+        Assert.assertTrue(output, output.contains("Timeout occurs when backup VERTEX"));
+        Assert.assertTrue(output, output.contains("--timeout"));
+        Assert.assertTrue(output, output.contains("--split-size"));
+    }
+
+    @Test
+    public void testEdgeLimitStillPrintsFailureGuidance() throws Exception {
+        this.pageBody = "{\"exception\":\"java.lang.IllegalStateException\"," +
+                        "\"message\":\"Too many records\"}";
+        String output = this.capturePageFailure(HugeType.EDGE);
+        Assert.assertTrue(output, output.contains("Limit exceed occurs when backup EDGE"));
+    }
+
+    private String capturePageFailure(HugeType type) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream previous = System.out;
+        try (PrintStream capture = new PrintStream(output, false, StandardCharsets.UTF_8)) {
+            System.setOut(capture);
+            this.assertPageFailure(type);
+        } finally {
+            System.setOut(previous);
+        }
+        return output.toString(StandardCharsets.UTF_8);
+    }
+
+    private void assertPageFailure(HugeType type) throws Exception {
+        this.shardStatus = 200;
+        this.shardBody = "{\"shards\":[{\"start\":\"\",\"end\":\"\",\"length\":1}]}";
+        SubCommands.Backup command = this.command(1);
+        BackupManager manager = this.manager(command);
+        if (this.recordTimeout) {
+            Files.writeString(Paths.get(command.logDir(), type.string() + "_timeout_shards"),
+                              this.shardBody);
+        }
+        try {
+            manager.backup(Collections.singletonList(type));
+            Assert.fail("Data page errors must fail backup before migration restores it");
+        } catch (ToolsException e) {
+            Assert.assertTrue(e.getMessage(),
+                              e.getMessage().contains("asynchronous tasks"));
+            Throwable root = e;
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+            Assert.assertTrue(root.toString(), root instanceof ServerException);
+            Assert.assertEquals(this.pageBody.contains("Too many records") ?
+                                "Too many records" : "backend busy", root.getMessage());
+        } finally {
+            manager.close();
+        }
+        Assert.assertEquals(this.successfulFirstPage ? 3 : 2,
+                            this.pageRequests.get());
+        long failedShards = Files.readAllLines(Paths.get(command.logDir(),
+                                                       type.string() + "_failed_shards"))
+                                 .stream().filter(line -> line.startsWith("Shard{")).count();
+        Assert.assertEquals("Each failed shard should have one diagnostic entry", 1L, failedShards);
     }
 
     @Test
