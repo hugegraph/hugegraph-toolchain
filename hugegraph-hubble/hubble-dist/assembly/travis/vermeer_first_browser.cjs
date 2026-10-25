@@ -15,7 +15,7 @@
  * under the License.
  */
 
-const {chromium} = require('../../../hubble-fe/node_modules/playwright');
+const {loadPlaywright, chromiumExecutablePath} = require('./run_ui_browser_smoke');
 const fs = require('fs');
 const path = require('path');
 const assert = require('node:assert/strict');
@@ -23,7 +23,7 @@ const {execFileSync} = require('node:child_process');
 const codeCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
  cwd: path.resolve(__dirname, '../../../..'), encoding: 'utf8',
 }).trim();
-const base = process.env.HUBBLE_UI_BASE || 'http://127.0.0.1:3004';
+const base = (process.env.HUBBLE_UI_BASE || 'http://127.0.0.1:3004').replace(/\/+$/, '');
 const output = process.env.HUBBLE_UI_EVIDENCE_DIR || '/tmp/hubble-vermeer-first-evidence';
 fs.mkdirSync(output, {recursive:true});
 const checks = [];
@@ -44,7 +44,7 @@ function pageResult(records, selected) {return {records,total:records.length,cur
 async function setup(browser, auth) {
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
  await context.addInitScript(()=>localStorage.setItem('languageType','zh-CN'));
- const state={auth, enabled:true, loaded:true, computerAvailable:true, capabilityCalls:0, submissions:[]};
+ const state={auth, enabled:true, loaded:true, computerAvailable:true, capabilityCalls:0, submissions:[], emptyGraph:false, vermeerGate:null};
  const capabilities=['graphspaces_read','operations_health_read','operations_topology_read',...(auth?['accounts_manage','model_settings_manage']:[])];
  await context.route('**/api/v*/**', async route=>{
   const req=route.request(); const url=new URL(req.url()); const p=url.pathname.replace(/^\/api\/v[\d.]+/,''); const method=req.method(); let data;
@@ -59,9 +59,9 @@ async function setup(browser, auth) {
    const s=spaces.find(x=>x.name===p.split('/')[2]);
    data=s;
   }
-  else if(p.endsWith('/graphs'))data=pageResult(graphs.map(g=>({...g,status:state.loaded?'loaded':'created'})),url.searchParams.get('selected'));
+  else if(p.endsWith('/graphs'))data=pageResult(state.emptyGraph ? [] : graphs.map(g=>({...g,status:state.loaded?'loaded':'created'})),url.searchParams.get('selected'));
   else if(p.endsWith('/graph_read_mode'))data={status:'1'};
-  else if(p==='/vermeer')data={enable:state.enabled};
+  else if(p==='/vermeer') {if(state.vermeerGate) await state.vermeerGate;data={enable:state.enabled};}
   else if(p.endsWith('/algorithms/olap/capability')) {state.capabilityCalls++; data={available:state.computerAvailable};}
   else if(p.endsWith('/algorithms/vermeer') && method==='POST') {state.submissions.push({path:p,body:req.postDataJSON()}); data={task_id:-801};}
   else if(p.endsWith('/text2gql/config'))data={available:false,custom_available:true,reason:'not_configured'};
@@ -81,10 +81,11 @@ async function setup(browser, auth) {
  page.setDefaultTimeout(12000);
  return {context,page,state};
 }
-async function screenshot(page,name){assert.equal(await page.locator('.ant-message-error').count(),0,'no caught error toasts'); await page.screenshot({path:path.join(output,name+'.png'),fullPage:true});}
+async function screenshot(page,name){assert.equal(await page.locator('.ant-message-error').count(),0,'no caught error toasts'); await page.screenshot({path:path.join(output,name+'.png'),fullPage:true,animations:'disabled'});}
 async function check(name,fn){try{await fn();checks.push({name,status:'passed'}); console.log('PASS '+name);}catch(e){checks.push({name,status:'failed',error:e.message}); console.log('FAIL '+name+': '+e.message);throw e;}}
 (async()=>{
- const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
+ const {chromium}=await loadPlaywright();
+ const browser=await chromium.launch({headless:true,executablePath:chromiumExecutablePath(),args:['--no-sandbox']});
  try {
  const {page,state}=await setup(browser,true);
  const goAlgorithms=async()=>{await page.goto(base+'/algorithms/DEFAULT/hugegraph'); await page.getByText('Vermeer · OLAP 全图计算',{exact:true}).waitFor();};
@@ -181,6 +182,34 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   await page.getByText('Vermeer 图计算',{exact:true}).waitFor();
   await page.getByText('Computer 图计算（兼容）',{exact:true}).waitFor();
   await screenshot(page,'09-task-engines');
+ });
+ await check('task rows remain available while task-type filters await engine discovery',async()=>{
+  let release;
+  state.vermeerGate=new Promise(resolve=>{release=resolve;});
+  try {
+   await page.goto(base+'/asyncTasks/DEFAULT/hugegraph');
+   await page.getByText('Vermeer 图计算',{exact:true}).waitFor();
+   const header=page.getByRole('columnheader',{name:/任务类型/});
+   assert.equal(await header.getByRole('button').count(),0);
+   await screenshot(page,'13-task-engine-pending');
+   release(); state.vermeerGate=null;
+   await header.getByRole('button').waitFor();
+   await header.getByRole('button').click();
+   await page.getByRole('menuitem',{name:'Vermeer 图计算',exact:true}).waitFor();
+   await screenshot(page,'14-task-engine-ready');
+   await page.keyboard.press('Escape');
+  } finally {release(); state.vermeerGate=null;}
+ });
+ await check('an empty graph selection does not leave Computer checking indefinitely',async()=>{
+  const calls=state.capabilityCalls;
+  state.emptyGraph=true;state.enabled=false;
+  await page.goto(base+'/algorithms/DEFAULT');
+  await page.waitForURL(base+'/graphspace/DEFAULT');
+  await page.getByText('这个 GraphSpace 已可用，但还没有图。创建第一张图后即可配置 Schema、导入和查询数据',{exact:true}).waitFor();
+  assert.equal(await page.getByText('正在检查 Computer 兼容接口…',{exact:true}).count(),0);
+  assert.equal(state.capabilityCalls,calls);
+  await screenshot(page,'15-computer-no-graph');
+  state.emptyGraph=false;
  });
  const anonymous=await setup(browser,false);
  await check('anonymous GraphSpaces remain visible while account and mutations are hidden',async()=>{

@@ -31,7 +31,7 @@ import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useSearchParams} from 'react-router-dom';
 import {getDashboard} from '../../api/auth';
 import {getOverview} from '../../api/operations';
-import {ReadinessStatus} from './Readiness';
+import {ReadinessStatus, markNodeReadinessStale} from './Readiness';
 import {normalizeDashboardUrl} from '../../modules/navigation/ConsoleItem/dashboard';
 import {
     ClusterTopology,
@@ -88,6 +88,12 @@ const Overview = () => {
             if ([401, 403].includes(requestError?.status)) {
                 dataRef.current = null;
                 setData(null);
+            }
+            else if (dataRef.current) {
+                const snapshot = {...dataRef.current, stale: true,
+                    nodes: dataRef.current.nodes?.map(markNodeReadinessStale)};
+                dataRef.current = snapshot;
+                setData(snapshot);
             }
             setError(requestError);
         }

@@ -21,11 +21,11 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const hubbleRoot = path.resolve(__dirname, '../../..');
-const {chromium} = require(path.join(hubbleRoot, 'hubble-fe/node_modules/playwright'));
-const base = process.env.HUBBLE_URL || 'http://127.0.0.1:3000';
+const os = require('node:os');
+const {loadPlaywright, chromiumExecutablePath} = require('./run_ui_browser_smoke');
+const base = (process.env.HUBBLE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const output = process.env.HUBBLE_UI_EVIDENCE_DIR
-    || path.join(hubbleRoot, 'docs/assets/operations-diagnostics-20261023/after');
+    || fs.mkdtempSync(path.join(os.tmpdir(), 'hubble-operations-diagnostics-'));
 const now = 1792757451000;
 const scenario = process.env.HUBBLE_UI_SCENARIO;
 assert(!scenario || ['overview', 'server', 'store', 'PD', 'ownership'].includes(scenario),
@@ -83,9 +83,8 @@ async function capture(page, name) {
         element => element.getBoundingClientRect().bottom
     );
     await page.setViewportSize({width: 1440, height: Math.max(1000, Math.ceil(contentBottom + 80))});
-    await page.waitForTimeout(250);
     assert.deepEqual(await page.locator('.ant-message-error').allTextContents(), []);
-    await page.screenshot({path: path.join(output, name + '.png'), fullPage: true});
+    await page.screenshot({path: path.join(output, name + '.png'), fullPage: true, animations: 'disabled'});
 }
 
 async function check(name, action) {
@@ -103,8 +102,9 @@ async function check(name, action) {
 
 (async () => {
     fs.mkdirSync(output, {recursive: true});
+    const {chromium} = await loadPlaywright();
     const browser = await chromium.launch({headless: true,
-        executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium',
+        executablePath: chromiumExecutablePath(),
         args: ['--no-sandbox']});
     const context = await browser.newContext({viewport: {width: 1440, height: 1800},
         timezoneId: 'Asia/Taipei'});
@@ -250,6 +250,7 @@ async function check(name, action) {
             browserVersion: browser.version(), checks, pageErrors,
             unexpectedApi: [...unexpectedApi], failure,
         }, null, 2) + '\n');
+        console.log(JSON.stringify({status: passed ? 'passed' : 'failed', output, checks: checks.length}));
         await browser.close();
         if (!passed) process.exitCode = 1;
     }

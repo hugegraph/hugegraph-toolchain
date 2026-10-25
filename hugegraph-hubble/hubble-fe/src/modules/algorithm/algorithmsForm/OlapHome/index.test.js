@@ -66,12 +66,12 @@ jest.mock('react-i18next', () => ({
 const home = (context = {
     isVermeer: false,
     graphStatus: 'LOADED',
-}, graph = 'hugegraph') => (
+}, graph = 'hugegraph', graphSpace = 'DEFAULT') => (
     <GraphAnalysisContext.Provider
         value={context}
     >
         <OlapFormHome
-            graphSpace="DEFAULT"
+            graphSpace={graphSpace}
             graph={graph}
             search=""
             currentAlgorithm=""
@@ -82,7 +82,7 @@ const home = (context = {
     </GraphAnalysisContext.Provider>
 );
 
-const renderHome = (context, graph) => render(home(context, graph));
+const renderHome = (context, graph, graphSpace) => render(home(context, graph, graphSpace));
 const expandComputer = () => fireEvent.click(screen.getByRole('button', {
     name: 'analysis.algorithm.computer_legacy_entry',
 }));
@@ -111,6 +111,18 @@ test('keeps unavailable Computer algorithms hidden after explicit expansion', as
     expect(await screen.findByText('analysis.algorithm.computer_legacy_unavailable'))
         .toBeInTheDocument();
     expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
+});
+
+test.each([
+    ['graph', 'DEFAULT', null],
+    ['GraphSpace', null, 'hugegraph'],
+])('does not show a pending Computer check without a selected %s', (_label, graphSpace, graph) => {
+    renderHome(undefined, graph, graphSpace);
+    expandComputer();
+
+    expect(screen.getByText('analysis.algorithm.computer_select_graph')).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.computer_checking')).not.toBeInTheDocument();
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
 });
 
 test('renders Computer algorithms only after explicit expansion and capability success', async () => {

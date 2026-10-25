@@ -69,7 +69,8 @@ const AsyncTaskDetail = props => {
         loading,
     } = props;
 
-    const {graphSpace: currentGraphSpace, graph: currentGraph, isVermeer} = useContext(GraphAnalysisContext);
+    const {graphSpace: currentGraphSpace, graph: currentGraph, isVermeer, vermeerReady}
+        = useContext(GraphAnalysisContext);
     const {records: asyncManageTaskDataRecords, total: asyncManageTaskDataTotal} = asyncManageTaskData || {};
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [expandedTaskId, setExpandedTaskId] = useState();
@@ -230,7 +231,7 @@ const AsyncTaskDetail = props => {
         {
             title: t('analysis.async_task.column.task_type'),
             dataIndex: 'task_type',
-            filters: renderTaskTypeFilters(),
+            filters: vermeerReady === false ? undefined : renderTaskTypeFilters(),
             filterMultiple: false,
             render: (task_type, _rowData, _index) => {
                 return (<>{taskTypeNames[task_type] || task_type}</>);

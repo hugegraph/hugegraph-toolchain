@@ -572,6 +572,7 @@
       "computer_legacy_ready": "The algorithms below use the Computer compatibility API. Tasks are not sent to Vermeer",
       "computer_legacy_unavailable": "The Computer compatibility API is unavailable for this graph. Check the existing Computer deployment",
       "computer_checking": "Checking the Computer compatibility API…",
+      "computer_select_graph": "Select a GraphSpace and graph before checking Computer compatibility",
       "computer_legacy_docs": "Computer configuration guide",
       "api_docs": "Open the official API documentation for this algorithm",
       "api_source": "View the official implementation/API source",

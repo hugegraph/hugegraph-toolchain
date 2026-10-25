@@ -58,5 +58,9 @@ node hugegraph-hubble/hubble-dist/assembly/travis/vermeer_first_browser.cjs
 ```
 
 The runner writes screenshots and its report to `/tmp/hubble-vermeer-first-evidence`.
-`HUBBLE_UI_BASE`, `HUBBLE_UI_EVIDENCE_DIR`, and `CHROMIUM_PATH` can override the frontend
-URL, output directory, and Chromium executable. The report records the checked-out commit.
+`HUBBLE_UI_BASE` and `HUBBLE_UI_EVIDENCE_DIR` override the frontend URL and output
+directory. Shared browser discovery honors `--chromium-executable`,
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` and `CHROME_PATH`; `CHROMIUM_PATH` remains a
+legacy alias. `PLAYWRIGHT_NODE_MODULES` selects an external Playwright install;
+otherwise the managed browser or platform defaults are used. The report records
+the checked-out commit.
