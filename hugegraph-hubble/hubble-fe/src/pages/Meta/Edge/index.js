@@ -57,7 +57,7 @@ const EdgeTable = ({canWrite = true}) => {
             asyncDeletion: true,
             onRefresh: () => setRefresh(value => !value),
             onComplete: () => {
-                if (isBatch) setSelectedItems([]);
+                setSelectedItems(current => current.filter(name => !names.includes(name)));
                 setRefresh(value => !value);
             },
         });
