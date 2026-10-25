@@ -105,6 +105,10 @@ export const AsyncTaskResultContent = ({
         && ['vermeer-task:load', 'vermeer-task:compute'].includes(taskType)
         && typeof asyncTaskResultJson === 'string'
         && /\brpc error:\s*code\s*=\s*Unknown\s+desc\s*=\s*$/i.test(asyncTaskResultJson);
+    const unavailableVermeerResult = taskStatus === 'success'
+        && taskType === 'vermeer-task:compute'
+        && (asyncTaskResultJson === null
+            || (typeof asyncTaskResultJson === 'string' && asyncTaskResultJson.trim() === 'null'));
     const resultSizeLimit = failed && typeof asyncTaskResultJson === 'string'
         ? asyncTaskResultJson.match(/Task result size (\d+) exceeded limit (\d+) bytes/)
         : null;
@@ -159,8 +163,15 @@ export const AsyncTaskResultContent = ({
                 />
             )}
             {!loading && !error && (
-                !hasResult ? (
-                    !failed && <Empty description={t('analysis.async_task.no_result')} />
+                !hasResult || unavailableVermeerResult ? (
+                    !failed && (unavailableVermeerResult ? (
+                        <Empty description={t('analysis.async_task.vermeer_result_unavailable_title')}>
+                            <p>{t('analysis.async_task.vermeer_result_unavailable_description')}</p>
+                            <Button href={`/algorithms/${encodeURIComponent(graphspace)}/${encodeURIComponent(graph)}`}>
+                                {t('analysis.async_task.result_open_algorithms')}
+                            </Button>
+                        </Empty>
+                    ) : <Empty description={t('analysis.async_task.no_result')} />)
                 ) : resultForJSON === null ? (
                     opaqueVermeerFailure ? (
                         <div className={c.rawFailure}>

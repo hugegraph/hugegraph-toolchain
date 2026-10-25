@@ -48,6 +48,9 @@ jest.mock('react-i18next', () => ({
         'analysis.async_task.vermeer_failure_namespace_hint': 'Verify Store pd.cluster matches Server',
         'analysis.async_task.vermeer_failure_up_hint': 'UP does not confirm computation success',
         'analysis.async_task.raw_error': 'Original error',
+        'analysis.async_task.vermeer_result_unavailable_title': 'Task succeeded, but its values are unavailable',
+        'analysis.async_task.vermeer_result_unavailable_description': 'Check upstream retention before recomputing',
+        'analysis.async_task.result_open_algorithms': 'Open graph algorithms',
         'analysis.async_task.result_size_limit_title': 'Task result exceeds the server limit',
         'analysis.async_task.result_size_limit_description': `Result ${values?.size} MiB exceeds ${values?.limit} MiB`,
         'analysis.async_task.refine_query': 'Refine query',
@@ -227,4 +230,52 @@ it.each([
     await screen.findByText(result.replace(/\s+/g, ' ').trim());
     expect(screen.queryByText('The upstream service returned no specific reason')).not.toBeInTheDocument();
     expect(screen.queryByText('Original error')).not.toBeInTheDocument();
+});
+
+it.each([null, 'null', ' \nnull\t'])(
+    'explains an explicitly unavailable successful Vermeer compute result: %s', async result => {
+        api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {
+            task_status: 'success', task_type: 'vermeer-task:compute', task_result: result,
+        }});
+        renderResult();
+
+        expect(await screen.findByText('Task succeeded, but its values are unavailable')).toBeInTheDocument();
+        expect(screen.getByText('Check upstream retention before recomputing')).toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'Open graph algorithms'}))
+            .toHaveAttribute('href', '/algorithms/DEFAULT/hugegraph');
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    }
+);
+
+it.each(['[]', '{"vertices":[],"cursor":0,"has_more":false}'])(
+    'preserves a valid empty Vermeer result %s', async result => {
+        api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {
+            task_status: 'success', task_type: 'vermeer-task:compute', task_result: result,
+        }});
+        renderResult();
+
+        expect(await screen.findByText(']')).toBeInTheDocument();
+        expect(screen.queryByText('Task succeeded, but its values are unavailable')).not.toBeInTheDocument();
+    }
+);
+
+it.each([
+    ['gremlin', 'success', null],
+    ['cypher', 'success', 'null'],
+    ['vermeer-task:load', 'success', null],
+    ['vermeer-task:compute', 'success', undefined],
+    ['vermeer-task:compute', 'failed', null],
+])('does not infer result availability for type=%s status=%s result=%s', async (taskType, status, result) => {
+    api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {
+        task_status: status, task_type: taskType, task_result: result,
+    }});
+    renderResult();
+
+    if (status === 'failed') {
+        expect(await screen.findByRole('alert')).toHaveTextContent('Task failed');
+    }
+    else {
+        expect(await screen.findByText('No task result is available.')).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Task succeeded, but its values are unavailable')).not.toBeInTheDocument();
 });
