@@ -48,7 +48,7 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
             inUseKey: 'schema.property.in_use',
             onRefresh: () => setRefresh(value => !value),
             onComplete: () => {
-                if (isBatch) setSelectedItems([]);
+                setSelectedItems(current => current.filter(name => !names.includes(name)));
                 setRefresh(value => !value);
             },
         });
