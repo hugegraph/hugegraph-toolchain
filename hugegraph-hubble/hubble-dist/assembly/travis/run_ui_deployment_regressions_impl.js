@@ -278,10 +278,17 @@ catch (e) {
         await check('Graph context switches via actual header selectors', async () => {
             await page.goto(base + '/gremlin/DEFAULT/hugegraph');
             await page.getByRole('button', { name: '执行查询', exact: true }).waitFor();
-            await page.getByRole('combobox', { name: '当前 GraphSpace', exact: true }).click();
-            await page.getByRole('option', {name: /记忆库/}).click();
-            await page.getByRole('combobox', { name: '当前图', exact: true }).click();
-            await page.getByRole('option', {name: /测试图/}).click();
+            const spaceSelector = page.getByRole('combobox', { name: '当前 GraphSpace', exact: true });
+            await spaceSelector.click();
+            // Ant Design virtualizes options; its accessible option nodes are not click targets.
+            await page.getByRole('option', {name: /记忆库/}).waitFor({state: 'attached'});
+            await spaceSelector.press('ArrowDown');
+            await spaceSelector.press('Enter');
+            const graphSelector = page.getByRole('combobox', { name: '当前图', exact: true });
+            await graphSelector.click();
+            await page.getByRole('option', {name: /测试图/}).waitFor({state: 'attached'});
+            await graphSelector.press('ArrowDown');
+            await graphSelector.press('Enter');
             await page.waitForURL('**/gremlin/soc_graph/second');
             await screenshot(page, 'graph-context-switch');
         });
