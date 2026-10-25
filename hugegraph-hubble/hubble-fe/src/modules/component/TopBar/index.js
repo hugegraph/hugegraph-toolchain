@@ -82,6 +82,7 @@ const TopBar = props => {
         last_load_time: currentGraphLoadTime,
     } = currentGraph;
     const currentGraphStatus = loadTask === undefined ? metadataGraphStatus : LOADING;
+    const showLoadFailureAction = currentGraphStatus === ERROR && !isLoadRequestLoading;
 
     const showVermeerGraphInfo = isVermeer && !_.isEmpty(currentGraph) &&
                                 Boolean(currentGraphStatus);
@@ -435,8 +436,19 @@ const TopBar = props => {
             {
                 showVermeerGraphInfo && (
                     <span className={c.vermeerInfo}>
-                        <Button type="text" disabled={currentGraphStatus === CREATED} onClick={onStatusBtnClick}>
+                        <Button
+                            type="text"
+                            disabled={currentGraphStatus === CREATED}
+                            onClick={onStatusBtnClick}
+                            aria-label={showLoadFailureAction
+                                ? t('analysis.topbar.load_failure_task_label') : undefined}
+                        >
                             <span className={c.graphStatus}>{renderStatusTag(currentGraphStatus)}</span>
+                            {showLoadFailureAction && (
+                                <span className={c.loadFailureAction}>
+                                    {t('analysis.async_task.action.check_reason')}
+                                </span>
+                            )}
                         </Button>
                         {
                             currentGraphLoadTime && (
