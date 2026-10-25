@@ -2,14 +2,14 @@
   "schema": 1,
   "scope": "pnpm list --prod --depth Infinity; conservative production dependency closure, including modules pruned by bundling",
   "lockfile": "hugegraph-hubble/hubble-fe/pnpm-lock.yaml",
-  "lockfileSha256": "6e92d95d4ce114f93ca33a745fa4d200f004f57c9d79bb98b9d68efc2d718249",
+  "lockfileSha256": "e6ef3fc877f6dd284bf21a460ed42cea0f9323a41e7d6bd3b0f3b9a0ec33801f",
   "packageManager": "pnpm@12.14.0",
   "packageCount": 257,
   "localPatches": [
     {
       "package": "@antv/g6@5.1.1",
       "path": "hugegraph-hubble/hubble-fe/patches/@antv__g6@5.1.1.patch",
-      "sha256": "14dba4e62477cacc60223c193dd8795d68b83d278b55c958f87a944efad0d57f"
+      "sha256": "a36f126c9a2046a104399de4a1e9a37338a8414fcc594d46d93600c5873352a3"
     }
   ],
   "packages": [
