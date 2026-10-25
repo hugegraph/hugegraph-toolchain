@@ -38,6 +38,8 @@ const VertexTable = ({canWrite = true}) => {
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
 
+    useEffect(() => setSelectedItems([]), [graphspace, graph]);
+
     const fetchPage = useCallback(params => api.manage.getMetaVertexList(
         graphspace, graph, params
     ), [graphspace, graph]);

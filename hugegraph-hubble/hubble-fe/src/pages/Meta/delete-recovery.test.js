@@ -23,9 +23,8 @@ import EdgeTable from './Edge';
 import * as api from '../../api';
 
 jest.mock('react-i18next', () => ({useTranslation: () => ({t: key => key})}));
-jest.mock('react-router-dom', () => ({
-    useParams: () => ({graphspace: 'DEFAULT', graph: 'audit'}),
-}));
+let mockScope;
+jest.mock('react-router-dom', () => ({useParams: () => mockScope}));
 jest.mock('./Property/EditLayer', () => ({EditPropertyLayer: () => null}));
 jest.mock('./Vertex/EditLayer', () => ({EditVertexLayer: () => null}));
 jest.mock('./Edge/EditLayer', () => ({EditEdgeLayer: () => null}));
@@ -42,6 +41,7 @@ jest.mock('../../api', () => ({manage: {
 
 let existing;
 beforeEach(() => {
+    mockScope = {graphspace: 'DEFAULT', graph: 'audit'};
     existing = {Property: [{name: 'audit_label'}], Vertex: [{name: 'audit_label'}], Edge: [{name: 'audit_label'}]};
     jest.clearAllMocks();
     window.matchMedia = jest.fn().mockImplementation(query => ({
@@ -64,6 +64,18 @@ const tables = [
     ['vertex', VertexTable, 'delMetaVertex'],
     ['edge', EdgeTable, 'delMetaEdge'],
 ];
+
+test.each(tables)('%s selection cannot carry a same-name key into another graph scope',
+    async (_name, Table) => {
+        const view = render(<Table />);
+        const checkbox = within(screen.getByRole('row', {name: /audit_label/})).getByRole('checkbox');
+        fireEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+
+        mockScope = {graphspace: 'OTHER', graph: 'audit'};
+        view.rerender(<Table />);
+        await waitFor(() => expect(checkbox).not.toBeChecked());
+    });
 
 test.each(tables)('%s batch completion clears the checkbox of a same-name replacement',
     async (_name, Table, operation) => {

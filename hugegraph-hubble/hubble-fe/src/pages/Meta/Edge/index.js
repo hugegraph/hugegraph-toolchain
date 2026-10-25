@@ -38,6 +38,8 @@ const EdgeTable = ({canWrite = true}) => {
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
 
+    useEffect(() => setSelectedItems([]), [graphspace, graph]);
+
     const fetchPage = useCallback(params => api.manage.getMetaEdgeList(
         graphspace, graph, params
     ), [graphspace, graph]);
