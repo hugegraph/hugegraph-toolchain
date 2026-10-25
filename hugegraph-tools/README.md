@@ -10,7 +10,13 @@ HugeGraph-Tools is a customizable command line utility for deploying, managing a
 
 ## Backup and migration failures
 
-If a vertex or edge data page still fails after retries, backup fails and `migrate` does not start restoring the target. Partial backup files and shard diagnostics are retained for inspection; use a new backup directory when retrying. Use `migrate --keep-local-data` to retain the local backup after a successful restore, and verify the target data before switching applications to it.
+If a vertex or edge data page still fails after retries, backup fails and `migrate` does not start restoring the target.
+Partial backup files and shard diagnostics are retained for inspection; use a new backup directory when retrying.
+The backup directory and `--log` directory are independent; the latter defaults to `./logs`.
+Initialization clears files ending in `_shards` from the selected log directory. Before retrying, copy those diagnostic
+files elsewhere or select a new `--log` directory as well as a new backup directory.
+Use `migrate --keep-local-data` to retain the local backup after a successful restore, and verify the target data before
+switching applications to it.
 
 ## Learn More
 

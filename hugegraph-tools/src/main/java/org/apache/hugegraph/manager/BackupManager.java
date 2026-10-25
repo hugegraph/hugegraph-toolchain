@@ -167,8 +167,11 @@ public class BackupManager extends BackupRestoreBaseManager {
         for (Shard shard : shards) {
             this.backupVertexShardAsync(shard);
         }
-        this.awaitTasks();
-        this.postProcessFailedShard(HugeType.VERTEX);
+        try {
+            this.awaitTasks();
+        } finally {
+            this.postProcessFailedShard(HugeType.VERTEX);
+        }
         Printer.print("%d", this.vertexCounter.get());
         Printer.print("Vertices backup finished: %d",
                       this.vertexCounter.get());
@@ -184,8 +187,11 @@ public class BackupManager extends BackupRestoreBaseManager {
         for (Shard shard : shards) {
             this.backupEdgeShardAsync(shard);
         }
-        this.awaitTasks();
-        this.postProcessFailedShard(HugeType.EDGE);
+        try {
+            this.awaitTasks();
+        } finally {
+            this.postProcessFailedShard(HugeType.EDGE);
+        }
         Printer.print("%d", this.edgeCounter.get());
         Printer.print("Edges backup finished: %d", this.edgeCounter.get());
     }
@@ -351,8 +357,6 @@ public class BackupManager extends BackupRestoreBaseManager {
             this.logLimitExceedShard(type, shard);
         } else if (isTimeoutException(e)) {
             this.logTimeoutShard(type, shard);
-        } else {
-            this.logExceptionWithShard(e, type, shard);
         }
         throw e;
     }
