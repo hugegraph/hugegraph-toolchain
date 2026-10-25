@@ -17,7 +17,7 @@
  */
 
 import {replaceBrowserLocation} from '../../utils/browserNavigation';
-import {render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {MemoryRouter} from 'react-router-dom';
 import {message} from 'antd';
@@ -25,6 +25,7 @@ import Login from './index';
 import * as api from '../../api';
 import enPages from '../../i18n/resources/en-US/modules/pages.json';
 import zhPages from '../../i18n/resources/zh-CN/modules/pages.json';
+import {ConfigConnectionContext} from '../../utils/ConfigConnectionContext';
 
 jest.mock('../../utils/browserNavigation', () => ({replaceBrowserLocation: jest.fn()}));
 
@@ -124,6 +125,29 @@ describe('Login request errors', () => {
             .toBe('A one-stop analysis platform for graph technology enthusiasts');
         expect(enPages.login.form_hint)
             .toBe('Use your HugeGraph account to explore graph visualization');
+    });
+
+    it('explains unverified connectivity, retries without submitting and retains credentials after recovery', async () => {
+        const retry = jest.fn();
+        const view = value => <MemoryRouter><ConfigConnectionContext.Provider value={value}>
+            <Login />
+        </ConfigConnectionContext.Provider></MemoryRouter>;
+        const {rerender, container} = render(view({status: 'verified', retrying: false, retry}));
+        await userEvent.type(screen.getByLabelText('login.username'), 'admin');
+        await userEvent.type(screen.getByLabelText('login.password'), 'fixture-only');
+        rerender(view({status: 'unverified', retrying: false, retry}));
+        expect(screen.getByRole('status')).toHaveTextContent('login.connection.unverified_title');
+        expect(screen.getByRole('button', {name: 'login.submit'})).toBeDisabled();
+        await act(async () => { fireEvent.submit(container.querySelector('form')); });
+        expect(api.auth.login).not.toHaveBeenCalled();
+        await userEvent.click(screen.getByRole('button', {name: 'login.connection.retry'}));
+        expect(retry).toHaveBeenCalledTimes(1);
+        expect(api.auth.login).not.toHaveBeenCalled();
+        rerender(view({status: 'verified', retrying: false, retry}));
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('login.username')).toHaveValue('admin');
+        expect(screen.getByLabelText('login.password')).toHaveValue('fixture-only');
+        expect(screen.getByRole('button', {name: 'login.submit'})).toBeEnabled();
     });
 
     it('lets users choose a language before authentication', async () => {
