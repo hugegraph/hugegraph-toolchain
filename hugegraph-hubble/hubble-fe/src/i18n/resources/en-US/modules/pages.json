@@ -1597,9 +1597,9 @@
     "form_hint": "Use your HugeGraph account to explore graph visualization",
     "connection": {
       "unverified_title": "Server connection not yet confirmed",
-      "unverified_description": "Hubble could not verify Server capabilities. Check the Server connection and PD service discovery if enabled. Sign-in details have not been verified by this connection check.",
+      "unverified_description": "Hubble could not verify Server capabilities. Check the Server connection and PD service discovery if enabled. Sign-in details have not been verified by this connection check",
       "unavailable_title": "Hubble connection settings unavailable",
-      "unavailable_description": "Connection settings could not be loaded. Check that the Hubble service is available, then retry.",
+      "unavailable_description": "Connection settings could not be loaded. Check that the Hubble service is available, then retry",
       "retry": "Retry connection",
       "auto_retry": "Sign-in resumes after verification. Hubble also retries automatically."
     },
