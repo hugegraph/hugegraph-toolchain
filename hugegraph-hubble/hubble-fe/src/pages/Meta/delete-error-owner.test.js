@@ -71,6 +71,38 @@ test('partially applied batch retries only remaining names with fresh usage chec
     expect(options.remove.mock.calls[1][2]).toEqual({names: ['b'], skip_using: false});
 });
 
+test.each([false, true])('recreated targets stay out of later retries (async=%s)', async asyncDeletion => {
+    options.asyncDeletion = asyncDeletion;
+    options.remove.mockImplementationOnce(async () => {
+        items = ['b'];
+        return {status: 500};
+    }).mockImplementationOnce(async (_space, _graph, {names}) => {
+        items = items.filter(name => !names.includes(name));
+        return {status: 200};
+    });
+    confirmSchemaDeletion(options);
+    act(() => onOk(close));
+    await finishAttempt();
+
+    // Another client creates a new schema with the already reconciled name.
+    items = ['a', 'b'];
+    if (asyncDeletion) {
+        act(() => onOk(close));
+        await finishAttempt();
+        expect(options.remove).toHaveBeenCalledTimes(1);
+        const view = render(update.mock.calls.at(-1)[0].content);
+        fireEvent.click(screen.getByRole('button', {name: 'schema.delete_retry'}));
+        view.unmount();
+    }
+    else act(() => onOk(close));
+
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+    expect(options.checkUsage.mock.calls[1][2]).toEqual({names: ['b']});
+    expect(options.remove.mock.calls[1][2]).toEqual({names: ['b'], skip_using: false});
+    expect(items).toEqual(['a']);
+    expect(message.success).toHaveBeenCalledTimes(1);
+});
+
 test('usage changes after failure block retry before any further deletion', async () => {
     options.remove.mockResolvedValue({status: 500});
     confirmSchemaDeletion(options);

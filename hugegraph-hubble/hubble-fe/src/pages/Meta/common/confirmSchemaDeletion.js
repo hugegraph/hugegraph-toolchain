@@ -43,7 +43,9 @@ export default function confirmSchemaDeletion({graphspace, graph, names, title, 
         if (recordNames.some(name => typeof name !== 'string' || !name) || existing.size !== page.total) {
             throw new Error('Schema list identities are incomplete');
         }
-        return names.filter(name => existing.has(name));
+        // A name confirmed absent may now belong to a newly created schema.
+        // Never add it back to the targets of this deletion attempt.
+        return pendingNames.filter(name => existing.has(name));
     };
     const content = (remaining, close) => {
         const remainingLabel = remaining?.join(', ');

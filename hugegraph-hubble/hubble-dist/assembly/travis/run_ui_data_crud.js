@@ -297,7 +297,7 @@ catch (e) {
                     state.deleteMode = 'normal';
                 });
             }
-            await check('02 partial batch retries remaining names and revalidates newly used properties', async () => {
+            await check('02 partial batch retry preserves recreated names and rechecks remaining usage', async () => {
                 const names = ['PartialA', 'PartialB'];
                 properties.push(...names.map(name => ({name, data_type: 'TEXT', cardinality: 'SINGLE'})));
                 await page.getByRole('tab', {name: '属性', exact: true}).click();
@@ -309,6 +309,8 @@ catch (e) {
                 await page.locator('.ant-message-error').waitFor();
                 const before = state.calls.filter(x => x.method === 'DELETE').length;
                 state.deleteMode = 'normal';
+                // A different client recreates the name already confirmed absent.
+                properties.push({name: 'PartialA', data_type: 'INT', cardinality: 'SINGLE'});
                 state.usageNames.add('PartialB');
                 await page.getByRole('dialog').getByRole('button', {name: /确\s*定/}).click();
                 await page.getByText(/PartialB.*使用|PartialB.*占用/).waitFor();
@@ -318,7 +320,11 @@ catch (e) {
                 await page.getByRole('dialog').getByRole('button', {name: /确\s*定/}).click();
                 await page.getByRole('dialog').waitFor({state: 'hidden'});
                 assert.deepEqual(state.calls.filter(x => x.method === 'DELETE').at(-1).names, ['PartialB']);
+                assert.equal(properties.find(x => x.name === 'PartialA')?.data_type, 'INT');
+                await page.getByRole('row').filter({hasText: 'PartialA'}).waitFor();
+                assert.equal(await page.getByRole('row').filter({hasText: 'PartialB'}).count(), 0);
                 await page.waitForFunction(() => !document.querySelector('.ant-message-error'));
+                await screenshot(page, '11-batch-retry-recreated-schema-preserved');
             });
             for (const mode of ['pending', 'pending-lost']) await check(`02 asynchronous ${mode} deletion checks status and requires explicit retry`, async () => {
                 state.vertexlabels.push({...label, name: 'PendingVertex'});
