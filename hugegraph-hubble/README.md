@@ -870,6 +870,11 @@ node --test hubble-dist/assembly/travis/ui_auth.test.js \
 python3 hubble-dist/assembly/travis/test_run_live_hubble_smoke.py
 ```
 
+The [service readiness contract](docs/service-readiness-20261023.md) explains
+why registered `UP` nodes can report a service as not ready, the bounded PD/Store
+probes, and the reproducible Chromium checks. Screenshots stay outside Git and
+are linked through the pull request's regression record.
+
 ## Doc
 
 [The hubble homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-hubble/) contains more information about it.
@@ -901,3 +906,7 @@ cleanup and final status writes; inspect task metadata and Server loading mode b
 ## Graph switching
 
 Query execution waits until the graph context matches the current route, including keyboard shortcuts during a graph switch. Standalone Server 1.5 supports core graph, schema and data operations; GraphSpace management and PD mode require a newer server.
+
+## Query and submitted-task feedback
+
+See [query and submitted-task feedback](docs/query-task-feedback.md) for preview limits, task discovery, and failed-result recovery.
