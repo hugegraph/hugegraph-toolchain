@@ -17,7 +17,7 @@
  */
 
 import {Table, Row, Col, Space, Button, message} from 'antd';
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useEffect} from 'react';
 import {EditPropertyLayer} from './EditLayer';
 import * as api from '../../../api';
 import {useParams} from 'react-router-dom';
@@ -34,6 +34,8 @@ const PropertyTable = ({noHeader, forceRefresh, canWrite = true}) => {
     const [selectedItems, setSelectedItems] = useState([]);
     const {graphspace, graph} = useParams();
     const {t} = useTranslation();
+
+    useEffect(() => setSelectedItems([]), [graphspace, graph]);
 
     const removeProperty = useCallback((names, isBatch) => {
         confirmSchemaDeletion({
