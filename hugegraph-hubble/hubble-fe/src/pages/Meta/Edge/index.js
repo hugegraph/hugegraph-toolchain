@@ -203,6 +203,7 @@ const EdgeTable = ({canWrite = true}) => {
                 dataSource={data}
                 rowSelection={canWrite ? {
                     type: 'checkbox',
+                    selectedRowKeys: selectedItems,
                     onChange: selectedRowKeys => {
                         setSelectedItems(selectedRowKeys);
                     },
