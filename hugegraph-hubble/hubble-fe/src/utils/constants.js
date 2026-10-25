@@ -110,8 +110,8 @@ export const Async_Task_Type = {
     create_index: 'analysis.async_task.type.create_index',
     rebuild_index: 'analysis.async_task.type.rebuild_index',
     cypher: 'analysis.async_task.type.cypher',
-    'vermeer-task:load': 'analysis.async_task.type.vermeer_load_engine',
-    'vermeer-task:compute': 'analysis.async_task.type.vermeer_compute_engine',
+    'vermeer-task:load': 'analysis.async_task.type.vermeer_load',
+    'vermeer-task:compute': 'analysis.async_task.type.vermeer_compute',
     'computer-dis': 'analysis.async_task.type.computer_legacy',
 };
 

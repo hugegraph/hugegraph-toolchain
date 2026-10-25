@@ -558,14 +558,13 @@
       "vermeer_olap": "Vermeer · OLAP 全图计算",
       "vermeer_ready": "通过 Vermeer 执行；图已加载，可运行下方算法",
       "vermeer_load_first": "通过 Vermeer 执行。请先在顶部将当前图加载到 Vermeer",
-      "vermeer_not_connected": "默认使用 Vermeer。当前连接不可用，请在 Hubble 部署配置中连接 Vermeer 服务，确认可用后刷新",
+      "vermeer_unavailable": "当前会话暂时无法使用 Vermeer；如使用 Computer，请展开下方兼容入口",
       "vermeer_no_match": "当前 Hubble 的 Vermeer 接口未提供匹配的算法",
       "computer_legacy_entry": "Computer 兼容入口（按需展开）",
       "computer_legacy_ready": "下方算法使用 Computer 兼容接口，任务不会发送到 Vermeer",
       "computer_legacy_unavailable": "当前图无法使用 Computer 兼容接口。请检查已有 Computer 部署",
       "computer_checking": "正在检查 Computer 兼容接口…",
       "computer_legacy_docs": "Computer 配置文档",
-      "computer_docs": "批量图计算使用指南",
       "api_docs": "查看此算法的官方 API 文档",
       "api_source": "查看官方实现/API 源码",
       "reset_parameters": "重置参数",
@@ -585,10 +584,6 @@
       "placeholder": "算法查询",
       "run": "运行",
       "run_shortcut": "运行（⌘/Ctrl + Enter）",
-      "computer_environment_title": "需要 HugeGraph Computer 计算环境",
-      "computer_environment_description": "这些全图算法通过 HugeGraph Computer 异步执行。提交任务前需先配置计算环境；部署要求 Kubernetes 时还需完成对应集群配置",
-      "computer_unavailable_title": "HugeGraph Computer 暂不可用",
-      "computer_unavailable_description": "当前图无法连接 HugeGraph Computer。请完成 Computer 与 Kubernetes 环境配置后再运行批量算法",
       "task_submit_success": "{{name}} 算法任务提交成功",
       "common": {
         "instance_num": "实例数",
@@ -603,8 +598,7 @@
         "max_step": "最大迭代步数",
         "request_memory": "计算节点最小内存需求",
         "JVM_memory": "jvm环境内存大小，默认为32g",
-        "source": "起始点ID",
-        "query_tooltip": "仅当选择的图数据加载完成后，才可以使用OLAP算法"
+        "source": "起始点ID"
       },
       "form": {
         "vertices_required": "未指定 ids 或 label 和 properties 的联合查询",
@@ -1016,16 +1010,13 @@
       "type": {
         "all": "全部",
         "gremlin": "Gremlin任务",
-        "algorithm": "算法任务",
         "remove_schema": "删除元数据",
         "create_index": "创建索引",
         "rebuild_index": "重建索引",
         "cypher": "Cypher任务",
-        "vermeer_load_engine": "Vermeer 图加载",
-        "vermeer_compute_engine": "Vermeer 图计算",
         "computer_legacy": "Computer 图计算（兼容）",
-        "vermeer_load": "vermeer图加载任务",
-        "vermeer_compute": "vermeer图计算任务"
+        "vermeer_load": "Vermeer 图加载",
+        "vermeer_compute": "Vermeer 图计算"
       },
       "status": {
         "all": "全部",

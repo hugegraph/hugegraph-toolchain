@@ -170,7 +170,7 @@ const OlapFormHome = props => {
         ),
     })).filter(group => !_.isEmpty(group.items));
     const isEmptyBasicOlap = _.isEmpty(visibleGroups);
-    const vermeerStatus = !isVermeer ? 'vermeer_not_connected'
+    const vermeerStatus = !isVermeer ? 'vermeer_unavailable'
         : graphStatus === GRAPH_LOAD_STATUS.LOADED ? 'vermeer_ready' : 'vermeer_load_first';
     const computerStatus = computerAvailable === false ? 'computer_legacy_unavailable'
         : computerAvailable === true ? 'computer_legacy_ready' : 'computer_checking';

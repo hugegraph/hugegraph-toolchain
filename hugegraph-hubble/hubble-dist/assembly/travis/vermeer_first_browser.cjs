@@ -129,6 +129,7 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
  });
  await check('unavailable Vermeer never automatically probes or exposes Computer',async()=>{
   state.enabled=false; await goAlgorithms(); await searchFor('PageRank');
+  await page.getByText('当前会话暂时无法使用 Vermeer；如使用 Computer，请展开下方兼容入口',{exact:true}).waitFor();
   const toggle=page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true});
   assert.equal(await toggle.getAttribute('aria-expanded'),'false');
   assert.equal(state.capabilityCalls,0); assert.equal(await pagerank().count(),0);
@@ -138,6 +139,16 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   assert.equal(state.capabilityCalls,1);
   assert((await pagerank().getByRole('link').getAttribute('href')).includes('/quickstart/computing/hugegraph-computer/'));
   await screenshot(page,'07-computer-opt-in');
+ });
+ await check('resetting parameters clears the per-visit Computer opt-in without an automatic probe',async()=>{
+  const calls=state.capabilityCalls;
+  await page.getByRole('button',{name:'重置参数',exact:true}).click();
+  await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true,expanded:false}).waitFor();
+  assert.equal(await pagerank().count(),0);
+  assert.equal(state.capabilityCalls,calls);
+  await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).click();
+  await pagerank().waitFor();
+  assert.equal(state.capabilityCalls,calls+1);
  });
  await check('Computer opt-in is cleared after graph A to B to A',async()=>{
   const calls=state.capabilityCalls;

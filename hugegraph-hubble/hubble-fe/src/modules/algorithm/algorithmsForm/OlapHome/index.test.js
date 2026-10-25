@@ -95,7 +95,7 @@ test('defaults to Vermeer guidance without silently probing or enabling Computer
     renderHome();
 
     expect(screen.getByText('analysis.algorithm.vermeer_olap')).toBeInTheDocument();
-    expect(screen.getByText('analysis.algorithm.vermeer_not_connected')).toBeInTheDocument();
+    expect(screen.getByText('analysis.algorithm.vermeer_unavailable')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
         .toHaveAttribute('aria-expanded', 'false');
     expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
