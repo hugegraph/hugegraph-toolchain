@@ -177,6 +177,7 @@ async function screenshot(page, name) {
             .forEach(element => element.scrollTo(0, 0));
     });
     if (name !== 'failure' && !name.startsWith('failure-')) {
+        await page.getByRole('tooltip').waitFor({state: 'hidden'});
         const toasts = await page.locator('.ant-message-error').allTextContents();
         assert.deepEqual(toasts, [], 'Unexpected error toast: ' + toasts.join('; '));
     }
