@@ -24,7 +24,8 @@ export const DELETE_REQUEST_CONFIG = {suppressBusinessErrorToast: true};
  * Only verified absence completes the operation; async retries remain explicit.
  */
 export default function confirmSchemaDeletion({graphspace, graph, names, title, warning,
-    list, checkUsage, remove, inUseKey, asyncDeletion = false, onComplete, onRefresh, t}) {
+    list, checkUsage, remove, inUseKey, asyncDeletion = false, onProgress, onComplete,
+    onRefresh, t}) {
     const feedbackKey = `schema-delete:${graphspace}:${graph}:${names.join(',')}`;
     const showError = content => message.error({key: feedbackKey, content});
     let deleting = false;
@@ -46,6 +47,17 @@ export default function confirmSchemaDeletion({graphspace, graph, names, title, 
         // A name confirmed absent may now belong to a newly created schema.
         // Never add it back to the targets of this deletion attempt.
         return pendingNames.filter(name => existing.has(name));
+    };
+    const updatePendingNames = remaining => {
+        const removed = pendingNames.filter(name => !remaining.includes(name));
+        pendingNames = remaining;
+        if (!removed.length || !onProgress) return;
+        try {
+            onProgress(removed);
+        }
+        catch {
+            // Reconciliation is authoritative; a UI callback must not block it.
+        }
     };
     const content = (remaining, close) => {
         const remainingLabel = remaining?.join(', ');
@@ -81,7 +93,7 @@ export default function confirmSchemaDeletion({graphspace, graph, names, title, 
             ...(submitted ? {content: content(pendingNames, close)} : {})});
         void (async () => {
             let remaining = await remainingNames();
-            pendingNames = remaining;
+            updatePendingNames(remaining);
             if (!remaining.length) return complete(close);
             if (submitted && !retry) {
                 confirmation.update({content: content(remaining, close)});
@@ -109,7 +121,7 @@ export default function confirmSchemaDeletion({graphspace, graph, names, title, 
                 // Reconcile even transport errors: the server may have applied them.
             }
             remaining = await remainingNames();
-            pendingNames = remaining;
+            updatePendingNames(remaining);
             if (!remaining.length) return complete(close);
             onRefresh();
             if (submitted) {

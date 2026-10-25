@@ -180,6 +180,44 @@ it('retains the selected loaded graph status and load date', async () => {
     expect(screen.getByText('2026-10-22')).toBeInTheDocument();
 });
 
+it('makes a failed Vermeer load an explicit accessible entry to its tasks', async () => {
+    Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
+    api.manage.getGraphList.mockResolvedValue({
+        status: 200, data: {records: [{name: 'graph-a'}]},
+    });
+    api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'error'}});
+
+    renderTopBar({isVermeer: true});
+
+    const failure = await screen.findByRole('button', {
+        name: 'analysis.topbar.load_failure_task_label',
+    });
+    expect(failure).toHaveTextContent('analysis.topbar.load_failed');
+    expect(failure).toHaveTextContent('analysis.async_task.action.check_reason');
+    fireEvent.click(failure);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('/asyncTasks');
+});
+
+it.each(['created', 'loading', 'loaded'])('does not offer failure details for status %s', async status => {
+    Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
+    api.manage.getGraphList.mockResolvedValue({
+        status: 200, data: {records: [{name: 'graph-a'}]},
+    });
+    api.manage.getGraph.mockResolvedValue({status: 200, data: {status}});
+
+    renderTopBar({isVermeer: true});
+
+    await screen.findByRole('button', {name: status === 'loaded'
+        ? 'analysis.topbar.reload_to_vermeer' : 'analysis.topbar.load_to_vermeer'});
+    expect(screen.queryByRole('button', {name: 'analysis.topbar.load_failure_task_label'}))
+        .not.toBeInTheDocument();
+    expect(screen.queryByText('analysis.async_task.action.check_reason')).not.toBeInTheDocument();
+    if (status === 'created') {
+        expect(screen.getByRole('button', {name: 'analysis.topbar.not_loaded'})).toBeDisabled();
+    }
+});
+
 it('refreshes selected graph details when the Vermeer capability resolves after the brief list', async () => {
     Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
     api.manage.getGraphList.mockResolvedValue({

@@ -11,10 +11,25 @@ index 21891ec35cfaaf752f0a964e1cfb9ee703c3fa65..b1dcb59dc1446aeeb5314787285e9884
          super.destroy();
      }
 diff --git a/esm/plugins/minimap/index.js b/esm/plugins/minimap/index.js
-index 3cd9b303a13c913496103f9b5f852bacbc34864c..cff72695447d75a34483617c9691e21bbf90ed8d 100644
 --- a/esm/plugins/minimap/index.js
 +++ b/esm/plugins/minimap/index.js
-@@ -123,6 +123,7 @@ export class Minimap extends BasePlugin {
+@@ -98,6 +98,7 @@
+             this.mask.removeEventListener('pointercancel', this.onMaskDragEnd);
+         };
+         this.onTransform = throttle(() => {
++            if (this.destroyed) return;
+             if (this.isMaskDragging)
+                 return;
+             this.updateMask();
+@@ -115,6 +116,7 @@
+     }
+     setOnRender() {
+         this.onRender = debounce(() => {
++            if (this.destroyed) return;
+             this.renderMinimap();
+             this.renderMask();
+         }, this.options.delay);
+@@ -123,6 +125,7 @@
          const { graph } = this.context;
          graph.on(GraphEvent.AFTER_DRAW, this.onDraw);
          graph.on(GraphEvent.AFTER_RENDER, this.onRender);
@@ -22,7 +37,7 @@ index 3cd9b303a13c913496103f9b5f852bacbc34864c..cff72695447d75a34483617c9691e21b
          graph.on(GraphEvent.AFTER_ANIMATE, this.onRender);
          graph.on(GraphEvent.AFTER_TRANSFORM, this.onTransform);
      }
-@@ -130,6 +131,7 @@ export class Minimap extends BasePlugin {
+@@ -130,6 +133,7 @@
          const { graph } = this.context;
          graph.off(GraphEvent.AFTER_DRAW, this.onDraw);
          graph.off(GraphEvent.AFTER_RENDER, this.onRender);
@@ -233,10 +248,25 @@ index ea930386e8fbd432f84c2fe85c2601894801965a..73c421ed9e945f7904869b727fa20152
          super.destroy();
      }
 diff --git a/lib/plugins/minimap/index.js b/lib/plugins/minimap/index.js
-index f46f4b7b13567298bbc94547a4811f954bb01ec8..8755703b5feb55a59055b91f1e740f9416cbcf51 100644
 --- a/lib/plugins/minimap/index.js
 +++ b/lib/plugins/minimap/index.js
-@@ -126,6 +126,7 @@ class Minimap extends base_plugin_1.BasePlugin {
+@@ -101,6 +101,7 @@
+             this.mask.removeEventListener('pointercancel', this.onMaskDragEnd);
+         };
+         this.onTransform = (0, util_1.throttle)(() => {
++            if (this.destroyed) return;
+             if (this.isMaskDragging)
+                 return;
+             this.updateMask();
+@@ -118,6 +119,7 @@
+     }
+     setOnRender() {
+         this.onRender = (0, util_1.debounce)(() => {
++            if (this.destroyed) return;
+             this.renderMinimap();
+             this.renderMask();
+         }, this.options.delay);
+@@ -126,6 +128,7 @@
          const { graph } = this.context;
          graph.on(constants_1.GraphEvent.AFTER_DRAW, this.onDraw);
          graph.on(constants_1.GraphEvent.AFTER_RENDER, this.onRender);
@@ -244,7 +274,7 @@ index f46f4b7b13567298bbc94547a4811f954bb01ec8..8755703b5feb55a59055b91f1e740f94
          graph.on(constants_1.GraphEvent.AFTER_ANIMATE, this.onRender);
          graph.on(constants_1.GraphEvent.AFTER_TRANSFORM, this.onTransform);
      }
-@@ -133,6 +134,7 @@ class Minimap extends base_plugin_1.BasePlugin {
+@@ -133,6 +136,7 @@
          const { graph } = this.context;
          graph.off(constants_1.GraphEvent.AFTER_DRAW, this.onDraw);
          graph.off(constants_1.GraphEvent.AFTER_RENDER, this.onRender);
@@ -441,10 +471,17 @@ index 8ecfa742c75b79c1dab02c2ba1d5a7d34bf9043f..c13eb552f145430ca6e751354758893c
      super.destroy();
    }
 diff --git a/src/plugins/minimap/index.ts b/src/plugins/minimap/index.ts
-index cc6c92152c2255df8c3c67189a1182f43a7d26c6..ec1ed65d6f864892b3f2be6b4effb7e95b012e36 100644
 --- a/src/plugins/minimap/index.ts
 +++ b/src/plugins/minimap/index.ts
-@@ -154,6 +154,7 @@ export class Minimap extends BasePlugin<MinimapOptions> {
+@@ -145,6 +145,7 @@
+ 
+   private setOnRender() {
+     this.onRender = debounce(() => {
++      if (this.destroyed) return;
+       this.renderMinimap();
+       this.renderMask();
+     }, this.options.delay);
+@@ -154,6 +155,7 @@
      const { graph } = this.context;
      graph.on(GraphEvent.AFTER_DRAW, this.onDraw);
      graph.on(GraphEvent.AFTER_RENDER, this.onRender);
@@ -452,7 +489,7 @@ index cc6c92152c2255df8c3c67189a1182f43a7d26c6..ec1ed65d6f864892b3f2be6b4effb7e9
      graph.on(GraphEvent.AFTER_ANIMATE, this.onRender);
      graph.on(GraphEvent.AFTER_TRANSFORM, this.onTransform);
    }
-@@ -162,6 +163,7 @@ export class Minimap extends BasePlugin<MinimapOptions> {
+@@ -162,6 +164,7 @@
      const { graph } = this.context;
      graph.off(GraphEvent.AFTER_DRAW, this.onDraw);
      graph.off(GraphEvent.AFTER_RENDER, this.onRender);
@@ -460,6 +497,14 @@ index cc6c92152c2255df8c3c67189a1182f43a7d26c6..ec1ed65d6f864892b3f2be6b4effb7e9
      graph.off(GraphEvent.AFTER_ANIMATE, this.onRender);
      graph.off(GraphEvent.AFTER_TRANSFORM, this.onTransform);
    }
+@@ -489,6 +492,7 @@
+ 
+   private onTransform = throttle(
+     () => {
++      if (this.destroyed) return;
+       if (this.isMaskDragging) return;
+       this.updateMask();
+       this.setCamera();
 diff --git a/src/runtime/canvas.ts b/src/runtime/canvas.ts
 index 56166b67ff6225f7716847b751acb624c7a6f9c7..794ea879604353ab68ff79e495878c18bf9b33bc 100644
 --- a/src/runtime/canvas.ts

@@ -22,7 +22,7 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Link, useParams} from 'react-router-dom';
-import {Alert, Button, Empty, Spin} from 'antd';
+import {Alert, Button, Empty, Spin, Typography} from 'antd';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../../api/index';
 import JsonViewer from '../../../components/JsonViewer';
@@ -101,6 +101,14 @@ export const AsyncTaskResultContent = ({
                       && asyncTaskResultJson !== null
                       && asyncTaskResultJson !== 'null';
     const failed = taskStatus === 'failed';
+    const opaqueVermeerFailure = failed
+        && ['vermeer-task:load', 'vermeer-task:compute'].includes(taskType)
+        && typeof asyncTaskResultJson === 'string'
+        && /\brpc error:\s*code\s*=\s*Unknown\s+desc\s*=\s*$/i.test(asyncTaskResultJson);
+    const unavailableVermeerResult = taskStatus === 'success'
+        && taskType === 'vermeer-task:compute'
+        && (asyncTaskResultJson === null
+            || (typeof asyncTaskResultJson === 'string' && asyncTaskResultJson.trim() === 'null'));
     const resultSizeLimit = failed && typeof asyncTaskResultJson === 'string'
         ? asyncTaskResultJson.match(/Task result size (\d+) exceeded limit (\d+) bytes/)
         : null;
@@ -127,11 +135,23 @@ export const AsyncTaskResultContent = ({
                     type='error'
                     title={t(resultSizeLimit
                         ? 'analysis.async_task.result_size_limit_title'
+                        : opaqueVermeerFailure
+                            ? 'analysis.async_task.vermeer_failure_unknown_title'
                         : 'analysis.async_task.result_failure_title')}
-                    description={resultSizeLimit && t('analysis.async_task.result_size_limit_description', {
+                    description={resultSizeLimit ? t('analysis.async_task.result_size_limit_description', {
                         size: (Number(resultSizeLimit[1]) / 1024 / 1024).toFixed(2),
                         limit: (Number(resultSizeLimit[2]) / 1024 / 1024).toFixed(2),
-                    })}
+                    }) : opaqueVermeerFailure && (
+                        <div className={c.failureGuidance}>
+                            <p>{t('analysis.async_task.vermeer_failure_unknown_description')}</p>
+                            <ul>
+                                <li>{t('analysis.async_task.vermeer_failure_logs_hint')}</li>
+                                <li>{t('analysis.async_task.vermeer_failure_connection_hint')}</li>
+                                <li>{t('analysis.async_task.vermeer_failure_namespace_hint')}</li>
+                            </ul>
+                            <p>{t('analysis.async_task.vermeer_failure_up_hint')}</p>
+                        </div>
+                    )}
                     action={resultSizeLimit && queryLanguage && (
                         <Button
                             size='small'
@@ -143,10 +163,26 @@ export const AsyncTaskResultContent = ({
                 />
             )}
             {!loading && !error && (
-                !hasResult ? (
-                    !failed && <Empty description={t('analysis.async_task.no_result')} />
+                !hasResult || unavailableVermeerResult ? (
+                    !failed && (unavailableVermeerResult ? (
+                        <Empty description={t('analysis.async_task.vermeer_result_unavailable_title')}>
+                            <p>{t('analysis.async_task.vermeer_result_unavailable_description')}</p>
+                            <Button href={`/algorithms/${encodeURIComponent(graphspace)}/${encodeURIComponent(graph)}`}>
+                                {t('analysis.async_task.result_open_algorithms')}
+                            </Button>
+                        </Empty>
+                    ) : <Empty description={t('analysis.async_task.no_result')} />)
                 ) : resultForJSON === null ? (
-                    asyncTaskResultJson
+                    opaqueVermeerFailure ? (
+                        <div className={c.rawFailure}>
+                            <Typography.Text type='secondary'>
+                                {t('analysis.async_task.raw_error')}
+                            </Typography.Text>
+                            <Typography.Paragraph copyable={{text: asyncTaskResultJson}}>
+                                {asyncTaskResultJson}
+                            </Typography.Paragraph>
+                        </div>
+                    ) : asyncTaskResultJson
                 ) : (
                     <JsonViewer
                         value={resultForJSON}

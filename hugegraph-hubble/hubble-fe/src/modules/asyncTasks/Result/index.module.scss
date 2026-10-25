@@ -80,6 +80,25 @@
     overflow-wrap: anywhere;
 }
 
+.failureGuidance {
+    p,
+    ul {
+        margin: 8px 0 0;
+    }
+
+    ul {
+        padding-inline-start: 20px;
+    }
+}
+
+.rawFailure {
+    margin-top: 12px;
+
+    :global(.ant-typography) {
+        margin-bottom: 0;
+    }
+}
+
 @media (max-width: 900px) {
     .resultHeader {
         flex-direction: column;
