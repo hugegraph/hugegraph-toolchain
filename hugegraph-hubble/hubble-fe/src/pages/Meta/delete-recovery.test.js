@@ -24,13 +24,13 @@ import * as api from '../../api';
 
 jest.mock('react-i18next', () => ({useTranslation: () => ({t: key => key})}));
 let mockScope;
+let mockTableData;
 jest.mock('react-router-dom', () => ({useParams: () => mockScope}));
 jest.mock('./Property/EditLayer', () => ({EditPropertyLayer: () => null}));
 jest.mock('./Vertex/EditLayer', () => ({EditVertexLayer: () => null}));
 jest.mock('./Edge/EditLayer', () => ({EditEdgeLayer: () => null}));
 jest.mock('./common/useMetaTable', () => () => ({
-    data: [{name: 'audit_label', data_type: 'TEXT', cardinality: 'SINGLE',
-        properties: [], primary_keys: [], property_indexes: [], sort_keys: []}],
+    data: mockTableData,
     pagination: false,
 }));
 jest.mock('../../api', () => ({manage: {
@@ -39,16 +39,22 @@ jest.mock('../../api', () => ({manage: {
     getMetaPropertyList: jest.fn(), getMetaVertexList: jest.fn(), getMetaEdgeList: jest.fn(),
 }}));
 
+const tableRow = name => ({name, data_type: 'TEXT', cardinality: 'SINGLE',
+    properties: [], primary_keys: [], property_indexes: [], sort_keys: []});
+
 let existing;
 beforeEach(() => {
     mockScope = {graphspace: 'DEFAULT', graph: 'audit'};
+    mockTableData = [tableRow('audit_label')];
     existing = {Property: [{name: 'audit_label'}], Vertex: [{name: 'audit_label'}], Edge: [{name: 'audit_label'}]};
     jest.clearAllMocks();
     window.matchMedia = jest.fn().mockImplementation(query => ({
         matches: false, media: query, addListener: jest.fn(), removeListener: jest.fn(),
     }));
-    api.manage.checkMetaProperty.mockResolvedValue({status: 200, data: {audit_label: false}});
-    api.manage.checkMetaVertex.mockResolvedValue({status: 200, data: {audit_label: false}});
+    api.manage.checkMetaProperty.mockResolvedValue({status: 200,
+        data: {audit_label: false, pending_label: false}});
+    api.manage.checkMetaVertex.mockResolvedValue({status: 200,
+        data: {audit_label: false, pending_label: false}});
     for (const type of ['Property', 'Vertex', 'Edge']) {
         api.manage[`getMeta${type}List`].mockImplementation(async () => ({status: 200,
             data: {records: existing[type], total: existing[type].length}}));
@@ -114,6 +120,34 @@ test.each(tables)('%s single-row completion removes a selected same-name replace
 
         await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
         await waitFor(() => expect(checkbox).not.toBeChecked());
+    });
+
+test.each(tables)('%s partial batch clears only the names confirmed absent',
+    async (_name, Table, operation) => {
+        const type = operation.replace('delMeta', '');
+        mockTableData = [tableRow('audit_label'), tableRow('pending_label')];
+        existing[type] = [{name: 'audit_label'}, {name: 'pending_label'}];
+        api.manage[operation].mockImplementation(async () => {
+            existing[type] = [{name: 'pending_label'}];
+            return {status: 500};
+        });
+        render(<Table />);
+        const deletedRow = screen.getByRole('row', {name: /audit_label/});
+        const pendingRow = screen.getByRole('row', {name: /pending_label/});
+        const deletedCheckbox = within(deletedRow).getByRole('checkbox');
+        const pendingCheckbox = within(pendingRow).getByRole('checkbox');
+        fireEvent.click(deletedCheckbox);
+        fireEvent.click(pendingCheckbox);
+        expect(deletedCheckbox).toBeChecked();
+        expect(pendingCheckbox).toBeChecked();
+        fireEvent.click(screen.getByRole('button', {name: /^(?:schema\.)?common\.batch_delete$/}));
+        const close = jest.fn();
+        act(() => Modal.confirm.mock.calls[0][0].onOk(close));
+
+        await waitFor(() => expect(api.manage[operation]).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(deletedCheckbox).not.toBeChecked());
+        expect(pendingCheckbox).toBeChecked();
+        expect(close).not.toHaveBeenCalled();
     });
 
 test.each(tables)('%s deletion keeps confirmation retryable on business and transport failure',
