@@ -19,6 +19,7 @@ package org.apache.hugegraph.unit;
 
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.UUID;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -51,6 +52,12 @@ public class GraphServiceUpdateIdTest {
         this.assertUpdate(IdStrategy.CUSTOMIZE_STRING, "9000001",
                           "\"9000001\"", "9000001");
         this.assertUpdate(IdStrategy.CUSTOMIZE_STRING, "001", "\"001\"", "001");
+    }
+
+    @Test
+    public void testCustomUuidUpdatePreservesUuidSdkPath() throws Exception {
+        String id = "835e1153-62c4-407c-832a-058419744e2d";
+        this.assertUpdate(IdStrategy.CUSTOMIZE_UUID, id, "U\"" + id + "\"", UUID.fromString(id));
     }
 
     @Test
