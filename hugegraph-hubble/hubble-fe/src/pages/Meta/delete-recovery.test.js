@@ -97,6 +97,25 @@ test.each(tables)('%s batch completion clears the checkbox of a same-name replac
         await waitFor(() => expect(checkbox).not.toBeChecked());
     });
 
+test.each(tables)('%s single-row completion removes a selected same-name replacement',
+    async (_name, Table, operation) => {
+        api.manage[operation].mockImplementation(async () => {
+            existing[operation.replace('delMeta', '')] = [];
+            return {status: 200};
+        });
+        render(<Table />);
+        const row = screen.getByRole('row', {name: /audit_label/});
+        const checkbox = within(row).getByRole('checkbox');
+        fireEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+        fireEvent.click(within(row).getByRole('button', {name: /^common\.(?:action\.)?delete$/}));
+        const close = jest.fn();
+        act(() => Modal.confirm.mock.calls[0][0].onOk(close));
+
+        await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(checkbox).not.toBeChecked());
+    });
+
 test.each(tables)('%s deletion keeps confirmation retryable on business and transport failure',
     async (_name, Table, operation) => {
         api.manage[operation]
