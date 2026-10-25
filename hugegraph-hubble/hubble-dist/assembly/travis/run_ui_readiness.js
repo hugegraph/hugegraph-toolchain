@@ -20,11 +20,10 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const hubbleRoot = path.resolve(__dirname, '../../..');
-const {chromium} = require(path.join(hubbleRoot, 'hubble-fe/node_modules/playwright'));
+const {loadPlaywright, chromiumExecutablePath} = require('./run_ui_browser_smoke');
 const output = process.env.HUBBLE_UI_EVIDENCE_DIR;
 assert(output, 'Set HUBBLE_UI_EVIDENCE_DIR to a directory outside the repository');
-const base = process.env.HUBBLE_URL || 'http://127.0.0.1:3000';
+const base = (process.env.HUBBLE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const now = Date.now();
 const acceptedScreenshots = [];
 const available = {availability:'AVAILABLE',observed_at:now,last_success_at:now,fresh:true,stale:false};
@@ -237,7 +236,8 @@ async function switching(item) {
 
 (async () => {
  fs.mkdirSync(output,{recursive:true});
- const browser = await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+ const {chromium} = await loadPlaywright();
+ const browser = await chromium.launch({executablePath:chromiumExecutablePath(),headless:true,args:['--no-sandbox']});
  const scenarios = [];let failure = null;
  try {
   for(const [name,role] of [['non-auth','ANONYMOUS'],['auth-admin','SUPERADMIN'],['auth-reader','USER']]) {
