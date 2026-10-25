@@ -170,6 +170,22 @@ describe('Login request errors', () => {
         expect(userUtil.setUser).toHaveBeenCalledWith({user_name: 'admin'});
     });
 
+    it('keeps an unsuccessful credential attempt on the unverified login page', async () => {
+        api.auth.login.mockRejectedValueOnce(new Error('credentials rejected'));
+        render(<MemoryRouter><ConfigConnectionContext.Provider value={{status: 'unverified'}}>
+            <Login />
+        </ConfigConnectionContext.Provider></MemoryRouter>);
+        await userEvent.type(screen.getByLabelText('login.username'), 'admin');
+        await userEvent.type(screen.getByLabelText('login.password'), 'fixture-only');
+        await userEvent.click(screen.getByRole('button', {name: 'login.submit'}));
+
+        await waitFor(() => expect(api.auth.login).toHaveBeenCalledTimes(1));
+        expect(replaceBrowserLocation).not.toHaveBeenCalled();
+        expect(userUtil.setUser).not.toHaveBeenCalled();
+        expect(screen.getByLabelText('login.password')).toHaveValue('fixture-only');
+        expect(screen.getByRole('status')).toHaveTextContent('login.connection.unverified_title');
+    });
+
     it('blocks sign-in only when connection settings are unavailable', async () => {
         const {container} = render(<MemoryRouter>
             <ConfigConnectionContext.Provider value={{status: 'unavailable'}}>
