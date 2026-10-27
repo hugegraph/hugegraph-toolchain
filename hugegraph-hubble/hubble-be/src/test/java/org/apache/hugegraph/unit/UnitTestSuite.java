@@ -73,6 +73,7 @@ import org.junit.runners.Suite;
     FileUploadControllerTest.class,
     FileUtilTest.class,
     GraphServiceImportTest.class,
+    GraphServiceUpdateIdTest.class,
     GraphMetricsControllerTest.class,
     HugeClientPoolServiceTest.class,
     H2StartupTest.class,
