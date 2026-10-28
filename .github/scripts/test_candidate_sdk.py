@@ -893,6 +893,38 @@ echo "Apache Maven ${SDK_TEST_MAVEN:-3.9.11} (fixture)"
                 else:
                     path.write_bytes(original)
 
+    def test_shared_fixture_runtime_is_forwarded_to_hubble_setup(self):
+        root = Path(__file__).resolve().parents[2]
+        java = (root / '.github/actions/setup-java-env/action.yml').read_text()
+        self.assertIn('value: ${{ steps.java.outputs.version }}', java)
+        self.assertRegex(java, r'- name: Install JDK.*\n      id: java\n')
+        entry = (root / '.github/workflows/ci.yml').read_text()
+        producer = entry.split('  current-fixture:', 1)[1].split('\n  client:', 1)[0]
+        self.assertIn('java-version: ${{ steps.java.outputs.java-version }}', producer)
+        self.assertRegex(producer, r'- uses: \./\.github/actions/setup-java-env\n        id: java\n')
+        consumer = entry.split('  hubble:', 1)[1].split('\n  go:', 1)[0]
+        self.assertIn('current-java-version: ${{ needs.current-fixture.outputs.java-version }}', consumer)
+        workflow = (root / '.github/workflows/hubble-ci.yml').read_text()
+        self.assertIn("java-version: ${{ inputs.reuse-candidate-sdk && inputs.current-java-version || "
+                      "matrix.JAVA_VERSION }}", workflow)
+
+    def test_reuse_requires_a_concrete_producer_jdk(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/hubble-ci.yml').read_text()
+        guard = workflow.split('      - name: Validate requested SDK reuse\n', 1)[1]
+        script = textwrap.dedent(guard.split('        run: |\n', 1)[1].split('\n      - name:', 1)[0])
+        for version in ('', '17', '17.0.21+9'):
+            with self.subTest(version=version):
+                env = dict(os.environ, SDK_FIXTURE_ARTIFACT='current-fixture-this-run',
+                           SDK_JAVA_VERSION=version)
+                result = subprocess.run(['bash', '-c', script], env=env,
+                                        capture_output=True, text=True, timeout=5)
+                if version == '17.0.21+9':
+                    self.assertEqual(0, result.returncode, result.stderr)
+                else:
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertIn('concrete producer JDK version', result.stderr)
+
     def test_requested_reuse_with_empty_name_stops_before_the_installer(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
