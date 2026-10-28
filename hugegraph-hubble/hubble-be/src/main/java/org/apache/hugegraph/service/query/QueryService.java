@@ -311,13 +311,17 @@ public class QueryService {
             }
             throw this.serverQueryException(e);
         } catch (ClientException e) {
+            for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+                if (cause instanceof java.net.SocketTimeoutException ||
+                    cause instanceof java.net.http.HttpTimeoutException ||
+                    cause instanceof java.util.concurrent.TimeoutException) {
+                    throw new ExternalException(HttpStatus.GATEWAY_TIMEOUT.value(),
+                                                "gremlin.execute.timeout", e);
+                }
+            }
             Throwable cause = e.getCause();
             if (cause != null) {
                 String message = cause.getMessage();
-                if (message != null && message.startsWith(TIMEOUT_EXCEPTION)) {
-                    throw new InternalException("gremlin.execute.timeout", e,
-                                                message);
-                }
                 if (message != null && message.contains(CONN_REFUSED_MSG)) {
                     throw new InternalException("gremlin.connection.refused", e,
                                                 message);

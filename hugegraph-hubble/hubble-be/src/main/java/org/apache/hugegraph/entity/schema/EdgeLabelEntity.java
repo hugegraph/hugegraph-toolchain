@@ -77,6 +77,16 @@ public class EdgeLabelEntity implements SchemaLabelEntity, Timefiable {
     private Date createTime;
 
     @Override
+    public Boolean getOpenLabelIndex() {
+        return this.openLabelIndex != null ? this.openLabelIndex : Boolean.TRUE;
+    }
+
+    @Override
+    public EdgeLabelStyle getStyle() {
+        return this.style != null ? this.style : new EdgeLabelStyle();
+    }
+
+    @Override
     public SchemaType getSchemaType() {
         return SchemaType.EDGE_LABEL;
     }

@@ -62,6 +62,25 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 public class QueryServiceTest {
 
     @Test
+    public void testWrappedTransportTimeoutHasSafeGatewayStatus() throws Exception {
+        for (Throwable cause : List.of(new java.net.SocketTimeoutException("Read timed out"),
+                                       new java.net.http.HttpTimeoutException("private host"),
+                                       new java.util.concurrent.TimeoutException("private host"))) {
+            GremlinManager gremlin = this.mockGremlin();
+            org.apache.hugegraph.rest.ClientException failure =
+                    new org.apache.hugegraph.rest.ClientException(
+                            "private upstream URL", new RuntimeException(cause));
+            Mockito.when(gremlin.execute(Mockito.any())).thenThrow(failure);
+            ExternalException error = (ExternalException) Assert.assertThrows(ExternalException.class, () ->
+                    this.serviceWithConfig().executeSingleGremlinQuery(
+                            this.mockClient(gremlin), new GremlinQuery("g.V().count()")));
+            Assert.assertEquals(504, error.status());
+            Assert.assertEquals("gremlin.execute.timeout", error.getMessage());
+            Assert.assertSame(failure, error.getCause());
+        }
+    }
+
+    @Test
     public void testDefaultReadLimitIsReported() throws Exception {
         GremlinManager gremlin = this.mockGremlin();
         GremlinResult result = this.serviceWithConfig().executeGremlinQuery(
