@@ -450,3 +450,11 @@ it('ignores a previous identity result when the same graph and task remain selec
     expect(screen.queryByText(/previous-secret/)).not.toBeInTheDocument();
     expect(api.analysis.fetchAsyncTaskResult).toHaveBeenCalledTimes(2);
 });
+
+
+it('uses the localized fallback when a failed response omits its message', async () => {
+    api.analysis.fetchAsyncTaskResult.mockResolvedValueOnce({status: 500});
+    renderResult();
+    expect(await screen.findByRole('alert')).toHaveTextContent('analysis.async_task.result_error_unknown');
+    expect(screen.queryByText('task result unavailable')).not.toBeInTheDocument();
+});

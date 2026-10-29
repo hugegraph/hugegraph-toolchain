@@ -123,11 +123,6 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
             if (source === 'vermeer') {
                 response = await api.manage.getVermeerStatistic(graphspace, item.name, config);
             } else {
-                const collection = await api.manage.updateGraphStatistic(graphspace, item.name);
-                if (collectionRequest.current !== request) return;
-                if (collection?.status != null && (collection.status < 200 || collection.status >= 300)) {
-                    throw Object.assign(new Error(''), {response: collection});
-                }
                 response = await api.manage.getGraphStatistic(graphspace, item.name, config);
             }
             if (collectionRequest.current !== request) return;

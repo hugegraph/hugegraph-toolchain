@@ -86,7 +86,7 @@ const ScopedAsyncTaskResultContent = ({
                             return;
                         }
                     }
-                    throw Object.assign(new Error('task result unavailable'), {response});
+                    throw Object.assign(new Error(''), {response});
                 }
                 setAsyncTaskResultJson(cursor === 0
                     ? response.data?.task_result : JSON.stringify(response.data));
