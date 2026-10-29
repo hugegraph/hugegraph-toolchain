@@ -822,6 +822,13 @@ Then we should follow the [hubble workflow doc](https://hugegraph.apache.org/doc
 
 ## Browser acceptance
 
+Use the [verification guide](docs/verification.md) to select unit, controlled-browser
+and live checks for a change. From `hubble-fe`, with pinned Node/pnpm and Chromium,
+`pnpm verify:ui` builds or reuses verified production output, starts and stops a
+local preview, and strictly checks the existing browser fixture report. Routine
+evidence goes to `target/hubble-ui-fixture` and CI artifacts; only selected core
+images with lasting documentation value belong in Git.
+
 The [browser regression guide](docs/browser-regression-guide.md) describes
 fixture checks, diagnostic configuration and live verification boundaries. Keep
 one-time reports and screenshots outside Git, in CI artifacts or PR attachments.

@@ -148,6 +148,8 @@ jobs:
             ../hubble-dist/assembly/travis/run_ui_http_smoke.test.js \
             ../hubble-dist/assembly/travis/run_ui_full_acceptance.test.js
           node --test ../hubble-dist/assembly/travis/build-frontend.test.mjs
+          node --test ../hubble-dist/assembly/travis/run_ui_deployment_regressions.test.js \
+            ../hubble-dist/assembly/travis/verify-ui.test.mjs
 
       - name: Verify frontend third-party notices
         run: |
@@ -162,9 +164,19 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
           pnpm exec playwright install --with-deps chromium
 
-      - name: Route not-found marker regression
+      - name: Browser assertion regressions
         working-directory: hugegraph-hubble/hubble-fe
-        run: node --test ../hubble-dist/assembly/travis/run_ui_browser_smoke.browser.test.js
+        run: |
+          node --test ../hubble-dist/assembly/travis/run_ui_browser_smoke.browser.test.js \
+            ../hubble-dist/assembly/travis/ui_usability.browser.test.js
+
+      - name: Production UI fixture regression gate
+        if: matrix.SERVER_BASELINE == 'candidate'
+        timeout-minutes: 8
+        working-directory: hugegraph-hubble/hubble-fe
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: pnpm verify:ui
 
       - name: Real public graph PNG contract
         working-directory: hugegraph-hubble/hubble-fe
@@ -294,6 +306,8 @@ jobs:
             hugegraph-hubble/target/hubble-dist-check.json
             hugegraph-hubble/target/hubble-png-contract/**/*.json
             hugegraph-hubble/target/hubble-png-contract/**/*.png
+            hugegraph-hubble/target/hubble-ui-fixture/**/*.json
+            hugegraph-hubble/target/hubble-ui-fixture/**/*.png
             hugegraph-hubble/target/hubble-live-acceptance/**/*.json
             hugegraph-hubble/target/hubble-live-acceptance/**/*.png
             hugegraph-hubble/target/hubble-live-acceptance/**/*.log
