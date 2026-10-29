@@ -16,6 +16,9 @@
 #
 
 github:
+  # Keep alerts without opening automated dependency update PRs.
+  dependabot_alerts: true
+  dependabot_updates: false
   features:
     # Enable issue management
     issues: true

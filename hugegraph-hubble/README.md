@@ -420,7 +420,12 @@ default, inherits the original `server.servlet.session.timeout` as the personal
 ceiling. A positive value explicitly authorizes that ceiling in seconds, including
 values above seven days. Personal changes never alter this ceiling. The initial
 timeout and subsequent sign-ins are also capped by it. For example, a 48-hour
-servlet default with a 2-hour ceiling starts at 2 hours and permits 15–120 minutes.
+servlet default with a 2-hour ceiling starts at 2 hours and offers 1–2 hours in the UI.
+Personal edits use whole hours, starting at 1 hour; the API still uses seconds.
+Non-whole-hour deployment values remain unchanged and display as “Deployment value”
+until the user explicitly selects an allowed hour value. A ceiling below one hour
+leaves no editable whole-hour choice. The compact panel keeps its brief help and
+allowed range in a tooltip.
 A positive deployment default below 15 minutes, or a ceiling below 15 minutes,
 keeps its effective timeout and makes personal editing unavailable. An unlimited
 servlet default with no explicit ceiling stays unlimited and read-only; configure
@@ -445,7 +450,7 @@ This does not change the password lifetime or renew the HugeGraph token
 (currently issued for 30 days).
 
 The Chrome screenshot uses explicit API fixtures. The interaction check covers
-GraphSpace administrator display while legacy status says `USER`, saving 60 minutes
+GraphSpace administrator display while legacy status says `USER`, saving 1 hour
 as 3600 seconds, changing identity to a regular user, changing the connection mode
 to standalone admin, and anonymous account-page hiding; it is not live cluster or
 long-duration expiry acceptance. In a separate controlled-API App check,

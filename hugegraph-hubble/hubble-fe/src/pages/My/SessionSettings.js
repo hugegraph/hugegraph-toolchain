@@ -16,15 +16,18 @@
  * under the License.
  */
 
-import {Alert, Button, Card, InputNumber, Space, Typography, message} from 'antd';
+import {QuestionCircleOutlined} from '@ant-design/icons';
+import {Alert, Button, Card, InputNumber, Space, Tooltip, message} from 'antd';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import * as api from '../../api';
 
+const toWholeHours = seconds => Number.isInteger(seconds / 3600) && seconds > 0 ? seconds / 3600 : null;
+
 const SessionSettings = () => {
     const {t} = useTranslation();
     const [settings, setSettings] = useState(null);
-    const [minutes, setMinutes] = useState(null);
+    const [hours, setHours] = useState(null);
     const [failed, setFailed] = useState(false);
     const [saving, setSaving] = useState(false);
     const requestRef = useRef(null);
@@ -41,7 +44,7 @@ const SessionSettings = () => {
                 throw new Error('session settings unavailable');
             }
             setSettings(res.data);
-            setMinutes(res.data.idle_timeout_seconds / 60);
+            setHours(toWholeHours(res.data.idle_timeout_seconds));
         }
         catch {
             if (requestRef.current === request) {
@@ -58,10 +61,10 @@ const SessionSettings = () => {
         requestRef.current = request;
         setSaving(true);
         try {
-            const res = await api.auth.updateSessionSettings(minutes * 60);
+            const res = await api.auth.updateSessionSettings(hours * 3600);
             if (requestRef.current === request && res?.status === 200) {
                 setSettings(res.data);
-                setMinutes(res.data.idle_timeout_seconds / 60);
+                setHours(toWholeHours(res.data.idle_timeout_seconds));
                 message.success(t('my.session.saved'));
             }
         }
@@ -74,26 +77,29 @@ const SessionSettings = () => {
             }
         }
     };
-    const min = settings?.min_idle_seconds / 60;
-    const max = settings?.max_idle_seconds / 60;
+    const min = Math.max(1, Math.ceil(settings?.min_idle_seconds / 3600));
+    const max = Math.floor(settings?.max_idle_seconds / 3600);
     const readOnly = settings && max < min;
-    const valid = Number.isInteger(minutes) && minutes >= min && minutes <= max;
+    const valid = Number.isInteger(hours) && hours >= min && hours <= max;
+    const hint = settings && (readOnly ? t('my.session.deploymentOnly')
+        : `${t('my.session.description')} ${t('my.session.range', {min, max})}`);
     return (
         <Card title={t('my.session.title')} style={{width: 'min(100%, 780px)'}}>
-            <Typography.Paragraph>{t('my.session.description')}</Typography.Paragraph>
             {failed ? <Alert type='error' title={t('my.session.unavailable')}
                 action={<Button onClick={load}>{t('my.load.retry')}</Button>} /> : (
                 <Space wrap>
-                    <label htmlFor='session-idle-minutes'>{t('my.session.minutes')}</label>
-                    <InputNumber id='session-idle-minutes' value={minutes} onChange={setMinutes}
-                        min={min} max={max} disabled={!settings || saving || readOnly} />
+                    <label htmlFor='session-idle-hours'>{t('my.session.hours')}</label>
+                    <InputNumber id='session-idle-hours' value={hours} onChange={setHours}
+                        min={min} max={max} step={1} placeholder={settings ? t('my.session.deploymentValue') : ''}
+                        disabled={!settings || saving || readOnly} />
                     <Button type='primary' onClick={save} loading={saving}
-                        disabled={!valid || minutes * 60 === settings?.idle_timeout_seconds}>
+                        disabled={!valid || hours * 3600 === settings?.idle_timeout_seconds}>
                         {t('common.action.save')}
                     </Button>
-                    {settings && <Typography.Text type='secondary'>
-                        {readOnly ? t('my.session.deploymentOnly') : t('my.session.range', {min, max})}
-                    </Typography.Text>}
+                    <Tooltip title={hint} trigger={['hover', 'focus']}>
+                        <Button type='text' size='small' aria-label={t('my.session.help')}
+                            icon={<QuestionCircleOutlined />} />
+                    </Tooltip>
                 </Space>
             )}
         </Card>
