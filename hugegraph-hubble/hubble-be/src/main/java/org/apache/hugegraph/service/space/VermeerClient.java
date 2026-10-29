@@ -154,7 +154,8 @@ public class VermeerClient {
             Map<String, Object> error = this.mapper.readValue(response.body(),
                     new TypeReference<Map<String, Object>>() { });
             return error != null && "1".equals(String.valueOf(error.get("errcode"))) &&
-                   ("task_id error:" + taskId).equals(error.get("message"));
+                   (("task_id error:" + taskId).equals(error.get("message")) ||
+                    ("compute value not exist, task_id:" + taskId).equals(error.get("message")));
         } catch (IOException e) {
             return false;
         }

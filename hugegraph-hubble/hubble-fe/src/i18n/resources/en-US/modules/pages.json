@@ -362,7 +362,13 @@
       "query_graph": "Query graph",
       "detail_tooltip": "View the current vertex and edge counts for this graph",
       "schema_loading": "Loading schema",
-      "schema_unavailable": "Schema preview is unavailable"
+      "schema_unavailable": "Schema preview is unavailable",
+      "collect_counts": "Collect vertex and edge counts",
+      "server_statistics": "Bounded Server statistics",
+      "vermeer_statistics": "Graph compute statistics (loaded snapshot)",
+      "statistics_source": "Choose count statistics source",
+      "vermeer_statistics_snapshot": "Source: loaded Vermeer graph snapshot ({{time}}). This is not a live Server count. Reload from OLAP to refresh the data.",
+      "vermeer_snapshot_label": "Compute snapshot"
     },
     "empty": {
       "description": "This GraphSpace is ready but has no graphs yet. Create the first graph to model, import, and query data",

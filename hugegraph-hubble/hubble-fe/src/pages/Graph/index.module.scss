@@ -157,3 +157,32 @@ span.disable {
 div.form_item {
     margin: 0;
 }
+
+.count_actions {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.count_button {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 4px;
+    height: auto;
+    min-height: 28px;
+    flex-direction: column;
+    gap: 0;
+
+    > span {
+        min-width: 0;
+        max-width: 100%;
+    }
+}
+
+.count_source {
+    display: block;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #1677ff;
+}

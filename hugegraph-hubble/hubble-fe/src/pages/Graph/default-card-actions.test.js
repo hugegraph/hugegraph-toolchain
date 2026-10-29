@@ -42,6 +42,7 @@ jest.mock('react-router-dom', () => {
 });
 
 jest.mock('../../api', () => ({
+    auth: {getVermeer: jest.fn(async () => ({status: 200, data: {enable: false}}))},
     manage: {
         getGraphSpace: jest.fn(),
         getGraphList: jest.fn(),

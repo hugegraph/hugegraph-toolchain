@@ -141,6 +141,10 @@ const getGraphStatistic = (graphspace, graph, config) => {
     return request.get(`/graphspaces/${graphspace}/graphs/${graph}/statistics`, config);
 };
 
+export const getVermeerStatistic = (graphspace, graph, config) => {
+    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/statistics/vermeer`, config);
+};
+
 const updateGraphStatistic = (graphspace, graph) => {
     return request.post(`/graphspaces/${graphspace}/graphs/${graph}/statistics`);
 };

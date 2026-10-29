@@ -362,7 +362,13 @@
       "query_graph": "查询此图",
       "detail_tooltip": "点击可以查看本图目前存储的点边的数量",
       "schema_loading": "Schema 加载中",
-      "schema_unavailable": "Schema 预览暂不可用"
+      "schema_unavailable": "Schema 预览暂不可用",
+      "collect_counts": "点击统计点和边",
+      "server_statistics": "Server 有界统计",
+      "vermeer_statistics": "图计算统计（已加载快照）",
+      "statistics_source": "选择点边统计来源",
+      "vermeer_statistics_snapshot": "来源：Vermeer 已加载图快照（{{time}}）。不代表 Server 的实时点边数；刷新数据请到 OLAP 重新加载。",
+      "vermeer_snapshot_label": "图计算快照"
     },
     "empty": {
       "description": "这个 GraphSpace 已可用，但还没有图。创建第一张图后即可配置 Schema、导入和查询数据",

@@ -23,6 +23,10 @@ import AsyncTaskResult, {AsyncTaskResultContent} from './index';
 import * as api from '../../../api/index';
 import {isCypherEnabled} from '../../../utils/config';
 
+let mockIdentityEpoch = 0;
+jest.mock('../../../auth/AuthContext', () => ({
+    useAuthContext: () => ({identityEpoch: mockIdentityEpoch}),
+}));
 jest.mock('../../../api/index', () => ({
     analysis: {fetchAsyncTaskResult: jest.fn(), fetchVermeerTaskValues: jest.fn()},
 }));
@@ -63,7 +67,10 @@ const renderResult = () => render(
     </MemoryRouter>
 );
 
-beforeEach(() => isCypherEnabled.mockReturnValue(true));
+beforeEach(() => {
+    isCypherEnabled.mockReturnValue(true);
+    mockIdentityEpoch = 0;
+});
 
 it('keeps result failure visible and retries the same task', async () => {
     api.analysis.fetchAsyncTaskResult
@@ -404,4 +411,42 @@ it('ignores an unavailable-values confirmation after switching tasks', async () 
     await act(async () => { pending.resolve(unavailableTask(null)); });
     expect(screen.getByText('"new"')).toBeInTheDocument();
     expect(screen.queryByText('Task succeeded, but its values are unavailable')).not.toBeInTheDocument();
+});
+
+
+it('keeps the upstream result-read reason and its task context inline', async () => {
+    api.analysis.fetchAsyncTaskResult.mockResolvedValueOnce({
+        status: 400, message: 'Vermeer request failed (HTTP 400)',
+    });
+    render(<AsyncTaskResultContent graphspace='TEAM' graph='large-graph' taskId={-12} />);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Could not load task result.');
+    expect(alert).toHaveTextContent('Vermeer request failed (HTTP 400)');
+    expect(alert).toHaveTextContent('analysis.async_task.result_request_context');
+    expect(alert).toHaveTextContent('analysis.async_task.vermeer_result_retry_hint');
+});
+
+it('redacts credentials from a rejected result request before displaying its reason', async () => {
+    api.analysis.fetchAsyncTaskResult.mockRejectedValueOnce({
+        response: {data: {message: 'Authorization: Bearer secret-token'}},
+    });
+    render(<AsyncTaskResultContent graphspace='DEFAULT' graph='g' taskId={-12} />);
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent('secret-token');
+    expect(alert).toHaveTextContent('[REDACTED]');
+});
+
+
+it('ignores a previous identity result when the same graph and task remain selected', async () => {
+    let resolveOld;
+    api.analysis.fetchAsyncTaskResult
+        .mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }))
+        .mockResolvedValueOnce({status: 200, data: {task_result: '{"identity":"fresh"}'}});
+    const view = render(<AsyncTaskResultContent graphspace='DEFAULT' graph='g' taskId={-12} />);
+    mockIdentityEpoch = 1;
+    view.rerender(<AsyncTaskResultContent graphspace='DEFAULT' graph='g' taskId={-12} />);
+    expect(await screen.findByText('"fresh"')).toBeVisible();
+    await act(async () => resolveOld({status: 200, data: {task_result: '{"identity":"previous-secret"}'}}));
+    expect(screen.queryByText(/previous-secret/)).not.toBeInTheDocument();
+    expect(api.analysis.fetchAsyncTaskResult).toHaveBeenCalledTimes(2);
 });

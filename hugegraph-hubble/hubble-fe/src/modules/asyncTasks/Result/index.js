@@ -30,12 +30,14 @@ import convertStringToJSON from '../../../utils/convertStringToJSON';
 import {isCypherEnabled} from '../../../utils/config';
 import {supportsQueryLanguage} from '../../../utils/text2gql';
 import c from './index.module.scss';
+import {useAuthContext} from '../../../auth/AuthContext';
+import {sanitizePublicError} from '../../../utils/publicError';
 
 const isUnavailableVermeerResult = (status, type, result) => status === 'success'
     && type === 'vermeer-task:compute'
     && (result === null || (typeof result === 'string' && result.trim() === 'null'));
 
-export const AsyncTaskResultContent = ({
+const ScopedAsyncTaskResultContent = ({
     graphspace,
     graph,
     taskId,
@@ -46,7 +48,7 @@ export const AsyncTaskResultContent = ({
     const [taskStatus, setTaskStatus] = useState();
     const [taskType, setTaskType] = useState();
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+    const [error, setError] = useState('');
     const requestRef = useRef(null);
     const context = JSON.stringify([graphspace, graph, taskId]);
     const [page, setPage] = useState({context, cursors: [0]});
@@ -58,7 +60,7 @@ export const AsyncTaskResultContent = ({
             const request = Symbol('async-result');
             requestRef.current = request;
             setLoading(true);
-            setError(false);
+            setError('');
             setAsyncTaskResultJson();
             setTaskStatus();
             setTaskType();
@@ -84,16 +86,17 @@ export const AsyncTaskResultContent = ({
                             return;
                         }
                     }
-                    throw new Error('task result unavailable');
+                    throw Object.assign(new Error('task result unavailable'), {response});
                 }
                 setAsyncTaskResultJson(cursor === 0
                     ? response.data?.task_result : JSON.stringify(response.data));
                 setTaskStatus(cursor === 0 ? response.data?.task_status : 'success');
                 setTaskType(cursor === 0 ? response.data?.task_type : undefined);
             }
-            catch {
+            catch (failure) {
                 if (requestRef.current === request) {
-                    setError(true);
+                    const response = failure?.response;
+                    setError(sanitizePublicError(response?.data?.message ?? response?.message ?? failure?.message) || true);
                 }
             }
             finally {
@@ -136,6 +139,13 @@ export const AsyncTaskResultContent = ({
                     showIcon
                     type='error'
                     title={t('analysis.async_task.result_load_failed')}
+                    description={(
+                        <div>
+                            <p>{typeof error === 'string' ? error : t('analysis.async_task.result_error_unknown')}</p>
+                            <p>{t('analysis.async_task.result_request_context', {graphspace, graph, taskId})}</p>
+                            {taskId < 0 && <p>{t('analysis.async_task.vermeer_result_retry_hint')}</p>}
+                        </div>
+                    )}
                     action={(
                         <Button size='small' onClick={getResult}>
                             {t('analysis.async_task.retry_result')}
@@ -220,6 +230,11 @@ export const AsyncTaskResultContent = ({
             )}
         </div>
     );
+};
+
+export const AsyncTaskResultContent = props => {
+    const {identityEpoch} = useAuthContext();
+    return <ScopedAsyncTaskResultContent key={identityEpoch} {...props} />;
 };
 
 const AsyncTaskResult = () => {

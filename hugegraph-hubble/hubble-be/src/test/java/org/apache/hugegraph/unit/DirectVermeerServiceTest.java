@@ -76,6 +76,87 @@ public class DirectVermeerServiceTest {
     }
 
     @Test
+    public void testLoadedGraphStatisticsUseVermeerSnapshotWithoutServerScan() {
+        VermeerClient backend = Mockito.mock(VermeerClient.class);
+        Mockito.when(backend.configured()).thenReturn(true);
+        Mockito.when(backend.request("GET", "workers/availability", null))
+               .thenReturn(Map.of("available", true));
+        Mockito.when(backend.request("GET", "graphs", null)).thenReturn(Map.of("graphs", List.of(
+                Map.of("name", "other-graph", "status", "loaded", "vertex_count", 999),
+                Map.of("name", "DEFAULT-graph-with-dash", "status", "loaded",
+                       "vertex_count", 3000, "edge_count", 6000, "update_time", "2026-10-29T08:00:00Z"))));
+        DirectVermeerService direct = service(backend);
+        HugeClient client = graphClient();
+        Map<String, Object> result = direct.statistics(client);
+        Assert.assertEquals("3000", result.get("vertex_count"));
+        Assert.assertEquals("6000", result.get("edge_count"));
+        Assert.assertEquals("vermeer", result.get("source"));
+        Assert.assertEquals("2026-10-29T08:00:00Z", result.get("update_time"));
+        Mockito.verify(client.graph()).listVertices(1);
+        Mockito.verifyNoMoreInteractions(client.graph());
+        Mockito.verify(backend, Mockito.never()).request(Mockito.eq("POST"), Mockito.anyString(), Mockito.any());
+    }
+
+    @Test
+    public void testNativeZeroCountsAreOmittedAndUnavailableGraphsAreRejected() {
+        VermeerClient backend = Mockito.mock(VermeerClient.class);
+        Mockito.when(backend.configured()).thenReturn(true);
+        Mockito.when(backend.request("GET", "workers/availability", null))
+               .thenReturn(Map.of("available", true));
+        Mockito.when(backend.request("GET", "graphs", null)).thenReturn(Map.of("graphs", List.of(
+                Map.of("name", "DEFAULT-graph-with-dash", "status", "loaded"))));
+        DirectVermeerService direct = service(backend);
+        Assert.assertEquals("0", direct.statistics(graphClient()).get("vertex_count"));
+        Assert.assertEquals("0", direct.statistics(graphClient()).get("edge_count"));
+        Mockito.when(backend.request("GET", "graphs", null)).thenReturn(Map.of("graphs", List.of(
+                Map.of("name", "DEFAULT-graph-with-dash", "status", "loading", "vertex_count", 99))));
+        expect(IllegalStateException.class, () -> direct.statistics(graphClient()));
+        Mockito.when(backend.request("GET", "graphs", null)).thenReturn(Map.of("graphs", List.of()));
+        expect(IllegalStateException.class, () -> direct.statistics(graphClient()));
+        Mockito.when(backend.request("GET", "workers/availability", null))
+               .thenReturn(Map.of("available", false));
+        expect(IllegalStateException.class, () -> direct.statistics(graphClient()));
+    }
+
+    @Test
+    public void testMalformedSnapshotCountsHaveAnActionableBoundedError() {
+        VermeerClient backend = Mockito.mock(VermeerClient.class);
+        Mockito.when(backend.configured()).thenReturn(true);
+        Mockito.when(backend.request("GET", "workers/availability", null))
+               .thenReturn(Map.of("available", true));
+        DirectVermeerService direct = service(backend);
+        for (Object value : java.util.Arrays.asList(null, "1.5", -1, "sensitive-invalid-value")) {
+            Map<String, Object> graph = new java.util.HashMap<>();
+            graph.put("name", "DEFAULT-graph-with-dash");
+            graph.put("status", "loaded");
+            graph.put("vertex_count", value);
+            Mockito.when(backend.request("GET", "graphs", null))
+                   .thenReturn(Map.of("graphs", List.of(graph)));
+            try {
+                direct.statistics(graphClient());
+                Assert.fail("Expected invalid graph counts");
+            } catch (ExternalException e) {
+                Assert.assertEquals(400, e.status());
+                Assert.assertTrue(e.getMessage().contains("reload the graph"));
+                Assert.assertFalse(e.getMessage().contains("sensitive-invalid-value"));
+            }
+        }
+    }
+
+    @Test
+    public void testStatisticsRejectOrdinaryUserBeforeUsingSharedVermeerCredential() {
+        VermeerClient backend = Mockito.mock(VermeerClient.class);
+        DirectVermeerService direct = service(backend);
+        AuthModeService mode = Mockito.mock(AuthModeService.class);
+        Mockito.when(mode.anonymous()).thenReturn(false);
+        ReflectionTestUtils.setField(direct, "authMode", mode);
+        HugeClient client = graphClient();
+        Mockito.when(client.auth().isSuperAdmin()).thenReturn(false);
+        expect(ForbiddenException.class, () -> direct.statistics(client));
+        Mockito.verifyNoInteractions(backend);
+    }
+
+    @Test
     public void testComputeDoesNotForwardServerCredentials() {
         VermeerClient backend = Mockito.mock(VermeerClient.class);
         Mockito.when(backend.request(Mockito.eq("POST"), Mockito.eq("tasks/create"), Mockito.anyMap()))
@@ -159,8 +240,16 @@ public class DirectVermeerServiceTest {
             Assert.assertNull(task.result());
             expect(VermeerClient.ValuesNotFoundException.class,
                     () -> direct.results(graphClient(), -12, 0, 1000));
-            // Other native errors must not be mistaken for a missing cache.
+            // The native service also retains a task whose values are absent.
             body.set("{\"errcode\":1,\"message\":\"compute value not exist, task_id:12\"}");
+            Assert.assertEquals("success", direct.task(graphClient(), -12, true).status());
+            Assert.assertNull(direct.task(graphClient(), -12, true).result());
+            expect(VermeerClient.ValuesNotFoundException.class,
+                    () -> direct.results(graphClient(), -12, 0, 1000));
+            // Match both the exact native response and this task's ID only.
+            body.set("{\"errcode\":1,\"message\":\"compute value not exist, task_id:13\"}");
+            expect(ExternalException.class, () -> direct.task(graphClient(), -12, true));
+            body.set("{\"errcode\":1,\"message\":\"cursor:0 must be >= 0 and <= 2\"}");
             expect(ExternalException.class, () -> direct.task(graphClient(), -12, true));
             status.set(403);
             body.set("{\"errcode\":1,\"message\":\"task_id error:12\"}");
@@ -403,7 +492,7 @@ public class DirectVermeerServiceTest {
         ReflectionTestUtils.setField(service, "direct", direct);
         Assert.assertEquals(Map.of("enable", false, "retryable", true),
                             service.getVermeer(client, "login-token", false));
-        Assert.assertEquals(Map.of("enable", true, "retryable", false),
+        Assert.assertEquals(Map.of("enable", true, "retryable", false, "statistics_available", true),
                             service.getVermeer(client, "login-token", false));
         Mockito.when(direct.permitted(client)).thenReturn(false);
         Assert.assertEquals(Map.of("enable", false, "retryable", false),
@@ -459,7 +548,7 @@ public class DirectVermeerServiceTest {
             Assert.assertEquals(Map.of("enable", false, "retryable", true),
                                 service.getVermeer(client, "login-token", false));
             body.set("{\"available\":true}");
-            Assert.assertEquals(Map.of("enable", true, "retryable", false),
+            Assert.assertEquals(Map.of("enable", true, "retryable", false, "statistics_available", true),
                                 service.getVermeer(client, "login-token", false));
             try {
                 backend.request("GET", "graphs", null);
