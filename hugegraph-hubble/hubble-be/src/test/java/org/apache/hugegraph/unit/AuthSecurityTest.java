@@ -822,6 +822,7 @@ public class AuthSecurityTest {
            throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         String oldSessionId = request.getSession().getId();
+        request.getSession().setAttribute("hubble.activity_scope", "previous-login");
         RequestContextHolder.setRequestAttributes(
                 new ServletRequestAttributes(request));
         TestLoginController controller = new TestLoginController();
@@ -836,6 +837,7 @@ public class AuthSecurityTest {
         controller.login(login);
 
         Assert.assertNotEquals(oldSessionId, request.getSession().getId());
+        Assert.assertNull(request.getSession().getAttribute("hubble.activity_scope"));
         Assert.assertEquals("admin", request.getSession().getAttribute(
                             Constant.USERNAME_KEY));
         Assert.assertEquals("server-token", request.getSession().getAttribute(

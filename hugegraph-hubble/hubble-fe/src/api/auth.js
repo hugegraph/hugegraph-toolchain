@@ -23,8 +23,10 @@ const login = data => {
     return request.post('/auth/login', data);
 };
 
-const logout = () => {
-    return request.get('/auth/logout');
+const logout = expectedActivityScope => {
+    return typeof expectedActivityScope === 'string'
+        ? request.get('/auth/logout', {params: {expected_activity_scope: expectedActivityScope}})
+        : request.get('/auth/logout');
 };
 
 const status = () => {
@@ -215,3 +217,26 @@ const getVermeer = config => {
 };
 
 export {getDashboard, getVermeer};
+
+// Session preferences apply only to the current authenticated browser session.
+const publishSessionSettings = (response, requestedAt, source) => {
+    const seconds = response?.data?.idle_timeout_seconds;
+    if (response?.status === 200 && Number.isInteger(seconds) && seconds > 0) {
+        window.dispatchEvent(new CustomEvent('hubble.session-settings-change', {
+            detail: {timeoutSeconds: seconds, activityScope: response.data.activity_scope, requestedAt, source},
+        }));
+    }
+    return response;
+};
+export const getSessionSettings = async () => {
+    const requestedAt = Date.now();
+    return publishSessionSettings(
+        await request.get('/auth/session', {suppressBusinessErrorToast: true}), requestedAt, 'load'
+    );
+};
+export const updateSessionSettings = async idleTimeoutSeconds => {
+    const requestedAt = Date.now();
+    return publishSessionSettings(
+        await request.put('/auth/session', {idle_timeout_seconds: idleTimeoutSeconds}), requestedAt, 'update'
+    );
+};

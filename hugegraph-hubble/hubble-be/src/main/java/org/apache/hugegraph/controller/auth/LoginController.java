@@ -40,6 +40,7 @@ import org.apache.hugegraph.service.auth.AuthContextService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +48,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.apache.hugegraph.driver.HugeClient;
@@ -63,6 +65,9 @@ public class LoginController extends BaseController {
     private static final int CONNECT_TIMEOUT_MILLIS = 5000;
     private static final int READ_TIMEOUT_MILLIS = 30000;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    @Value("${hubble.session.max-idle-seconds:0}")
+    private int configuredMaxIdleSeconds;
 
     @Autowired
     UserService userService;
@@ -110,6 +115,8 @@ public class LoginController extends BaseController {
 
             this.getRequest().getSession();
             this.getRequest().changeSessionId();
+            SessionController.resetPreferences(this.getRequest().getSession(),
+                                               this.configuredMaxIdleSeconds);
             this.setUser(login.name());
             this.setToken(result.token());
             // HugeGraph 1.7's Gremlin HTTP channel only accepts Basic auth.
@@ -274,7 +281,20 @@ public class LoginController extends BaseController {
     // FIXME: Change logout to POST and add CSRF/Origin protection after coordinating
     // the API change with the frontend; explicitly harden the session cookie as well.
     @GetMapping("/logout")
-    public void logout() {
-        this.clearAuthSession();
+    public void logout(@RequestParam(name = "expected_activity_scope", required = false) String expectedScope) {
+        if (expectedScope == null) {
+            this.clearAuthSession();
+            return;
+        }
+        jakarta.servlet.http.HttpSession session = this.getRequest().getSession(false);
+        if (session == null) {
+            return;
+        }
+        synchronized (session) {
+            // A timer in an older tab must not revoke a newer login sharing its cookie.
+            if (expectedScope.equals(session.getAttribute(SessionController.ACTIVITY_SCOPE_KEY))) {
+                this.clearAuthSession();
+            }
+        }
     }
 }

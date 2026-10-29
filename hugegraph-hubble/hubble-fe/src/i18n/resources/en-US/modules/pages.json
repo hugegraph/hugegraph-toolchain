@@ -523,6 +523,17 @@
     }
   },
   "my": {
+    "session": {
+      "title": "Login timeout",
+      "description": "Idle sessions sign out; signing in again restores the default",
+      "hours": "Idle timeout (hours)",
+      "saved": "Session timeout updated",
+      "unavailable": "Unable to load the session timeout.",
+      "range": "Allowed: {{min}}–{{max}} hours",
+      "deploymentOnly": "The deployment controls the current timeout",
+      "help": "Timeout help",
+      "deploymentValue": "Deployment value"
+    },
     "empty_value": "No information",
     "level": {
       "ADMIN": "Administrator",

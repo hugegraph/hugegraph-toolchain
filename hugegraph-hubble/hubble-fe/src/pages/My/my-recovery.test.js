@@ -55,6 +55,8 @@ jest.mock('../../modules/algorithm/algorithmsForm/algorithmFormPersistence', () 
     clearPersistedAlgorithmFormsForUser: jest.fn(),
 }));
 
+jest.mock('./SessionSettings', () => () => <div />);
+
 jest.mock('./EditLayer', () => ({refresh}) => (
     <button type='button' onClick={refresh}>mock profile saved</button>
 ));
@@ -310,4 +312,25 @@ test('clears local auth and redirects only after the password update succeeds', 
     expect(sessionStorage.getItem('hubble.login_notice')).toBeNull();
     expect(replaceBrowserLocation)
         .toHaveBeenCalledWith('/login?notice=credential-updated');
+});
+
+
+test('uses the current capability role when legacy status mislabels a space manager', async () => {
+    mockAuthContext = {role: 'SPACEADMIN', actions: {account: ['read']}};
+    api.auth.status.mockResolvedValue({status: 200, data: {level: 'USER'}});
+    api.auth.getPersonal.mockResolvedValue({status: 200, data: {user_name: 'tester01'}});
+    render(<My />);
+    expect(await screen.findByText('my.level.SPACEADMIN')).toBeInTheDocument();
+    expect(screen.queryByText('my.level.USER')).not.toBeInTheDocument();
+});
+
+test('does not reuse cached administrator profile data over current capability role', async () => {
+    mockAuthContext = {role: 'USER', actions: {account: ['read']}};
+    api.auth.status.mockResolvedValue({status: 200, data: {level: 'ADMIN'}});
+    api.auth.getPersonal.mockResolvedValue({
+        status: 200, data: {user_name: 'tester01', adminSpaces: ['old-space']},
+    });
+    render(<My />);
+    expect(await screen.findByText('my.level.USER')).toBeInTheDocument();
+    expect(screen.queryByText('my.level.ADMIN')).not.toBeInTheDocument();
 });

@@ -451,6 +451,65 @@ The compatibility boundary is deliberately small:
 
 Use matching Server, PD, and Store minor versions in a distributed cluster. **Server/PD 1.8 or later is strongly recommended for the best Hubble experience.** Support for 1.5 and 1.7 is intentionally limited to minimum usability and does not imply feature parity with the current release. Version checks stay in the client adapter/resolver rather than being scattered through controllers or pages. See [`AGENTS.md`](AGENTS.md) for verification rules.
 
+### Personal session timeout
+
+The personal center uses the current authentication context to display the account
+role, including GraphSpace administrators. The session panel reads the deployed
+servlet idle timeout (48 hours by default) and lets signed-in users change their
+current browser session within the administrator-defined range. The backend
+validates this range and requires the existing username/token session; anonymous deployments expose no
+personal center or session settings.
+
+Administrators configure `hubble.session.max-idle-seconds` in the backend Spring
+configuration (or `HUBBLE_SESSION_MAX_IDLE_SECONDS` in the environment). `0`, the
+default, inherits the original `server.servlet.session.timeout` as the personal
+ceiling. A positive value explicitly authorizes that ceiling in seconds, including
+values above seven days. Personal changes never alter this ceiling. The initial
+timeout and subsequent sign-ins are also capped by it. For example, a 48-hour
+servlet default with a 2-hour ceiling starts at 2 hours and offers 1–2 hours in the UI.
+Personal edits use whole hours, starting at 1 hour; the API still uses seconds.
+Non-whole-hour deployment values remain unchanged and display as “Deployment value”
+until the user explicitly selects an allowed hour value. A ceiling below one hour
+leaves no editable whole-hour choice. The compact panel keeps its brief help and
+allowed range in a tooltip.
+A positive deployment default below 15 minutes, or a ceiling below 15 minutes,
+keeps its effective timeout and makes personal editing unavailable. An unlimited
+servlet default with no explicit ceiling stays unlimited and read-only; configure
+a positive ceiling to enable bounded personal choices.
+
+An application-wide timer tracks mouse, keyboard and touch activity across tabs
+sharing the same login. Background requests do not extend this timer. Changing
+the setting applies immediately, and an expired timer calls the existing logout
+endpoint before clearing local account state (with a five-second local fallback
+if logout stalls). Anonymous mode never creates a session for this timer.
+The servlet request-idle timeout is also updated, but the two clocks are independent:
+mouse or keyboard input without an HTTP request does not renew the servlet clock,
+while background requests can renew the servlet session without extending the browser
+timer. Either clock can end the login; an actively edited static page can therefore
+lose its server session earlier. No human-activity heartbeat is sent to the server.
+Signing in again restores the
+original deployment timeout and starts a fresh, noncredential activity scope.
+Idle logout includes that expected scope: a stale tab can clear its own local
+state without revoking a newer login sharing the browser's session cookie.
+Explicit user-initiated logout continues to clear the current login.
+This does not change the password lifetime or renew the HugeGraph token
+(currently issued for 30 days).
+
+The Chrome screenshot uses explicit API fixtures. The interaction check covers
+GraphSpace administrator display while legacy status says `USER`, saving 1 hour
+as 3600 seconds, changing identity to a regular user, changing the connection mode
+to standalone admin, and anonymous account-page hiding; it is not live cluster or
+long-duration expiry acceptance. In a separate controlled-API App check,
+Playwright's browser clock advanced beyond a 15-minute timeout while background
+authorization refreshes continued to succeed; the existing logout endpoint ran
+and the app returned to login. Changing 15 to 30 minutes kept the session alive
+after the old deadline and logged it out after the updated deadline. These are
+simulated-time checks, not a 15/30-minute live-cluster soak. A second shared-login
+tab receiving keyboard input also kept both tabs alive beyond their original
+15-minute deadlines while background authorization requests remained successful.
+
+![Personal role and session idle setting](docs/assets/personal-session-idle.png)
+
 ## Import resource cleanup
 
 Import tasks close their Loader before publishing completion. The built-in example import also closes its Loader.

@@ -180,3 +180,47 @@ describe('auth API contract', () => {
         }
     });
 });
+
+describe('session activity settings notifications', () => {
+    it('publishes the server correlation scope and timeout after reads and updates', async () => {
+        const listener = jest.fn();
+        window.addEventListener('hubble.session-settings-change', listener);
+        const response = {status: 200, data: {idle_timeout_seconds: 3600, activity_scope: 'login-scope'}};
+        mockRequest.get.mockResolvedValueOnce(response);
+        mockRequest.put.mockResolvedValueOnce(response);
+        try {
+            expect(await auth.getSessionSettings()).toBe(response);
+            expect(await auth.updateSessionSettings(3600)).toBe(response);
+            expect(listener).toHaveBeenCalledTimes(2);
+            expect(listener.mock.calls[1][0].detail)
+                .toEqual({timeoutSeconds: 3600, activityScope: 'login-scope',
+                    requestedAt: expect.any(Number), source: 'update'});
+        }
+        finally {
+            window.removeEventListener('hubble.session-settings-change', listener);
+        }
+    });
+
+    it('does not change idle tracking after a failed save', async () => {
+        const listener = jest.fn();
+        window.addEventListener('hubble.session-settings-change', listener);
+        mockRequest.put.mockResolvedValueOnce({status: 400});
+        try {
+            await auth.updateSessionSettings(0);
+            expect(listener).not.toHaveBeenCalled();
+        }
+        finally {
+            window.removeEventListener('hubble.session-settings-change', listener);
+        }
+    });
+});
+
+
+test('scopes idle logout while keeping explicit logout unscoped', () => {
+    auth.logout('old-login-scope');
+    expect(mockRequest.get).toHaveBeenLastCalledWith('/auth/logout', {
+        params: {expected_activity_scope: 'old-login-scope'},
+    });
+    auth.logout();
+    expect(mockRequest.get).toHaveBeenLastCalledWith('/auth/logout');
+});
