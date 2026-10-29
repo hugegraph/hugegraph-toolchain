@@ -221,20 +221,29 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
             )}
             actions={[
                 <Tooltip fresh key='counts' title={collectionError || (statistic?.source === 'vermeer'
-                    ? t('graph.card.vermeer_statistics_snapshot', {time: formatSnapshotTime(statistic.update_time)})
+                    ? `${t('graph.card.element_counts', {
+                        vertices: formatRecordedCount(statistic.vertex, statistic),
+                        edges: formatRecordedCount(statistic.edge, statistic),
+                    })} — ${t('graph.card.vermeer_statistics_snapshot', {time: formatSnapshotTime(statistic.update_time)})}`
                     : hasElementCounts ? t(statistic.scan_limit > 0
                         ? 'graph.detail.bounded_statistics_hint' : 'graph.card.counts_tooltip',
                         {limit: statistic.scan_limit}) : t('graph.card.collect_counts'))}>
-                    <div className={style.count_actions}>
+                    <div className={style.count_group}>
+                        {statistic?.source === 'vermeer' && (
+                            <span className={style.count_source}>{t('graph.card.vermeer_snapshot_label')}</span>
+                        )}
+                        <div className={style.count_actions}>
                         <Button className={style.count_button} type='link' size='small' loading={collecting}
+                            aria-label={statistic?.source === 'vermeer' ? `${t('graph.card.vermeer_snapshot_label')} · `
+                                + t('graph.card.element_counts', {
+                                    vertices: formatRecordedCount(statistic.vertex, statistic),
+                                    edges: formatRecordedCount(statistic.edge, statistic),
+                                }) : undefined}
                             title={hasElementCounts ? t('graph.card.element_counts', {
                                 vertices: formatRecordedCount(statistic.vertex, statistic),
                                 edges: formatRecordedCount(statistic.edge, statistic),
                             }) : undefined}
                             onClick={() => collectStatistics(statistic?.source || 'server')}>
-                            {statistic?.source === 'vermeer' && (
-                                <span className={style.count_source}>{t('graph.card.vermeer_snapshot_label')}</span>
-                            )}
                             <span className={style.element_counts}>
                                 {hasElementCounts ? t('graph.card.element_counts', {
                                     vertices: formatRecordedCount(statistic.vertex, statistic),
@@ -252,6 +261,7 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
                             <Button type='text' size='small' icon={<DownOutlined />}
                                 disabled={collecting} aria-label={t('graph.card.statistics_source')} />
                         </Dropdown>}
+                        </div>
                     </div>
                 </Tooltip>,
                 <Link key='overview' to={overviewPath}>{t('graph.card.overview')}</Link>,

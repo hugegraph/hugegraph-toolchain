@@ -931,3 +931,23 @@ Query execution waits until the graph context matches the current route, includi
 ## Query and submitted-task feedback
 
 See [query and submitted-task feedback](docs/query-task-feedback.md) for preview limits, task discovery, and failed-result recovery.
+
+### Graph count snapshots and result-read diagnostics
+
+Click the graph-card count to collect bounded Server statistics. Administrators
+with ready native Vermeer integration can choose the loaded graph snapshot,
+which displays its source and timestamp and does not scan the entire Server graph.
+
+![Loaded graph compute snapshot](docs/assets/graph-statistics/loaded-snapshot.png)
+
+Unexpected result-read failures retain the backend reason, graph/task context
+and a retry action. A read error does not change a successful computation to a
+failed task. Confirmed absent native values instead show a successful task with
+currently unavailable results.
+
+![Result-read failure and retry guidance](docs/assets/graph-statistics/result-read-error.png)
+
+These Chromium screenshots use intercepted APIs in authenticated administrator
+mode. Anonymous PD access, GraphSpace switching and account visibility were also
+checked. They validate the UI contract; native count correctness and retention
+policies require separate live deployment verification.
