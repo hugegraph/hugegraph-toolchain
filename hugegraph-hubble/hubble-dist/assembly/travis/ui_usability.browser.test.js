@@ -40,6 +40,15 @@ test('a covering overlay is rejected', async t => {
     const p = await page(t, button+'<div style="position:fixed;inset:0;background:white"></div>');
     await assert.rejects(assertUsableControl(p.getByRole('button')), /covered/);
 });
+for (const [name, html] of [
+    ['control', button.replace('width:120px', 'opacity:0;width:120px')],
+    ['ancestor', '<div style="opacity:0">'+button+'</div>'],
+]) {
+    test(`zero opacity on the ${name} is rejected`, async t => {
+        const p = await page(t, html);
+        await assert.rejects(assertUsableControl(p.getByRole('button')), /transparent/);
+    });
+}
 test('ancestor overflow clipping is rejected', async t => {
     const p = await page(t, '<div style="height:20px;overflow:hidden">'+button+'</div>');
     await assert.rejects(assertUsableControl(p.getByRole('button')), /clipped/);

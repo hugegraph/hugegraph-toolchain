@@ -21,6 +21,9 @@ async function assertUsableControl(control) {
     const problem = await control.evaluate(element => {
         const box = element.getBoundingClientRect();
         if (!box.width || !box.height) return 'Key control has no visible area';
+        for (let node = element; node; node = node.parentElement) {
+            if (Number(getComputedStyle(node).opacity) === 0) return 'Key control is visually transparent';
+        }
         const inside = (outer, x, y) => (!x || box.left >= outer.left - 1 && box.right <= outer.right + 1)
             && (!y || box.top >= outer.top - 1 && box.bottom <= outer.bottom + 1);
         if (!inside({left: 0, top: 0, right: innerWidth, bottom: innerHeight}, true, true)) return 'Key control is outside viewport';

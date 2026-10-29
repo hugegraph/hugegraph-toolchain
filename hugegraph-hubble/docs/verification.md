@@ -57,7 +57,10 @@ add an affected-flow regression when the existing checks do not cover a bug.
 The fixture gate checks core login/anonymous access, GraphSpace editing and
 switching, graph-scoped query results, delayed tasks and actionable failures.
 It also checks selected query controls and the empty state at desktop and tablet
-widths for clipping, obstruction, real clickability and horizontal overflow.
+widths for clipping, pointer-hit obstruction, real clickability and horizontal overflow.
+Zero opacity on a control or its ancestors is rejected. Hit-testing does not
+detect purely visual overlays with `pointer-events: none`; inspect screenshots
+for those and other painted occlusion.
 These are functional usability checks, not pixel-golden comparisons or a full
 site-wide visual audit. Inspect the saved screenshots for other visual defects.
 
