@@ -25,7 +25,8 @@ import * as api from '../../api';
 
 jest.mock('../../api', () => ({
     manage: {getGraphView: jest.fn(() => new Promise(() => {})),
-        getGraphStatistic: jest.fn(), getVermeerStatistic: jest.fn()},
+        getGraphStatistic: jest.fn(), updateGraphStatistic: jest.fn(),
+        getVermeerStatistic: jest.fn()},
     analysis: {getGraphData: jest.fn(() => new Promise(() => {}))},
 }));
 
@@ -55,6 +56,13 @@ jest.mock('../../utils/config', () => ({
 }));
 
 const LocationProbe = () => <div data-testid='location'>{useLocation().pathname}</div>;
+
+beforeEach(() => {
+    api.manage.getGraphStatistic.mockReset();
+    api.manage.getVermeerStatistic.mockReset();
+    api.manage.updateGraphStatistic.mockReset();
+    api.manage.updateGraphStatistic.mockResolvedValue({status: 200});
+});
 
 test('falls back to the graph name when a PD graph has no alias', () => {
     render(
@@ -323,14 +331,26 @@ test.each([
 
 test('clicking an uncollected count collects bounded Server statistics only once', async () => {
     api.analysis.getGraphData.mockResolvedValueOnce({status: 200, data: {vertexcount: null, edgecount: null}});
-    let resolve;
-    api.manage.getGraphStatistic.mockReturnValueOnce(new Promise(done => { resolve = done; }));
+    let resolveCollection;
+    let resolveStatistic;
+    api.manage.updateGraphStatistic.mockReturnValueOnce(new Promise(done => { resolveCollection = done; }));
+    api.manage.getGraphStatistic.mockReturnValueOnce(new Promise(done => { resolveStatistic = done; }));
     render(<MemoryRouter><GraphCard item={{name: 'g', graphspace: 'space',
         schemaview: {vertices: [], edges: []}}} menus={[]} /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', {name: 'graph.detail.not_collected'}));
-    expect(api.manage.getGraphStatistic).toHaveBeenLastCalledWith('space', 'g', {suppressBusinessErrorToast: true});
+    expect(api.manage.updateGraphStatistic).toHaveBeenCalledTimes(1);
+    expect(api.manage.updateGraphStatistic).toHaveBeenLastCalledWith('space', 'g');
+    expect(api.manage.getGraphStatistic).not.toHaveBeenCalled();
+
+    await act(async () => resolveCollection({status: 200}));
+    await waitFor(() => expect(api.manage.getGraphStatistic).toHaveBeenLastCalledWith(
+        'space', 'g', {suppressBusinessErrorToast: true}
+    ));
+    fireEvent.click(screen.getByRole('button', {name: 'graph.detail.loading'}));
+    expect(api.manage.updateGraphStatistic).toHaveBeenCalledTimes(1);
     expect(api.manage.getGraphStatistic).toHaveBeenCalledTimes(1);
-    await act(async () => resolve({status: 200, data: {
+
+    await act(async () => resolveStatistic({status: 200, data: {
         vertex_count: '100000', edge_count: '200', approximate: true, scan_limit: 100000,
     }}));
     expect(screen.getByText('graph.card.element_counts:≥100000/≈200')).toBeVisible();
@@ -350,6 +370,28 @@ test('an enabled graph-compute source reads a clearly identified loaded snapshot
     ));
     expect(await screen.findByRole('button', {name: /graph.card.vermeer_snapshot_label/}))
         .toHaveTextContent('3000/6000');
+});
+
+test('a failed Vermeer snapshot retries the same source instead of collecting Server statistics', async () => {
+    api.analysis.getGraphData.mockResolvedValueOnce({status: 200, data: {vertexcount: null, edgecount: null}});
+    api.manage.getVermeerStatistic
+        .mockResolvedValueOnce({status: 503, message: 'snapshot temporarily unavailable'})
+        .mockResolvedValueOnce({status: 200, data: {
+            source: 'vermeer', vertex_count: '30', edge_count: '60', update_time: '2026-10-29T08:00:00Z',
+        }});
+    render(<MemoryRouter><GraphCard item={{name: 'g', graphspace: 'space',
+        schemaview: {vertices: [], edges: []}}} menus={[]} canComputeStatistics /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', {name: 'graph.card.statistics_source'}));
+    fireEvent.click(await screen.findByText('graph.card.vermeer_statistics'));
+    const retry = await screen.findByRole('button', {name: 'graph.detail.retry_statistics'});
+    fireEvent.click(retry);
+
+    await waitFor(() => expect(api.manage.getVermeerStatistic).toHaveBeenCalledTimes(2));
+    expect(api.manage.updateGraphStatistic).not.toHaveBeenCalled();
+    expect(api.manage.getGraphStatistic).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', {name: /graph.card.vermeer_snapshot_label/}))
+        .toHaveTextContent('30/60');
 });
 
 test('a failed collection leaves a retryable action and keeps graph navigation available', async () => {
