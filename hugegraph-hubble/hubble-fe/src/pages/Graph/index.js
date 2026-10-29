@@ -55,6 +55,7 @@ import {getResourceDisplayName} from '../../utils/displayName';
 import {sanitizePublicError} from '../../utils/publicError';
 import EditableNicknameCell from './EditableNicknameCell';
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
+import {useAuthContext} from '../../auth/AuthContext';
 import {useGraphspaceAccess} from '../../auth/graphspaceAccess';
 
 const GraphRowAction = ({onAction, graph, children}) => {
@@ -113,6 +114,20 @@ const Graph = () => {
         ? t('graph.clone.unavailable') : graphCreateUnavailableHint;
     const graphDefaultMutationEnabled = isGraphDefaultMutationEnabled(pdMode);
     const {canManage, canWrite} = useGraphspaceAccess(graphspace);
+    const {context: authContext, identityEpoch} = useAuthContext();
+    const [vermeerEnabled, setVermeerEnabled] = useState(false);
+    const canUseGraphCompute = authContext?.role === 'SUPERADMIN' || authContext?.mode === 'NON_AUTH';
+    useEffect(() => {
+        let active = true;
+        setVermeerEnabled(false);
+        if (canUseGraphCompute) {
+            api.auth.getVermeer({suppressBusinessErrorToast: true}).then(response => {
+                if (active) setVermeerEnabled(response?.status === 200 && response.data?.statistics_available === true);
+            }).catch(() => {});
+        }
+        return () => { active = false; };
+    }, [canUseGraphCompute, identityEpoch]);
+
 
     const handlePagination = useCallback(current => {
         setPagination({...pagination, current});
@@ -635,6 +650,7 @@ const Graph = () => {
                                                 item={item}
                                                 menus={menus}
                                                 canMutate={canWrite}
+                                                canComputeStatistics={vermeerEnabled}
                                             />
                                         </Col>
                                     );

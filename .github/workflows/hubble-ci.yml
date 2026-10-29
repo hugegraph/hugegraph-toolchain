@@ -9,6 +9,10 @@ on:
       current-artifact-name:
         type: string
         required: true
+      current-java-version:
+        description: Resolved JDK version used to build the shared SDK
+        type: string
+        default: ''
       reuse-candidate-sdk:
         type: boolean
         default: false
@@ -74,7 +78,8 @@ jobs:
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
-          java-version: ${{ matrix.JAVA_VERSION }}
+          # Different runner images may resolve floating Java 17 to different patches.
+          java-version: ${{ inputs.reuse-candidate-sdk && inputs.current-java-version || matrix.JAVA_VERSION }}
           distribution: 'temurin'
 
       - name: Record candidate Server JDK
@@ -85,10 +90,15 @@ jobs:
         if: inputs.reuse-candidate-sdk
         env:
           SDK_FIXTURE_ARTIFACT: ${{ inputs.current-artifact-name }}
+          SDK_JAVA_VERSION: ${{ inputs.current-java-version }}
         run: |
           set -euo pipefail
           if [[ -z "$SDK_FIXTURE_ARTIFACT" ]]; then
             echo 'SDK reuse requires current-artifact-name' >&2
+            exit 1
+          fi
+          if [[ ! "${SDK_JAVA_VERSION:-}" =~ ^17\.[0-9]+\.[0-9]+(\.[0-9]+)?\+[0-9]+([.-][[:alnum:]_.-]+)?$ ]]; then
+            echo 'SDK reuse requires a concrete producer JDK version' >&2
             exit 1
           fi
 

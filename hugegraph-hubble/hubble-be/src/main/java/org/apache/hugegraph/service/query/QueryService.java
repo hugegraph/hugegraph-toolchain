@@ -92,9 +92,6 @@ public class QueryService {
 
     public static final int GRAPH_VERTEX_LIMIT = 1000;
 
-    private static final String TIMEOUT_EXCEPTION =
-            "java.net.SocketTimeoutException";
-
     private static final String CONN_REFUSED_MSG = "Connection refused";
 
     @Autowired
@@ -209,13 +206,10 @@ public class QueryService {
             }
             throw this.serverQueryException(e);
         } catch (ClientException e) {
+            throwIfTimeout(e, "cypher.execute.timeout");
             Throwable cause = e.getCause();
             if (cause != null) {
                 String message = cause.getMessage();
-                if (message != null && message.startsWith(TIMEOUT_EXCEPTION)) {
-                    throw new InternalException("gremlin.execute.timeout", e,
-                            message);
-                }
                 if (message != null && message.contains(CONN_REFUSED_MSG)) {
                     throw new InternalException("gremlin.connection.refused", e,
                             message);
@@ -223,6 +217,7 @@ public class QueryService {
             }
             throw e;
         } catch (Exception e) {
+            throwIfTimeout(e, "cypher.execute.timeout");
             log.error("Cypher execute failed with {}",
                       e.getClass().getSimpleName());
             throw new ExternalException("gremlin.execute.failed", e,
@@ -311,13 +306,10 @@ public class QueryService {
             }
             throw this.serverQueryException(e);
         } catch (ClientException e) {
+            throwIfTimeout(e, "gremlin.execute.timeout");
             Throwable cause = e.getCause();
             if (cause != null) {
                 String message = cause.getMessage();
-                if (message != null && message.startsWith(TIMEOUT_EXCEPTION)) {
-                    throw new InternalException("gremlin.execute.timeout", e,
-                                                message);
-                }
                 if (message != null && message.contains(CONN_REFUSED_MSG)) {
                     throw new InternalException("gremlin.connection.refused", e,
                                                 message);
@@ -325,10 +317,21 @@ public class QueryService {
             }
             throw e;
         } catch (Exception e) {
+            throwIfTimeout(e, "gremlin.execute.timeout");
             log.error("Gremlin execute failed with {}",
                       e.getClass().getSimpleName());
             throw new ExternalException("gremlin.execute.failed", e,
                                         e.getMessage());
+        }
+    }
+
+    private static void throwIfTimeout(Exception error, String messageKey) {
+        for (Throwable cause : org.apache.commons.lang3.exception.ExceptionUtils.getThrowables(error)) {
+            if (cause instanceof java.net.SocketTimeoutException ||
+                cause instanceof java.net.http.HttpTimeoutException ||
+                cause instanceof java.util.concurrent.TimeoutException) {
+                throw new ExternalException(HttpStatus.GATEWAY_TIMEOUT.value(), messageKey, error);
+            }
         }
     }
 

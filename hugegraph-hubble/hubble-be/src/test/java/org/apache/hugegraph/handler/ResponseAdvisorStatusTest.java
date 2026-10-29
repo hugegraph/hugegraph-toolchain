@@ -34,6 +34,45 @@ import org.springframework.mock.web.MockHttpServletResponse;
 public class ResponseAdvisorStatusTest {
 
     @Test
+    public void testTimeoutUsesHttp504AndSuppressesCause() throws Exception {
+        MessageSourceHandler messages = Mockito.mock(MessageSourceHandler.class);
+        Mockito.when(messages.getMessage(Mockito.eq("gremlin.execute.timeout"),
+                                         Mockito.nullable(Object[].class)))
+               .thenReturn("Gremlin query timed out. Submit an asynchronous Server job.");
+        ExceptionAdvisor exceptions = new ExceptionAdvisor();
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                exceptions, "messageSourceHandler", messages);
+        org.springframework.test.web.servlet.MockMvc mvc =
+                org.springframework.test.web.servlet.setup.MockMvcBuilders
+                        .standaloneSetup(new TimeoutController())
+                        .setControllerAdvice(exceptions, new ResponseAdvisor())
+                        .build();
+
+        MockHttpServletResponse response = mvc.perform(
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/timeout"))
+                .andReturn().getResponse();
+
+        Assert.assertEquals(504, response.getStatus());
+        com.fasterxml.jackson.databind.JsonNode body =
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.getContentAsString());
+        Assert.assertEquals(504, body.get("status").asInt());
+        Assert.assertTrue(body.get("message").asText().contains("asynchronous"));
+        Assert.assertFalse(response.getContentAsString().contains("private-upstream-canary"));
+        Assert.assertFalse(response.getContentAsString().contains("SocketTimeoutException"));
+    }
+
+    @org.springframework.web.bind.annotation.RestController
+    public static class TimeoutController {
+
+        @org.springframework.web.bind.annotation.GetMapping("/timeout")
+        public Object timeout() {
+            throw new org.apache.hugegraph.exception.ExternalException(
+                    504, "gremlin.execute.timeout",
+                    new java.net.SocketTimeoutException("private-upstream-canary"));
+        }
+    }
+
+    @Test
     public void testErrorResponseSetsMatchingHttpStatus() {
         MockHttpServletResponse servletResponse = write(
                 Response.builder()

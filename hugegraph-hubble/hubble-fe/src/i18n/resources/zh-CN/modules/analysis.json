@@ -1073,7 +1073,10 @@
         "check_result": "查看结果",
         "check_reason": "查看原因",
         "collapse_result": "收起结果"
-      }
+      },
+      "result_error_unknown": "服务没有返回具体原因，请检查 Hubble 和图计算服务日志",
+      "result_request_context": "图空间 {{graphspace}} / 图 {{graph}} / 任务 {{taskId}}",
+      "vermeer_result_retry_hint": "这是读取计算结果失败，不代表计算任务失败。请先重试；若结果已被清理，请在 OLAP 图计算中重新运行算法"
     },
     "topbar": {
       "current_graph_space": "当前图空间:",

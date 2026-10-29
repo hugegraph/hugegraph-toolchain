@@ -57,6 +57,11 @@ public class VermeerService {
                client.vermeer().getGraphInfoByName(convert2VG(space, graph));
     }
 
+    public Map<String, Object> statistics(HugeClient client) {
+        E.checkState(this.directConfigured(), "Configure native Vermeer before collecting graph statistics");
+        return this.direct.statistics(client);
+    }
+
     public Map<String, Object> loadDirect(HugeClient client, boolean force,
                                           Map<String, Object> params) {
         return this.direct.load(client, force, params);
@@ -81,8 +86,9 @@ public class VermeerService {
             boolean permitted = this.direct.permitted(client);
             try {
                 boolean available = permitted && this.direct.available();
-                return ImmutableMap.of("enable", available,
-                                       "retryable", permitted && !available);
+                return available ? ImmutableMap.of("enable", true, "retryable", false,
+                                                   "statistics_available", true) :
+                       ImmutableMap.of("enable", false, "retryable", permitted);
             } catch (VermeerClient.ConfigurationException e) {
                 return ImmutableMap.of("enable", false, "retryable", false, "error", true);
             }

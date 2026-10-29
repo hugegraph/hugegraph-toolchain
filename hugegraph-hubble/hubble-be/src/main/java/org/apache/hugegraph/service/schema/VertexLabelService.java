@@ -357,12 +357,15 @@ public class VertexLabelService extends SchemaService {
         if (styleValue != null) {
             return JsonUtil.fromJson(styleValue, VertexLabelStyle.class);
         } else {
-            VertexLabelStyle style = new VertexLabelStyle();
-            int colorIndex = Math.floorMod(element.name().hashCode(),
-                                          DEFAULT_LABEL_COLORS.size());
-            style.setColor(DEFAULT_LABEL_COLORS.get(colorIndex));
-            return style;
+            return defaultStyle(element.name());
         }
+    }
+
+    private static VertexLabelStyle defaultStyle(String name) {
+        VertexLabelStyle style = new VertexLabelStyle();
+        int colorIndex = Math.floorMod(name.hashCode(), DEFAULT_LABEL_COLORS.size());
+        style.setColor(DEFAULT_LABEL_COLORS.get(colorIndex));
+        return style;
     }
 
     private static VertexLabel convert(VertexLabelEntity entity,
@@ -371,7 +374,7 @@ public class VertexLabelService extends SchemaService {
             return null;
         }
 
-        VertexLabelStyle style = entity.getStyle();
+        VertexLabelStyle style = entity.hasStyle() ? entity.getStyle() : defaultStyle(entity.getName());
         return client.schema().vertexLabel(entity.getName())
                      .idStrategy(entity.getIdStrategy())
                      .properties(toStringArray(entity.getPropNames()))

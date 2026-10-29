@@ -228,6 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       artifact: ${{ steps.identity.outputs.artifact }}
+      java-version: ${{ steps.java.outputs.java-version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -236,6 +237,7 @@ jobs:
         id: identity
         run: echo "artifact=current-fixture-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/setup-java-env
+        id: java
         with:
           java-version: '17'
           distribution: temurin
@@ -319,6 +321,7 @@ jobs:
       server-baselines: ${{ needs.plan.outputs.server-baselines }}
       current-artifact-name: ${{ needs.current-fixture.outputs.artifact }}
       reuse-candidate-sdk: true
+      current-java-version: ${{ needs.current-fixture.outputs.java-version }}
       current-commit: ${{ needs.plan.outputs.current-commit }}
       current-repository: ${{ needs.plan.outputs.current-repository }}
       current-ref: ${{ needs.plan.outputs.current-ref }}
