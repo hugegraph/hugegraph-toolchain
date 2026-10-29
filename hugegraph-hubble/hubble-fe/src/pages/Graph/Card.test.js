@@ -329,7 +329,7 @@ test.each([
 });
 
 
-test('clicking an uncollected count collects bounded Server statistics only once', async () => {
+test('posts before reading bounded Server statistics and keeps one request in flight', async () => {
     api.analysis.getGraphData.mockResolvedValueOnce({status: 200, data: {vertexcount: null, edgecount: null}});
     let resolveCollection;
     let resolveStatistic;
@@ -337,7 +337,9 @@ test('clicking an uncollected count collects bounded Server statistics only once
     api.manage.getGraphStatistic.mockReturnValueOnce(new Promise(done => { resolveStatistic = done; }));
     render(<MemoryRouter><GraphCard item={{name: 'g', graphspace: 'space',
         schemaview: {vertices: [], edges: []}}} menus={[]} /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', {name: 'graph.detail.not_collected'}));
+    const collectButton = await screen.findByRole('button', {name: 'graph.detail.not_collected'});
+    fireEvent.click(collectButton);
+    fireEvent.click(collectButton);
     expect(api.manage.updateGraphStatistic).toHaveBeenCalledTimes(1);
     expect(api.manage.updateGraphStatistic).toHaveBeenLastCalledWith('space', 'g');
     expect(api.manage.getGraphStatistic).not.toHaveBeenCalled();
@@ -346,7 +348,6 @@ test('clicking an uncollected count collects bounded Server statistics only once
     await waitFor(() => expect(api.manage.getGraphStatistic).toHaveBeenLastCalledWith(
         'space', 'g', {suppressBusinessErrorToast: true}
     ));
-    fireEvent.click(screen.getByRole('button', {name: 'graph.detail.loading'}));
     expect(api.manage.updateGraphStatistic).toHaveBeenCalledTimes(1);
     expect(api.manage.getGraphStatistic).toHaveBeenCalledTimes(1);
 
