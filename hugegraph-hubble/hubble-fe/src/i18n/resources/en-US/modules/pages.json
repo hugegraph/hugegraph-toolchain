@@ -228,7 +228,7 @@
     },
     "menu": {
       "enter_analysis": "Open Graph Studio",
-      "meta_config": "Metadata Config",
+      "meta_config": "Schema Config",
       "clear_graph": "Clear Schema and Data",
       "set_default": "Set Default",
       "view_schema": "View Schema",
@@ -1208,11 +1208,15 @@
     "create_success": "Created successfully",
     "update_success": "Updated successfully",
     "builtin": {
+      "hlm": "Dream of the Red Chamber",
+      "covid19": "COVID-19 Contact Network",
       "people_network": "People Relationship Network",
       "product_catalog": "Product Relationship Catalog"
     },
     "builtin_description": {
-      "people_network": "A single-primary-key example with person vertices, relationship edges, and a secondary index",
+      "hlm": "The original example with people, organizations, and the complete relationship types",
+      "covid19": "The original example with patients, places, cities, vehicles, and contact relationships",
+      "people_network": "A single-primary-key example with person vertices and relationship edges",
       "product_catalog": "A composite-primary-key example with product vertices, relationship edges, and a range index"
     },
     "builtin_section": {

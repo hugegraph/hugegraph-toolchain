@@ -16,7 +16,10 @@
  * under the License.
  */
 
+import LEGACY_SCHEMA_TEMPLATES from './legacySchemaTemplates';
+
 const BUILTIN_SCHEMA_TEMPLATES = {
+    ...LEGACY_SCHEMA_TEMPLATES,
     people_network: [
         'schema.propertyKey("name").asText().ifNotExist().create()',
         'schema.propertyKey("since").asInt().ifNotExist().create()',

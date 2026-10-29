@@ -228,7 +228,7 @@
     },
     "menu": {
       "enter_analysis": "进入图分析平台",
-      "meta_config": "元数据配置",
+      "meta_config": "Schema 配置",
       "clear_graph": "清空 Schema 与数据",
       "set_default": "设为默认",
       "view_schema": "查看schema",
@@ -1208,11 +1208,15 @@
     "create_success": "新增成功",
     "update_success": "编辑成功",
     "builtin": {
+      "hlm": "红楼梦人物关系",
+      "covid19": "新冠传播网络",
       "people_network": "人物关系网络",
       "product_catalog": "商品关联目录"
     },
     "builtin_description": {
-      "people_network": "单一主键示例，包含人物顶点、关系边和二级索引",
+      "hlm": "原有红楼梦示例，包含人物、机构及完整关系类型",
+      "covid19": "原有疫情示例，包含患者、地点、城市、交通工具及传播关系",
+      "people_network": "单一主键示例，包含人物顶点和关系边",
       "product_catalog": "组合主键示例，包含商品顶点、关联边和范围索引"
     },
     "builtin_section": {

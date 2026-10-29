@@ -35,7 +35,7 @@ const DUPLICATE_SCHEMA_TEMPLATE
 const normalizeSchema = schema => String(schema ?? '').replace(/\s+/g, ' ').trim();
 
 const isEquivalentBuiltinSchema = (actual, expected) => (
-    normalizeSchema(actual) === normalizeSchema(expected)
+    normalizeSchema(toGraphSchemaGroovy(actual)) === normalizeSchema(toGraphSchemaGroovy(expected))
 );
 
 const errorMessage = error => (
@@ -74,14 +74,12 @@ const EditLayer = ({
     const {t} = useTranslation();
     const pdMode = isPdEnabled();
     const schemaOptions = useMemo(() => {
-        const builtinNames = new Set(Object.keys(BUILTIN_SCHEMA_TEMPLATES));
-        const builtins = [...builtinNames].map(name => ({
-            label: t(`schema_template.builtin.${name}`),
-            value: name,
-        }));
+        const savedNames = new Set(pdMode ? schemaList.map(item => item.name) : []);
+        const builtins = Object.keys(BUILTIN_SCHEMA_TEMPLATES)
+            .filter(name => !savedNames.has(name))
+            .map(name => ({label: t(`schema_template.builtin.${name}`), value: name}));
         const saved = pdMode
             ? schemaList
-                .filter(item => !builtinNames.has(item.name))
                 .map(item => ({label: item.name, value: item.name}))
             : [];
 
@@ -197,7 +195,8 @@ const EditLayer = ({
         }
 
         const sample = values.sample === 'none' ? undefined : values.sample;
-        const builtinSchema = BUILTIN_SCHEMA_TEMPLATES[values.schema];
+        const savedTemplate = pdMode && schemaList.some(item => item.name === values.schema);
+        const builtinSchema = savedTemplate ? undefined : BUILTIN_SCHEMA_TEMPLATES[values.schema];
         const ensureTemplate = pdMode && builtinSchema
             ? ensureBuiltinTemplate(values.schema, builtinSchema)
             : Promise.resolve();
@@ -292,6 +291,7 @@ const EditLayer = ({
         onCancel,
         pdMode,
         refresh,
+        schemaList,
         t,
         validateForm,
     ]);
