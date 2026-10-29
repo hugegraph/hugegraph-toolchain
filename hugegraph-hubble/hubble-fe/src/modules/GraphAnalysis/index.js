@@ -232,9 +232,6 @@ const GraphAnalysisHome = props => {
     );
 
     const renderModule = () => {
-        if (moduleName === ALGORITHMS && !vermeerReady) {
-            return vermeerLoading ? <Spin /> : null;
-        }
         switch (moduleName) {
             case GREMLIN:
                 return <AnalysisHome toolbarExtra={topBar} />;
