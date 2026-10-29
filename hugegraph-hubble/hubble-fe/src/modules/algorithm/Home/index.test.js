@@ -58,8 +58,16 @@ jest.mock('../LogsDetail/Home', () => props => (
         )}
     </div>
 ));
+let mockLanguage = 'zh';
+const mockModeTranslations = {
+    zh: {OLTP: '交互式探索', OLAP: '集群批量计算'},
+    en: {OLTP: 'Interactive exploration', OLAP: 'Cluster batch computation'},
+};
 jest.mock('react-i18next', () => ({
-    useTranslation: () => ({t: key => key}),
+    useTranslation: () => ({t: key => {
+        const mode = key.match(/^analysis\.algorithm\.mode\.(OLTP|OLAP)$/)?.[1];
+        return mode ? mockModeTranslations[mockLanguage][mode] : key;
+    }}),
 }));
 
 const okList = {status: 200, data: {records: [], total: 0}};
@@ -72,6 +80,7 @@ const deferred = () => {
 };
 
 beforeEach(() => {
+    mockLanguage = 'zh';
     api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: false}});
     api.analysis.fetchFavoriteQueries.mockResolvedValue(okList);
     api.analysis.getExecutionLogs.mockResolvedValue(okList);
@@ -329,6 +338,48 @@ const startAlgorithm = kind => {
     return receive;
 };
 const algorithmResult = () => mockGraphResultProps.mock.lastCall[0];
+
+it('retains a completed OLTP graph while changing languages in both directions', async () => {
+    const view = render(countsHomeFor());
+    await screen.findByText('algorithm forms edges 0');
+    const data = {vertices: [{id: 'v1'}, {id: 'v2'}], edges: []};
+    await act(async () => { startAlgorithm('Oltp')(GRAPH_STATUS.SUCCESS, data); });
+    for (const language of ['en', 'zh']) {
+        mockLanguage = language;
+        view.rerender(countsHomeFor());
+        expect(algorithmResult().isQueryMode).toBe(true);
+        expect(algorithmResult().queryStatus).toBe(GRAPH_STATUS.SUCCESS);
+        expect(algorithmResult().data).toBe(data);
+        expect(algorithmResult().asyncTaskId).toBeUndefined();
+    }
+});
+
+it('renders an OLTP request completed after a language change as a graph', async () => {
+    const view = render(countsHomeFor());
+    await screen.findByText('algorithm forms edges 0');
+    let complete;
+    await act(async () => { complete = startAlgorithm('Oltp'); });
+    mockLanguage = 'en';
+    view.rerender(countsHomeFor());
+    const data = {vertices: [{id: 'late-result'}], edges: []};
+    await act(async () => { complete(GRAPH_STATUS.SUCCESS, data); });
+    expect(algorithmResult().isQueryMode).toBe(true);
+    expect(algorithmResult().data).toBe(data);
+    expect(algorithmResult().asyncTaskId).toBeUndefined();
+});
+
+it('retains a real OLAP task across language changes', async () => {
+    const view = render(countsHomeFor());
+    await screen.findByText('algorithm forms edges 0');
+    await act(async () => { startAlgorithm('Olap')(GRAPH_STATUS.SUCCESS, 'real-task'); });
+    for (const language of ['en', 'zh']) {
+        mockLanguage = language;
+        view.rerender(countsHomeFor());
+        expect(algorithmResult().isQueryMode).toBe(false);
+        expect(algorithmResult().asyncTaskId).toBe('real-task');
+        expect(algorithmResult().data).toEqual({});
+    }
+});
 
 it('keeps the latest algorithm result when OLTP and OLAP finish in reverse order', async () => {
     render(countsHomeFor());

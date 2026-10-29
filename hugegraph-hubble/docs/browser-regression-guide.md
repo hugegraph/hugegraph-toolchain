@@ -189,6 +189,8 @@ For browser verification, exercise both authenticated and anonymous PD modes:
 9. Withdraw Vermeer readiness while a graph load is known: the load controls and
    graph-load polling pause until discovery is confirmed again. Preserve accepted
    task identity so polling can resume without duplicate submissions.
+10. Switch Chinese/English after an OLTP result and during a pending query. The
+    graph stays a graph, no extra query is sent, and OLAP task IDs remain intact.
 
 An intercepted API run validates this navigation and feedback contract. It does
 not validate actual Vermeer readiness, graph loading or algorithm correctness.

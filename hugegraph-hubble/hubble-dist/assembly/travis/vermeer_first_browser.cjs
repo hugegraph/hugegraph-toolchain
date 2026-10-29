@@ -90,7 +90,13 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
  const {page,state}=await setup(browser,true);
  const goAlgorithms=async()=>{await page.goto(base+'/algorithms/DEFAULT/hugegraph'); await page.getByRole('tab',{name:'OLAP 全图计算',exact:true}).click();};
  const search=()=>page.getByPlaceholder("算法查询");
- const searchFor=async value=>{await search().fill(value); await page.getByText('K-out API（GET，基础版）',{exact:true}).waitFor({state:'hidden'});};
+ const searchFor=async value=>{
+  await search().fill(value);
+  await page.waitForFunction(query=>{
+   const titles=[...document.querySelectorAll('.ant-collapse-header .ant-typography')].filter(title=>title.checkVisibility());
+   return titles.length>0 && titles.every(title=>title.textContent.toLowerCase().includes(query.toLowerCase()));
+  },value);
+ };
  const pagerank=()=>page.locator('.ant-collapse-item').filter({has:page.getByRole('link',{name:/^PageRank /})});
  await check('authenticated login and GraphSpace/account visibility',async()=>{
   await page.goto(base+'/graphspace'); await page.getByRole('textbox',{name:'用户名',exact:true}).fill('smoke_admin'); await page.locator('input[type=password]').fill('fixture-only-password'); await page.getByRole('button',{name:/登\s*录/}).click();
@@ -129,13 +135,13 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   await pagerank().scrollIntoViewIfNeeded(); await screenshot(page,'05-vermeer-unloaded');
  });
  await check('confirmed-disabled Vermeer checks capability once and keeps Computer opt-in explicit',async()=>{
-  state.enabled=false; await goAlgorithms(); await searchFor('PageRank');
+  state.enabled=false; await goAlgorithms(); await search().fill('PageRank');
   const toggle=page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true});
   await toggle.waitFor();
   assert.equal(await toggle.getAttribute('aria-expanded'),'false');
   assert.equal(state.capabilityCalls,1); assert.equal(await pagerank().count(),0);
   await screenshot(page,'06-computer-collapsed');
-  await toggle.click(); await pagerank().waitFor();
+  await toggle.click(); await pagerank().waitFor(); await searchFor('PageRank');
   await page.getByText('下方算法使用 Computer 兼容接口，任务不会发送到 Vermeer',{exact:false}).waitFor();
   assert.equal(state.capabilityCalls,1);
   assert((await pagerank().getByRole('link').getAttribute('href')).includes('/quickstart/computing/hugegraph-computer/'));
@@ -148,7 +154,7 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   assert.equal(await pagerank().count(),0);
   assert.equal(state.capabilityCalls,calls);
   await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).click();
-  await pagerank().waitFor();
+  await pagerank().waitFor(); await searchFor('PageRank');
   assert.equal(state.capabilityCalls,calls);
  });
  await check('Computer opt-in is cleared after graph A to B to A',async()=>{
@@ -166,15 +172,15 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
    assert.equal(await pagerank().count(),0);
    assert.equal(state.capabilityCalls,++expectedCalls);
   }
-  await searchFor('PageRank');
+  await search().fill('PageRank');
   await toggle.scrollIntoViewIfNeeded();
   await screenshot(page,'12-computer-return-collapsed');
-  await toggle.click(); await pagerank().waitFor();
+  await toggle.click(); await pagerank().waitFor(); await searchFor('PageRank');
   assert.equal(state.capabilityCalls,expectedCalls);
   assert((await pagerank().getByRole('link').getAttribute('href')).includes('/quickstart/computing/hugegraph-computer/'));
  });
  await check('unavailable Computer shows canvas setup guidance without an executable compatibility entry',async()=>{
-  state.computerAvailable=false; await goAlgorithms(); await searchFor('PageRank');
+  state.computerAvailable=false; await goAlgorithms(); await search().fill('PageRank');
   await page.getByText('图计算当前不可用',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).count(),0);
   assert(await page.getByRole('link',{name:'Vermeer 图计算指南',exact:true}).isVisible());

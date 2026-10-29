@@ -999,6 +999,7 @@ the canvas offers a recheck and links to Vermeer documentation and the Helm star
 guide. OLTP remains usable while compute discovery is pending or has failed;
 OLAP offers a backend only after discovery is confirmed. Load a graph for Vermeer
 from the OLAP tab, then inspect progress and results in async tasks.
+Changing the UI language retains graph results and submitted task IDs.
 
 ![OLTP query result and compact algorithm help](docs/assets/analytics/oltp-query-result.png)
 

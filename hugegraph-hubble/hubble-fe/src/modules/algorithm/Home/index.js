@@ -25,18 +25,16 @@ import AlgorithmFormHome from '../algorithmsForm/Home';
 import GraphResult from '../GraphResult/Home';
 import LogsDetail from '../LogsDetail/Home';
 import GraphAnalysisContext from '../../Context';
-import {GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, useTranslatedConstants} from '../../../utils/constants';
+import {GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE} from '../../../utils/constants';
 import * as api from '../../../api';
 import {toGraphCounts} from '../../../utils/graphStatistics';
 import {USER_CHANGE_EVENT} from '../../../utils/user';
 import _ from 'lodash';
 import c from './index.module.scss';
 
-
+const ALGORITHM_MODE = {OLTP: 'oltp', OLAP: 'olap'};
 
 const AlgorithmHome = ({engine = 'oltp', onEngineChange}) => {
-    const {ALGORITHM_MODE} = useTranslatedConstants();
-
     const {STANDBY} = GRAPH_STATUS;
     const {CLOSED} = PANEL_TYPE;
     const {OLTP, OLAP} = ALGORITHM_MODE;
