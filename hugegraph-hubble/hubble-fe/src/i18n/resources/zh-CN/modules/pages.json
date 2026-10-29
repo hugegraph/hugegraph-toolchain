@@ -1649,7 +1649,8 @@
     "vermeer_address_copied": "地址已复制",
     "vermeer_launch_time": "启动时间",
     "vermeer_node_information": "节点信息",
-    "vermeer_reason_vermeer_snapshot_refresh_failed": "集群快照刷新失败，以下保留上次观测的计算集群信息"
+    "vermeer_reason_vermeer_snapshot_refresh_failed": "集群快照刷新失败，以下保留上次观测的计算集群信息",
+    "vermeer_reason_metrics_warming_up": "进程指标正在预热。请至少等待 1 秒后刷新，取得第二次采样后即可查看资源数据"
   },
   "navigation_page": {
     "title": "导航",

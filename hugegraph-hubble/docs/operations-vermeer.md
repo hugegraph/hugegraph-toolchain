@@ -47,6 +47,11 @@ This requires a paired Vermeer build providing schema version 1, including:
 - registered and ready Worker counts;
 - independently timestamped process CPU/RSS observations and metric availability.
 
+The HTTP exchange, including a continuously streaming response body, is limited
+to `operations.connect_timeout_ms` plus `operations.read_timeout_ms`. The
+separate DNS address validation precedes this HTTP call budget. Master and
+Worker raw IDs may overlap; the UI includes the role in node-selection keys.
+
 `GET /api/v1.3/operations/overview` retains its existing `nodes`, `facts` and
 `sources` for the main cluster and adds `vermeer`, `main_cluster_status` and
 `main_cluster_reason`. The separate Vermeer object contains `configured`,
@@ -76,10 +81,13 @@ Worker counts mean **ready / registered**, not expected Helm replicas. A Worker
 removed from the registration set is not invented as an offline historical
 node. CPU is process CPU time divided by the sampling window, expressed in
 cores; memory is process RSS, displayed in binary units. The compute information
-panel sums only fresh, available process samples and shows the collected-node
-coverage separately for CPU and RSS. Partial coverage is not a complete cluster
-resource total. These observations are not host or Pod-limit percentages. The initial CPU observation may report
-`metrics_warming_up` until a second sample is available.
+panel sums each valid measurement from fresh samples, including partial
+samples, and shows the collected-node coverage separately for CPU and RSS.
+Upstream metric freshness flags remain effective even when the cluster snapshot
+is fresh. Partial coverage is not a complete cluster resource total. These
+observations are not host or Pod-limit percentages. The initial CPU observation
+may report `metrics_warming_up`; wait at least one second and refresh for a
+second sample.
 
 ## Paired rollout
 

@@ -156,11 +156,11 @@ public class VermeerOperationsService {
             String reason = e.getMessage();
             if ("upstream_http_status_401".equals(reason) ||
                 "upstream_http_status_403".equals(reason)) {
-                this.clear();
+                this.lastSuccess = null;
                 result = this.empty("UNAVAILABLE", "vermeer_access_denied", now);
             } else if ("upstream_http_status_404".equals(reason) ||
                        "upstream_http_status_405".equals(reason)) {
-                this.clear();
+                this.lastSuccess = null;
                 result = this.empty("UNSUPPORTED",
                                     "vermeer_cluster_api_unsupported", now);
             } else {
@@ -240,10 +240,10 @@ public class VermeerOperationsService {
                                                "MASTER", observed);
         List<Map<String, Object>> workers = new ArrayList<>();
         int ready = 0;
-        Set<String> names = new java.util.HashSet<>();
+        Set<String> workerIds = new java.util.HashSet<>();
         for (JsonNode worker : root.path("workers")) {
             Map<String, Object> node = this.node(worker, "WORKER", observed);
-            if (!names.add((String) node.get("id"))) {
+            if (!workerIds.add((String) node.get("id"))) {
                 throw new IllegalArgumentException("Duplicate Vermeer worker");
             }
             workers.add(node);
@@ -359,6 +359,12 @@ public class VermeerOperationsService {
         metricStatus.put("observed_at", timestamp(
                          rawMetricStatus.get("observed_at"), observed));
         metricStatus.put("reason", reason(rawMetricStatus.get("reason"), null));
+        for (String field : List.of("stale", "fresh")) {
+            JsonNode value = rawMetricStatus.get(field);
+            if (value != null && value.isBoolean()) {
+                metricStatus.put(field, value.booleanValue());
+            }
+        }
         node.put("metric_status", metricStatus);
         return node;
     }

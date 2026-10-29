@@ -138,6 +138,34 @@ test('opens node details and a full view without losing the compute context', as
     expect(screen.getByText('Workers ready 1 / registered 1')).toBeInTheDocument();
 });
 
+test('same raw Master and Worker IDs select the clicked role without sharing row keys', async () => {
+    const data = snapshot();
+    data.vermeer.master = {...data.vermeer.master, id: 'master', name: 'master-shared',
+        checks: {http_ready: true, initialized: true, service_online: true}};
+    data.vermeer.workers[0] = {...data.vermeer.workers[0], id: 'master', name: 'worker-shared',
+        group: 'worker-group'};
+    getOverview.mockResolvedValue(data);
+    const {container} = renderOverview('/operations/overview?service=vermeer');
+    await userEvent.click(await screen.findByRole('button', {name: 'worker-shared'}));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('worker-group')).toBeInTheDocument();
+    expect(within(dialog).getByText('Registered with Master')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Master initialization')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent('node=worker%3Amaster');
+    expect(container.querySelector('[data-row-key="master:master"]')).not.toBeNull();
+    expect(container.querySelector('[data-row-key="worker:master"]')).not.toBeNull();
+});
+
+test('an ambiguous raw node ID does not silently open Master details', async () => {
+    const data = snapshot();
+    data.vermeer.master.id = 'master';
+    data.vermeer.workers[0].id = 'master';
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer&node=master');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
 test('never presents old readiness as current when the snapshot becomes stale', async () => {
     const data = snapshot();
     data.vermeer = {...data.vermeer, status: 'UNKNOWN', availability: 'UNAVAILABLE', stale: true,
@@ -252,6 +280,35 @@ test('resource collection failure explains missing metrics without changing Work
     expect(within(dialog).getByText('Process CPU: Unavailable')).toBeInTheDocument();
 });
 
+test.each([
+    ['RSS-only', {rss_bytes: 1288490188}, 'RSS memory: 1.2 GiB', 'Process CPU: Unavailable'],
+    ['CPU-only', {cpu_cores: 0.42}, 'Process CPU: 0.42 cores', 'RSS memory: Unavailable'],
+])('fresh %s partial resources remain visible in node details', async (_, metrics, present, missing) => {
+    const data = snapshot();
+    data.vermeer.workers[0].metric_status = {availability: 'PARTIAL', fresh: true, stale: false};
+    data.vermeer.workers[0].metrics = metrics;
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer&node=worker-1');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(present)).toBeInTheDocument();
+    expect(within(dialog).getByText(missing)).toBeInTheDocument();
+    expect(within(dialog).queryByText('Not ready')).not.toBeInTheDocument();
+});
+
+test.each([
+    ['en-US', 'Process metrics are warming up. Wait at least one second, then refresh to collect the second sample.'],
+    ['zh-CN', '进程指标正在预热。请至少等待 1 秒后刷新，取得第二次采样后即可查看资源数据'],
+])('resource warm-up has actionable %s guidance', async (locale, message) => {
+    await i18n.changeLanguage(locale);
+    const data = snapshot();
+    data.vermeer.workers[0].metric_status = {availability: 'UNAVAILABLE', reason: 'metrics_warming_up'};
+    data.vermeer.workers[0].metrics = {};
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer&node=worker-1');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(message)).toBeInTheDocument();
+});
+
 test('expired resource snapshots are not displayed as current process measurements', async () => {
     const data = snapshot();
     data.vermeer.workers[0].metric_status = {availability: 'AVAILABLE', stale: true, fresh: false};
@@ -280,6 +337,32 @@ test('resource summary counts only fresh process samples and states coverage per
     });
     expect(vermeerResourceSummary(nodes, {...data.vermeer, stale: true})).toEqual({
         cpu: {value: null, collected: 0}, rss: {value: null, collected: 0}, total: 2,
+    });
+});
+
+test.each([
+    ['RSS-only', {rss_bytes: 2048}, {cpu: {value: 0.12, collected: 1}, rss: {value: 3072, collected: 2}}],
+    ['CPU-only', {cpu_cores: 0.42}, {cpu: {value: 0.54, collected: 2}, rss: {value: 1024, collected: 1}}],
+])('%s partial samples contribute only to their valid metric and coverage', (_, metrics, expected) => {
+    const data = snapshot();
+    const nodes = [
+        {...data.vermeer.master, metrics: {cpu_cores: 0.12, rss_bytes: 1024},
+            metric_status: {availability: 'AVAILABLE', fresh: true}},
+        {...data.vermeer.workers[0], metrics,
+            metric_status: {availability: 'PARTIAL', fresh: true, stale: false}},
+    ];
+    expect(vermeerResourceSummary(nodes, data.vermeer)).toEqual({...expected, total: 2});
+});
+
+test.each([
+    ['stale partial', {availability: 'PARTIAL', stale: true}],
+    ['non-fresh partial', {availability: 'PARTIAL', fresh: false}],
+])('%s samples never contribute values or collection coverage', (_, metricStatus) => {
+    const data = snapshot();
+    const worker = {...data.vermeer.workers[0], metrics: {cpu_cores: 0.42, rss_bytes: 2048},
+        metric_status: metricStatus};
+    expect(vermeerResourceSummary([worker], data.vermeer)).toEqual({
+        cpu: {value: null, collected: 0}, rss: {value: null, collected: 0}, total: 1,
     });
 });
 

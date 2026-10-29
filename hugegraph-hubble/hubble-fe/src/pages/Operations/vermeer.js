@@ -45,7 +45,20 @@ const vermeerNodes = cluster => {
         ? [{...cluster.master, role: 'MASTER'}, ...ordered] : ordered;
 };
 
-const vermeerNodeId = node => node.id ?? node.role.toLowerCase() + '-' + node.name;
+const vermeerNodeId = node => node.role.toLowerCase() + ':' + (node.id ?? node.name);
+
+const vermeerSelectedNode = (nodes, selectedId) => {
+    if (!selectedId) {
+        return null;
+    }
+    const selected = nodes.find(node => vermeerNodeId(node) === selectedId);
+    if (selected) {
+        return selected;
+    }
+    // Accept earlier links only when their raw ID identifies exactly one role.
+    const previousMatches = nodes.filter(node => (node.id ?? node.name) === selectedId);
+    return previousMatches.length === 1 ? previousMatches[0] : null;
+};
 
 const processMetric = (value, locale) => (
     typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -56,7 +69,7 @@ const vermeerResourceValues = (node, cluster) => {
     const stale = Boolean(cluster?.stale || node.stale || node.metric_status?.stale
         || node.metric_status?.fresh === false);
     const available = vermeerAvailable(cluster)
-        && node.metric_status?.availability === 'AVAILABLE' && !stale;
+        && ['AVAILABLE', 'PARTIAL'].includes(node.metric_status?.availability) && !stale;
     const metric = value => available && typeof value === 'number'
         && Number.isFinite(value) && value >= 0 ? value : null;
     return {cpu: metric(node.metrics?.cpu_cores), rss: metric(node.metrics?.rss_bytes), stale};
@@ -97,4 +110,5 @@ export {
     vermeerNodes,
     vermeerResourceSummary,
     vermeerResourceValues,
+    vermeerSelectedNode,
 };

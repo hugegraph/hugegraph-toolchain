@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -128,6 +129,34 @@ public class VermeerOperationsServiceTest {
     }
 
     @Test
+    public void testUpstreamMetricFreshnessSurvivesCollectorNormalization() throws Exception {
+        List<Map<String, Boolean>> cases = List.of(
+                Map.of("stale", true), Map.of("fresh", false),
+                Map.of("stale", true, "fresh", false));
+        for (Map<String, Boolean> flags : cases) {
+            StubHttp http = new StubHttp();
+            ObjectNode upstream = (ObjectNode) MAPPER.readTree(http.payload);
+            ObjectNode worker = (ObjectNode) upstream.path("workers").get(0);
+            ObjectNode metrics = (ObjectNode) worker.path("metric_status");
+            metrics.put("observed_at", 500L);
+            flags.forEach((key, value) -> metrics.put(key, value.booleanValue()));
+            http.payload = MAPPER.writeValueAsString(upstream);
+
+            Map<?, ?> cluster = cluster(service(http).enrich(main("UP"), ADMIN, false));
+            Map<?, ?> normalized = (Map<?, ?>) ((List<?>) cluster.get("workers")).get(0);
+            Map<?, ?> metricStatus = (Map<?, ?>) normalized.get("metric_status");
+
+            flags.forEach((key, value) -> Assert.assertEquals(value, metricStatus.get(key)));
+            Assert.assertEquals(500L, metricStatus.get("observed_at"));
+            Assert.assertEquals("AVAILABLE", metricStatus.get("availability"));
+            Assert.assertEquals(0.42, ((Map<?, ?>) normalized.get("metrics")).get("cpu_cores"));
+            Assert.assertEquals(false, cluster.get("stale"));
+            Assert.assertEquals("UP", cluster.get("status"));
+            Assert.assertEquals(true, normalized.get("ready"));
+        }
+    }
+
+    @Test
     public void testTransientFailureRetainsOnlyExplicitlyStaleEvidence() {
         StubHttp http = new StubHttp();
         VermeerOperationsService service = service(http);
@@ -162,6 +191,97 @@ public class VermeerOperationsServiceTest {
             Assert.assertNull(cluster.get("master"));
             Assert.assertEquals(List.of(), cluster.get("workers"));
         }
+    }
+
+    @Test
+    public void testDeniedAndUnsupportedSnapshotsRespectCacheTtl() {
+        for (int status : List.of(401, 403, 404, 405)) {
+            StubHttp http = new StubHttp();
+            TestClock clock = new TestClock();
+            VermeerOperationsService service = new VermeerOperationsService(
+                    true, "http://vermeer.internal:6688", "", 5, http, MAPPER, clock);
+            service.enrich(main("UP"), ADMIN, false);
+            http.failure = new UpstreamRequestException("upstream_http_status_" + status);
+            Map<?, ?> denied = cluster(service.enrich(main("UP"), ADMIN, true));
+            Assert.assertEquals(2, http.requests);
+            Assert.assertNull(denied.get("master"));
+            Assert.assertNull(denied.get("last_success_at"));
+
+            service.enrich(main("UP"), ADMIN, false);
+            clock.now += 4999;
+            service.enrich(main("UP"), ADMIN, false);
+            Assert.assertEquals(2, http.requests);
+            clock.now++;
+            service.enrich(main("UP"), ADMIN, false);
+            Assert.assertEquals(3, http.requests);
+            service.enrich(main("UP"), ADMIN, true);
+            Assert.assertEquals(4, http.requests);
+
+            http.failure = null;
+            clock.now += 5000;
+            Assert.assertEquals("UP", cluster(service.enrich(main("UP"), ADMIN, false)).get("status"));
+            Assert.assertEquals(5, http.requests);
+        }
+    }
+
+    @Test
+    public void testCredentialRotationBypassesCachedDenialAndUnsupportedResponses() throws Exception {
+        Path file = this.temporary.newFile("rotating-token").toPath();
+        for (int status : List.of(401, 403, 404, 405)) {
+            Files.writeString(file, "original-token\n");
+            StubHttp http = new StubHttp();
+            VermeerOperationsService service = new VermeerOperationsService(
+                    true, "http://vermeer.internal:6688", file.toString(),
+                    5, http, MAPPER, new TestClock());
+            service.enrich(main("UP"), ADMIN, false);
+            http.failure = new UpstreamRequestException("upstream_http_status_" + status);
+            service.enrich(main("UP"), ADMIN, true);
+            service.enrich(main("UP"), ADMIN, false);
+            Assert.assertEquals(2, http.requests);
+
+            Files.writeString(file, "rotated-token\n");
+            http.failure = null;
+            Map<?, ?> fresh = cluster(service.enrich(main("UP"), ADMIN, false));
+
+            Assert.assertEquals(3, http.requests);
+            Assert.assertEquals("rotated-token", http.token);
+            Assert.assertEquals("UP", fresh.get("status"));
+            Assert.assertEquals(false, fresh.get("stale"));
+        }
+    }
+
+    @Test
+    public void testMasterAndWorkerMayShareAnIdAcrossRoles() throws Exception {
+        StubHttp http = new StubHttp();
+        ObjectNode upstream = (ObjectNode) MAPPER.readTree(http.payload);
+        ObjectNode master = (ObjectNode) upstream.path("master");
+        ObjectNode worker = (ObjectNode) upstream.path("workers").get(0);
+        master.put("id", "master").put("name", "master");
+        worker.put("id", "master").put("name", "master");
+        http.payload = MAPPER.writeValueAsString(upstream);
+
+        Map<?, ?> normalized = cluster(service(http).enrich(main("UP"), ADMIN, false));
+        Map<?, ?> normalizedMaster = (Map<?, ?>) normalized.get("master");
+        Map<?, ?> normalizedWorker = (Map<?, ?>) ((List<?>) normalized.get("workers")).get(0);
+
+        Assert.assertEquals("UP", normalized.get("status"));
+        Assert.assertEquals("master", normalizedMaster.get("id"));
+        Assert.assertEquals("master", normalizedWorker.get("id"));
+        Assert.assertEquals("MASTER", normalizedMaster.get("role"));
+        Assert.assertEquals("WORKER", normalizedWorker.get("role"));
+    }
+
+    @Test
+    public void testWorkerIdsRemainUniqueWithinTheirRole() throws Exception {
+        StubHttp http = new StubHttp();
+        ObjectNode upstream = (ObjectNode) MAPPER.readTree(payload(2, true, "AVAILABLE"));
+        ((ObjectNode) upstream.path("workers").get(1)).put("id", "worker-0");
+        http.payload = MAPPER.writeValueAsString(upstream);
+
+        Map<?, ?> normalized = cluster(service(http).enrich(main("UP"), ADMIN, false));
+
+        Assert.assertEquals("MALFORMED", normalized.get("availability"));
+        Assert.assertEquals(List.of(), normalized.get("workers"));
     }
 
     @Test

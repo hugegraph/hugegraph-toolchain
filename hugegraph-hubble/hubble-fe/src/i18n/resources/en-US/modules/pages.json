@@ -1649,7 +1649,8 @@
     "vermeer_address_copied": "Address copied",
     "vermeer_launch_time": "Started at",
     "vermeer_node_information": "Node information",
-    "vermeer_reason_vermeer_snapshot_refresh_failed": "Cluster refresh failed. The last observed compute snapshot is retained."
+    "vermeer_reason_vermeer_snapshot_refresh_failed": "Cluster refresh failed. The last observed compute snapshot is retained.",
+    "vermeer_reason_metrics_warming_up": "Process metrics are warming up. Wait at least one second, then refresh to collect the second sample."
   },
   "navigation_page": {
     "title": "Navigation",

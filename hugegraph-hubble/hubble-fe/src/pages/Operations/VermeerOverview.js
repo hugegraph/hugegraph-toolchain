@@ -43,6 +43,7 @@ import {
     vermeerNodes,
     vermeerResourceSummary,
     vermeerResourceValues,
+    vermeerSelectedNode,
 } from './vermeer';
 
 const Reason = ({reason}) => {
@@ -297,7 +298,7 @@ const VermeerNodeDetails = ({node, cluster}) => {
 const VermeerOverview = ({cluster, mainStatus, view, selectedNode, fullDetail, onSelect, onFullDetail}) => {
     const {t, i18n} = useTranslation();
     const nodes = vermeerNodes(cluster);
-    const selected = nodes.find(node => vermeerNodeId(node) === selectedNode);
+    const selected = vermeerSelectedNode(nodes, selectedNode);
     const available = vermeerAvailable(cluster);
     const columns = [
         {title: t('operations.node'), key: 'name', render: (_, node) => (
