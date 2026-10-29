@@ -57,6 +57,7 @@ import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
 import {operationsReturnState} from './navigation';
 import {DIAGNOSTICS_ID} from './SourceDiagnostics';
 import VermeerOverview, {VermeerHealth, VermeerReason, VermeerSummary} from './VermeerOverview';
+import {vermeerObservedAt} from './vermeer';
 import './operations.scss';
 
 const Overview = () => {
@@ -115,9 +116,7 @@ const Overview = () => {
             else if (dataRef.current) {
                 const previous = dataRef.current;
                 const previousVermeer = previous.vermeer;
-                const lastComputeSuccess = previousVermeer?.last_success_at
-                    ?? (previousVermeer?.availability === 'AVAILABLE' && !previousVermeer.stale
-                        ? previousVermeer.observed_at : null);
+                const lastComputeSuccess = vermeerObservedAt(previousVermeer);
                 const snapshot = {...previous, stale: true,
                     nodes: previous.nodes?.map(markNodeReadinessStale),
                     vermeer: previousVermeer?.configured ? {
@@ -234,9 +233,7 @@ const Overview = () => {
 
     const unavailable = t('operations.unavailable');
     const activeSnapshot = isVermeer ? data?.vermeer : data;
-    const activeObservedAt = isVermeer && activeSnapshot?.stale
-        ? activeSnapshot.last_success_at
-        : activeSnapshot?.observed_at;
+    const activeObservedAt = isVermeer ? vermeerObservedAt(activeSnapshot) : activeSnapshot?.observed_at;
     const observed = formatObservedAt(
         activeObservedAt, i18n.language, unavailable
     );
@@ -413,7 +410,7 @@ const Overview = () => {
                             aria-label={t('operations.deployment_health')}>
                             <span>{t('operations.vermeer_main_cluster')}: {' '}
                                 <HealthStatus status={data.main_cluster_status ?? data.status}
-                                    reason={data.main_cluster_reason} />
+                                    reason={data.main_cluster_reason} stale={data.stale} />
                             </span>
                             <span>Vermeer: <VermeerHealth cluster={data.vermeer} /></span>
                         </div>
@@ -461,7 +458,7 @@ const Overview = () => {
                     </TopbarPageContextSlot>
                     {error && <Alert type='warning' showIcon title={t('operations.refresh_failed')} />}
                     <VermeerOverview cluster={data.vermeer}
-                        mainStatus={data.main_cluster_status ?? data.status} view={view}
+                        mainStatus={data.main_cluster_status ?? data.status} mainStale={data.stale} view={view}
                         selectedNode={searchParams.get('node')}
                         fullDetail={searchParams.get('detail') === 'full'}
                         onSelect={selectVermeerNode} onFullDetail={openFullDetail} />

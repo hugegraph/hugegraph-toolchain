@@ -27,15 +27,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 
@@ -48,6 +53,151 @@ public class VermeerOperationsServiceConcurrencyTest {
             OperationsCapabilityService.TOPOLOGY_READ,
             OperationsCapabilityService.METRICS_READ);
     private static final long OBSERVED_AT = 1_700_000_000_000L;
+
+    @Test
+    public void testBlockedCollectionBoundsLeaderAndFollower() throws Exception {
+        DeadlineHttp http = new DeadlineHttp(1);
+        VermeerOperationsService service = service(http);
+        ExecutorService callers = Executors.newFixedThreadPool(2);
+        try {
+            Future<Map<String, Object>> leader = callers.submit(() -> service.enrich(main(), ADMIN, true));
+            Assert.assertTrue(http.firstBlocked.await(2L, TimeUnit.SECONDS));
+            Future<Map<String, Object>> follower = callers.submit(() -> service.enrich(main(), ADMIN, true));
+
+            assertCollectionUnavailable(leader.get(1L, TimeUnit.SECONDS));
+            assertCollectionUnavailable(follower.get(1L, TimeUnit.SECONDS));
+            Assert.assertEquals(1, http.requests.get());
+            assertCollectionUnavailable(service.enrich(main(), ADMIN, false));
+            Assert.assertEquals(1, http.requests.get());
+        } finally {
+            http.release.countDown();
+            callers.shutdownNow();
+        }
+    }
+
+    @Test
+    public void testBlockedCollectionsCannotCreateUnlimitedReadersOrRunExpiredQueue() throws Exception {
+        DeadlineHttp http = new DeadlineHttp(Integer.MAX_VALUE);
+        VermeerOperationsService service = service(http);
+        ExecutorService callers = Executors.newSingleThreadExecutor();
+        try {
+            for (int i = 0; i < 8; i++) {
+                Future<Map<String, Object>> request = callers.submit(() -> service.enrich(main(), ADMIN, true));
+                assertCollectionUnavailable(request.get(1L, TimeUnit.SECONDS));
+            }
+            Assert.assertEquals(2, http.requests.get());
+            http.release.countDown();
+            http.awaitCollectorsIdle();
+            // An abandoned queued request must never begin its DNS/HTTP work.
+            Assert.assertEquals(2, http.requests.get());
+            assertCollectionUnavailable(service.enrich(main(), ADMIN, false));
+            Assert.assertEquals("worker-3", workerId(service.enrich(main(), ADMIN, true)));
+            Assert.assertEquals(3, http.requests.get());
+        } finally {
+            http.release.countDown();
+            callers.shutdownNow();
+        }
+    }
+
+    @Test
+    public void testLateCollectionCannotReplaceNewCredentialCache() throws Exception {
+        Path token = Files.createTempFile("vermeer-collection-deadline", ".token");
+        token.toFile().deleteOnExit();
+        Files.writeString(token, "old-token");
+        DeadlineHttp http = new DeadlineHttp(1);
+        VermeerOperationsService service = service(http, token);
+        ExecutorService callers = Executors.newSingleThreadExecutor();
+        try {
+            Future<Map<String, Object>> old = callers.submit(() -> service.enrich(main(), ADMIN, true));
+            Assert.assertTrue(http.firstBlocked.await(2L, TimeUnit.SECONDS));
+            assertCollectionUnavailable(old.get(1L, TimeUnit.SECONDS));
+
+            Files.writeString(token, "new-token");
+            Assert.assertEquals("worker-2", workerId(service.enrich(main(), ADMIN, true)));
+            http.release.countDown();
+            http.awaitCollectorsIdle();
+
+            Assert.assertEquals("worker-2", workerId(service.enrich(main(), ADMIN, false)));
+            Assert.assertEquals(2, http.requests.get());
+        } finally {
+            http.release.countDown();
+            callers.shutdownNow();
+        }
+    }
+
+    @Test
+    public void testCollectionDeadlineIncludesJsonParsing() throws Exception {
+        DeadlineHttp http = new DeadlineHttp(0);
+        BlockingMapper mapper = new BlockingMapper();
+        VermeerOperationsService service = new VermeerOperationsService(
+                true, "http://127.0.0.1:6688", "", 30, http, mapper, Clock.systemUTC());
+        ExecutorService callers = Executors.newSingleThreadExecutor();
+        try {
+            Future<Map<String, Object>> request = callers.submit(() -> service.enrich(main(), ADMIN, true));
+            Assert.assertTrue(mapper.blocked.await(2L, TimeUnit.SECONDS));
+            Map<String, Object> timedOut = request.get(1L, TimeUnit.SECONDS);
+            assertCollectionUnavailable(timedOut);
+            Assert.assertEquals("vermeer_upstream_timeout", ((Map<?, ?>) timedOut.get("vermeer")).get("reason"));
+            mapper.release.countDown();
+            http.awaitCollectorsIdle();
+            assertCollectionUnavailable(service.enrich(main(), ADMIN, false));
+            Assert.assertEquals(1, http.requests.get());
+        } finally {
+            mapper.release.countDown();
+            callers.shutdownNow();
+        }
+    }
+
+    @Test
+    public void testCompletionWaitsForCachePublication() throws Exception {
+        BlockingHttpClient http = new BlockingHttpClient(snapshot(), 0);
+        CountDownLatch publishing = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicLong ticks = new AtomicLong();
+        AtomicInteger reads = new AtomicInteger();
+        VermeerOperationsService service = new VermeerOperationsService(
+                true, "http://127.0.0.1:6688", "", 30, http, new ObjectMapper(), Clock.systemUTC(), () -> {
+                    if (reads.incrementAndGet() == 1) {
+                        publishing.countDown();
+                        try {
+                            if (!release.await(2L, TimeUnit.SECONDS)) {
+                                throw new AssertionError("Cache publication was never released");
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new AssertionError(e);
+                        }
+                    }
+                    return ticks.get();
+                }, 2500, null);
+        ExecutorService callers = Executors.newSingleThreadExecutor();
+        try {
+            Future<Map<String, Object>> request = callers.submit(() -> service.enrich(main(), ADMIN, false));
+            Assert.assertTrue(publishing.await(2L, TimeUnit.SECONDS));
+            Assert.assertThrows(TimeoutException.class, () -> request.get(50L, TimeUnit.MILLISECONDS));
+            release.countDown();
+            Assert.assertEquals("worker-1", workerId(request.get(1L, TimeUnit.SECONDS)));
+
+            ticks.set(TimeUnit.SECONDS.toNanos(30L) - 1);
+            service.enrich(main(), ADMIN, false);
+            Assert.assertEquals(1, http.requests());
+            ticks.incrementAndGet();
+            service.enrich(main(), ADMIN, false);
+            Assert.assertEquals(2, http.requests());
+        } finally {
+            release.countDown();
+            callers.shutdownNow();
+        }
+    }
+
+    private static void assertCollectionUnavailable(Map<String, Object> overview) {
+        Map<?, ?> cluster = (Map<?, ?>) overview.get("vermeer");
+        Assert.assertEquals("UP", overview.get("main_cluster_status"));
+        Assert.assertEquals("UNKNOWN", cluster.get("status"));
+        Assert.assertEquals("UNAVAILABLE", cluster.get("availability"));
+        Assert.assertTrue(Set.of("vermeer_upstream_timeout", "vermeer_upstream_unavailable")
+                             .contains(cluster.get("reason")));
+    }
 
     @Test
     public void testCachedReadDoesNotWaitForExplicitRefresh() throws Exception {
@@ -108,8 +258,14 @@ public class VermeerOperationsServiceConcurrencyTest {
     private static void awaitPendingCollection(Thread thread, Future<?> request) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2L);
         while (!request.isDone() && System.nanoTime() < deadline) {
-            if (thread.getState() == Thread.State.WAITING && !request.isDone()) {
-                return;
+            Thread.State state = thread.getState();
+            if ((state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) && !request.isDone()) {
+                for (StackTraceElement frame : thread.getStackTrace()) {
+                    if (frame.getClassName().equals(VermeerOperationsService.class.getName()) &&
+                        frame.getMethodName().equals("await")) {
+                        return;
+                    }
+                }
             }
             LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1L));
         }
@@ -248,6 +404,84 @@ public class VermeerOperationsServiceConcurrencyTest {
 
         private void release() {
             this.release.countDown();
+        }
+    }
+
+    private static final class DeadlineHttp extends OperationsHttpClient {
+
+        private final int blockRequests;
+        private final AtomicInteger requests = new AtomicInteger();
+        private final CountDownLatch firstBlocked = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+        private final List<Thread> workers = new CopyOnWriteArrayList<>();
+
+        private DeadlineHttp(int blockRequests) {
+            super(100, 100, 1024 * 1024);
+            this.blockRequests = blockRequests;
+        }
+
+        @Override
+        public String getBearer(URI target, String token, Set<String> allowedOrigins) {
+            int request = this.requests.incrementAndGet();
+            this.workers.add(Thread.currentThread());
+            if (request <= this.blockRequests) {
+                this.firstBlocked.countDown();
+                boolean interrupted = false;
+                // Simulate a resolver that does not respond to cancellation.
+                while (this.release.getCount() != 0) {
+                    try {
+                        this.release.await();
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return snapshot("worker-" + request, OBSERVED_AT + request);
+        }
+
+        private void awaitCollectorsIdle() {
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2L);
+            while (System.nanoTime() < deadline) {
+                boolean collecting = this.workers.stream().anyMatch(worker -> {
+                    for (StackTraceElement frame : worker.getStackTrace()) {
+                        if (frame.getClassName().equals(VermeerOperationsService.class.getName())) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+                if (!collecting) {
+                    return;
+                }
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1L));
+            }
+            Assert.fail("Released collectors did not finish");
+        }
+    }
+
+    private static final class BlockingMapper extends ObjectMapper {
+
+        private final CountDownLatch blocked = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+
+        @Override
+        public JsonNode readTree(String content) throws JsonProcessingException {
+            this.blocked.countDown();
+            boolean interrupted = false;
+            while (this.release.getCount() != 0) {
+                try {
+                    this.release.await();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+            return super.readTree(content);
         }
     }
 

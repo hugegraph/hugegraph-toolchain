@@ -41,6 +41,7 @@ import {
     vermeerNodeId,
     vermeerNodeReady,
     vermeerNodes,
+    vermeerObservedAt,
     vermeerResourceSummary,
     vermeerResourceValues,
     vermeerSelectedNode,
@@ -230,7 +231,7 @@ const VermeerFacts = ({cluster, nodes}) => {
                 collected: resources.rss.collected, total: resources.total,
             }) : t('operations.vermeer_resource_unconfirmed')},
         {key: 'observed', icon: ClockCircleOutlined, label: t('operations.last_observed'),
-            value: formatObservedAt(cluster?.stale ? cluster.last_success_at : cluster?.observed_at,
+            value: formatObservedAt(vermeerObservedAt(cluster),
                 i18n.language, t('operations.unavailable'))},
     ];
     return (
@@ -260,6 +261,8 @@ const VermeerFacts = ({cluster, nodes}) => {
 const VermeerNodeDetails = ({node, cluster}) => {
     const {t, i18n} = useTranslation();
     const checks = node.checks ?? {};
+    const observedAt = vermeerAvailable(cluster)
+        ? node.observed_at ?? cluster.observed_at : vermeerObservedAt(cluster);
     const checkKeys = node.role === 'MASTER' ? ['http_ready', 'initialized', 'service_online']
         : ['registered', 'connection_ready', 'load_stream_ready', 'compute_stream_ready',
             'superstep_stream_ready'];
@@ -306,7 +309,7 @@ const VermeerNodeDetails = ({node, cluster}) => {
                     i18n.language, t('operations.unavailable')
                 )},
                 {key: 'observed', label: t('operations.observed_at'), children: formatObservedAt(
-                    cluster.stale ? cluster.last_success_at : cluster.observed_at,
+                    observedAt,
                     i18n.language, t('operations.unavailable')
                 )},
             ]} />
@@ -314,7 +317,7 @@ const VermeerNodeDetails = ({node, cluster}) => {
     );
 };
 
-const VermeerOverview = ({cluster, mainStatus, view, selectedNode, fullDetail, onSelect, onFullDetail}) => {
+const VermeerOverview = ({cluster, mainStatus, mainStale, view, selectedNode, fullDetail, onSelect, onFullDetail}) => {
     const {t, i18n} = useTranslation();
     const nodes = vermeerNodes(cluster);
     const selected = vermeerSelectedNode(nodes, selectedNode);
@@ -406,7 +409,7 @@ const VermeerOverview = ({cluster, mainStatus, view, selectedNode, fullDetail, o
                 </>
             )}
             <div className='operations-vermeer-main-context'>
-                <span>{t('operations.vermeer_main_cluster')}: <HealthStatus status={mainStatus} /></span>
+                <span>{t('operations.vermeer_main_cluster')}: <HealthStatus status={mainStatus} stale={mainStale} /></span>
             </div>
         </section>
     );

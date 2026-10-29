@@ -58,12 +58,20 @@ This requires a paired Vermeer build providing schema version 1, including:
 - registered and ready Worker counts;
 - independently timestamped process CPU/RSS observations and metric availability.
 
-Only the Vermeer Bearer exchange, including a continuously streaming response
-body, is limited to `operations.connect_timeout_ms` plus
-`operations.read_timeout_ms`. Existing PD, Store and readiness requests retain
-their idle-read and source-specific deadline behavior. DNS validation precedes
-the Vermeer HTTP call budget. Master and Worker raw IDs may overlap; the UI
-includes the role in node-selection keys.
+The whole Vermeer collection shares one deadline of
+`operations.connect_timeout_ms` plus `operations.read_timeout_ms`, covering
+queueing, DNS validation, the HTTP exchange/body and response normalization.
+The caller starting a collection and callers joining it wait only for the
+remaining budget. Expiry returns `UNKNOWN` with reason
+`vermeer_upstream_timeout`; earlier successful evidence is explicitly stale.
+Late success cannot replace the settled timeout response or a newer
+credential's cache. A known authorization rejection still clears retained
+evidence from the same successful observation, without changing an already
+returned response or a newer successful observation.
+Fixed worker and queue limits bound outstanding work even if an underlying
+DNS lookup cannot be interrupted. Existing PD, Store and readiness requests
+retain their idle-read and source-specific deadline behavior. Master and
+Worker raw IDs may overlap; the UI includes the role in node-selection keys.
 
 Concurrent explicit Vermeer refreshes share one in-flight collection. Network
 and JSON parsing run outside the cache monitor, while an ordinary overview read
@@ -74,6 +82,7 @@ overwrite the new credential's cache.
 Each overview request still verifies the configured credential before using the
 compute cache. Concurrent file reads share one bounded background read outside
 the cache lock, with a caller wait limited by `operations.read_timeout_ms`.
+This credential-read budget is separate and precedes the collection deadline.
 An unreadable or stalled credential file produces `UNKNOWN` with reason
 `vermeer_credentials_unavailable`, without cached compute nodes or resources.
 A timed-out read cannot publish a late token; retries do not create additional
@@ -126,6 +135,8 @@ node details all show the last successful observation time. The failure reason
 and stale marker make clear that current readiness is not confirmed.
 Without a successful observation, the time remains unavailable; a failed probe
 does not create a successful observation timestamp.
+The main-cluster status also retains its own stale marker in the deployment
+strip and compute view, independently of the compute snapshot's freshness.
 
 ### Credential file unavailable
 
@@ -135,6 +146,24 @@ Actual Chromium capture with controlled API test data: unreadable credentials
 clear earlier compute details, and unavailable counts do not imply zero Workers.
 The main-cluster topology and the return action remain available. This image
 does not establish live authentication or Helm deployment acceptance.
+
+### Independent cluster freshness
+
+![Fresh compute observations beside a stale main-cluster status](images/showcase/operations-vermeer-main-stale.png)
+
+Controlled API test data gives Vermeer a fresh successful observation while the
+main snapshot is stale. Both the deployment strip and compute-view footer keep
+the main-cluster stale marker; compute readiness and resource coverage remain
+independent. This is browser evidence, not live cluster acceptance.
+
+### Phone topology
+
+![Three main-cluster tiers with a compact compute entry beside Store on a phone](images/showcase/operations-vermeer-mobile.png)
+
+Actual topology-surface capture at a 375px viewport using controlled API data.
+Peer nodes wrap inside their existing Server, PD or Store layer. The compact
+Vermeer entry remains beside Store without a fourth tier or a connecting edge.
+It opens the compute view and restores the main view on return.
 
 ## Paired rollout
 

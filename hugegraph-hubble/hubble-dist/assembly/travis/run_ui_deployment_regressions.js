@@ -33,6 +33,7 @@ const REQUIRED_CHECKS = Object.freeze([
     'truncation is compact with details on demand',
     'async task ID remains visible in the selected graph and failure is actionable',
     'PD unmapped metrics have localized three-node source diagnostics',
+    'mobile operations preserves readable main tiers and Store-row compute access',
     'anonymous GraphSpaces visible with account and mutation actions hidden',
 ]);
 
@@ -67,6 +68,8 @@ const screenshotNames = new Set([
     'query-core-1440', 'query-core-1024',
     'query-core-1440', 'query-core-1024',
     'async-task-submitted', 'async-task-result-limit', 'pd-unmapped-diagnostics',
+    'operations-mobile-320', 'operations-mobile-375',
+    'operations-mobile-compute-320', 'operations-mobile-compute-375',
     'graphspace-anonymous', 'failure',
 ].map(name => `${name}.png`));
 function main({outputDir, env = process.env, argv = process.argv.slice(2), spawn = spawnSync,

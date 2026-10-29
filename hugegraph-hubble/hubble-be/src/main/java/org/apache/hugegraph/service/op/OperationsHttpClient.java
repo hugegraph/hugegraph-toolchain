@@ -78,6 +78,10 @@ public class OperationsHttpClient {
         return this.get(target, username, password, Set.of());
     }
 
+    int callTimeoutMillis() {
+        return this.callTimeoutMillis;
+    }
+
     public String get(URI target, String username, String password,
                       Set<String> allowedOrigins) {
         return this.get(target, username, password, allowedOrigins,

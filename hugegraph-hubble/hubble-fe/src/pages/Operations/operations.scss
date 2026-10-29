@@ -973,8 +973,16 @@ section.operations-metric-group .ant-descriptions-item-content > div + div {
 .operations-vermeer-summary-copy {
     display: flex;
     flex: 1;
+    min-width: 0;
     flex-direction: column;
     gap: 3px;
+
+    .operations-health {
+        min-width: 0;
+        flex-wrap: wrap;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
 
     > span:not(.operations-health),
     small {
@@ -1341,12 +1349,88 @@ section.operations-metric-group .ant-descriptions-item-content > div + div {
         .operations-node-icon { width: 20px; height: 20px; font-size: 18px; }
         .operations-tier-branch { gap: 6px; }
         .operations-compute-entry { padding-left: 8px; }
-        .operations-vermeer-icon { font-size: 20px; }
+        .operations-vermeer-icon { display: none; }
     }
 }
 
 @media (max-width: 620px) {
     .operations-overview .operations-fact-list { grid-template-columns: minmax(0, 1fr); }
+
+    .operations-overview .operations-workbench { padding: 12px; }
+    .operations-attention .ant-table-content { overflow-x: auto; }
+
+    .operations-main-topology.has-vermeer {
+        grid-template-columns: minmax(0, 1fr) 90px;
+        gap: 20px 8px;
+
+        .operations-topology { display: contents; }
+
+        .operations-tier {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .tier-server { grid-row: 1; grid-column: 1 / -1; }
+        .tier-pd { grid-row: 2; grid-column: 1 / -1; }
+        .tier-store { grid-row: 3; grid-column: 1; }
+
+        .operations-tier-label {
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 2px 8px;
+        }
+
+        .operations-tier-branch,
+        .operations-tier-branch[data-node-count='1'],
+        .operations-tier-branch[data-node-count='2'] {
+            grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+            gap: 8px;
+        }
+
+        .operations-topology-node { min-height: 44px; }
+        .tier-pd .operations-topology-node.is-axis-node { grid-column: auto; }
+
+        .operations-topology::before,
+        .operations-tier-branch::before,
+        .operations-topology-node::before,
+        .operations-topology-overflow::before { display: none; }
+
+        .operations-compute-entry {
+            grid-row: 3;
+            grid-column: 2;
+            align-self: end;
+            padding-left: 0;
+            border-left: 0;
+        }
+
+        .operations-vermeer-summary {
+            min-height: 44px;
+            min-width: 0;
+            padding: 8px;
+        }
+
+        .operations-vermeer-summary > .anticon { display: none; }
+
+        .operations-vermeer-summary-copy {
+            min-width: 0;
+            width: 100%;
+
+            > span:not(.operations-health),
+            > small:last-child { display: none; }
+
+            strong { font-size: 12px; overflow-wrap: anywhere; }
+
+            .operations-health {
+                min-width: 0;
+                flex-wrap: wrap;
+                font-size: 12px;
+                line-height: 18px;
+                overflow-wrap: anywhere;
+                white-space: normal;
+            }
+        }
+    }
 }
 
 .operations-vermeer-fact-value {

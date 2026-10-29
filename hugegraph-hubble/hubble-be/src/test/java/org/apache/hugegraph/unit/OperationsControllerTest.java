@@ -113,17 +113,20 @@ public class OperationsControllerTest {
         Fixture fixture = fixture("USER", true);
         Mockito.when(fixture.dataService.overview(Mockito.any(),
                                                   Mockito.anySet(),
-                                                  Mockito.eq(false)))
+                                                  Mockito.eq(true)))
                .thenReturn(Collections.singletonMap("status", "UP"));
 
         Map<String, Object> capabilities =
                 fixture.controller.capabilities();
-        Map<String, Object> overview = fixture.controller.overview(false);
+        Map<String, Object> overview = fixture.controller.overview(true);
 
         Assert.assertEquals(3,
                             ((java.util.Set<?>) capabilities.get(
                              "capabilities")).size());
         Assert.assertEquals("UP", overview.get("status"));
+        Mockito.verify(fixture.vermeerService).enrich(Mockito.eq(overview),
+                                                      Mockito.anySet(),
+                                                      Mockito.eq(true));
     }
 
     private static Fixture fixture(String level) {
@@ -156,18 +159,21 @@ public class OperationsControllerTest {
                                            Mockito.anyBoolean()))
                .thenAnswer(invocation -> invocation.getArgument(0));
         ReflectionTestUtils.setField(controller, "vermeerService", vermeerService);
-        return new Fixture(controller, dataService);
+        return new Fixture(controller, dataService, vermeerService);
     }
 
     private static final class Fixture {
 
         private final OperationsController controller;
         private final OperationsDataService dataService;
+        private final VermeerOperationsService vermeerService;
 
         private Fixture(OperationsController controller,
-                        OperationsDataService dataService) {
+                        OperationsDataService dataService,
+                        VermeerOperationsService vermeerService) {
             this.controller = controller;
             this.dataService = dataService;
+            this.vermeerService = vermeerService;
         }
     }
 }

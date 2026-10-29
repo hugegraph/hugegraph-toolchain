@@ -18,6 +18,9 @@
 const vermeerAvailable = cluster => cluster?.configured === true
     && cluster?.availability === 'AVAILABLE' && !cluster?.stale;
 
+const vermeerObservedAt = cluster => cluster?.last_success_at
+    ?? (vermeerAvailable(cluster) ? cluster.observed_at : null);
+
 const vermeerNodeReady = (node, cluster) => {
     if (!vermeerAvailable(cluster) || typeof node?.ready !== 'boolean') {
         return null;
@@ -108,6 +111,7 @@ export {
     vermeerNodeId,
     vermeerNodeReady,
     vermeerNodes,
+    vermeerObservedAt,
     vermeerResourceSummary,
     vermeerResourceValues,
     vermeerSelectedNode,

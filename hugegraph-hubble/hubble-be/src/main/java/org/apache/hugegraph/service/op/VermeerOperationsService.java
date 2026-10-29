@@ -33,9 +33,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.LongSupplier;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -77,13 +82,16 @@ public class VermeerOperationsService {
     private final LongSupplier ticker;
     private final VermeerTokenReader tokenReader;
     private final int tokenReadTimeoutMillis;
+    private final int collectionTimeoutMillis;
+    private final ThreadPoolExecutor collector;
     private long appliedCredentialRead;
     private boolean credentialReadSucceeded;
     private String credentialFingerprint;
     private Map<String, Object> cached;
     private Map<String, Object> lastSuccess;
     private long cachedAtNanos;
-    private CompletableFuture<Map<String, Object>> inFlight;
+    private CollectionFlight cachedFlight;
+    private CollectionFlight inFlight;
 
     @Autowired
     public VermeerOperationsService(HugeConfig config, ObjectMapper mapper) {
@@ -121,6 +129,14 @@ public class VermeerOperationsService {
         this.ticker = ticker;
         this.tokenReadTimeoutMillis = tokenReadTimeoutMillis;
         this.tokenReader = new VermeerTokenReader(reader == null ? this::readToken : reader);
+        this.collectionTimeoutMillis = http.callTimeoutMillis();
+        this.collector = new ThreadPoolExecutor(
+                2, 2, 60L, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1), task -> {
+                    Thread thread = new Thread(task, "vermeer-cluster-collector");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+        this.collector.allowCoreThreadTimeOut(true);
     }
 
     public Map<String, Object> enrich(Map<String, Object> overview,
@@ -151,8 +167,7 @@ public class VermeerOperationsService {
         long now = this.clock.millis();
         String token;
         String fingerprint;
-        CompletableFuture<Map<String, Object>> future;
-        Map<String, Object> previousSuccess = null;
+        CollectionFlight flight;
         boolean collect = false;
         synchronized (this) {
             if (credentials.token() == null) {
@@ -188,45 +203,95 @@ public class VermeerOperationsService {
                 return this.cached;
             }
             if (this.inFlight != null) {
-                future = this.inFlight;
+                flight = this.inFlight;
             } else {
-                future = new CompletableFuture<>();
-                this.inFlight = future;
-                previousSuccess = this.lastSuccess;
+                flight = new CollectionFlight(token, fingerprint, this.lastSuccess,
+                                              this.collectionTimeoutMillis);
+                this.inFlight = flight;
                 collect = true;
             }
         }
-        if (!collect) {
-            return await(future);
+        if (collect) {
+            try {
+                this.collector.execute(() -> this.collectAndPublish(flight, now));
+            } catch (RejectedExecutionException e) {
+                this.complete(flight, this.failed("UNAVAILABLE", "vermeer_upstream_unavailable",
+                                                 this.clock.millis(), flight.previousSuccess), null);
+            }
         }
-        Map<String, Object> result;
+        return this.await(flight);
+    }
+
+    private void collectAndPublish(CollectionFlight flight, long now) {
+        // A queued task may have expired while every collector was stuck in DNS.
+        if (flight.result.isDone() || flight.remainingNanos() <= 0) {
+            this.complete(flight, null, null);
+            return;
+        }
         try {
-            result = this.collect(token, now, previousSuccess);
+            this.complete(flight, this.collect(flight.token, now, flight.previousSuccess), null);
         } catch (RuntimeException e) {
-            synchronized (this) {
-                if (this.inFlight == future &&
-                    Objects.equals(this.credentialFingerprint, fingerprint)) {
+            this.complete(flight, null, e);
+        }
+    }
+
+    private void complete(CollectionFlight flight, Map<String, Object> result, RuntimeException error) {
+        long now = this.clock.millis();
+        synchronized (this) {
+            Object reason = result == null ? null : result.get("reason");
+            boolean terminal = reason != null && CLEAR_SUCCESS_REASONS.contains(reason);
+            if (flight.result.isDone()) {
+                // A late rejection may revoke only the history still owned by this
+                // flight or carried forward by another failure. Never alter a
+                // settled response or a newer successful snapshot.
+                boolean sameHistory = this.cached != null &&
+                                      Boolean.TRUE.equals(this.cached.get("stale")) &&
+                                      this.lastSuccess != null && this.lastSuccess == flight.previousSuccess;
+                if (terminal && (this.cachedFlight == flight || sameHistory) &&
+                    Objects.equals(this.credentialFingerprint, flight.fingerprint)) {
+                    this.lastSuccess = null;
+                    this.cached = this.empty((String) result.get("availability"),
+                                             (String) result.get("reason"), now);
+                    this.cachedAtNanos = this.ticker.getAsLong();
+                }
+                return;
+            }
+            if (!terminal && (flight.remainingNanos() <= 0 || result == null && error == null)) {
+                result = this.failed("UNAVAILABLE", "vermeer_upstream_timeout", now,
+                                     flight.previousSuccess);
+                error = null;
+            }
+            boolean current = this.inFlight == flight &&
+                              Objects.equals(this.credentialFingerprint, flight.fingerprint);
+            if (error != null) {
+                if (current) {
                     this.inFlight = null;
                 }
+                flight.result.completeExceptionally(error);
+                return;
             }
-            future.completeExceptionally(e);
-            throw e;
-        }
-        synchronized (this) {
-            if (this.inFlight == future &&
-                Objects.equals(this.credentialFingerprint, fingerprint)) {
+            if (current) {
+                // Another terminal result may have revoked the history captured
+                // before this pending flight began. A failure cannot restore it.
+                if (Boolean.TRUE.equals(result.get("stale")) &&
+                    this.lastSuccess != flight.previousSuccess) {
+                    result = this.empty((String) result.get("availability"),
+                                        (String) result.get("reason"), now);
+                }
                 if ("AVAILABLE".equals(result.get("availability"))) {
                     this.lastSuccess = result;
                 } else if (CLEAR_SUCCESS_REASONS.contains(result.get("reason"))) {
                     this.lastSuccess = null;
                 }
                 this.cached = result;
+                this.cachedFlight = flight;
                 this.cachedAtNanos = this.ticker.getAsLong();
                 this.inFlight = null;
             }
+            // Every completion takes this monitor. Publish before waking callers,
+            // so their next refresh observes the completed cache and its TTL.
+            flight.result.complete(result);
         }
-        future.complete(result);
-        return result;
     }
 
     private Map<String, Object> collect(String token, long now,
@@ -265,15 +330,42 @@ public class VermeerOperationsService {
         return result;
     }
 
-    private static Map<String, Object> await(
-            CompletableFuture<Map<String, Object>> future) {
+    private Map<String, Object> await(CollectionFlight flight) {
         try {
-            return future.join();
-        } catch (CompletionException e) {
+            return flight.result.get(Math.max(1L, flight.remainingNanos()), TimeUnit.NANOSECONDS);
+        } catch (TimeoutException e) {
+            this.complete(flight, null, null);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return this.failed("UNAVAILABLE", "vermeer_upstream_unavailable", this.clock.millis(),
+                               flight.previousSuccess);
+        } catch (ExecutionException e) {
             if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
             }
-            throw e;
+            throw new CompletionException(e.getCause());
+        }
+        return flight.result.getNow(null);
+    }
+
+    private static final class CollectionFlight {
+
+        private final String token;
+        private final String fingerprint;
+        private final Map<String, Object> previousSuccess;
+        private final long deadlineNanos;
+        private final CompletableFuture<Map<String, Object>> result = new CompletableFuture<>();
+
+        private CollectionFlight(String token, String fingerprint, Map<String, Object> previousSuccess,
+                                  int timeoutMillis) {
+            this.token = token;
+            this.fingerprint = fingerprint;
+            this.previousSuccess = previousSuccess;
+            this.deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        }
+
+        private long remainingNanos() {
+            return this.deadlineNanos - System.nanoTime();
         }
     }
 
@@ -319,6 +411,7 @@ public class VermeerOperationsService {
 
     private void clearLocked() {
         this.cached = null;
+        this.cachedFlight = null;
         this.lastSuccess = null;
         this.credentialFingerprint = null;
         this.cachedAtNanos = 0L;

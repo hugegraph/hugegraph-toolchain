@@ -1633,6 +1633,7 @@
     "vermeer_reason_vermeer_cluster_response_invalid": "集群健康响应不完整或状态不一致",
     "vermeer_reason_vermeer_access_denied": "Vermeer 拒绝访问集群监测信息",
     "vermeer_reason_vermeer_upstream_unavailable": "暂时无法连接 Vermeer 集群",
+    "vermeer_reason_vermeer_upstream_timeout": "计算集群采集超时，当前就绪状态待确认",
     "vermeer_reason_vermeer_configuration_invalid": "Vermeer 监测连接配置不正确",
     "vermeer_reason_master_not_ready": "Master 尚未就绪，暂时无法协调 Worker",
     "vermeer_reason_master_initializing": "Master 正在初始化",

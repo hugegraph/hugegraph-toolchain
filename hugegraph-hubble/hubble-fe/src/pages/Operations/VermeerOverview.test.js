@@ -195,6 +195,9 @@ test('unknown topology does not claim zero nodes or no registered Workers', asyn
     getOverview.mockResolvedValue(data);
     const {container} = renderOverview('/operations/overview?service=vermeer');
     await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const computeHealth = container.querySelector('.operations-vermeer-cluster-heading');
+    expect(computeHealth.querySelector('.status-unknown')).not.toBeNull();
+    expect(computeHealth.querySelector('.status-up')).toBeNull();
     const tiers = container.querySelectorAll('.operations-vermeer-tier');
     for (const tier of tiers) {
         expect(within(tier).queryByText(/^0 nodes?$/)).not.toBeInTheDocument();

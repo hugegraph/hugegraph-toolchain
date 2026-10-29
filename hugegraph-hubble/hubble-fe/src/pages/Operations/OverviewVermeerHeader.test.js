@@ -166,6 +166,10 @@ test.each([
         }
         expect(Boolean(within(header).queryByText('Stale'))).toBe(computeStale);
         expect(header.querySelector(computeStale ? '.status-unknown' : '.status-up')).not.toBeNull();
+        const mainStrip = container.querySelector('.operations-deployment-health > span');
+        const mainContext = container.querySelector('.operations-vermeer-main-context');
+        expect(Boolean(within(mainStrip).queryByText('Stale'))).toBe(mainStale);
+        expect(Boolean(within(mainContext).queryByText('Stale'))).toBe(mainStale);
 
         await userEvent.click(screen.getByRole('button', {name: 'Back to main cluster'}));
         await screen.findByRole('heading', {level: 2, name: 'Cluster Overview'});
@@ -178,8 +182,8 @@ test.each([
 test.each([
     ['UP', true, COMPUTE_OBSERVED],
     ['UNKNOWN', true, COMPUTE_OBSERVED],
-    ['UNKNOWN', false, RETRY_OBSERVED],
-    ['UP', false, RETRY_OBSERVED],
+    ['UNKNOWN', false, COMPUTE_OBSERVED],
+    ['UP', false, COMPUTE_OBSERVED],
 ])('compute header status %s and stale=%s choose observation time independently',
     async (status, stale, expectedTime) => {
         jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
@@ -193,10 +197,103 @@ test.each([
         const header = container.querySelector('.operations-overall-status');
         expect(header).toHaveTextContent(formatObservedAt(expectedTime, 'en-US', 'Unavailable'));
         expect(header).toHaveTextContent(formatObservedAge(expectedTime, 'en-US', 'Unavailable'));
-        const otherTime = stale ? RETRY_OBSERVED : COMPUTE_OBSERVED;
+        const otherTime = RETRY_OBSERVED;
         expect(header).not.toHaveTextContent(formatObservedAt(otherTime, 'en-US', 'Unavailable'));
         expect(Boolean(within(header).queryByText('Stale'))).toBe(stale);
     });
+
+test.each(['vermeer_upstream_unavailable', 'vermeer_credentials_unavailable', 'vermeer_access_denied'])(
+    'a first %s failure has no successful observation clock', async reason => {
+        const data = snapshot();
+        data.vermeer = {...data.vermeer, availability: 'UNAVAILABLE', status: 'UNKNOWN', reason,
+            stale: false, observed_at: RETRY_OBSERVED, last_success_at: null,
+            master: null, workers: [], registered_workers: null, ready_workers: null};
+        getOverview.mockResolvedValue(data);
+        const {container} = renderCompute();
+        await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+        const header = container.querySelector('.operations-overall-status');
+        expect(header).toHaveTextContent('Observed: Unavailable · Unavailable');
+        expect(header).not.toHaveTextContent(formatObservedAt(RETRY_OBSERVED, 'en-US', 'Unavailable'));
+        const lastObserved = container.querySelector('.operations-vermeer-facts .operations-fact:last-child');
+        expect(lastObserved).toHaveTextContent('Last observedUnavailable');
+        expect(within(header).queryByText('Stale')).not.toBeInTheDocument();
+    }
+);
+
+test('a first collection timeout explains the unconfirmed readiness in Chinese without a successful clock', async () => {
+    await i18n.changeLanguage('zh-CN');
+    const data = snapshot();
+    data.vermeer = {...data.vermeer, availability: 'UNAVAILABLE', status: 'UNKNOWN',
+        reason: 'vermeer_upstream_timeout', stale: false, observed_at: RETRY_OBSERVED,
+        last_success_at: null, master: null, workers: [], registered_workers: null, ready_workers: null};
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer 计算集群'});
+    const header = container.querySelector('.operations-overall-status');
+    expect(within(header).getByText('计算集群采集超时，当前就绪状态待确认')).toBeInTheDocument();
+    expect(header).not.toHaveTextContent('vermeer_upstream_timeout');
+    expect(header).not.toHaveTextContent('vermeer upstream timeout');
+    expect(header).toHaveTextContent(`${i18n.t('operations.observed_at')}: 不可用 · 不可用`);
+    expect(header).not.toHaveTextContent(formatObservedAt(RETRY_OBSERVED, 'zh-CN', '不可用'));
+    expect(header.querySelector('.status-unknown')).not.toBeNull();
+});
+
+test.each([
+    ['fresh with successful timestamp', 'AVAILABLE', false, COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
+    ['fresh legacy response', 'AVAILABLE', false, null, RETRY_OBSERVED],
+    ['retained successful snapshot', 'UNAVAILABLE', true, COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
+    ['retained snapshot without success', 'UNAVAILABLE', true, null, null],
+])('%s preserves successful service clocks and the node observation clock',
+    async (_, availability, stale, lastSuccess, expectedTime) => {
+        const data = snapshot();
+        data.vermeer = {...data.vermeer, availability, stale, observed_at: RETRY_OBSERVED,
+            last_success_at: lastSuccess};
+        getOverview.mockResolvedValue(data);
+        const {container} = renderCompute();
+        await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+        const expected = formatObservedAt(expectedTime, 'en-US', 'Unavailable');
+        expect(container.querySelector('.operations-overall-status')).toHaveTextContent(expected);
+        const lastObserved = container.querySelector('.operations-vermeer-facts .operations-fact:last-child strong');
+        expect(lastObserved).toHaveTextContent(expected);
+        await userEvent.click(screen.getByRole('button', {name: 'worker-01'}));
+        const dialog = await screen.findByRole('dialog');
+        const expectedNode = formatObservedAt(availability === 'AVAILABLE' && !stale
+            ? RETRY_OBSERVED : expectedTime, 'en-US', 'Unavailable');
+        expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
+            .toHaveTextContent(expectedNode);
+    });
+
+test('fresh node details preserve an explicit node observation distinct from the collector clock', async () => {
+    const data = snapshot();
+    data.vermeer.workers[0].observed_at = COMPUTE_LAST_SUCCESS;
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    expect(container.querySelector('.operations-overall-status')).toHaveTextContent(
+        formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable')
+    );
+    await userEvent.click(screen.getByRole('button', {name: 'worker-01'}));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
+        .toHaveTextContent(formatObservedAt(COMPUTE_LAST_SUCCESS, 'en-US', 'Unavailable'));
+});
+
+test('a stale formerly UP main snapshot remains visibly stale beside fresh compute health', async () => {
+    const data = snapshot();
+    data.main_cluster_status = 'UP';
+    data.main_cluster_reason = null;
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const header = container.querySelector('.operations-overall-status');
+    expect(header.querySelector('.status-up')).not.toBeNull();
+    expect(within(header).queryByText('Stale')).not.toBeInTheDocument();
+    for (const mainStatus of [container.querySelector('.operations-deployment-health > span'),
+        container.querySelector('.operations-vermeer-main-context')]) {
+        expect(within(mainStatus).getByText('UP')).toBeInTheDocument();
+        expect(within(mainStatus).getByText('Stale')).toBeInTheDocument();
+    }
+});
 
 test('a stale compute snapshot without a successful observation does not reuse the failed-attempt clock', async () => {
     jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
