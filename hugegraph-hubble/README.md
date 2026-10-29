@@ -388,6 +388,13 @@ Prepare reusable schemas before configuring data sources and import tasks.
 
 ![Hubble schema template management](docs/images/showcase/schema-templates.jpg)
 
+The original Red Chamber (`hlm`) and COVID-19 (`covid19`) schemas are available
+alongside the smaller examples. Every example includes a scrollable code preview;
+using one opens a draft and saves it only after confirmation. The screenshot below
+uses controlled API responses with an empty Server template list, not a live cluster.
+
+![Original Schema examples and code previews](docs/assets/schema-original-examples.png)
+
 Schema deletion keeps the selected graph and targets visible, and leaves failed requests
 open for retry or cancellation. See the [schema deletion recovery guide](docs/schema-delete-recovery-20261023.md).
 
@@ -814,6 +821,13 @@ Then we should follow the [hubble workflow doc](https://hugegraph.apache.org/doc
 > 2. Recommand to use `release tag`(like `1.0.0`) for the stable version. Use `latest` tag to experience the newest functions in development.
 
 ## Browser acceptance
+
+Use the [verification guide](docs/verification.md) to select unit, controlled-browser
+and live checks for a change. From `hubble-fe`, with pinned Node/pnpm and Chromium,
+`pnpm verify:ui` builds or reuses verified production output, starts and stops a
+local preview, and strictly checks the existing browser fixture report. Routine
+evidence goes to `target/hubble-ui-fixture` and CI artifacts; only selected core
+images with lasting documentation value belong in Git.
 
 The [browser regression guide](docs/browser-regression-guide.md) describes
 fixture checks, diagnostic configuration and live verification boundaries. Keep
