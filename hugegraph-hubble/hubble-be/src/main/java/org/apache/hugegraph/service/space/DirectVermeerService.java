@@ -98,6 +98,39 @@ public class DirectVermeerService {
         return Map.of();
     }
 
+    public Map<String, Object> statistics(HugeClient client) {
+        authorize(client);
+        E.checkState(this.available(), "Vermeer workers are not ready");
+        Map<String, Object> loaded = HubbleUtil.uncheckedCast(
+                this.graph(client.getGraphSpaceName(), client.getGraphName()).get("graph"));
+        E.checkState(loaded != null && "loaded".equals(loaded.get("status")),
+                     "Load this graph from OLAP graph compute before collecting Vermeer statistics");
+        // Native graph JSON omits zero counters. These are counts of the loaded
+        // graph, not a live Server scan and not per-label statistics.
+        long vertices = statisticCount(loaded.getOrDefault("vertex_count", 0));
+        long edges = statisticCount(loaded.getOrDefault("edge_count", 0));
+        Map<String, Object> result = new HashMap<>();
+        result.put("vertex_count", Long.toString(vertices));
+        result.put("edge_count", Long.toString(edges));
+        result.put("update_time", loaded.get("update_time"));
+        result.put("source", "vermeer");
+        result.put("approximate", false);
+        return result;
+    }
+
+    private static long statisticCount(Object value) {
+        try {
+            long count = Long.parseLong(String.valueOf(value));
+            if (count >= 0) {
+                return count;
+            }
+        } catch (NumberFormatException ignored) {
+            // Do not echo malformed upstream values into the public error.
+        }
+        throw new ExternalException("Vermeer returned invalid graph counts; " +
+                                    "reload the graph or check the Vermeer service logs");
+    }
+
     public Map<String, Object> load(HugeClient client, boolean force,
                                     Map<String, Object> options) {
         authorize(client);

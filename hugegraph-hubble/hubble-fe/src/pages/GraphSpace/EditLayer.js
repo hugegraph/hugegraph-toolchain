@@ -23,7 +23,6 @@ import {
     Select,
     message,
     InputNumber,
-    Space,
     Typography,
 } from 'antd';
 import {useState, useEffect, useMemo, useCallback, useRef} from 'react';
@@ -33,6 +32,7 @@ import FormHelpLabel from '../../components/FormHelpLabel';
 import {isAuthEnabled} from '../../utils/config';
 import {getResourceAlias} from '../../utils/displayName';
 import {formatComputeLimit} from './storageUsage';
+import styles from './EditLayer.module.scss';
 
 const PAGE_ERROR_CONFIG = {suppressBusinessErrorToast: true};
 // Keep this validation aligned with Server GraphManager.checkNickname().
@@ -43,10 +43,10 @@ const GRAPHSPACE_NICKNAME_PATTERN = new RegExp(
 const MyFormItem = ({label, help, unit, children, extra}) => {
     return (
         <Form.Item label={<FormHelpLabel label={label} help={help} />} colon={false} extra={extra}>
-            <Space>
+            <div className={styles.resource_value}>
                 {children}
-                <span className='spanFontSize'>{unit}</span>
-            </Space>
+                <span>{unit}</span>
+            </div>
         </Form.Item>
     );
 };
@@ -72,7 +72,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
         memory_limit: 128,
         compute_cpu_limit: 128,
         compute_memory_limit: 128,
-        storage_limit: 10240,
+        storage_limit: 256,
     };
 
     const isDisabled = useMemo(() => {
@@ -246,7 +246,7 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
             // forceRender
         >
             <Form
-                className="graphspace-edit-form"
+                className={`graphspace-edit-form ${styles.form}`}
                 labelCol={{flex: '200px'}}
                 wrapperCol={{flex: '1 1 0'}}
                 labelWrap
@@ -304,175 +304,183 @@ const EditLayer = ({visible, detail, onCancel, refresh}) => {
                     />
                 </Form.Item>
 
-                <details style={{marginBottom: 24}}>
-                    <summary style={{cursor: 'pointer', marginBottom: 16}}>
-                        <strong>{t('graphspace.form.advanced_title')}</strong>
-                        <Typography.Text type='secondary' style={{marginLeft: 8}}>
-                            {t('graphspace.form.advanced_help')}
-                        </Typography.Text>
+                <details className={styles.advanced}>
+                    <summary>
+                        <span>
+                            <strong>{t('graphspace.form.advanced_title')}</strong>
+                            <Typography.Text type='secondary' className={styles.advanced_help}>
+                                {t('graphspace.form.advanced_help')}
+                            </Typography.Text>
+                        </span>
                     </summary>
 
-                    <Typography.Title level={5}>
-                        {t('graphspace.form.graph_service')}
-                    </Typography.Title>
-                    <MyFormItem
-                        label={t('graphspace.form.cpu')}
-                        help={t('graphspace.form.graph_cpu_help')}
-                        unit={t('graphspace.unit.cpu')}
-                    >
-                        <Form.Item
-                            name="cpu_limit"
-                            noStyle
+                    <section className={styles.resource_section} aria-labelledby='graphspace-graph-service'>
+                        <Typography.Title id='graphspace-graph-service' level={5}>
+                            {t('graphspace.form.graph_service')}
+                        </Typography.Title>
+                        <MyFormItem
+                            label={t('graphspace.form.cpu')}
+                            help={t('graphspace.form.graph_cpu_help')}
+                            unit={t('graphspace.unit.cpu')}
                         >
-                            <InputNumber
-                                placeholder={t('graphspace.form.cpu_placeholder')}
-                                precision={0}
-                                min={1}
-                            />
-                        </Form.Item>
-                    </MyFormItem>
+                            <Form.Item
+                                name="cpu_limit"
+                                noStyle
+                            >
+                                <InputNumber
+                                    placeholder={t('graphspace.form.cpu_placeholder')}
+                                    precision={0}
+                                    min={1}
+                                />
+                            </Form.Item>
+                        </MyFormItem>
 
-                    <MyFormItem
-                        label={t('graphspace.form.memory')}
-                        help={t('graphspace.form.graph_memory_help')}
-                        unit={t('graphspace.unit.memory')}
-                    >
-                        <Form.Item
-                            name="memory_limit"
-                            noStyle
+                        <MyFormItem
+                            label={t('graphspace.form.memory')}
+                            help={t('graphspace.form.graph_memory_help')}
+                            unit={t('graphspace.unit.memory')}
                         >
-                            <InputNumber
-                                placeholder={t('graphspace.form.memory_placeholder')}
-                                precision={0}
-                                min={1}
-                            />
-                        </Form.Item>
-                    </MyFormItem>
+                            <Form.Item
+                                name="memory_limit"
+                                noStyle
+                            >
+                                <InputNumber
+                                    placeholder={t('graphspace.form.memory_placeholder')}
+                                    precision={0}
+                                    min={1}
+                                />
+                            </Form.Item>
+                        </MyFormItem>
 
-                    <Form.Item
-                        name="oltp_namespace"
-                        label={<FormHelpLabel
-                            label={t('graphspace.form.k8s_namespace')}
-                            help={t('graphspace.form.oltp_namespace_help')}
-                        />}
-                        rules={
-                            [
-                                {validator: k8sValidator},
-                            ]
-                        }
-                    >
-                        <Input disabled={isDisabled} placeholder={t('graphspace.form.k8s_placeholder')} />
-                    </Form.Item>
-
-                    <Typography.Title level={5}>{t('graphspace.form.compute_task')}</Typography.Title>
-                    <Typography.Paragraph type='secondary'>
-                        {t('graphspace.form.compute_inheritance_help')}
-                    </Typography.Paragraph>
-                    <MyFormItem
-                        label={t('graphspace.form.cpu')}
-                        help={t('graphspace.form.compute_cpu_help')}
-                        unit={t('graphspace.unit.cpu')}
-                        extra={computeCpu === null || computeCpu === 0
-                            ? formatComputeLimit(0, cpu, t('graphspace.unit.cpu'), t) : null}
-                    >
                         <Form.Item
-                            name="compute_cpu_limit"
-                            rules={[{type: 'number', min: 0, message: t('graphspace.form.compute_nonnegative')}]}
-                            noStyle
+                            name="oltp_namespace"
+                            label={<FormHelpLabel
+                                label={t('graphspace.form.k8s_namespace')}
+                                help={t('graphspace.form.oltp_namespace_help')}
+                            />}
+                            rules={
+                                [
+                                    {validator: k8sValidator},
+                                ]
+                            }
                         >
-                            <InputNumber
-                                placeholder={t('graphspace.form.cpu_placeholder')}
-                                precision={0}
-                                min={0}
-                            />
+                            <Input disabled={isDisabled} placeholder={t('graphspace.form.k8s_placeholder')} />
                         </Form.Item>
-                    </MyFormItem>
 
-                    <MyFormItem
-                        label={t('graphspace.form.memory')}
-                        help={t('graphspace.form.compute_memory_help')}
-                        unit={t('graphspace.unit.memory')}
-                        extra={computeMemory === null || computeMemory === 0
-                            ? formatComputeLimit(0, memory, t('graphspace.unit.memory'), t) : null}
-                    >
+                    </section>
+                    <section className={styles.resource_section} aria-labelledby='graphspace-compute-service'>
+                        <Typography.Title id='graphspace-compute-service' level={5}>
+                            {t('graphspace.form.compute_task')}
+                        </Typography.Title>
+                        <Typography.Paragraph type='secondary'>
+                            {t('graphspace.form.compute_inheritance_help')}
+                        </Typography.Paragraph>
+                        <MyFormItem
+                            label={t('graphspace.form.cpu')}
+                            help={t('graphspace.form.compute_cpu_help')}
+                            unit={t('graphspace.unit.cpu')}
+                            extra={computeCpu === null || computeCpu === 0
+                                ? formatComputeLimit(0, cpu, t('graphspace.unit.cpu'), t) : null}
+                        >
+                            <Form.Item
+                                name="compute_cpu_limit"
+                                rules={[{type: 'number', min: 0, message: t('graphspace.form.compute_nonnegative')}]}
+                                noStyle
+                            >
+                                <InputNumber
+                                    placeholder={t('graphspace.form.cpu_placeholder')}
+                                    precision={0}
+                                    min={0}
+                                />
+                            </Form.Item>
+                        </MyFormItem>
+
+                        <MyFormItem
+                            label={t('graphspace.form.memory')}
+                            help={t('graphspace.form.compute_memory_help')}
+                            unit={t('graphspace.unit.memory')}
+                            extra={computeMemory === null || computeMemory === 0
+                                ? formatComputeLimit(0, memory, t('graphspace.unit.memory'), t) : null}
+                        >
+                            <Form.Item
+                                name="compute_memory_limit"
+                                rules={[{type: 'number', min: 0, message: t('graphspace.form.compute_nonnegative')}]}
+                                noStyle
+                            >
+                                <InputNumber
+                                    placeholder={t('graphspace.form.memory_placeholder')}
+                                    precision={0}
+                                    min={0}
+                                />
+                            </Form.Item>
+                        </MyFormItem>
+
                         <Form.Item
-                            name="compute_memory_limit"
-                            rules={[{type: 'number', min: 0, message: t('graphspace.form.compute_nonnegative')}]}
-                            noStyle
+                            name="olap_namespace"
+                            label={<FormHelpLabel
+                                label={t('graphspace.form.k8s_namespace')}
+                                help={t('graphspace.form.olap_namespace_help')}
+                            />}
+                            rules={
+                                [
+                                    {validator: k8sValidator},
+                                ]
+                            }
                         >
-                            <InputNumber
-                                placeholder={t('graphspace.form.memory_placeholder')}
-                                precision={0}
-                                min={0}
-                            />
+                            <Input disabled={isDisabled} placeholder={t('graphspace.form.k8s_placeholder')} />
                         </Form.Item>
-                    </MyFormItem>
 
-                    <Form.Item
-                        name="olap_namespace"
-                        label={<FormHelpLabel
-                            label={t('graphspace.form.k8s_namespace')}
-                            help={t('graphspace.form.olap_namespace_help')}
-                        />}
-                        rules={
-                            [
-                                {validator: k8sValidator},
-                            ]
-                        }
-                    >
-                        <Input disabled={isDisabled} placeholder={t('graphspace.form.k8s_placeholder')} />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="operator_image_path"
-                        label={t('graphspace.form.operator_image')}
-                        rules={[
-                            {
-                                pattern: /^[a-zA-Z0-9\-.]+\/[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+(:[a-z0-9.]+)*$/,
-                                message: t('graphspace.form.image_format_error'),
-                            },
-                        ]}
-                        extra={t('graphspace.form.image_example')}
-                    >
-                        <Input placeholder={t('graphspace.form.image_placeholder')} />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="algorithm_image_url"
-                        label={t('graphspace.form.algorithm_image')}
-                        extra={t('graphspace.form.image_example')}
-                        rules={[
-                            {
-                                pattern: /^[a-zA-Z0-9\-.]+\/[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+(:[a-z0-9.]+)*$/,
-                                message: t('graphspace.form.image_format_error'),
-                            },
-                        ]}
-                    >
-                        <Input placeholder={t('graphspace.form.image_placeholder')} />
-                    </Form.Item>
-
-                    <Typography.Title level={5}>{t('graphspace.form.storage')}</Typography.Title>
-                    <MyFormItem
-                        label={t('graphspace.form.storage_limit')}
-                        help={t('graphspace.form.storage_limit_help')}
-                        unit={t('graphspace.unit.memory')}
-                    >
                         <Form.Item
-                            name="storage_limit"
-                            noStyle
+                            name="operator_image_path"
+                            label={t('graphspace.form.operator_image')}
+                            rules={[
+                                {
+                                    pattern: /^[a-zA-Z0-9\-.]+\/[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+(:[a-z0-9.]+)*$/,
+                                    message: t('graphspace.form.image_format_error'),
+                                },
+                            ]}
+                            extra={t('graphspace.form.image_example')}
                         >
-                            <InputNumber
-                                style={{width: 200}}
-                                placeholder={t('graphspace.form.storage_placeholder')}
-                                precision={0}
-                                min={1}
-                            />
+                            <Input placeholder={t('graphspace.form.image_placeholder')} />
                         </Form.Item>
-                    </MyFormItem>
 
+                        <Form.Item
+                            name="algorithm_image_url"
+                            label={t('graphspace.form.algorithm_image')}
+                            extra={t('graphspace.form.image_example')}
+                            rules={[
+                                {
+                                    pattern: /^[a-zA-Z0-9\-.]+\/[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+(:[a-z0-9.]+)*$/,
+                                    message: t('graphspace.form.image_format_error'),
+                                },
+                            ]}
+                        >
+                            <Input placeholder={t('graphspace.form.image_placeholder')} />
+                        </Form.Item>
+
+                    </section>
+                    <section className={styles.resource_section} aria-labelledby='graphspace-storage-service'>
+                        <Typography.Title id='graphspace-storage-service' level={5}>
+                            {t('graphspace.form.storage')}
+                        </Typography.Title>
+                        <MyFormItem
+                            label={t('graphspace.form.storage_limit')}
+                            help={t('graphspace.form.storage_limit_help')}
+                            unit={t('graphspace.unit.memory')}
+                        >
+                            <Form.Item
+                                name="storage_limit"
+                                noStyle
+                            >
+                                <InputNumber
+                                    placeholder={t('graphspace.form.storage_placeholder')}
+                                    precision={0}
+                                    min={1}
+                                />
+                            </Form.Item>
+                        </MyFormItem>
+                    </section>
                 </details>
-
-                <hr />
 
                 <Form.Item
                     name="graphspace_admin"

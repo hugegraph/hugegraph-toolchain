@@ -1069,7 +1069,10 @@
         "check_result": "View Result",
         "check_reason": "View Reason",
         "collapse_result": "Hide Result"
-      }
+      },
+      "result_error_unknown": "The service returned no specific reason. Check the Hubble and graph compute service logs",
+      "result_request_context": "GraphSpace {{graphspace}} / graph {{graph}} / task {{taskId}}",
+      "vermeer_result_retry_hint": "The result could not be read; this does not mean the computation failed. Retry first. If values have been cleared, run the algorithm again from OLAP graph compute"
     },
     "topbar": {
       "current_graph_space": "Current Graphspace:",
@@ -1083,8 +1086,8 @@
       "recent_load_time": "Last Load Time:",
       "load_to_vermeer": "Load to Vermeer",
       "reload_to_vermeer": "Reload to Vermeer",
-      "metadata_config": "Metadata",
-      "metadata_tooltip": "Open metadata configuration for the selected graph",
+      "metadata_config": "Schema Config",
+      "metadata_tooltip": "Open Schema configuration for the selected graph",
       "olap_result": "Query OLAP Result:",
       "get_vermeer_failed": "Failed to get Vermeer status",
       "load_vermeer_failed": "Failed to load Vermeer task",

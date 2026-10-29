@@ -2,8 +2,8 @@
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to You under the Apache License, Version 2.0 (the
+ * work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -23,6 +23,7 @@ import org.apache.hugegraph.controller.auth.GraphSpaceAuthMutationAuthorizationT
 import org.apache.hugegraph.controller.auth.GraphSpaceAuthOwnershipTest;
 import org.apache.hugegraph.controller.ingest.IngestControllerTest;
 import org.apache.hugegraph.controller.langchain.LangChainControllerSecurityTest;
+import org.apache.hugegraph.controller.query.CypherControllerTimeoutTest;
 import org.apache.hugegraph.controller.query.Text2GqlControllerTest;
 import org.apache.hugegraph.controller.query.Text2GqlStreamTransportTest;
 import org.apache.hugegraph.controller.schema.SchemaControllerSecurityTest;
@@ -93,6 +94,7 @@ import org.junit.runners.Suite;
     GremlinUtilTest.class,
     ReadOnlyGremlinTest.class,
     ReadOnlyCypherTest.class,
+    CypherControllerTimeoutTest.class,
     CypherHistoryFailureTest.class,
     Text2GqlControllerTest.class,
     Text2GqlStreamTransportTest.class,
@@ -139,6 +141,8 @@ import org.junit.runners.Suite;
     UserCsvImportTest.class,
     EntityUtilTest.class,
     VertexLabelStyleDefaultsTest.class,
+    SchemaCreateDefaultsTest.class,
+    SchemaCreateServiceDefaultsTest.class,
     org.apache.hugegraph.util.HubbleDateTimeTest.class,
     HubbleUtilTest.class,
     DirectVermeerServiceTest.class,

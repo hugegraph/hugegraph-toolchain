@@ -9,6 +9,10 @@ on:
       current-artifact-name:
         type: string
         required: true
+      current-java-version:
+        description: Resolved JDK version used to build the shared SDK
+        type: string
+        default: ''
       reuse-candidate-sdk:
         type: boolean
         default: false
@@ -74,7 +78,8 @@ jobs:
       - name: Setup Java environment
         uses: ./.github/actions/setup-java-env
         with:
-          java-version: ${{ matrix.JAVA_VERSION }}
+          # Different runner images may resolve floating Java 17 to different patches.
+          java-version: ${{ inputs.reuse-candidate-sdk && inputs.current-java-version || matrix.JAVA_VERSION }}
           distribution: 'temurin'
 
       - name: Record candidate Server JDK
@@ -85,10 +90,15 @@ jobs:
         if: inputs.reuse-candidate-sdk
         env:
           SDK_FIXTURE_ARTIFACT: ${{ inputs.current-artifact-name }}
+          SDK_JAVA_VERSION: ${{ inputs.current-java-version }}
         run: |
           set -euo pipefail
           if [[ -z "$SDK_FIXTURE_ARTIFACT" ]]; then
             echo 'SDK reuse requires current-artifact-name' >&2
+            exit 1
+          fi
+          if [[ ! "${SDK_JAVA_VERSION:-}" =~ ^17\.[0-9]+\.[0-9]+(\.[0-9]+)?\+[0-9]+([.-][[:alnum:]_.-]+)?$ ]]; then
+            echo 'SDK reuse requires a concrete producer JDK version' >&2
             exit 1
           fi
 
@@ -148,6 +158,8 @@ jobs:
             ../hubble-dist/assembly/travis/run_ui_http_smoke.test.js \
             ../hubble-dist/assembly/travis/run_ui_full_acceptance.test.js
           node --test ../hubble-dist/assembly/travis/build-frontend.test.mjs
+          node --test ../hubble-dist/assembly/travis/run_ui_deployment_regressions.test.js \
+            ../hubble-dist/assembly/travis/verify-ui.test.mjs
 
       - name: Verify frontend third-party notices
         run: |
@@ -162,9 +174,19 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
           pnpm exec playwright install --with-deps chromium
 
-      - name: Route not-found marker regression
+      - name: Browser assertion regressions
         working-directory: hugegraph-hubble/hubble-fe
-        run: node --test ../hubble-dist/assembly/travis/run_ui_browser_smoke.browser.test.js
+        run: |
+          node --test ../hubble-dist/assembly/travis/run_ui_browser_smoke.browser.test.js \
+            ../hubble-dist/assembly/travis/ui_usability.browser.test.js
+
+      - name: Production UI fixture regression gate
+        if: matrix.SERVER_BASELINE == 'candidate'
+        timeout-minutes: 8
+        working-directory: hugegraph-hubble/hubble-fe
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: pnpm verify:ui
 
       - name: Real public graph PNG contract
         working-directory: hugegraph-hubble/hubble-fe
@@ -294,6 +316,8 @@ jobs:
             hugegraph-hubble/target/hubble-dist-check.json
             hugegraph-hubble/target/hubble-png-contract/**/*.json
             hugegraph-hubble/target/hubble-png-contract/**/*.png
+            hugegraph-hubble/target/hubble-ui-fixture/**/*.json
+            hugegraph-hubble/target/hubble-ui-fixture/**/*.png
             hugegraph-hubble/target/hubble-live-acceptance/**/*.json
             hugegraph-hubble/target/hubble-live-acceptance/**/*.png
             hugegraph-hubble/target/hubble-live-acceptance/**/*.log

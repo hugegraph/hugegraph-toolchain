@@ -1069,7 +1069,10 @@
         "check_result": "查看结果",
         "check_reason": "查看原因",
         "collapse_result": "收起结果"
-      }
+      },
+      "result_error_unknown": "服务没有返回具体原因，请检查 Hubble 和图计算服务日志",
+      "result_request_context": "图空间 {{graphspace}} / 图 {{graph}} / 任务 {{taskId}}",
+      "vermeer_result_retry_hint": "这是读取计算结果失败，不代表计算任务失败。请先重试；若结果已被清理，请在 OLAP 图计算中重新运行算法"
     },
     "topbar": {
       "current_graph_space": "当前图空间:",
@@ -1083,8 +1086,8 @@
       "recent_load_time": "最近加载时间:",
       "load_to_vermeer": "加载到Vermeer",
       "reload_to_vermeer": "重加载到Vermeer",
-      "metadata_config": "元数据配置",
-      "metadata_tooltip": "点击可跳转到对应图的元数据配置的页面",
+      "metadata_config": "Schema 配置",
+      "metadata_tooltip": "点击可跳转到对应图的Schema 配置的页面",
       "olap_result": "是否查询OLAP结果:",
       "get_vermeer_failed": "获取vermeer状态失败",
       "load_vermeer_failed": "加载Vermeer任务失败",

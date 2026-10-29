@@ -62,6 +62,21 @@ public class VertexLabelEntity implements SchemaLabelEntity, Timefiable {
     private Date createTime;
 
     @Override
+    public Boolean getOpenLabelIndex() {
+        return this.openLabelIndex != null ? this.openLabelIndex : Boolean.TRUE;
+    }
+
+    @Override
+    public VertexLabelStyle getStyle() {
+        return this.style != null ? this.style : new VertexLabelStyle();
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean hasStyle() {
+        return this.style != null;
+    }
+
+    @Override
     public SchemaType getSchemaType() {
         return SchemaType.VERTEX_LABEL;
     }

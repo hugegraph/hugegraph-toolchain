@@ -61,8 +61,11 @@ const Graph = ({data, datasetKey, layout = DEFAULT_LAYOUT, onReady, onClick, onD
     const [showMinimap, setShowMinimap] = useState(true);
     const snapshot = useGraphSnapshot(controller);
     const reportError = useCallback(error => {
+        const state = controller?.getSnapshot();
+        // The canvas owns engine failures. Business callbacks without a canvas failure still need a toast.
+        if (state?.status === 'error' && state.error === error) return;
         message.error(error instanceof Error ? error.message : String(error));
-    }, []);
+    }, [controller]);
     const run = useCallback(async operation => {
         try {
             return await operation();
@@ -165,7 +168,7 @@ const Graph = ({data, datasetKey, layout = DEFAULT_LAYOUT, onReady, onClick, onD
             onPointerDownCapture={pointerDown} onContextMenuCapture={canvasMenu}>
             <GraphCanvas data={data} datasetKey={datasetKey} layout={layout} preset='interactive'
                 style={{height: '100%'}} onReady={ready} onClick={click} onDoubleClick={doubleClick}
-                onContextMenu={setContextTarget} onError={reportError} tooltip={tooltip}
+                onContextMenu={setContextTarget} tooltip={tooltip}
                 aria-label={t('analysis.canvas.graph_canvas')} />
             {children}
         </div>

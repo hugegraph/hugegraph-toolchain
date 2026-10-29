@@ -18,4 +18,12 @@ Version checks belong in the client compatibility adapter and connection resolve
 
 ## Verification
 
-For UI changes, use Chrome to exercise login/non-auth mode, connection switching, and account/GraphSpace visibility. Static inspection and unit tests are not a substitute for this interaction check. Keep screenshots collected from the running UI in the documentation assets referenced by `README.md`.
+Follow the change-to-check table in [the verification guide](docs/verification.md). Reuse the existing unit, controlled-browser and live runners; do not introduce another test framework for a feature.
+
+Before implementation, verify the remote base and existing issues/PRs, state the expected behavior, and ask the user to choose unresolved requirements or design alternatives. Continue independent inspection while waiting for a required answer.
+
+For UI changes, run `pnpm verify:ui` from `hubble-fe` and use Chrome to exercise the affected flow, login/non-auth mode, connection switching, and account/GraphSpace visibility. Static inspection and unit tests are not a substitute. The controlled-browser gate uses fixture APIs and does not prove real authentication, PD discovery or Vermeer execution; use the existing live runners when those contracts change.
+
+For a bug fix, add a regression that fails on the old behavior when practical. Investigate failures rather than weakening assertions or extending timeouts just to obtain a pass. Report the source revision, checks actually run, evidence location, failures and unverified scope; missing input is not a pass, and test counts do not establish full acceptance.
+
+Keep routine screenshots and reports in CI artifacts or PR attachments. Commit only selected core screenshots with lasting documentation value, referenced by `README.md` or the relevant guide and labeled with their validation scope.

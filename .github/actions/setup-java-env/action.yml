@@ -11,10 +11,16 @@ inputs:
     required: false
     default: 'zulu'
 
+outputs:
+  java-version:
+    description: Resolved JDK version including its patch and build
+    value: ${{ steps.java.outputs.version }}
+
 runs:
   using: composite
   steps:
     - name: Install JDK ${{ inputs.java-version }}
+      id: java
       uses: actions/setup-java@v5
       with:
         java-version: ${{ inputs.java-version }}

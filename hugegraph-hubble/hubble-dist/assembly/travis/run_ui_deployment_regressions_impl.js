@@ -22,9 +22,9 @@ const path = require('path');
 const os = require('os');
 const assert = require('node:assert/strict');
 const {loadPlaywright, chromiumExecutablePath} = require('./run_ui_browser_smoke');
+const {assertUsableControl, assertNoHorizontalOverflow} = require('./ui_usability');
 const base = (process.env.HUBBLE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
-const output = process.env.HUBBLE_UI_EVIDENCE_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'hubble-deployment-ui-'));
-fs.mkdirSync(output, { recursive: true });
+let output;
 const checks = [];
 const unexpected = new Set();
 const errors = [];
@@ -45,6 +45,29 @@ const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unma
 const task = { id: 80001, task_name: 'g.V().limit(100002)', task_type: 'gremlin', task_status: 'failed', task_create: now - 49000, task_update: now - 45602 };
 const taskResult = { ...task, task_result: 'org.apache.hugegraph.exception.LimitExceedException: Task result size 77849617 exceeded limit 16777216 bytes' };
 function pageResult(records, selected) { return { records, total: records.length, current: 1, size: 100, pages: 1, selected: records.find(x => x.name === selected) ?? null }; }
+function sessionFixture(state, method) {
+    if (method !== 'GET') return {status: 405, message: 'Unexpected fixture session method'};
+    if (!state.auth || !state.loggedIn) return {status: 401, message: 'Fixture session requires authenticated login'};
+    return {status: 200, data: {idle_timeout_seconds: 172800, min_idle_seconds: 900,
+        max_idle_seconds: 604800, activity_scope: 'fixture-smoke-admin-login'}};
+}
+function queryFixture(method, pathname, body, truncated = false) {
+    const prefix = '/graphspaces/', suffix = '/gremlin-query';
+    const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+        ? pathname.slice(prefix.length, -suffix.length) : '';
+    const queries = {'DEFAULT/graphs/hugegraph': 'g.V()', 'soc_graph/graphs/second': 'g.V().limit(2)'};
+    if (!Object.hasOwn(queries, scope) && scope !== 'soc_graph/graphs/hugegraph') return {status: 404};
+    if (method === 'GET') return {status: 200, data: {vertexcount: null, edgecount: null}};
+    if (method !== 'POST') return {status: 405};
+    if (!queries[scope] || body?.content !== queries[scope] || body?.preview !== true) return {status: 400};
+    const second = scope === 'soc_graph/graphs/second';
+    const vertices = (second ? ['second-1', 'second-2'] : ['1'])
+        .map(id => ({id, label: 'Memory', properties: {name: id}}));
+    return {status: 200, data: {type: 'VERTEX', graph_view: {vertices, edges: []},
+        table_view: {header: ['id', 'label', 'properties'], rows: []}, json_view: {data: vertices},
+        default_limit_applied: !second, default_limit: 300, ...(truncated ? {properties_truncated: true,
+            property_preview_limit: 256, property_preview_vertex_ids: ['1'], graph_truncated: true} : {})}};
+}
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
@@ -101,6 +124,13 @@ async function setup(browser, auth) {
         }
         else if (p === '/auth/status')
             data = {};
+        else if (p === '/auth/session') {
+            const response = sessionFixture(state, method);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json',
+                body: JSON.stringify(response)});
+            return;
+        }
         else if (p === '/auth/users/list')
             data = { users: [] };
         else if (p === '/graphspaces/list')
@@ -141,8 +171,14 @@ async function setup(browser, auth) {
             data = { records: [], total: 0 };
         else if (p.endsWith('/gremlin-query/async-task'))
             data = { task_id: 80001 };
-        else if (p.endsWith('/gremlin-query'))
-            data = method === 'GET' ? { vertexcount: null, edgecount: null } : { type: 'VERTEX', graph_view: { vertices: [{ id: '1', label: 'Memory', properties: { name: 'hello' } }], edges: [] }, table_view: { header: ['id', 'label', 'properties'], rows: [] }, json_view: { data: [] }, default_limit_applied: true, default_limit: 300, ...(state.truncation ? { properties_truncated: true, property_preview_limit: 256, property_preview_vertex_ids: ['1'], graph_truncated: true } : {}) };
+        else if (p.endsWith('/gremlin-query')) {
+            let body;
+            try { body = req.postDataJSON(); } catch (_) { /* Invalid requests are rejected below. */ }
+            const response = queryFixture(method, p, body, state.truncation);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json', body: JSON.stringify(response)});
+            return;
+        }
         else if (p.endsWith('/async-tasks/ids'))
             data = ++state.taskLookups < 3 ? [] : [task];
         else if (p.endsWith('/async-tasks/80001'))
@@ -201,7 +237,9 @@ catch (e) {
     console.log('FAIL ' + name + ': ' + e.message);
     throw e;
 } }
-(async () => {
+async function main() {
+    output = process.env.HUBBLE_UI_EVIDENCE_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'hubble-deployment-ui-'));
+    fs.mkdirSync(output, {recursive: true});
     const {chromium} = await loadPlaywright();
     const browser = await chromium.launch({ headless: true, executablePath: chromiumExecutablePath(), args: ['--no-sandbox'] });
     try {
@@ -245,7 +283,7 @@ catch (e) {
             assert(new URL(page.url()).pathname === '/graphspace');
             await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
             await page.getByRole('dialog').waitFor();
-            const quota = page.getByRole('dialog').getByPlaceholder('例如：10240', {exact: true});
+            const quota = page.getByRole('dialog').locator('input[id$="_storage_limit"]');
             await waitForInputValue(page, quota, '10');
             await page.getByRole('dialog').getByText('高级部署与资源限制', { exact: true }).click();
             assert(await quota.isEditable());
@@ -276,7 +314,7 @@ catch (e) {
             await (await staleResponse).finished();
             await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
             assert.equal(await name.inputValue(), 'soc_graph');
-            assert.equal(await page.getByRole('dialog').getByPlaceholder('例如：10240', {exact: true}).inputValue(), '10');
+            assert.equal(await page.getByRole('dialog').locator('input[id$="_storage_limit"]').inputValue(), '10');
             await page.getByRole('button', { name: /取\s*消/ }).click();
         });
         await check('Graph context switches via actual header selectors', async () => {
@@ -292,9 +330,42 @@ catch (e) {
             await graphSelector.click();
             await page.getByRole('option', {name: /测试图/}).waitFor({state: 'attached'});
             await graphSelector.press('ArrowDown');
+            const ready = page.waitForResponse(response => response.request().method() === 'GET'
+                && new URL(response.url()).pathname === '/api/v1.3/graphspaces/soc_graph/graphs/second/schema/propertykeys');
             await graphSelector.press('Enter');
             await page.waitForURL('**/gremlin/soc_graph/second');
+            await (await ready).finished();
+            const execute = page.getByRole('button', {name: '执行查询', exact: true});
+            // URL changes precede context/draft restoration. Wait for the public
+            // action to be enabled and stable before editing the new graph's draft.
+            await execute.click({trial: true});
+            await page.locator('.cm-content').fill('g.V().limit(2)');
+            await execute.click();
+            await page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true}).waitFor();
             await screenshot(page, 'graph-context-switch');
+        });
+        await check('core query actions are usable at desktop and compact widths', async () => {
+            for (const width of [1440, 1024]) {
+                await page.setViewportSize({width, height: 1000});
+                const ready = page.waitForResponse(response => response.request().method() === 'GET'
+                    && new URL(response.url()).pathname === '/api/v1.3/graphspaces/DEFAULT/graphs/hugegraph/schema/propertykeys');
+                await page.goto(base + '/gremlin/DEFAULT/hugegraph');
+                await (await ready).finished();
+                await page.getByText('尚未执行图查询，点击执行查询查看结果', {exact: true}).waitFor();
+                await page.locator('.cm-content').fill('g.V()');
+                const run = page.getByRole('button', {name: '执行查询', exact: true});
+                const clear = page.getByRole('button', {name: /^清\s*空$/});
+                await assertUsableControl(run);
+                await assertUsableControl(clear);
+                await assertNoHorizontalOverflow(page);
+                await screenshot(page, `query-core-${width}`);
+                await run.click();
+                await page.getByRole('group', {name: '节点：当前结果 1；全图总数未获取', exact: true}).waitFor();
+                await clear.click();
+                await page.locator('.cm-content .cm-placeholder').waitFor({state: 'visible'});
+                assert.equal(await run.isEnabled(), false);
+            }
+            await page.setViewportSize({width: 1440, height: 1000});
         });
         await check('routine query limit is quiet canvas note without unknown totals', async () => {
             await page.goto(base + '/gremlin/DEFAULT/hugegraph');
@@ -342,15 +413,20 @@ catch (e) {
             await page.getByText(/减少返回条数或仅返回需要的属性后重新提交/).waitFor();
             await page.getByRole('link', { name: '调整查询', exact: true }).waitFor();
             await screenshot(page, 'async-task-result-limit');
+            await page.getByRole('link', {name: '调整查询', exact: true}).click();
+            await page.waitForURL('**/gremlin/soc_graph/hugegraph?language=gremlin');
         });
         await check('PD unmapped metrics have localized three-node source diagnostics', async () => {
             await page.goto(base + '/operations/nodes?type=PD&source=pd#operations-source-diagnostics');
             await page.locator('summary').filter({hasText: '检查地址与修复方法'}).click();
             await page.getByText('最近拓扑采集成功', { exact: false }).waitFor();
-            const repair = await page.getByText(/hugegraph-hubble\.properties/).innerText();
-            for (const detail of ['pd.server', 'server.protocol', 'restUrl', '修改 Hubble 配置后需重启']) {
+            const repair = await page.locator('details.operations-diagnostic-details').filter({
+                has: page.locator('summary').filter({hasText: '检查地址与修复方法'}),
+            }).innerText();
+            for (const detail of ['hugegraph-hubble.properties', 'pd.server', 'server.protocol', 'restUrl']) {
                 assert(repair.includes(detail), `Missing actionable PD repair detail: ${detail}`);
             }
+            assert(/重启[^。]*Hubble|Hubble[^。]*重启/.test(repair), 'Missing Hubble restart guidance');
             await page.getByText('尚未采集系统指标', { exact: false }).first().waitFor();
             assert.equal(await page.getByText(/来源可能在发现节点前/).count(), 0);
             await page.getByText('http://pd-service:8620', { exact: true }).waitFor();
@@ -402,4 +478,8 @@ catch (e) {
     }
     if (failure || checks.some(x => x.status === 'failed') || errors.length || unexpected.size)
         process.exitCode = 1;
-})();
+}
+if (require.main === module) {
+    main().catch(error => { console.error(error.stack); process.exitCode = 1; });
+}
+module.exports = {sessionFixture, queryFixture};

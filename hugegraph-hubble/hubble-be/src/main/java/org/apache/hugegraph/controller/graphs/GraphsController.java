@@ -226,6 +226,13 @@ public class GraphsController extends BaseController {
         graphsService.postStatistics(null, client, graphspace, graph);
     }
 
+    @GetMapping("{graph}/statistics/vermeer")
+    public Map<String, Object> getVermeerStatistics(
+            @PathVariable("graphspace") String graphspace,
+            @PathVariable("graph") String graph) {
+        return this.vermeerService.statistics(this.authClient(graphspace, graph));
+    }
+
     @GetMapping("{graph}/statistics")
     public GraphStatisticsEntity getStatistics(
             @PathVariable("graphspace") String graphspace,

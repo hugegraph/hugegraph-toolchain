@@ -16,7 +16,8 @@
     "lint": "eslint src --max-warnings=0",
     "i18n:check": "node scripts/check-i18n.js",
     "test": "jest",
-    "test:ci": "jest --runInBand"
+    "test:ci": "jest --runInBand",
+    "verify:ui": "node ../hubble-dist/assembly/travis/verify-ui.mjs"
   },
   "dependencies": {
     "3d-force-graph": "1.80.1",
