@@ -222,7 +222,10 @@ export const useAnalysisGraph = ({data = EMPTY_RAW, metaData = EMPTY_META, optio
                 // A submitted server write owns its completion message. Let
                 // its drawer distinguish a local apply failure from POST failure.
                 if (propagateError) throw error;
-                message.error(error instanceof Error ? error.message : String(error));
+                const state = owner?.getSnapshot();
+                if (state?.status !== 'error' || state.error !== error) {
+                    message.error(error instanceof Error ? error.message : String(error));
+                }
             }
             return undefined;
         }

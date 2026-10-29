@@ -939,3 +939,11 @@ Query execution waits until the graph context matches the current route, includi
 ## Query and submitted-task feedback
 
 See [query and submitted-task feedback](docs/query-task-feedback.md) for preview limits, task discovery, and failed-result recovery.
+
+
+The Chrome screenshot below uses ten-vertex API fixtures and an injected G6
+`RangeError` to verify one unobstructed inline renderer alert without duplicate
+toasts. It demonstrates error presentation; the original deployment's stack
+overflow cause was not reproduced or diagnosed by this fixture.
+
+![Single inline canvas renderer error](docs/assets/query-render-error-single.png)
