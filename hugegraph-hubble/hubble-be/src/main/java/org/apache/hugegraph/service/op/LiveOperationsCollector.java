@@ -906,12 +906,27 @@ public class LiveOperationsCollector implements OperationsCollector {
                                                       "upstream_deadline"));
                 continue;
             }
-            URI endpoint = job.getTarget().resolve("/metrics/" + group);
+            boolean raft = "raft".equals(group);
+            URI endpoint = job.getTarget().resolve(raft ? "/metrics/raft/summary" : "/metrics/" + group);
             try {
-                String payload = this.http.get(endpoint, this.storeUsername,
-                                               this.storePassword,
-                                               allowedTargets);
-                metrics.put(group, this.parser.parseStoreMetrics(group, payload));
+                String payload;
+                String parserGroup = raft ? "raft_summary" : group;
+                try {
+                    payload = this.http.get(endpoint, this.storeUsername,
+                                            this.storePassword, allowedTargets);
+                } catch (UpstreamRequestException e) {
+                    // Older Store versions expose only the detailed endpoint.
+                    // Do not amplify authorization, transport or server errors.
+                    if (!raft || !("upstream_http_status_404".equals(e.getMessage()) ||
+                                   "upstream_http_status_405".equals(e.getMessage()))) {
+                        throw e;
+                    }
+                    endpoint = job.getTarget().resolve("/metrics/raft");
+                    parserGroup = "raft";
+                    payload = this.http.get(endpoint, this.storeUsername,
+                                            this.storePassword, allowedTargets);
+                }
+                metrics.put(group, this.parser.parseStoreMetrics(parserGroup, payload));
                 statuses.put(group, availableMetric(now));
                 successfulGroups++;
             } catch (RuntimeException e) {

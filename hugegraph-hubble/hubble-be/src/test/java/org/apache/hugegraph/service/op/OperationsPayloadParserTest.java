@@ -34,6 +34,22 @@ public class OperationsPayloadParserTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
+    public void testCompactRaftSummaryRequiresConsistentIntegralCounters() {
+        OperationsPayloadParser parser = new OperationsPayloadParser(MAPPER);
+        Assert.assertEquals(Map.of("groups", 12000L, "enabled_groups", 11999L),
+                            parser.parseStoreMetrics("raft_summary", "{\"groups\":12000,\"enabled_groups\":11999}"));
+        Assert.assertEquals(Map.of("groups", 0L, "enabled_groups", 0L),
+                            parser.parseStoreMetrics("raft_summary", "{\"groups\":0,\"enabled_groups\":0}"));
+        for (String body : new String[]{"{}", "null", "[]", "{\"0\":{\"enabled\":true}}",
+                "{\"groups\":1,\"enabled_groups\":2}", "{\"groups\":-1,\"enabled_groups\":0}",
+                "{\"groups\":1.5,\"enabled_groups\":1}", "{\"groups\":1,\"enabled_groups\":\"1\"}",
+                "{\"groups\":9223372036854775808,\"enabled_groups\":1}"}) {
+            Assert.assertThrows(MalformedUpstreamException.class,
+                                () -> parser.parseStoreMetrics("raft_summary", body));
+        }
+    }
+
+    @Test
     public void testReadinessRequiresExplicitKnownBodyAndPreservesSafeReasons() throws Exception {
         OperationsPayloadParser parser = new OperationsPayloadParser(new ObjectMapper());
         OperationsModels.Readiness ready = parser.parseReadiness("PD",

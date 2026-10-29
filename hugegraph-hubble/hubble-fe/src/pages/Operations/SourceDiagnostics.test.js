@@ -330,3 +330,32 @@ test('keeps multiple Store request paths and HTTP statuses attached to their met
     expect(within(second).getByText('502', {exact: true})).toBeVisible();
     expect(within(second).queryByText('/metrics/system')).not.toBeInTheDocument();
 });
+
+
+test('explains the collection setting and compact Raft remedy for a partial Store failure', () => {
+    i18n.changeLanguage('zh-CN');
+    render(<SourceDiagnostics sourceName='stores' sources={{stores: {
+        status: 'UP', availability: 'PARTIAL', reason: 'store_metrics_partial',
+    }}} nodes={[{id: 'store-1', type: 'STORE', name: 'Store 1', metric_statuses: {
+        raft: {availability: 'UNAVAILABLE', reason: 'response_too_large',
+            diagnostics: {request_path: '/metrics/raft', max_response_bytes: 1048576,
+                response_bytes: 1052672, response_size_exact: false}},
+    }}]} />);
+    expect(screen.getByText('至少 1 MB (1,052,672 B)')).toBeVisible();
+    expect(screen.getByText(/不是完整响应大小/)).not.toBeVisible();
+    fireEvent.click(screen.getByText('采集详情与修复方法'));
+    expect(screen.getByText(/operations.max_response_bytes 限制每次上游响应/)).toBeVisible();
+    expect(screen.getByText(/不是完整响应大小/)).toBeVisible();
+    expect(screen.getByText(/Store 升级至提供.*metrics\/raft\/summary/)).toBeVisible();
+    expect(screen.getByText(/此上限对每次采集请求都生效/)).toBeVisible();
+});
+
+test('does not suggest an older Raft payload remedy for an unrelated oversized request', () => {
+    render(<SourceDiagnostics sourceName='stores' sources={{stores: {
+        status: 'UP', availability: 'PARTIAL', reason: 'response_too_large',
+        diagnostics: {request_path: '/v1/stores', max_response_bytes: 1048576},
+    }}} />);
+    fireEvent.click(screen.getByText('Collection details and how to fix'));
+    expect(screen.getByText(/operations.max_response_bytes.*limits each upstream response/)).toBeVisible();
+    expect(screen.queryByText(/older \/metrics\/raft endpoint/)).not.toBeInTheDocument();
+});
