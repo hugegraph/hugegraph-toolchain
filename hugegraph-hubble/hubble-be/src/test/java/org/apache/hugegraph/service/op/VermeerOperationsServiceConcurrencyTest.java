@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -32,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
@@ -99,11 +101,49 @@ public class VermeerOperationsServiceConcurrencyTest {
         }
     }
 
+    @Test
+    public void testRotatedCredentialPreventsOldRequestFromReplacingCache()
+           throws Exception {
+        Path token = Files.createTempFile("vermeer-rotation", ".token");
+        Files.writeString(token, "old-token");
+        token.toFile().deleteOnExit();
+        RotatingHttpClient http = new RotatingHttpClient();
+        VermeerOperationsService service = service(http, token);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<Map<String, Object>> oldRequest = executor.submit(() ->
+                    service.enrich(main(), ADMIN, true));
+            Assert.assertTrue(http.awaitFirstBlocked());
+
+            Files.writeString(token, "new-token");
+            Map<String, Object> newest = service.enrich(main(), ADMIN, true);
+            Assert.assertEquals("worker-new", workerId(newest));
+            Assert.assertEquals("new-token", http.secondToken.get());
+
+            http.releaseFirst();
+            Assert.assertEquals("worker-old",
+                                workerId(oldRequest.get(5L, TimeUnit.SECONDS)));
+            Assert.assertEquals("old-token", http.firstToken.get());
+
+            Map<String, Object> cached = service.enrich(main(), ADMIN, false);
+            Assert.assertEquals("worker-new", workerId(cached));
+            Assert.assertEquals(2, http.requests.get());
+        } finally {
+            http.releaseFirst();
+            executor.shutdownNow();
+        }
+    }
+
     private static VermeerOperationsService service(OperationsHttpClient http)
                                                     throws Exception {
         Path token = Files.createTempFile("vermeer-concurrency", ".token");
         Files.writeString(token, "service-token");
         token.toFile().deleteOnExit();
+        return service(http, token);
+    }
+
+    private static VermeerOperationsService service(OperationsHttpClient http,
+                                                     Path token) {
         return new VermeerOperationsService(
                 true, "http://127.0.0.1:6688", token.toString(), 30,
                 http, new ObjectMapper(),
@@ -117,10 +157,20 @@ public class VermeerOperationsServiceConcurrencyTest {
         return overview;
     }
 
+    private static String workerId(Map<String, Object> overview) {
+        Map<?, ?> cluster = (Map<?, ?>) overview.get("vermeer");
+        Map<?, ?> worker = (Map<?, ?>) ((List<?>) cluster.get("workers")).get(0);
+        return (String) worker.get("id");
+    }
+
     private static String snapshot() {
+        return snapshot("worker-1", OBSERVED_AT);
+    }
+
+    private static String snapshot(String worker, long observedAt) {
         return "{" +
                "\"schema_version\":1," +
-               "\"observed_at\":" + OBSERVED_AT + "," +
+               "\"observed_at\":" + observedAt + "," +
                "\"status\":\"UP\"," +
                "\"registered_workers\":1," +
                "\"ready_workers\":1," +
@@ -131,7 +181,8 @@ public class VermeerOperationsServiceConcurrencyTest {
                "\"metrics\":{\"cpu_cores\":0.1,\"rss_bytes\":1024}," +
                "\"metric_status\":{\"availability\":\"AVAILABLE\"}}," +
                "\"workers\":[{" +
-               "\"id\":\"worker-1\",\"name\":\"worker-1\",\"ready\":true," +
+               "\"id\":\"" + worker + "\",\"name\":\"" + worker +
+               "\",\"ready\":true," +
                "\"checks\":{\"registered\":true,\"connection_ready\":true," +
                "\"load_stream_ready\":true,\"compute_stream_ready\":true," +
                "\"superstep_stream_ready\":true}," +
@@ -161,7 +212,8 @@ public class VermeerOperationsServiceConcurrencyTest {
                 this.blocked.countDown();
                 try {
                     if (!this.release.await(5L, TimeUnit.SECONDS)) {
-                        throw new IllegalStateException("Timed out waiting to release request");
+                        throw new IllegalStateException(
+                                "Timed out waiting to release request");
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -181,6 +233,49 @@ public class VermeerOperationsServiceConcurrencyTest {
 
         private void release() {
             this.release.countDown();
+        }
+    }
+
+    private static final class RotatingHttpClient extends OperationsHttpClient {
+
+        private final AtomicInteger requests = new AtomicInteger();
+        private final AtomicReference<String> firstToken = new AtomicReference<>();
+        private final AtomicReference<String> secondToken = new AtomicReference<>();
+        private final CountDownLatch firstBlocked = new CountDownLatch(1);
+        private final CountDownLatch releaseFirst = new CountDownLatch(1);
+
+        private RotatingHttpClient() {
+            super(1000, 1000, 1024 * 1024);
+        }
+
+        @Override
+        public String getBearer(URI target, String token,
+                                Set<String> allowedOrigins) {
+            int request = this.requests.incrementAndGet();
+            if (request == 1) {
+                this.firstToken.set(token);
+                this.firstBlocked.countDown();
+                try {
+                    if (!this.releaseFirst.await(5L, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException(
+                                "Timed out waiting to release old request");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+                return snapshot("worker-old", OBSERVED_AT);
+            }
+            this.secondToken.set(token);
+            return snapshot("worker-new", OBSERVED_AT + 1L);
+        }
+
+        private boolean awaitFirstBlocked() throws InterruptedException {
+            return this.firstBlocked.await(2L, TimeUnit.SECONDS);
+        }
+
+        private void releaseFirst() {
+            this.releaseFirst.countDown();
         }
     }
 }

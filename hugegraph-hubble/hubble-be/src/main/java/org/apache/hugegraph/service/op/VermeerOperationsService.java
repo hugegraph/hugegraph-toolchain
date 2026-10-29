@@ -72,6 +72,7 @@ public class VermeerOperationsService {
     private final OperationsHttpClient http;
     private final ObjectMapper mapper;
     private final Clock clock;
+    private final Object credentialLock = new Object();
     private String credentialFingerprint;
     private Map<String, Object> cached;
     private Map<String, Object> lastSuccess;
@@ -104,8 +105,8 @@ public class VermeerOperationsService {
     }
 
     public Map<String, Object> enrich(Map<String, Object> overview,
-                                       Set<String> capabilities,
-                                       boolean refresh) {
+                                      Set<String> capabilities,
+                                      boolean refresh) {
         OperationsCapabilityService.requireHealth(capabilities);
         Map<String, Object> vermeer = this.project(this.snapshot(refresh),
                                                    capabilities);
@@ -131,30 +132,34 @@ public class VermeerOperationsService {
         CompletableFuture<Map<String, Object>> future;
         Map<String, Object> previousSuccess = null;
         boolean collect = false;
-        synchronized (this) {
+        synchronized (this.credentialLock) {
             try {
                 token = this.readToken();
             } catch (IOException | IllegalArgumentException e) {
-                this.clearLocked();
+                synchronized (this) {
+                    this.clearLocked();
+                }
                 return this.empty("UNAVAILABLE",
                                   "vermeer_credentials_unavailable", now);
             }
             fingerprint = fingerprint(token);
-            if (!Objects.equals(fingerprint, this.credentialFingerprint)) {
-                this.clearLocked();
-                this.credentialFingerprint = fingerprint;
-            }
-            if (!refresh && this.cached != null &&
-                now - this.cachedAt < this.ttlMillis) {
-                return this.cached;
-            }
-            if (this.inFlight != null) {
-                future = this.inFlight;
-            } else {
-                future = new CompletableFuture<>();
-                this.inFlight = future;
-                previousSuccess = this.lastSuccess;
-                collect = true;
+            synchronized (this) {
+                if (!Objects.equals(fingerprint, this.credentialFingerprint)) {
+                    this.clearLocked();
+                    this.credentialFingerprint = fingerprint;
+                }
+                if (!refresh && this.cached != null &&
+                    now - this.cachedAt < this.ttlMillis) {
+                    return this.cached;
+                }
+                if (this.inFlight != null) {
+                    future = this.inFlight;
+                } else {
+                    future = new CompletableFuture<>();
+                    this.inFlight = future;
+                    previousSuccess = this.lastSuccess;
+                    collect = true;
+                }
             }
         }
         if (!collect) {
@@ -502,8 +507,8 @@ public class VermeerOperationsService {
     }
 
     private static Map<String, Object> projectNode(Object value,
-                                                    boolean includeMetrics,
-                                                    boolean stale) {
+                                                   boolean includeMetrics,
+                                                   boolean stale) {
         if (!(value instanceof Map)) {
             return null;
         }
