@@ -21,9 +21,9 @@ package org.apache.hugegraph.service.op;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.Proxy;
-import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -59,10 +59,16 @@ public class OperationsHttpClient {
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
         this.maxResponseBytes = maxResponseBytes;
+        // Idle-read timeouts alone let a continuously progressing response hold
+        // the collector indefinitely. Bound the complete HTTP call by the
+        // existing connection budget plus one read budget, without a new option.
+        long callTimeoutMillis = Math.min(Integer.MAX_VALUE,
+                                          (long) connectTimeoutMillis + readTimeoutMillis);
         this.client = new OkHttpClient.Builder()
                 .connectTimeout(this.connectTimeoutMillis,
                                 TimeUnit.MILLISECONDS)
                 .readTimeout(this.readTimeoutMillis, TimeUnit.MILLISECONDS)
+                .callTimeout(callTimeoutMillis, TimeUnit.MILLISECONDS)
                 .followRedirects(false)
                 .followSslRedirects(false)
                 .proxy(Proxy.NO_PROXY)
@@ -159,7 +165,7 @@ public class OperationsHttpClient {
             }
         } catch (UpstreamRequestException e) {
             throw e;
-        } catch (SocketTimeoutException e) {
+        } catch (InterruptedIOException e) {
             throw new UpstreamRequestException("upstream_timeout", e,
                                                Map.of("request_path", target.getRawPath()));
         } catch (IOException | IllegalArgumentException e) {

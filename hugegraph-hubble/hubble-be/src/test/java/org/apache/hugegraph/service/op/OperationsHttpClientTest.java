@@ -19,6 +19,7 @@
 package org.apache.hugegraph.service.op;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.URI;
@@ -26,6 +27,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.net.httpserver.HttpServer;
@@ -321,6 +324,53 @@ public class OperationsHttpClientTest {
                     Assert.assertThrows(UpstreamRequestException.class, () ->
                             client.get(uri(server, "/"), null, null));
             Assert.assertEquals("upstream_timeout", error.getMessage());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test(timeout = 6000L)
+    public void testBearerCallDeadlineBoundsContinuouslyProgressingBody()
+           throws IOException {
+        AtomicInteger chunks = new AtomicInteger();
+        AtomicReference<String> authorization = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/", exchange -> {
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            try {
+                exchange.sendResponseHeaders(200, 80L);
+                for (int index = 0; index < 80; index++) {
+                    exchange.getResponseBody().write('x');
+                    exchange.getResponseBody().flush();
+                    chunks.incrementAndGet();
+                    // Progress every 50ms prevents the 1000ms idle-read timeout.
+                    Thread.sleep(50L);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (IOException ignored) {
+                // The call deadline closes the connection while the server streams.
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        OperationsHttpClient client = new OperationsHttpClient(100, 1000, 128);
+        long started = System.nanoTime();
+        try {
+            UpstreamRequestException error = (UpstreamRequestException)
+                    Assert.assertThrows(UpstreamRequestException.class, () ->
+                    client.getBearer(uri(server, "/api/v1/admin/cluster?token=private-query"),
+                                     "private-service-token", Collections.emptySet()));
+
+            Assert.assertEquals("upstream_timeout", error.getMessage());
+            Assert.assertTrue(error.getCause() instanceof InterruptedIOException);
+            Assert.assertFalse(error.getCause() instanceof java.net.SocketTimeoutException);
+            Assert.assertEquals("Bearer private-service-token", authorization.get());
+            Assert.assertTrue(chunks.get() >= 3);
+            Assert.assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started) < 3000L);
+            Assert.assertEquals(Map.of("request_path", "/api/v1/admin/cluster"), error.getDiagnostics());
+            Assert.assertFalse(error.getDiagnostics().toString().contains("private-"));
         } finally {
             server.stop(0);
         }
