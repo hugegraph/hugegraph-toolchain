@@ -95,6 +95,7 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
     const collectionRequest = useRef(null);
     const [collecting, setCollecting] = useState(false);
     const [collectionError, setCollectionError] = useState('');
+    const [collectionSource, setCollectionSource] = useState('server');
     const [schema, setSchema] = useState(null);
     const [snapshot, setSnapshot] = useState(null);
     const schemaView = item.schemaview || (schema?.key === key ? schema.data : null);
@@ -105,6 +106,7 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
         collectionRequest.current = null;
         setCollecting(false);
         setCollectionError('');
+        setCollectionSource('server');
         return () => { collectionRequest.current = null; };
     }, [key]);
 
@@ -114,11 +116,20 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
         collectionRequest.current = request;
         setCollecting(true);
         setCollectionError('');
+        setCollectionSource(source);
         try {
             const config = {suppressBusinessErrorToast: true};
-            const response = source === 'vermeer'
-                ? await api.manage.getVermeerStatistic(graphspace, item.name, config)
-                : await api.manage.getGraphStatistic(graphspace, item.name, config);
+            let response;
+            if (source === 'vermeer') {
+                response = await api.manage.getVermeerStatistic(graphspace, item.name, config);
+            } else {
+                const collection = await api.manage.updateGraphStatistic(graphspace, item.name);
+                if (collectionRequest.current !== request) return;
+                if (collection?.status != null && (collection.status < 200 || collection.status >= 300)) {
+                    throw Object.assign(new Error(''), {response: collection});
+                }
+                response = await api.manage.getGraphStatistic(graphspace, item.name, config);
+            }
             if (collectionRequest.current !== request) return;
             if (response?.status !== 200 || !isKnownCount(response.data?.vertex_count)
                 || !isKnownCount(response.data?.edge_count)) {
@@ -126,6 +137,7 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
             }
             setSnapshot({key, collected: true, data: {
                 ...response.data,
+                source: response.data.source || source,
                 vertex: response.data.vertex_count,
                 edge: response.data.edge_count,
             }});
@@ -243,7 +255,7 @@ const GraphCard = ({item, menus, canMutate = true, canComputeStatistics = false}
                                 vertices: formatRecordedCount(statistic.vertex, statistic),
                                 edges: formatRecordedCount(statistic.edge, statistic),
                             }) : undefined}
-                            onClick={() => collectStatistics(statistic?.source || 'server')}>
+                            onClick={() => collectStatistics(collectionSource)}>
                             <span className={style.element_counts}>
                                 {hasElementCounts ? t('graph.card.element_counts', {
                                     vertices: formatRecordedCount(statistic.vertex, statistic),
