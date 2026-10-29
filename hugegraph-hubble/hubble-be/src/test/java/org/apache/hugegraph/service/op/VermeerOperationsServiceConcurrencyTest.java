@@ -34,6 +34,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
@@ -81,15 +82,18 @@ public class VermeerOperationsServiceConcurrencyTest {
         VermeerOperationsService service = service(http);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch secondStarted = new CountDownLatch(1);
+        AtomicReference<Thread> secondThread = new AtomicReference<>();
         try {
             Future<Map<String, Object>> first = executor.submit(() ->
                     service.enrich(main(), ADMIN, true));
             Assert.assertTrue(http.awaitBlocked());
             Future<Map<String, Object>> second = executor.submit(() -> {
+                secondThread.set(Thread.currentThread());
                 secondStarted.countDown();
                 return service.enrich(main(), ADMIN, true);
             });
             Assert.assertTrue(secondStarted.await(2L, TimeUnit.SECONDS));
+            awaitPendingCollection(secondThread.get(), second);
 
             http.release();
             first.get(5L, TimeUnit.SECONDS);
@@ -99,6 +103,17 @@ public class VermeerOperationsServiceConcurrencyTest {
             http.release();
             executor.shutdownNow();
         }
+    }
+
+    private static void awaitPendingCollection(Thread thread, Future<?> request) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2L);
+        while (!request.isDone() && System.nanoTime() < deadline) {
+            if (thread.getState() == Thread.State.WAITING && !request.isDone()) {
+                return;
+            }
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1L));
+        }
+        Assert.fail("Second refresh did not wait for the in-flight collection");
     }
 
     @Test
