@@ -71,6 +71,11 @@ public class VertexLabelEntity implements SchemaLabelEntity, Timefiable {
         return this.style != null ? this.style : new VertexLabelStyle();
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean hasStyle() {
+        return this.style != null;
+    }
+
     @Override
     public SchemaType getSchemaType() {
         return SchemaType.VERTEX_LABEL;

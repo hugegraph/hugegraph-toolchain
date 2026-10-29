@@ -16,7 +16,8 @@ After logging in and retaining the Hubble session cookie, submit:
 ```
 
 Use `POST {prefix}/schema/vertexlabels`. `style` and `open_label_index` are
-optional. Missing or null styles use the standard style displaying `~id`;
+optional in builds containing [Toolchain #859](https://github.com/apache/hugegraph-toolchain/pull/859).
+Missing or null vertex styles use the same name-based palette as labels created outside Hubble, displaying `~id`;
 missing or null `open_label_index` enables the label index. An explicit `false`
 is preserved. The same optional-field defaults apply to edge labels.
 Existing explicit styles retain their color and display settings.
@@ -38,3 +39,8 @@ exceptions remain available as the server-side cause. For long queries, submit
 `GET /graphspaces/{space}/graphs/{graph}/tasks/{task_id}` until terminal status,
 then read `task_result`. Hubble transport and Server evaluation timeouts are
 independent; a failed synchronous response is not an exact graph count.
+
+Servers without GraphSpace (including 1.5 standalone) use
+`POST /graphs/{graph}/jobs/gremlin` and `GET /graphs/{graph}/tasks/{task_id}` instead.
+Cypher transport timeouts also return HTTP 504 with a Cypher-specific message.
+Check Server connectivity for connection timeouts before retrying a long query as a task.

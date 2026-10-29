@@ -26,6 +26,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.SchemaManager;
 import org.apache.hugegraph.entity.schema.EdgeLabelEntity;
 import org.apache.hugegraph.entity.schema.VertexLabelEntity;
+import org.apache.hugegraph.entity.schema.VertexLabelStyle;
 import org.apache.hugegraph.service.schema.PropertyIndexService;
 import org.apache.hugegraph.service.schema.VertexLabelService;
 import org.apache.hugegraph.structure.schema.VertexLabel;
@@ -65,7 +66,7 @@ public class SchemaCreateDefaultsTest {
 
     @Test
     public void testServiceSendsDefaultStyleAndLabelIndexToServer() {
-        for (String options : List.of("", ",\"style\":{},\"open_label_index\":null")) {
+        for (String options : List.of("", ",\"style\":null,\"open_label_index\":null", ",\"style\":{}")) {
             VertexLabelEntity entity = entity(options);
             SchemaManager schema = Mockito.mock(SchemaManager.class);
             HugeClient client = Mockito.mock(HugeClient.class);
@@ -81,6 +82,13 @@ public class SchemaCreateDefaultsTest {
             Mockito.verify(schema).addVertexLabel(sent.capture());
             Assert.assertTrue(sent.getValue().enableLabelIndex());
             Assert.assertTrue(sent.getValue().userdata().get("~style").toString().contains("~id"));
+            VertexLabelStyle stored = JsonUtil.fromJson(
+                    sent.getValue().userdata().get("~style").toString(), VertexLabelStyle.class);
+            VertexLabelStyle fallback = ReflectionTestUtils.invokeMethod(VertexLabelService.class, "getStyle",
+                    new VertexLabel.BuilderImpl("person", null).build());
+            Assert.assertEquals(entity.hasStyle() ? new VertexLabelStyle().getColor() : fallback.getColor(),
+                                stored.getColor());
+            Assert.assertFalse(JsonUtil.toJson(entity).contains("hasStyle"));
         }
     }
 
