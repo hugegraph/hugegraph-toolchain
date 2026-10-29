@@ -24,7 +24,10 @@ import {clearPersistedAlgorithmFormsForUser} from '../modules/algorithm/algorith
 
 export const SESSION_SETTINGS_EVENT = 'hubble.session-settings-change';
 export const SESSION_ACTIVITY_PREFIX = 'hubble.session.activity.';
-const validTimeout = seconds => Number.isInteger(seconds) && seconds >= 900 && seconds <= 604800;
+const MAX_TIMER_DELAY = 2147483647;
+// Reading an existing deployment value is less restrictive than editing it.
+// The backend and settings form keep enforcing the 15-minute to 7-day update range.
+const validTimeout = seconds => Number.isSafeInteger(seconds) && seconds > 0;
 const newerSetting = (nextAt, nextSource, currentAt, currentSource) => nextAt > currentAt
     || (nextAt === currentAt && (nextSource === 'update' || currentSource !== 'update'));
 const read = key => {
@@ -112,7 +115,7 @@ export const useSessionIdleTimeout = enabled => {
             if (!active || expired || !validTimeout(timeoutSeconds)) return;
             const remaining = lastActivity + timeoutSeconds * 1000 - Date.now();
             if (remaining <= 0) expire();
-            else timer = window.setTimeout(check, remaining);
+            else timer = window.setTimeout(check, Math.min(remaining, MAX_TIMER_DELAY));
         };
         const check = () => { sync(); schedule(); };
         const save = () => {
