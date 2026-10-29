@@ -75,8 +75,10 @@ health verdict.
 Worker counts mean **ready / registered**, not expected Helm replicas. A Worker
 removed from the registration set is not invented as an offline historical
 node. CPU is process CPU time divided by the sampling window, expressed in
-cores; memory is process RSS, displayed in binary units. These observations
-are not host or Pod-limit percentages. The initial CPU observation may report
+cores; memory is process RSS, displayed in binary units. The compute information
+panel sums only fresh, available process samples and shows the collected-node
+coverage separately for CPU and RSS. Partial coverage is not a complete cluster
+resource total. These observations are not host or Pod-limit percentages. The initial CPU observation may report
 `metrics_warming_up` until a second sample is available.
 
 ## Paired rollout

@@ -397,8 +397,9 @@ with no Store-to-Vermeer connector or additional topology layer. Open it to insp
 the Master layer above the Worker layer, then return to the main cluster without
 losing the selected topology or node-list view. Worker nodes wrap within the
 same layer as the deployment grows. Node details distinguish readiness checks
-from process CPU and RSS telemetry; missing or stale observations do not imply
-that a registered node is ready.
+from process CPU and RSS telemetry; the compute summary reports collection
+coverage rather than treating partial samples as a cluster total. Missing or stale
+observations do not imply that a registered node is ready.
 
 These browser captures use controlled API fixtures for the 1 Master + 1 Worker
 and 1 Master + 10 Worker scenarios. They illustrate the implemented interface,
