@@ -975,7 +975,7 @@
       "oltp_tab": "OLTP exploration",
       "olap_tab": "OLAP graph compute",
       "oltp_guide": "Query the current graph directly for interactive neighbor and path exploration",
-      "olap_guide": "Use Vermeer for whole-graph computation. Load the current graph, then submit an algorithm and view progress and results in async tasks"
+      "olap_guide": "Browse whole-graph algorithms here. Vermeer requires loading the current graph first; the Computer compatibility entry uses its own execution path"
     },
     "async_task": {
       "result_next": "Next results",
