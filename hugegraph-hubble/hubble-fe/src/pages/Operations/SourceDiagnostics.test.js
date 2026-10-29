@@ -358,4 +358,6 @@ test('does not suggest an older Raft payload remedy for an unrelated oversized r
     fireEvent.click(screen.getByText('Collection details and how to fix'));
     expect(screen.getByText(/operations.max_response_bytes.*limits each upstream response/)).toBeVisible();
     expect(screen.queryByText(/older \/metrics\/raft endpoint/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Inspect the full response size from the same endpoint/)).toBeVisible();
+    expect(screen.queryByText(/For an older Store|partition count/)).not.toBeInTheDocument();
 });
