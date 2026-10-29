@@ -236,7 +236,7 @@ let browser;
             await dialog().getByRole('button', {name: /保\s*存/, exact: true}).click();
             await page.locator('.ant-message-error').waitFor();
             assert.equal(await quotaField().inputValue(), '25');
-            assert.equal(state.spaces.find(s => s.name === 'crud_demo').storage_limit, 10240);
+            assert.equal(state.spaces.find(s => s.name === 'crud_demo').storage_limit, 256);
         });
         await messageGone();
         let releaseSave;

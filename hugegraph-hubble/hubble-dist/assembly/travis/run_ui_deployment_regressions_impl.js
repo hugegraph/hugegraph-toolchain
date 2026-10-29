@@ -245,7 +245,7 @@ catch (e) {
             assert(new URL(page.url()).pathname === '/graphspace');
             await page.getByRole('menuitem', { name: '编辑', exact: true }).click();
             await page.getByRole('dialog').waitFor();
-            const quota = page.getByRole('dialog').getByPlaceholder('例如：10240', {exact: true});
+            const quota = page.getByRole('dialog').locator('input[id$="_storage_limit"]');
             await waitForInputValue(page, quota, '10');
             await page.getByRole('dialog').getByText('高级部署与资源限制', { exact: true }).click();
             assert(await quota.isEditable());
@@ -276,7 +276,7 @@ catch (e) {
             await (await staleResponse).finished();
             await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
             assert.equal(await name.inputValue(), 'soc_graph');
-            assert.equal(await page.getByRole('dialog').getByPlaceholder('例如：10240', {exact: true}).inputValue(), '10');
+            assert.equal(await page.getByRole('dialog').locator('input[id$="_storage_limit"]').inputValue(), '10');
             await page.getByRole('button', { name: /取\s*消/ }).click();
         });
         await check('Graph context switches via actual header selectors', async () => {
