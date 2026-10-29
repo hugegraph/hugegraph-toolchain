@@ -419,7 +419,12 @@ sharing the same login. Background requests do not extend this timer. Changing
 the setting applies immediately, and an expired timer calls the existing logout
 endpoint before clearing local account state (with a five-second local fallback
 if logout stalls). Anonymous mode never creates a session for this timer.
-The servlet request-idle timeout is also updated. Signing in again restores the
+The servlet request-idle timeout is also updated, but the two clocks are independent:
+mouse or keyboard input without an HTTP request does not renew the servlet clock,
+while background requests can renew the servlet session without extending the browser
+timer. Either clock can end the login; an actively edited static page can therefore
+lose its server session earlier. No human-activity heartbeat is sent to the server.
+Signing in again restores the
 original deployment timeout and starts a fresh, noncredential activity scope.
 Idle logout includes that expected scope: a stale tab can clear its own local
 state without revoking a newer login sharing the browser's session cookie.
