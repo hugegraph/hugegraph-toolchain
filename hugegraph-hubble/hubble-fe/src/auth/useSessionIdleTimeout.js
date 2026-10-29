@@ -25,9 +25,8 @@ import {clearPersistedAlgorithmFormsForUser} from '../modules/algorithm/algorith
 export const SESSION_SETTINGS_EVENT = 'hubble.session-settings-change';
 export const SESSION_ACTIVITY_PREFIX = 'hubble.session.activity.';
 const MAX_TIMER_DELAY = 2147483647;
-// Reading an existing deployment value is less restrictive than editing it.
-// The backend and settings form keep enforcing the 15-minute to 7-day update range.
 const validTimeout = seconds => Number.isSafeInteger(seconds) && seconds > 0;
+const validUpdatedTimeout = seconds => validTimeout(seconds) && seconds >= 900 && seconds <= 604800;
 const newerSetting = (nextAt, nextSource, currentAt, currentSource) => nextAt > currentAt
     || (nextAt === currentAt && (nextSource === 'update' || currentSource !== 'update'));
 const read = key => {
@@ -140,7 +139,8 @@ export const useSessionIdleTimeout = enabled => {
             schedule();
         };
         const applySettings = (seconds, activityScope, requestedAt, source = 'load') => {
-            if (!active || expired || !validTimeout(seconds) || typeof activityScope !== 'string'
+            const valid = source === 'update' ? validUpdatedTimeout(seconds) : validTimeout(seconds);
+            if (!active || expired || !valid || typeof activityScope !== 'string'
                 || !activityScope || activityScope.length > 128) return;
             if (scope && scope !== activityScope) return;
             const firstSettings = !scope;
@@ -176,19 +176,20 @@ export const useSessionIdleTimeout = enabled => {
         const settingsChanged = event => {
             const detail = event.detail;
             const requestedAt = detail?.requestedAt ?? Date.now();
-            if (!validTimeout(detail?.timeoutSeconds) || typeof detail?.activityScope !== 'string'
+            if (!validUpdatedTimeout(detail?.timeoutSeconds) || typeof detail?.activityScope !== 'string'
                 || !detail.activityScope || !Number.isFinite(requestedAt)
                 || requestedAt < settingsRequestAt || requestedAt > Date.now()) return;
+            const update = {...detail, requestedAt, source: 'update'};
             if (!scope) {
                 // Only our own current-identity GET establishes the session scope. Keep a newer
                 // settings response until that GET resolves, without accepting another login's scope.
-                if (!pendingSettings || newerSetting(requestedAt, detail.source,
+                if (!pendingSettings || newerSetting(requestedAt, update.source,
                     pendingSettings.requestedAt, pendingSettings.source)) {
-                    pendingSettings = {...detail, requestedAt};
+                    pendingSettings = update;
                 }
             }
-            else if (scope === detail?.activityScope) {
-                applySettings(detail.timeoutSeconds, detail.activityScope, requestedAt, detail.source);
+            else if (scope === update.activityScope) {
+                applySettings(update.timeoutSeconds, update.activityScope, requestedAt, update.source);
             }
         };
         const storageChanged = event => { if (event.key === key) check(); };
