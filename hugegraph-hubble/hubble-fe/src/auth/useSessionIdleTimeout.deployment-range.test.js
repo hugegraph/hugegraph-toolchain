@@ -17,7 +17,7 @@
  */
 
 import {act, renderHook} from '@testing-library/react';
-import {useSessionIdleTimeout} from './useSessionIdleTimeout';
+import {SESSION_ACTIVITY_PREFIX, useSessionIdleTimeout} from './useSessionIdleTimeout';
 import * as api from '../api';
 import * as user from '../utils/user';
 
@@ -61,6 +61,19 @@ test('uses a positive deployment timeout below the editable minimum without poll
     await advance(480000);
     await flush();
     expect(api.auth.logout).toHaveBeenCalledTimes(1);
+});
+
+test.each([0, -1])('treats disabled deployment timeout %s as loaded without polling or logout', async seconds => {
+    api.auth.getSessionSettings.mockResolvedValue(settings(seconds));
+    renderHook(() => useSessionIdleTimeout(true));
+    await flush();
+
+    await advance(180000);
+    expect(api.auth.getSessionSettings).toHaveBeenCalledTimes(1);
+    expect(api.auth.logout).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem(
+        SESSION_ACTIVITY_PREFIX + 'deployment-scope'
+    )).timeoutSeconds).toBe(seconds);
 });
 
 test('segments a deployment timeout longer than the browser maximum timer delay', async () => {
