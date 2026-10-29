@@ -244,7 +244,12 @@ public class GraphSpaceController extends BaseController {
         HugeClient client = this.requireGraphSpaceAdministrator();
 
         graphSpaceEntity.setName(graphspace);
+        boolean keepStorage = graphSpaceEntity.getStorageLimit() <= 0;
         applyResourceDefaults(graphSpaceEntity);
+        if (keepStorage) {
+            // Server interprets zero as preserving the existing storage quota.
+            graphSpaceEntity.setStorageLimit(0);
+        }
 
         // Update graphspace
         graphSpaceService.update(client, graphSpaceEntity.convertGraphSpace());

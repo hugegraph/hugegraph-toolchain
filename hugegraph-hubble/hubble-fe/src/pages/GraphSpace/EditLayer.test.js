@@ -497,3 +497,18 @@ test('preserves an existing storage quota when saving a space opened with the ne
         'existing_space', expect.objectContaining({storage_limit: 10240}), expect.anything()
     ));
 });
+
+test('clearing an existing storage quota sends null for backend preserve semantics', async () => {
+    api.manage.getGraphSpace.mockResolvedValue({status: 200,
+        data: {name: 'existing_space', auth: true, storage_limit: 10240}});
+    render(<EditLayer visible detail={{name: 'existing_space'}}
+        onCancel={jest.fn()} refresh={jest.fn()} />);
+    const quota = document.querySelector('#control-hooks_storage_limit');
+    await waitFor(() => expect(quota).toHaveValue('10240'));
+    fireEvent.change(quota, {target: {value: ''}});
+    fireEvent.blur(quota);
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
+    await waitFor(() => expect(api.manage.updateGraphSpace).toHaveBeenCalledWith(
+        'existing_space', expect.objectContaining({storage_limit: null}), expect.anything()
+    ));
+});
