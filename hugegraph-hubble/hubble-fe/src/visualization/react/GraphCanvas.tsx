@@ -239,7 +239,7 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
         }
         snapshotOwnedError.current = null;
         if (previous !== null && previous !== undefined) {
-            setError(current => current === previous ? null : current);
+            setError((current: unknown) => current === previous ? null : current);
             if (lastError.current === previous) {
                 lastError.current = Symbol('no-error');
             }
