@@ -53,11 +53,21 @@ public class SessionControllerTest {
 
     @Test
     public void testReadPreservesDeploymentDefaultAndExposesBounds() {
-        Map<String, Integer> settings = this.controller.get();
+        Map<String, Object> settings = this.controller.get();
         Assert.assertEquals(Integer.valueOf(48 * 60 * 60),
                             settings.get("idle_timeout_seconds"));
         Assert.assertEquals(Integer.valueOf(900), settings.get("min_idle_seconds"));
         Assert.assertEquals(Integer.valueOf(604800), settings.get("max_idle_seconds"));
+    }
+
+    @Test
+    public void testActivityScopeIsStableAndDistinctFromTheSessionCredential() {
+        Object first = this.controller.get().get("activity_scope");
+        Assert.assertNotNull(first);
+        Assert.assertEquals(first, this.controller.update(settings(3600)).get("activity_scope"));
+        Assert.assertNotEquals(this.session.getId(), first);
+        this.session.removeAttribute(SessionController.ACTIVITY_SCOPE_KEY);
+        Assert.assertNotEquals(first, this.controller.get().get("activity_scope"));
     }
 
     @Test

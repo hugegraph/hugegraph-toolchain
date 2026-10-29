@@ -217,9 +217,18 @@ const getVermeer = config => {
 export {getDashboard, getVermeer};
 
 // Session preferences apply only to the current authenticated browser session.
-export const getSessionSettings = () => request.get('/auth/session', {
-    suppressBusinessErrorToast: true,
-});
-export const updateSessionSettings = idleTimeoutSeconds => request.put('/auth/session', {
-    idle_timeout_seconds: idleTimeoutSeconds,
-});
+const publishSessionSettings = response => {
+    const seconds = response?.data?.idle_timeout_seconds;
+    if (response?.status === 200 && Number.isInteger(seconds) && seconds > 0) {
+        window.dispatchEvent(new CustomEvent('hubble.session-settings-change', {
+            detail: {timeoutSeconds: seconds, activityScope: response.data.activity_scope},
+        }));
+    }
+    return response;
+};
+export const getSessionSettings = async () => publishSessionSettings(
+    await request.get('/auth/session', {suppressBusinessErrorToast: true})
+);
+export const updateSessionSettings = async idleTimeoutSeconds => publishSessionSettings(
+    await request.put('/auth/session', {idle_timeout_seconds: idleTimeoutSeconds})
+);

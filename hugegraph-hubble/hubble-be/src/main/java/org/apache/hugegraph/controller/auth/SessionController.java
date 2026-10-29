@@ -19,6 +19,7 @@
 package org.apache.hugegraph.controller.auth;
 
 import java.util.Map;
+import java.util.UUID;
 
 import jakarta.servlet.http.HttpSession;
 import org.apache.hugegraph.common.Constant;
@@ -35,16 +36,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(Constant.API_VERSION + "auth/session")
 public class SessionController extends BaseController {
 
+    static final String ACTIVITY_SCOPE_KEY = "hubble.activity_scope";
+
     private static final int MIN_IDLE_SECONDS = 15 * 60;
     private static final int MAX_IDLE_SECONDS = 7 * 24 * 60 * 60;
 
     @GetMapping
-    public Map<String, Integer> get() {
+    public Map<String, Object> get() {
         return settings(this.currentSession());
     }
 
     @PutMapping
-    public Map<String, Integer> update(@RequestBody Settings settings) {
+    public Map<String, Object> update(@RequestBody Settings settings) {
         HttpSession session = this.currentSession();
         Integer seconds = settings == null ? null : settings.idleTimeoutSeconds;
         if (seconds == null || seconds < MIN_IDLE_SECONDS ||
@@ -71,10 +74,21 @@ public class SessionController extends BaseController {
         return value instanceof String && !((String) value).isBlank();
     }
 
-    private static Map<String, Integer> settings(HttpSession session) {
+    private static Map<String, Object> settings(HttpSession session) {
+        String scope;
+        synchronized (session) {
+            Object current = session.getAttribute(ACTIVITY_SCOPE_KEY);
+            if (!(current instanceof String)) {
+                current = UUID.randomUUID().toString();
+                session.setAttribute(ACTIVITY_SCOPE_KEY, current);
+            }
+            scope = (String) current;
+        }
+        // An activity correlation key is not a servlet session ID or credential.
         return Map.of("idle_timeout_seconds", session.getMaxInactiveInterval(),
                       "min_idle_seconds", MIN_IDLE_SECONDS,
-                      "max_idle_seconds", MAX_IDLE_SECONDS);
+                      "max_idle_seconds", MAX_IDLE_SECONDS,
+                      "activity_scope", scope);
     }
 
     public static class Settings {
