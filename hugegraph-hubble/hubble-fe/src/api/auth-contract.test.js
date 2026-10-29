@@ -193,7 +193,8 @@ describe('session activity settings notifications', () => {
             expect(await auth.updateSessionSettings(3600)).toBe(response);
             expect(listener).toHaveBeenCalledTimes(2);
             expect(listener.mock.calls[1][0].detail)
-                .toEqual({timeoutSeconds: 3600, activityScope: 'login-scope'});
+                .toEqual({timeoutSeconds: 3600, activityScope: 'login-scope',
+                    requestedAt: expect.any(Number), source: 'update'});
         }
         finally {
             window.removeEventListener('hubble.session-settings-change', listener);
