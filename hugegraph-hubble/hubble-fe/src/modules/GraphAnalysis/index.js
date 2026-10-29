@@ -42,6 +42,7 @@ const GraphAnalysisHome = props => {
     const {t} = useTranslation();
 
     const [currentOlapMode, setCurrentOlapMode] = useState(false);
+    const [algorithmEngine, setAlgorithmEngine] = useState('oltp');
     const [isOlapModeLoading, setOlapModeLoading] = useState(false);
     const [olapError, setOlapError] = useState(false);
     const [vermeerReady, setVermeerReady] = useState(false);
@@ -223,6 +224,7 @@ const GraphAnalysisHome = props => {
             onGraphInfoChange={onGraphInfoChange}
             showOlapSwitch={moduleName !== ASYNCTASKS}
             showNavigationButton={moduleName !== ASYNCTASKS}
+            showGraphLoad={moduleName === ALGORITHMS && algorithmEngine === 'olap'}
             isOlapModeEnable={currentOlapMode}
             isOlapModeLoading={isOlapModeLoading}
             onOlapModeChange={onOlapModeChange}
@@ -237,7 +239,7 @@ const GraphAnalysisHome = props => {
             case GREMLIN:
                 return <AnalysisHome toolbarExtra={topBar} />;
             case ALGORITHMS:
-                return <AlgorithmHome />;
+                return <AlgorithmHome engine={algorithmEngine} onEngineChange={setAlgorithmEngine} />;
             case ASYNCTASKS:
                 return <AsyncTaskHome />;
             default:

@@ -47,6 +47,7 @@ const TopBar = props => {
         moduleName,
         showOlapSwitch,
         showNavigationButton,
+        showGraphLoad = false,
         isOlapModeEnable,
         isOlapModeLoading,
         onOlapModeChange,
@@ -455,6 +456,7 @@ const TopBar = props => {
                                     <span>{renderLoadTime()}</span>
                                 </span>)
                         }
+                        {showGraphLoad && <Tooltip title={t('analysis.topbar.graph_compute_tooltip')}>
                         <Button
                             size='small'
                             onClick={onLoadBtnClick}
@@ -465,6 +467,7 @@ const TopBar = props => {
                                 ? t('analysis.topbar.reload_to_vermeer')
                                 : t('analysis.topbar.load_to_vermeer')}
                         </Button>
+                        </Tooltip>}
                     </span>
                 )
             }

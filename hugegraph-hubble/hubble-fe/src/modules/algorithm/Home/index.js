@@ -34,7 +34,7 @@ import c from './index.module.scss';
 
 
 
-const AlgorithmHome = () => {
+const AlgorithmHome = ({engine = 'oltp', onEngineChange}) => {
     const {ALGORITHM_MODE} = useTranslatedConstants();
 
     const {STANDBY} = GRAPH_STATUS;
@@ -440,6 +440,8 @@ const AlgorithmHome = () => {
             <div className={c.algorithmContent}>
                 <AlgorithmFormHome
                     key={JSON.stringify([graphSpace, graph, identityVersion])}
+                    engine={engine}
+                    onEngineChange={onEngineChange}
                     handleOltpFormSubmit={handleOltpFormSubmit}
                     handleOlapFormSubmit={handleOlapFormSubmit}
                     currentAlgorithm={algorithmOnCanvas}

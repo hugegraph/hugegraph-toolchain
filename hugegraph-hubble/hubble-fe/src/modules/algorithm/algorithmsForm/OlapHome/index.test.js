@@ -34,7 +34,7 @@ jest.mock('../Olap/OlapItem', () => ({algorithmName}) => (
 
 jest.mock('../../../../utils/constants', () => ({
     GRAPH_LOAD_STATUS: {LOADED: 'LOADED'},
-    isAlgorithmNameMatched: () => true,
+    isAlgorithmNameMatched: (name, search) => name.toLowerCase().includes(search.toLowerCase()),
     TEXT_PATH: {ALGORITHM_COMMON: 'analysis.algorithm.common'},
     useTranslatedConstants: () => ({
         ALGORITHM_MODE: {OLAP: 'OLAP'},
@@ -213,4 +213,17 @@ test('ignores graph A capability after graph B has explicitly opted in', async (
     expect(screen.getByText('analysis.algorithm.computer_legacy_unavailable')).toBeInTheDocument();
     expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
     expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
+});
+
+
+test('shows an explicit no-match state for expanded, available Computer algorithms', async () => {
+    api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: true}});
+    render(<GraphAnalysisContext.Provider value={{isVermeer: false, graphStatus: 'LOADED'}}>
+        <OlapFormHome graphSpace='DEFAULT' graph='hugegraph' search='unmatched-name'
+            currentAlgorithm='' updateCurrentAlgorithm={jest.fn()} onOlapFormSubmit={jest.fn()} />
+    </GraphAnalysisContext.Provider>);
+    expect(screen.queryByText('query_result.empty')).not.toBeInTheDocument();
+    expandComputer();
+    expect(await screen.findByText('query_result.empty')).toBeVisible();
+    expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
 });

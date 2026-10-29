@@ -30,11 +30,13 @@ jest.mock('../../api', () => ({
     },
 }));
 jest.mock('../analysis/Home', () => ({toolbarExtra}) => <div>analysis module{toolbarExtra}</div>);
-jest.mock('../algorithm/Home', () => function MockAlgorithmHome() {
+jest.mock('../algorithm/Home', () => function MockAlgorithmHome({onEngineChange}) {
     const {useContext} = require('react');
     const Context = require('../Context').default;
     const {isVermeer} = useContext(Context);
-    return <div>algorithm module<span>{isVermeer ? 'Vermeer enabled' : 'Vermeer disabled'}</span></div>;
+    return <div>algorithm module<span>{isVermeer ? 'Vermeer enabled' : 'Vermeer disabled'}</span>
+        <button onClick={() => onEngineChange('olap')}>choose OLAP</button>
+        <button onClick={() => onEngineChange('oltp')}>choose OLTP</button></div>;
 });
 jest.mock('../asyncTasks/Home', () => function MockAsyncTaskHome() {
     const {useContext} = require('react');
@@ -54,6 +56,7 @@ jest.mock('../component/TopBar', () => props => (
             select B
         </button>
         <button onClick={() => props.onOlapModeChange(true)}>toggle olap</button>
+        {props.showGraphLoad && <span>graph load entry</span>}
         <span>{props.isOlapModeLoading ? 'olap loading' : 'olap idle'}</span>
         <span>{props.isOlapModeEnable ? 'olap on' : 'olap off'}</span>
     </div>
@@ -275,4 +278,15 @@ it('shows submitted-task feedback while optional Vermeer discovery is still pend
     expect(screen.getByText('async module')).toBeVisible();
     await act(async () => discovery.resolve({status: 200, data: {enable: false}}));
     expect(screen.getByText('async module')).toBeVisible();
+});
+
+
+it('places the only graph-loading entry on the OLAP algorithm tab', async () => {
+    render(<GraphAnalysisHome moduleName='algorithms' />);
+    await screen.findByText('algorithm module');
+    expect(screen.queryByText('graph load entry')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'choose OLAP'}));
+    expect(screen.getByText('graph load entry')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', {name: 'choose OLTP'}));
+    expect(screen.queryByText('graph load entry')).not.toBeInTheDocument();
 });

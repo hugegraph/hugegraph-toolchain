@@ -21,16 +21,11 @@
  */
 
 import {useCallback, useState} from 'react';
-import {Button, Empty, Space} from 'antd';
+import {Button, Space, Tabs} from 'antd';
 import OlapFormHome from '../OlapHome';
 import OltpFormHome from '../OltpHome';
 import AlgorithmSearch from '../../AlgorithmSearch';
-import {
-    isAlgorithmNameMatched,
-    useTranslatedConstants,
-} from '../../../../utils/constants';
 import c from './index.module.scss';
-import _ from 'lodash';
 import {useTranslation} from 'react-i18next';
 import {clearPersistedAlgorithmForms} from '../algorithmFormPersistence';
 import {isKnownZeroCount} from '../../../../utils/graphStatistics';
@@ -45,9 +40,10 @@ const AlgorithmFormHome = props => {
         graphNums,
         graphSpace,
         graph,
+        engine = 'oltp',
+        onEngineChange,
     } =  props;
     const {t} = useTranslation();
-    const {ALGORITHM_NAME} = useTranslatedConstants();
     const [search, setSearch] = useState('');
     const [formVersion, setFormVersion] = useState(0);
 
@@ -59,56 +55,60 @@ const AlgorithmFormHome = props => {
         setFormVersion(value => value + 1);
     }, [graph, graphSpace]);
 
-    const isListEmpty = _.isEmpty(
-        Object.values(ALGORITHM_NAME).filter(item => isAlgorithmNameMatched(item, search, t))
-    );
     const canRunLouvain = !isKnownZeroCount(graphNums?.edgeCount, graphNums);
 
     return (
         <div className={c.algorithmSidebar}>
+            <Tabs
+                className={c.engineTabs}
+                activeKey={engine}
+                onChange={onEngineChange}
+                items={[
+                    {key: 'oltp', label: t('analysis.algorithm.oltp_tab')},
+                    {key: 'olap', label: t('analysis.algorithm.olap_tab')},
+                ]}
+            />
+            <p className={c.engineGuide}>{t(`analysis.algorithm.${engine}_guide`)}</p>
             <AlgorithmSearch onSearch={handleSearch} />
             <Space className={c.docs} wrap size={12}>
-                <a
+                {engine === 'oltp' ? <a
                     href="https://hugegraph.apache.org/docs/clients/restful-api/traverser/"
                     target="_blank"
                     rel="noreferrer"
                 >
                     {t('analysis.algorithm.traverser_docs')}
-                </a>
-                <a
+                </a> : <a
                     href={VERMEER_DOC}
                     target="_blank"
                     rel="noreferrer"
                 >
                     {t('analysis.algorithm.vermeer_docs')}
-                </a>
+                </a>}
                 <Button type='link' size='small' onClick={resetParameters}>
                     {t('analysis.algorithm.reset_parameters')}
                 </Button>
             </Space>
-            {isListEmpty && (
-                <Empty
-                    className={c.listEmpty}
-                    description={t('query_result.empty')}
+            <div hidden={engine !== 'oltp'}>
+                <OltpFormHome
+                    key={`oltp-${formVersion}`}
+                    onOltpFormSubmit={handleOltpFormSubmit}
+                    search={search}
+                    currentAlgorithm={currentAlgorithm}
+                    updateCurrentAlgorithm={updateCurrentAlgorithm}
                 />
-            )}
-            <OltpFormHome
-                key={`oltp-${formVersion}`}
-                onOltpFormSubmit={handleOltpFormSubmit}
-                search={search}
-                currentAlgorithm={currentAlgorithm}
-                updateCurrentAlgorithm={updateCurrentAlgorithm}
-            />
-            <OlapFormHome
-                key={`olap-${formVersion}`}
-                onOlapFormSubmit={handleOlapFormSubmit}
-                search={search}
-                currentAlgorithm={currentAlgorithm}
-                updateCurrentAlgorithm={updateCurrentAlgorithm}
-                canRunLouvain={canRunLouvain}
-                graphSpace={graphSpace}
-                graph={graph}
-            />
+            </div>
+            <div hidden={engine !== 'olap'}>
+                <OlapFormHome
+                    key={`olap-${formVersion}`}
+                    onOlapFormSubmit={handleOlapFormSubmit}
+                    search={search}
+                    currentAlgorithm={currentAlgorithm}
+                    updateCurrentAlgorithm={updateCurrentAlgorithm}
+                    canRunLouvain={canRunLouvain}
+                    graphSpace={graphSpace}
+                    graph={graph}
+                />
+            </div>
         </div>
     );
 };

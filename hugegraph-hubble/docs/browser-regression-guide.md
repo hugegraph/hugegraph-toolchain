@@ -121,3 +121,27 @@ same fixtures and browser, and verify the served source. Separate unmeasured
 warm-up queries from timed samples and interleave baseline/candidate runs to
 reduce order effects. Small development-UI samples do not establish production
 throughput or tail-latency guarantees.
+
+## Switch between OLTP exploration and OLAP graph compute
+
+Open `algorithms/<graphspace>/<graph>`. The initial OLTP tab contains only
+interactive traversers and links to their REST API documentation. Select the
+OLAP tab to browse Vermeer whole-graph algorithms and their documentation.
+Search and parameter reset remain available within the selected catalog.
+
+The OLAP tab owns the graph-loading entry. An unloaded graph explains that it
+must be loaded before computation; hover over **Load for graph compute** to
+identify the Vermeer engine. Query and async-task pages do not duplicate that
+loading control. Start or retry loading on the OLAP tab and inspect progress in
+async tasks. Switching back to OLTP does not cancel an acknowledged load.
+
+For browser verification, exercise both authenticated and anonymous PD modes:
+
+1. Open an explicit graph route and verify that only the OLTP catalog is shown.
+2. Select OLAP; verify the unloaded-state guidance, loading button and tooltip.
+3. Submit one load and verify its graphspace/graph scope and pending state.
+4. Return to OLTP and verify that the loading button is absent.
+5. Switch GraphSpace and verify the selected graph and account visibility.
+
+An intercepted API run validates this navigation and feedback contract. It does
+not validate actual Vermeer readiness, graph loading or algorithm correctness.

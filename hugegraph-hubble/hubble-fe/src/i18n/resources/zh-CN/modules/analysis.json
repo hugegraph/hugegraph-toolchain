@@ -565,7 +565,7 @@
       "vermeer_docs": "Vermeer 图计算指南",
       "vermeer_olap": "Vermeer · OLAP 全图计算",
       "vermeer_ready": "通过 Vermeer 执行；图已加载，可运行下方算法",
-      "vermeer_load_first": "通过 Vermeer 执行。请先在顶部将当前图加载到 Vermeer",
+      "vermeer_load_first": "请先将当前图加载到图计算服务，加载完成后即可运行算法",
       "vermeer_unavailable": "当前会话暂时无法使用 Vermeer；如使用 Computer，请展开下方兼容入口",
       "vermeer_no_match": "当前 Hubble 的 Vermeer 接口未提供匹配的算法",
       "computer_legacy_entry": "Computer 兼容入口（按需展开）",
@@ -971,7 +971,11 @@
           "max_degree": "查询过程中，单个顶点遍历的最大邻接边数目",
           "select_direction": "顶点向外发散的方向"
         }
-      }
+      },
+      "oltp_tab": "OLTP 交互探索",
+      "olap_tab": "OLAP 图计算",
+      "oltp_guide": "直接查询当前图，适合邻居、路径等局部交互探索",
+      "olap_guide": "使用 Vermeer 进行全图计算。先加载当前图，再提交算法；进度和结果可在异步任务中查看"
     },
     "async_task": {
       "result_next": "下一页结果",
@@ -1081,8 +1085,8 @@
       "load_failed": "加载失败",
       "not_loaded": "未加载",
       "recent_load_time": "最近加载时间:",
-      "load_to_vermeer": "加载到Vermeer",
-      "reload_to_vermeer": "重加载到Vermeer",
+      "load_to_vermeer": "加载到图计算",
+      "reload_to_vermeer": "重新加载到图计算",
       "metadata_config": "元数据配置",
       "metadata_tooltip": "点击可跳转到对应图的元数据配置的页面",
       "olap_result": "是否查询OLAP结果:",
@@ -1094,7 +1098,8 @@
       "retry_graph_spaces": "重试图空间",
       "retry_graphs": "重试图",
       "retry_olap": "重试 OLAP 模式",
-      "retry_vermeer": "重试 Vermeer 状态"
+      "retry_vermeer": "重试 Vermeer 状态",
+      "graph_compute_tooltip": "Vermeer 高性能图计算"
     },
     "prompt": {
       "title": "Text2GQL Prompt",

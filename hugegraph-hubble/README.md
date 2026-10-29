@@ -955,3 +955,16 @@ toasts. It demonstrates error presentation; the original deployment's stack
 overflow cause was not reproduced or diagnosed by this fixture.
 
 ![Single inline canvas renderer error](docs/assets/query-render-error-single.png)
+
+### OLTP and OLAP algorithm workflows
+
+The algorithm catalog separates interactive OLTP exploration from OLAP graph
+compute. Load a graph for Vermeer from the OLAP tab, then inspect computation
+progress and results in async tasks.
+
+![OLAP loading guidance](docs/assets/analytics/olap-load-guide.png)
+
+This screenshot comes from a Chromium run with explicitly intercepted APIs in
+authenticated administrator mode. The corresponding anonymous PD flow, loading
+submission scope and GraphSpace switching were also checked. It demonstrates UI
+navigation and feedback; it does not establish live loading or algorithm results.

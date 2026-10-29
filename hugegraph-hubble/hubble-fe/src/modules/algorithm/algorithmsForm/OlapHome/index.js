@@ -184,8 +184,8 @@ const OlapFormHome = props => {
             <p className={c.engineHint}>
                 {t(`analysis.algorithm.${vermeerStatus}`)}
             </p>
-            {isVermeer && isEmptyBasicOlap && search && (
-                <p className={c.engineHint}>{t('analysis.algorithm.vermeer_no_match')}</p>
+            {isEmptyBasicOlap && search && (isVermeer || (legacyExpanded && computerAvailable === true)) && (
+                <p className={c.engineHint}>{t(isVermeer ? 'analysis.algorithm.vermeer_no_match' : 'query_result.empty')}</p>
             )}
             {!isVermeer && (
                 <>

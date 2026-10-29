@@ -47,10 +47,10 @@ jest.mock('react-i18next', () => ({
 
 const renderTopBar = (
     context = {isVermeer: false},
-    {moduleName = 'gremlin', onGraphInfoChange = jest.fn()} = {}
+    {moduleName = 'algorithms', onGraphInfoChange = jest.fn(), showGraphLoad = true} = {}
 ) => render(
     <GraphAnalysisContext.Provider value={context}>
-        <TopBar
+        <TopBar showGraphLoad={showGraphLoad}
             moduleName={moduleName}
             onGraphInfoChange={onGraphInfoChange}
             showOlapSwitch={false}
@@ -255,7 +255,7 @@ it('refreshes selected graph details when the Vermeer capability resolves after 
     const view = renderTopBar({isVermeer: false}, {onGraphInfoChange});
     const capabilityReady = capability.promise.then(isVermeer => view.rerender(
         <GraphAnalysisContext.Provider value={{isVermeer}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     ));
     await waitFor(() => expect(onGraphInfoChange).toHaveBeenCalledWith(
@@ -294,7 +294,7 @@ it('does not automatically retry a forbidden detail request after capability act
 
     view.rerender(
         <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     );
 
@@ -327,7 +327,7 @@ it('ignores pending capability-triggered details after the route selects a diffe
     ));
     const enabledTopBar = (
         <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     );
     view.rerender(enabledTopBar);
@@ -338,7 +338,7 @@ it('ignores pending capability-triggered details after the route selects a diffe
     Object.assign(mockParams, {graph: 'graph-b'});
     view.rerender(
         <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     );
     await waitFor(() => expect(onGraphInfoChange).toHaveBeenCalledWith(
@@ -459,7 +459,7 @@ it('ignores a late graph response after the route switches GraphSpace', async ()
     Object.assign(mockParams, {graphSpace: 'B'});
     view.rerender(
         <GraphAnalysisContext.Provider value={{isVermeer: false}}>
-            <TopBar
+            <TopBar showGraphLoad
                 moduleName='gremlin'
                 onGraphInfoChange={jest.fn()}
                 showOlapSwitch={false}
@@ -516,7 +516,7 @@ it.each(['gremlin', 'algorithms', 'asyncTasks'])(
         Object.assign(mockParams, {graph: 'graph-b'});
         view.rerender(
             <GraphAnalysisContext.Provider value={{isVermeer: false}}>
-                <TopBar
+                <TopBar showGraphLoad
                     moduleName={moduleName}
                     onGraphInfoChange={onGraphInfoChange}
                     showOlapSwitch={false}
@@ -590,7 +590,7 @@ it('resumes a queued load after switching away and back to its graph', async () 
         const onGraphInfoChange = jest.fn();
         const topBar = () => (
             <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-                <TopBar
+                <TopBar showGraphLoad
                     moduleName='algorithms'
                     onGraphInfoChange={onGraphInfoChange}
                     showOlapSwitch={false}
@@ -660,7 +660,7 @@ it('refreshes graph status when Vermeer becomes available again', async () => {
     ));
     view.rerender(
         <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar
+            <TopBar showGraphLoad
                 moduleName='algorithms'
                 onGraphInfoChange={onGraphInfoChange}
                 showOlapSwitch={false}
@@ -694,7 +694,7 @@ it('preserves an in-flight load guard when switching away and back before its ac
         api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {task_status: 'queued'}});
         const onGraphInfoChange = jest.fn();
         const topBar = () => <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='algorithms' onGraphInfoChange={onGraphInfoChange}
+            <TopBar showGraphLoad moduleName='algorithms' onGraphInfoChange={onGraphInfoChange}
                 showOlapSwitch={false} showNavigationButton={false} isOlapModeEnable={false}
                 isOlapModeLoading={false} onOlapModeChange={jest.fn()} />
         </GraphAnalysisContext.Provider>;
@@ -752,4 +752,15 @@ it('resolves a route-selected late-page graph from the same bounded response', a
         brief: true, page_no: 1, page_size: 100, query: '', selected: 'graph_10000',
     }, expect.any(Object));
     expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+
+it('keeps the graph loading control confined to the OLAP surface', async () => {
+    Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
+    api.manage.getGraphList.mockResolvedValue({status: 200, data: {records: [{name: 'graph-a'}]}});
+    renderTopBar({isVermeer: true}, {showGraphLoad: false});
+    await waitFor(() => expect(api.manage.getGraph).toHaveBeenCalled());
+    expect(await screen.findByText('analysis.topbar.loaded')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'analysis.topbar.reload_to_vermeer'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'analysis.topbar.load_to_vermeer'})).not.toBeInTheDocument();
 });
