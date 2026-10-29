@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {act, renderHook} from '@testing-library/react';
-import {SESSION_ACTIVITY_PREFIX, useSessionIdleTimeout} from './useSessionIdleTimeout';
+import {act, fireEvent, renderHook} from '@testing-library/react';
+import {SESSION_ACTIVITY_PREFIX, SESSION_SETTINGS_EVENT, useSessionIdleTimeout} from './useSessionIdleTimeout';
 import * as api from '../api';
 import * as user from '../utils/user';
 
@@ -74,6 +74,22 @@ test.each([0, -1])('treats disabled deployment timeout %s as loaded without poll
     expect(JSON.parse(localStorage.getItem(
         SESSION_ACTIVITY_PREFIX + 'deployment-scope'
     )).timeoutSeconds).toBe(seconds);
+});
+
+test.each([0, -1])('can enable an editable idle limit after loading disabled deployment value %s', async seconds => {
+    api.auth.getSessionSettings.mockResolvedValue(settings(seconds));
+    renderHook(() => useSessionIdleTimeout(true));
+    await flush();
+    await advance(1000);
+    fireEvent(window, new CustomEvent(SESSION_SETTINGS_EVENT, {detail: {
+        timeoutSeconds: 900, activityScope: 'deployment-scope', source: 'update', requestedAt: Date.now(),
+    }}));
+    await advance(898999);
+    expect(api.auth.logout).not.toHaveBeenCalled();
+    await advance(1);
+    await flush();
+    expect(api.auth.getSessionSettings).toHaveBeenCalledTimes(1);
+    expect(api.auth.logout).toHaveBeenCalledTimes(1);
 });
 
 test('segments a deployment timeout longer than the browser maximum timer delay', async () => {
