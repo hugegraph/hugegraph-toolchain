@@ -18,7 +18,7 @@ import {mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {verifyUi, runBrowser} from './verify-ui.mjs';
+import {verifyUi, runBrowser, terminateBrowserProcess} from './verify-ui.mjs';
 import {REQUIRED_CHECKS} from './run_ui_deployment_regressions.js';
 
 const passed = () => ({status: 'passed', observedAt: new Date().toISOString(),
@@ -138,4 +138,30 @@ test('an already interrupted run never starts a browser process', async () => {
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(runBrowser('http://127.0.0.1:43127', '/unused', controller.signal), /interrupted/);
+});
+
+test('Windows cleanup terminates the complete wrapper process tree', () => {
+  const calls = [];
+  const child = {pid: 43127, kill: () => assert.fail('taskkill should own Windows tree cleanup')};
+  terminateBrowserProcess(child, 'SIGTERM', {
+    platform: 'win32',
+    runTaskkill: (command, args, options) => {
+      calls.push({command, args, options});
+      return {status: 0};
+    },
+  });
+  assert.deepEqual(calls, [{
+    command: 'taskkill',
+    args: ['/PID', '43127', '/T', '/F'],
+    options: {stdio: 'ignore', windowsHide: true},
+  }]);
+});
+
+test('POSIX cleanup keeps the detached process-group contract', () => {
+  const calls = [];
+  terminateBrowserProcess({pid: 91, kill: () => assert.fail('group kill should be used')}, 'SIGKILL', {
+    platform: 'linux',
+    killProcess: (pid, signal) => calls.push({pid, signal}),
+  });
+  assert.deepEqual(calls, [{pid: -91, signal: 'SIGKILL'}]);
 });
