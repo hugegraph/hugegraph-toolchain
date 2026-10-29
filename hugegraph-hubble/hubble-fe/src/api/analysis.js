@@ -222,7 +222,9 @@ const runOlapVermeer =  (graphspace, graph, params) => {
 
 // 任务管理
 const fetchAsyncTaskResult = (graphspace, graph, taskId) => {
-    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/async-tasks/${taskId}`);
+    return request.get(`/graphspaces/${graphspace}/graphs/${graph}/async-tasks/${taskId}`, {
+        suppressBusinessErrorToast: true,
+    });
 };
 
 const fetchVermeerTaskValues = (graphspace, graph, taskId, cursor) => {

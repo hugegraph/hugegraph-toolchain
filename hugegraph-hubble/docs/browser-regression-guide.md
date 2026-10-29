@@ -122,3 +122,31 @@ same fixtures and browser, and verify the served source. Separate unmeasured
 warm-up queries from timed samples and interleave baseline/candidate runs to
 reduce order effects. Small development-UI samples do not establish production
 throughput or tail-latency guarantees.
+
+## Collect graph-card counts and diagnose Vermeer result reads
+
+Click an uncollected graph-card count to request the existing bounded Server
+statistics. Duplicate clicks share the in-flight guard. Failed collection leaves
+a retry action while overview and query navigation remain usable.
+
+For an authorized native Vermeer deployment with ready workers, the count source
+menu also offers **Graph compute statistics (loaded snapshot)**. Hubble verifies
+the caller's graph read permission and existing Vermeer administrator boundary,
+then reads only the selected loaded graph's total counters. The visible count
+label and tooltip identify this source and snapshot time. These counts may lag
+Server writes; refresh the graph through OLAP loading when new data is needed.
+No full Server graph scan, graph load or compute task is started by this read.
+
+The additive `GET /graphspaces/{space}/graphs/{graph}/statistics/vermeer` endpoint
+returns `vertex_count`, `edge_count`, `update_time`, `source: vermeer` and
+`approximate: false`. Unloaded graphs and unavailable workers are rejected. The
+existing statistics endpoint retains its behavior. The `/vermeer` capability
+response advertises `statistics_available` only for ready native integration;
+legacy Dashboard availability does not enable this new source.
+
+A successful Vermeer task can have unavailable result values. Both exact native
+absence responses (`task_id error:<id>` and `compute value not exist, task_id:<id>`)
+retain successful task metadata, while mismatched IDs, authorization errors and
+transient failures remain errors. Unexpected result-read failures show a single
+inline reason, task scope and retry guidance. They do not change the computation
+status to failed. Result state resets when the signed-in identity changes.

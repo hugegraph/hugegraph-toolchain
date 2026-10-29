@@ -1069,7 +1069,10 @@
         "check_result": "View Result",
         "check_reason": "View Reason",
         "collapse_result": "Hide Result"
-      }
+      },
+      "result_error_unknown": "The service returned no specific reason. Check the Hubble and graph compute service logs",
+      "result_request_context": "GraphSpace {{graphspace}} / graph {{graph}} / task {{taskId}}",
+      "vermeer_result_retry_hint": "The result could not be read; this does not mean the computation failed. Retry first. If values have been cleared, run the algorithm again from OLAP graph compute"
     },
     "topbar": {
       "current_graph_space": "Current Graphspace:",

@@ -962,10 +962,29 @@ Query execution waits until the graph context matches the current route, includi
 
 See [query and submitted-task feedback](docs/query-task-feedback.md) for preview limits, task discovery, and failed-result recovery.
 
-
 The Chrome screenshot below uses ten-vertex API fixtures and an injected G6
 `RangeError` to verify one unobstructed inline renderer alert without duplicate
 toasts. It demonstrates error presentation; the original deployment's stack
 overflow cause was not reproduced or diagnosed by this fixture.
 
 ![Single inline canvas renderer error](docs/assets/query-render-error-single.png)
+
+### Graph count snapshots and result-read diagnostics
+
+Click the graph-card count to collect bounded Server statistics. Administrators
+with ready native Vermeer integration can choose the loaded graph snapshot,
+which displays its source and timestamp and does not scan the entire Server graph.
+
+![Loaded graph compute snapshot](docs/assets/graph-statistics/loaded-snapshot.png)
+
+Unexpected result-read failures retain the backend reason, graph/task context
+and a retry action. A read error does not change a successful computation to a
+failed task. Confirmed absent native values instead show a successful task with
+currently unavailable results.
+
+![Result-read failure and retry guidance](docs/assets/graph-statistics/result-read-error.png)
+
+These Chromium screenshots use intercepted APIs in authenticated administrator
+mode. Anonymous PD access, GraphSpace switching and account visibility were also
+checked. They validate the UI contract; native count correctness and retention
+policies require separate live deployment verification.
