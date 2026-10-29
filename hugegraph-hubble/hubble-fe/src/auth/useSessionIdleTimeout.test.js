@@ -233,3 +233,17 @@ test('does not retry an explicit unsupported HTTP rejection', async () => {
     await advance(120000); await flush();
     expect(api.auth.getSessionSettings).toHaveBeenCalledTimes(1);
 });
+
+
+test('human input before the cached deadline is retained while the initial metadata response is slow', async () => {
+    let resolve;
+    localStorage.setItem(storageKey, JSON.stringify({lastActivity: Date.now() - 899000,
+        timeoutSeconds: 900, settingsUpdatedAt: Date.now() - 899000}));
+    api.auth.getSessionSettings.mockImplementationOnce(() => new Promise(done => {resolve = done;}));
+    renderHook(() => useSessionIdleTimeout(true));
+    fireEvent.keyDown(window, {key: 'a'});
+    await advance(10000);
+    await act(async () => resolve(settings()));
+    expect(api.auth.logout).not.toHaveBeenCalled();
+    await advance(890000); await flush(); expect(api.auth.logout).toHaveBeenCalledTimes(1);
+});

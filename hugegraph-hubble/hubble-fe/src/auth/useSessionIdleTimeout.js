@@ -57,6 +57,9 @@ export const useSessionIdleTimeout = enabled => {
         const settingsRequestAt = Date.now();
         let timeoutSeconds;
         let lastActivity = Date.now();
+        let firstInputAt;
+        let lastInputAt;
+        let longestInputGap = 0;
         let lastWrite = 0;
         let settingsUpdatedAt = 0;
         let settingsSource = 'load';
@@ -125,7 +128,11 @@ export const useSessionIdleTimeout = enabled => {
                 expire();
                 return;
             }
-            lastActivity = Date.now();
+            const now = Date.now();
+            if (firstInputAt === undefined) firstInputAt = now;
+            if (lastInputAt !== undefined) longestInputGap = Math.max(longestInputGap, now - lastInputAt);
+            lastInputAt = now;
+            lastActivity = now;
             if (Date.now() - lastWrite >= 1000) save();
             schedule();
         };
@@ -152,6 +159,14 @@ export const useSessionIdleTimeout = enabled => {
                 settingsSource = newest.source;
             }
             pendingSettings = null;
+            // Input received while the initial GET was pending can renew an unexpired session,
+            // but an input after the cached deadline (or a long idle gap) cannot revive it.
+            const priorSeconds = validTimeout(saved?.timeoutSeconds) ? saved.timeoutSeconds : timeoutSeconds;
+            if (firstSettings && Number.isFinite(saved?.lastActivity) && firstInputAt !== undefined
+                && firstInputAt < saved.lastActivity + priorSeconds * 1000
+                && longestInputGap < priorSeconds * 1000) {
+                lastActivity = Math.max(lastActivity, lastInputAt);
+            }
             schedule();
             save();
         };
