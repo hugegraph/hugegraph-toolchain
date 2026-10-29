@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import fs from 'fs';
+import path from 'path';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {message} from 'antd';
@@ -653,11 +655,39 @@ test('retries graph creation after the built-in template was already persisted',
     await expectCreateComplete(dialog, onCancel, refresh);
 });
 
-test('does not reuse a same-named built-in template with different content', async () => {
-    api.manage.getSchemaList.mockResolvedValue({
-        status: 200,
-        data: {records: [{name: 'people_network', schema: 'different schema'}]},
-    });
+test.each(['hlm', 'covid19'])('reuses the Server historical %s template without a false conflict', async name => {
+    const source = fs.readFileSync(path.resolve(__dirname,
+        '../../../../hubble-be/src/main/java/org/apache/hugegraph/util/GremlinUtil.java'), 'utf8');
+    const constant = source.split(`public static final String GREMLIN_${name.toUpperCase()}_SCHEMA =`)[1]
+        .split(/;\s*\n/)[0];
+    const schemaText = [...constant.matchAll(/"(?:[^"\\]|\\.)*"/g)]
+        .map(match => JSON.parse(match[0])).join('');
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    api.manage.addSchema.mockResolvedValue({status: 400,
+        message: 'Cannot create schema template since it has been created'});
+    api.manage.getSchema.mockResolvedValue({status: 200, data: {name, schema: schemaText}});
+    api.manage.addGraph.mockResolvedValue({status: 200});
+    render(<EditLayer visible onCancel={jest.fn()} refresh={jest.fn()} graphspace='DEFAULT' />);
+    const dialog = await screen.findByRole('dialog');
+    const current = within(dialog);
+    const schema = current.getByRole('combobox', {name: 'graph.form.schema'});
+    await waitFor(() => expect(schema).toBeEnabled());
+    await userEvent.type(current.getByPlaceholderText('graph.form.name_placeholder'), 'historical_graph');
+    await userEvent.click(schema);
+    await clickCurrentOption(schema, `schema_template.builtin.${name}`);
+    await userEvent.click(current.getByRole('button', {name: 'OK'}));
+    await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalledWith('DEFAULT',
+        expect.objectContaining({schema: name})));
+    expect(api.manage.getSchema).toHaveBeenCalledWith('DEFAULT', name, expect.anything());
+    expect(screen.queryByText('graph.form.schema_conflict')).not.toBeInTheDocument();
+});
+
+test('does not reuse a concurrently created built-in template with different content', async () => {
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: []}});
+    api.manage.addSchema.mockResolvedValue({status: 400,
+        message: 'Cannot create schema template since it has been created'});
+    api.manage.getSchema.mockResolvedValue({status: 200,
+        data: {name: 'people_network', schema: 'different schema'}});
 
     const onCancel = jest.fn();
     const refresh = jest.fn();
@@ -683,8 +713,30 @@ test('does not reuse a same-named built-in template with different content', asy
 
     expect(await screen.findByText('graph.form.schema_conflict')).toBeInTheDocument();
     expect(api.manage.addGraph).not.toHaveBeenCalled();
-    expect(api.manage.addSchema).not.toHaveBeenCalled();
+    expect(api.manage.addSchema).toHaveBeenCalledTimes(1);
 });
+
+test.each(['hlm', 'covid19', 'people_network'])(
+    'keeps the customized saved %s template selectable without builtin verification', async name => {
+        api.manage.getSchemaList.mockResolvedValue({status: 200,
+            data: {records: [{name, schema: 'customized user schema'}]}});
+        api.manage.addGraph.mockResolvedValue({status: 200});
+        render(<EditLayer visible onCancel={jest.fn()} refresh={jest.fn()} graphspace='DEFAULT' />);
+        const dialog = await screen.findByRole('dialog');
+        const current = within(dialog);
+        const schema = current.getByRole('combobox', {name: 'graph.form.schema'});
+        await waitFor(() => expect(schema).toBeEnabled());
+        await userEvent.type(current.getByPlaceholderText('graph.form.name_placeholder'), 'custom_graph');
+        await userEvent.click(schema);
+        expect(screen.queryByText(`schema_template.builtin.${name}`)).not.toBeInTheDocument();
+        await clickCurrentOption(schema, name);
+        await userEvent.click(current.getByRole('button', {name: 'OK'}));
+        await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalledWith('DEFAULT',
+            expect.objectContaining({schema: name})));
+        expect(api.manage.addSchema).not.toHaveBeenCalled();
+        expect(api.manage.getSchema).not.toHaveBeenCalled();
+    }
+);
 
 test('does not leak an old graph export failure into the next graph', async () => {
     let rejectOld;

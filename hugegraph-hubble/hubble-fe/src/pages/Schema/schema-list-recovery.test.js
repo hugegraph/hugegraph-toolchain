@@ -49,6 +49,8 @@ const mockTranslate = (key, values) => ({
     'schema_template.user_section.title': 'Saved user templates',
     'schema_template.user_section.description': 'Templates saved on the Server.',
     'schema_template.builtin.people_network': 'People network',
+    'schema_template.builtin.hlm': 'Dream of the Red Chamber',
+    'schema_template.builtin.covid19': 'COVID-19 Contact Network',
     'schema_template.builtin.product_catalog': 'Product catalog',
     'schema_template.builtin_description.people_network': 'People relationships.',
     'schema_template.builtin_description.product_catalog': 'Product relationships.',
@@ -300,6 +302,15 @@ it('puts user templates before compact example-template cards', async () => {
     expect(screen.queryByText(/starting point/i)).not.toBeInTheDocument();
 
     const peopleCard = screen.getByText('People network').closest('.ant-card');
+    const preview = within(peopleCard).getByRole('region', {name: 'Expand People network'});
+    expect(preview).toHaveAttribute('data-readonly', 'true');
+    expect(preview).toHaveTextContent('schema.vertexLabel');
+    expect(preview).toHaveTextContent('schema.edgeLabel');
+    const originalPreview = screen.getByRole('region', {name: 'Expand Dream of the Red Chamber'});
+    expect(originalPreview).toHaveTextContent("edgeLabel('尚书令')");
+    const covidPreview = screen.getByRole('region', {name: 'Expand COVID-19 Contact Network'});
+    expect(covidPreview).toHaveTextContent("vertexLabel('vehicle')");
+    expect(covidPreview).toHaveTextContent("edgeLabel('take')");
     const peopleHeader = peopleCard.querySelector('.ant-card-head');
     expect(within(peopleHeader).getByRole('button', {name: 'Use example People network'}))
         .toBeInTheDocument();
@@ -310,10 +321,9 @@ it('puts user templates before compact example-template cards', async () => {
     expect(api.manage.updateSchema).not.toHaveBeenCalled();
     expect(api.manage.delSchema).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', {name: 'Use example People network'}));
-    expect(screen.getByTestId('schema-edit-layer')).toHaveTextContent(
-        'create:people_network:schema.propertyKey'
-    );
+    fireEvent.click(screen.getByRole('button', {name: 'Use example Dream of the Red Chamber'}));
+    expect(screen.getByTestId('schema-edit-layer')).toHaveTextContent('create:hlm:graph.schema()');
+    expect(screen.getByTestId('schema-edit-layer')).toHaveTextContent("edgeLabel('尚书令')");
     expect(api.manage.addSchema).not.toHaveBeenCalled();
     expect(api.manage.updateSchema).not.toHaveBeenCalled();
     expect(api.manage.delSchema).not.toHaveBeenCalled();
@@ -327,11 +337,11 @@ it('removes example templates locally and offers an explicit restore action', as
     });
 
     const {unmount} = render(<Schema />);
-    expect(await screen.findAllByText('Not saved')).toHaveLength(2);
+    expect(await screen.findAllByText('Not saved')).toHaveLength(4);
     await waitForLoadingToFinish();
 
     fireEvent.click(screen.getByRole('button', {name: 'Remove example People network'}));
-    expect(screen.getAllByText('Not saved')).toHaveLength(1);
+    expect(screen.getAllByText('Not saved')).toHaveLength(3);
     expect(screen.getByRole('button', {name: 'Restore example templates'}))
         .toBeInTheDocument();
     expect(api.manage.addSchema).not.toHaveBeenCalled();
@@ -340,11 +350,11 @@ it('removes example templates locally and offers an explicit restore action', as
 
     unmount();
     render(<Schema />);
-    expect(await screen.findAllByText('Not saved')).toHaveLength(1);
+    expect(await screen.findAllByText('Not saved')).toHaveLength(3);
     await waitForLoadingToFinish();
 
     fireEvent.click(screen.getByRole('button', {name: 'Restore example templates'}));
-    expect(screen.getAllByText('Not saved')).toHaveLength(2);
+    expect(screen.getAllByText('Not saved')).toHaveLength(4);
     expect(api.manage.addSchema).not.toHaveBeenCalled();
     expect(api.manage.updateSchema).not.toHaveBeenCalled();
     expect(api.manage.delSchema).not.toHaveBeenCalled();
@@ -555,4 +565,18 @@ it('hides graph-space A identity and rows while graph-space B is pending', async
         await Promise.resolve();
     });
     await waitForLoadingToFinish();
+});
+
+it('does not offer an unsaved example whose name is already in the Server list', async () => {
+    api.manage.getGraphSpace.mockResolvedValue({status: 200, data: {nickname: 'Space'}});
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: [
+        {name: 'hlm', schema: 'saved schema', creator: 'alice'},
+    ], total: 1}});
+    render(<Schema />);
+    expect(await screen.findByText('hlm')).toBeInTheDocument();
+    await waitForLoadingToFinish();
+    expect(screen.queryByRole('button', {name: 'Use example Dream of the Red Chamber'}))
+        .not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Use example COVID-19 Contact Network'}))
+        .toBeInTheDocument();
 });
