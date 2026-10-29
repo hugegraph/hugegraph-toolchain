@@ -98,20 +98,35 @@ it('recovers an optional Vermeer capability request without blocking the route',
     )).not.toBeInTheDocument());
 });
 
-it('does not choose an algorithm execution path until Vermeer is known', async () => {
+it('keeps the algorithm page mounted while Vermeer is pending, unavailable and recovering', async () => {
+    const pending = deferred();
+    const retry = deferred();
     api.auth.getVermeer
+        .mockReturnValueOnce(pending.promise)
         .mockRejectedValueOnce(new Error('offline'))
-        .mockResolvedValueOnce({status: 200, data: {enable: false}});
+        .mockReturnValueOnce(retry.promise);
 
     render(<GraphAnalysisHome moduleName='algorithms' />);
+    const algorithm = screen.getByText('algorithm module');
+    expect(algorithm).toBeVisible();
 
+    await act(async () => pending.resolve({status: 503}));
     await screen.findByRole('button', {name: 'analysis.topbar.retry_vermeer'});
-    expect(screen.queryByText('algorithm module')).not.toBeInTheDocument();
+    expect(screen.getByText('algorithm module')).toBe(algorithm);
     fireEvent.click(screen.getByRole('button', {
         name: 'analysis.topbar.retry_vermeer',
     }));
+    await screen.findByRole('button', {name: 'analysis.topbar.retry_vermeer'});
+    expect(screen.getByText('algorithm module')).toBe(algorithm);
+    expect(screen.getByText('Vermeer disabled')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', {
+        name: 'analysis.topbar.retry_vermeer',
+    }));
+    expect(screen.getByText('algorithm module')).toBe(algorithm);
 
-    expect(await screen.findByText('algorithm module')).toBeInTheDocument();
+    await act(async () => retry.resolve({status: 200, data: {enable: true}}));
+    expect(screen.getByText('Vermeer enabled')).toBeVisible();
+    expect(screen.getByText('algorithm module')).toBe(algorithm);
 });
 
 it('keeps task discovery available while engine-dependent filters await capability discovery', async () => {

@@ -18,7 +18,7 @@
 
 import PageHeader from '../../components/PageHeader';
 import {useState, useCallback, useEffect, useRef} from 'react';
-import {Alert, Button, Spin} from 'antd';
+import {Alert, Button} from 'antd';
 import AnalysisHome from '../analysis/Home';
 import AlgorithmHome from '../algorithm/Home';
 import AsyncTaskHome from '../asyncTasks/Home';
@@ -46,7 +46,6 @@ const GraphAnalysisHome = props => {
     const [isOlapModeLoading, setOlapModeLoading] = useState(false);
     const [olapError, setOlapError] = useState(false);
     const [vermeerReady, setVermeerReady] = useState(false);
-    const [vermeerLoading, setVermeerLoading] = useState(true);
     const [vermeerError, setVermeerError] = useState(false);
     const olapRequest = useRef(null);
     const olapGraph = useRef(null);
@@ -170,7 +169,6 @@ const GraphAnalysisHome = props => {
         clearTimeout(vermeerRetry.current);
         const request = Symbol('get-vermeer');
         vermeerRequest.current = request;
-        setVermeerLoading(true);
         setVermeerError(false);
         try {
             const response = await api.auth.getVermeer(INLINE_ERROR_CONFIG);
@@ -196,11 +194,6 @@ const GraphAnalysisHome = props => {
             if (vermeerRequest.current === request) {
                 setVermeerError(true);
                 setVermeerReady(false);
-            }
-        }
-        finally {
-            if (vermeerRequest.current === request) {
-                setVermeerLoading(false);
             }
         }
     }, []);
