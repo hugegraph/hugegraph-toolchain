@@ -111,6 +111,8 @@ second sample.
 When a failed refresh retains earlier evidence, the compute header, facts and
 node details all show the last successful observation time. The failure reason
 and stale marker make clear that current readiness is not confirmed.
+Without a successful observation, the time remains unavailable; a failed probe
+does not create a successful observation timestamp.
 
 ## Paired rollout
 

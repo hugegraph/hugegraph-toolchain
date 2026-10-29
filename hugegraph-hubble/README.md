@@ -392,7 +392,7 @@ Track asynchronous queries and algorithms, then expand compact results inline.
 ### Cluster Operations and Vermeer
 
 The cluster overview keeps Server, PD, and Store topology as the main view.
-Vermeer appears as a compact compute-cluster summary beside the Store row,
+When Vermeer monitoring is enabled, a compact compute-cluster summary appears beside the Store row,
 with no Store-to-Vermeer connector or additional topology layer. Open it to inspect
 the Master layer above the Worker layer, then return to the main cluster without
 losing the selected topology or node-list view. Worker nodes wrap within the
@@ -410,6 +410,12 @@ not the health of a live Helm deployment.
 ![Vermeer compute perspective with Master above Worker](docs/images/showcase/operations-vermeer-compute.png)
 
 ![Vermeer Worker nodes wrap within the same layer](docs/images/showcase/operations-vermeer-many-workers.png)
+
+Stale evidence retains node identity while current readiness remains unconfirmed:
+[last successful observation](docs/images/showcase/operations-vermeer-stale-history.png)
+and [English node details](docs/images/showcase/operations-vermeer-stale-en.png).
+An [installation without Vermeer monitoring](docs/images/showcase/operations-vermeer-disabled.png)
+keeps the main topology free of an unused compute entry.
 
 See [Vermeer operations integration](docs/operations-vermeer.md) for deployment
 configuration, state semantics, permissions, and the coordinated image rollout.
@@ -623,16 +629,12 @@ Server/PD/Store connectivity, authentication enforcement, or the connection
 resolver. Screenshots: [PD data health in anonymous mode](docs/assets/operations-pd-data-health-anonymous.png)
 and [Server backend health after administrator login](docs/assets/operations-server-backend-health-authenticated.png).
 
-### Vermeer cluster health
+### Vermeer backend configuration
 
-The cluster overview keeps Server, PD and Store as its primary topology. When
-Vermeer is enabled, a compact compute-cluster summary opens a separate view with
-Master above Worker nodes and an explicit return to the main cluster. These are
-deployment-wide operations views; they do not inherit the selected graph's scope.
-
-Hubble Backend reads the authenticated Vermeer `GET /api/v1/admin/cluster`
-snapshot. Configure its internal Master HTTP origin and a service admin token
-file; browsers never contact individual Workers or receive that credential:
+Enable deployment-wide Vermeer monitoring independently of the selected graph.
+Hubble reads `GET /api/v1/admin/cluster` using an internal Master HTTP origin and
+an administrator token file; browsers receive neither the credential nor Worker
+request targets:
 
 ```properties
 operations.vermeer.enabled=true
@@ -640,26 +642,21 @@ operations.vermeer.address=http://vermeer-master:6688
 operations.vermeer.token_file=/var/run/hugegraph/vermeer/token
 ```
 
-The paired Helm chart supplies the actual Service address and reuses its
-read-only, memory-backed Vermeer token mount. For other deployments, mount the
-token file read-only and rotate it before expiry. Hubble rereads the file and
-invalidates cached observations when its contents change. Leaving collection
-disabled is neutral and does not lower the main cluster's health.
+The paired Helm chart supplies the Service address and read-only, memory-backed
+token mount. For other deployments, mount the token read-only and rotate it
+before expiry. Hubble rereads it and invalidates old observations on rotation;
+401/403 responses also discard retained node data. Collection is disabled by
+default and remains neutral to the main cluster's health.
 
-Worker counts distinguish **ready** from **registered**. Readiness requires a
-ready reverse connection and live load, compute and superstep task channels.
-An empty Worker set is not healthy. Resources use process CPU cores and RSS
-bytes; they are not Pod limits or host utilization percentages. Missing resource
-data does not turn a ready node into an unavailable service.
-
-`GET /operations/overview` adds a separate `vermeer` object while retaining the
-original graph `nodes` and `facts`. `main_cluster_status` and
-`main_cluster_reason` preserve the graph cluster's conclusion when Vermeer
-requires attention. Missing older cluster APIs are reported as unsupported;
-transient source failures mark retained observations stale and clear current
-readiness. An upstream 401/403 or token rotation clears retained node data.
-The existing operations health, topology and metrics capabilities also govern
+`GET /api/v1.3/operations/overview` adds `vermeer`, `main_cluster_status` and
+`main_cluster_reason`, retaining the original graph `nodes` and `facts`.
+The existing Operations health, topology and metrics capabilities also govern
 this source; resource data is omitted without metrics access.
+
+See [Cluster Operations and Vermeer](#cluster-operations-and-vermeer) for the UI
+and [Vermeer operations integration](docs/operations-vermeer.md) for the separate
+administrator settings, readiness/registration and resource semantics, cache
+behavior, HTTP limits and paired image rollout.
 
 ## Functional Modules Overview
 
