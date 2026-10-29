@@ -21,6 +21,7 @@ import './App.scss';
 import './App.css';
 import './styles/workbench.scss';
 import Layout from './layout.ant';
+import {useSessionIdleTimeout} from './auth/useSessionIdleTimeout';
 import {AuthContextProvider} from './auth/AuthContext';
 import * as api from './api';
 import {isAuthEnabled, setConfig} from './utils/config';
@@ -43,6 +44,7 @@ function App() {
     const [connectionStatus, setConnectionStatus] = useState('loading');
     const [retrying, setRetrying] = useState(false);
     const [configRevision, setConfigRevision] = useState(0);
+    useSessionIdleTimeout(configReady && isAuthEnabled());
     const retryRef = useRef(() => {});
     const retry = useCallback(() => retryRef.current(), []);
     const connection = useMemo(() => ({status: connectionStatus, retrying, retry}),
