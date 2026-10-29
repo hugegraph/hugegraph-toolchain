@@ -36,7 +36,8 @@ public class ResponseAdvisorStatusTest {
     @Test
     public void testTimeoutUsesHttp504AndSuppressesCause() throws Exception {
         MessageSourceHandler messages = Mockito.mock(MessageSourceHandler.class);
-        Mockito.when(messages.getMessage(Mockito.anyString(), Mockito.nullable(Object[].class)))
+        Mockito.when(messages.getMessage(Mockito.eq("gremlin.execute.timeout"),
+                                         Mockito.nullable(Object[].class)))
                .thenReturn("Gremlin query timed out. Submit an asynchronous Server job.");
         ExceptionAdvisor exceptions = new ExceptionAdvisor();
         org.springframework.test.util.ReflectionTestUtils.setField(
