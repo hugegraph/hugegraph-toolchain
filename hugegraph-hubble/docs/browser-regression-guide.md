@@ -2,7 +2,7 @@
 
 ## Run the browser fixture checks
 
-The manual Chromium runner exercises the running frontend with controlled API
+The Chromium runner exercises the running frontend with controlled API
 responses. It covers authenticated and anonymous visibility, GraphSpace
 navigation and editing, graph switching, query notices and counts, delayed
 task discovery, result-size guidance and PD diagnostics. It requires the
@@ -17,9 +17,10 @@ following frontend changes together:
 
 Those frontend changes and their later fixes are included in this branch through
 the ASF master merges. Run against a frontend built from the same revision as the
-runner. This remains an explicitly invoked integration fixture: unlike the
-self-contained 404-marker test, it needs a running frontend at `HUBBLE_URL`.
-Adding it to `hubble-ci.yml` also requires starting and waiting for that frontend.
+runner. The recommended `pnpm verify:ui` entry in `hubble-fe` builds or verifies
+production output and manages its preview; the candidate PR CI lane uses that entry once.
+The direct runner below remains available for an already running frontend at
+`HUBBLE_URL`. See [verification](verification.md) for check selection and evidence.
 Fixtures do not establish acceptance of a live PD/Store/Server cluster or replace
 the packaged distribution gate.
 

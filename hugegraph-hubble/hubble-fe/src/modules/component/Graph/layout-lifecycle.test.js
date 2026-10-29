@@ -90,7 +90,11 @@ const rightClick = (kind, {button = 2, ctrlKey = false, menuButton = button, sup
     finally { behavior.destroy(); }
 };
 
-beforeEach(() => { jest.clearAllMocks(); jest.useFakeTimers(); mockSnapshot.status = 'ready'; });
+beforeEach(() => {
+    jest.clearAllMocks(); jest.useFakeTimers(); mockSnapshot.status = 'ready';
+    delete mockSnapshot.error;
+    mockController.getSnapshot.mockImplementation(() => mockSnapshot);
+});
 afterEach(() => { jest.useRealTimers(); });
 
 test('shares the controller snapshot without exposing an engine or rewriting result data', () => {
@@ -122,6 +126,19 @@ test('catches command failures once and preserves successful command results', a
     await expect(mockContext.run(async () => { throw new Error('draw failed'); })).resolves.toBeUndefined();
     expect(message.error).toHaveBeenCalledTimes(1);
     expect(message.error).toHaveBeenCalledWith('draw failed');
+});
+
+test('leaves canvas failures in the inline boundary and reports unrelated callback errors once', async () => {
+    render(<Graph data={{nodes: [], edges: []}}><Probe /></Graph>);
+    expect(mockCanvasProps.onError).toBeUndefined();
+    const failure = new RangeError('Maximum call stack size exceeded');
+    mockSnapshot.status = 'error';
+    mockSnapshot.error = failure;
+    await expect(mockContext.run(async () => { throw failure; })).resolves.toBeUndefined();
+    expect(message.error).not.toHaveBeenCalled();
+    await mockContext.run(async () => { throw new Error('Details could not be loaded'); });
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith('Details could not be loaded');
 });
 
 test('canvas menus are owned by the current instance and reset at a dataset boundary', () => {

@@ -284,7 +284,7 @@ public class GraphSpaceControllerTest {
         Assert.assertEquals(128, graphSpace.getMemoryLimit());
         Assert.assertEquals(0, graphSpace.getComputeCpuLimit());
         Assert.assertEquals(0, graphSpace.getComputeMemoryLimit());
-        Assert.assertEquals(10240, graphSpace.getStorageLimit());
+        Assert.assertEquals(256, graphSpace.getStorageLimit());
         Map<?, ?> wire = JsonUtil.fromJson(JsonUtil.toJson(graphSpace.convertReq()), Map.class);
         Assert.assertFalse(wire.containsKey("compute_cpu_limit"));
         Assert.assertFalse(wire.containsKey("compute_memory_limit"));
@@ -320,6 +320,35 @@ public class GraphSpaceControllerTest {
         graphSpace.setComputeMemoryLimit(-1);
         Assert.assertThrows(IllegalArgumentException.class,
                             () -> GraphSpaceController.applyResourceDefaults(graphSpace));
+    }
+
+    @Test
+    public void testUpdatePreservesStorageWhenMissingNullOrZero() throws Exception {
+        assertStorageUpdate("", 0);
+        assertStorageUpdate(",\"storage_limit\":null", 0);
+        assertStorageUpdate(",\"storage_limit\":0", 0);
+        assertStorageUpdate(",\"storage_limit\":10240", 10240);
+        assertStorageUpdate(",\"storage_limit\":512", 512);
+    }
+
+    private static void assertStorageUpdate(String fields, int expected) throws Exception {
+        HugeClient client = Mockito.mock(HugeClient.class);
+        UserService users = Mockito.mock(UserService.class);
+        GraphSpaceService service = Mockito.mock(GraphSpaceService.class);
+        TestGraphSpaceController controller = controller(client, users, service);
+        Mockito.when(users.isSuperAdmin(client)).thenReturn(true);
+        GraphSpaceEntity previous = new GraphSpaceEntity();
+        Mockito.when(service.getWithAdmins(client, "space")).thenReturn(previous);
+        Mockito.when(service.toView(previous)).thenReturn(java.util.Collections.emptyMap());
+        MockMvcBuilders.standaloneSetup(controller).build()
+                       .perform(put("/api/v1.3/graphspaces/space")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"cpu_limit\":4,\"memory_limit\":8" + fields + "}"))
+                       .andExpect(status().isOk());
+        ArgumentCaptor<GraphSpace> updated = ArgumentCaptor.forClass(GraphSpace.class);
+        Mockito.verify(service).update(Mockito.eq(client), updated.capture());
+        Map<?, ?> wire = JsonUtil.fromJson(JsonUtil.toJson(updated.getValue().convertReq()), Map.class);
+        Assert.assertEquals(expected, wire.get("storage_limit"));
     }
 
     @Test

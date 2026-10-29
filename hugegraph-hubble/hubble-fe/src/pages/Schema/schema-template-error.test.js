@@ -63,7 +63,7 @@ test('does not swallow unexpected validation or application failures', async () 
     await expect(validateSchemaTemplateFields(form)).rejects.toBe(error);
 });
 
-test.each(Object.entries(BUILTIN_SCHEMA_TEMPLATES))(
+test.each(['people_network', 'product_catalog'].map(name => [name, BUILTIN_SCHEMA_TEMPLATES[name]]))(
     '%s is a small idempotent complete graph starting point',
     (name, script) => {
         expect(script.split('\n').length).toBeLessThanOrEqual(12);
@@ -81,4 +81,18 @@ test('people_network avoids a redundant secondary index on its full primary key'
 
 test('product_catalog keeps its non-primary-key range index', () => {
     expect(BUILTIN_SCHEMA_TEMPLATES.product_catalog).toContain('indexLabel(');
+});
+
+test.each([
+    ['hlm', 5, 3, 14],
+    ['covid19', 5, 4, 6],
+])('%s restores the complete original Schema without JSON wrapping', (name, properties, vertices, edges) => {
+    const script = BUILTIN_SCHEMA_TEMPLATES[name];
+    expect(script.match(/propertyKey\(/g)).toHaveLength(properties);
+    expect(script.match(/vertexLabel\(/g)).toHaveLength(vertices);
+    expect(script.match(/edgeLabel\(/g)).toHaveLength(edges);
+    expect(script.match(/ifNotExist\(\)/g)).toHaveLength(properties + vertices + edges);
+    expect(script).toMatch(/^graph\.schema\(\)/);
+    expect(script).not.toContain('\\n');
+    expect(script.trim()).toMatch(/create\(\);$/);
 });

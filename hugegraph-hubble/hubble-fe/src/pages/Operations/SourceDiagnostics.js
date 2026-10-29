@@ -69,10 +69,10 @@ const PdMetricMapping = ({mapping, nodes}) => {
     const comparison = matches => t(matches ? 'operations.diagnostic_address_matches'
         : 'operations.diagnostic_address_differs');
     return (
-        <div>
+        <div className='operations-pd-mapping'>
             <h4>{t('operations.diagnostic_pd_address_comparison')}</h4>
             <Descriptions size='small' column={{xs: 1, md: 3}} items={[
-                {key: 'configured', label: t('operations.diagnostic_pd_configured_address'),
+                {key: 'configured', label: t('operations.diagnostic_pd_configured_address'), span: 3,
                     children: <code>{mapping.configured_origin || unavailable}</code>},
                 {key: 'status', label: t('operations.diagnostic_pd_mapping_result'),
                     children: t(`operations.diagnostic_pd_mapping_${mapping.status}`, {defaultValue: unavailable})},
@@ -80,15 +80,16 @@ const PdMetricMapping = ({mapping, nodes}) => {
                     children: `${mapping.matched_nodes ?? 0} / ${mapping.discovered_nodes ?? 0}`},
             ]} />
             <Table size='small' pagination={false} rowKey='node_id' dataSource={mapping.members ?? []}
+                tableLayout='fixed' scroll={{x: 860}}
                 columns={[
-                    {key: 'node', title: t('operations.node_identity'), render: (_, member) => (
+                    {key: 'node', width: 160, title: t('operations.node_identity'), render: (_, member) => (
                         nodes.find(node => node.id === member.node_id)?.name ?? member.node_id
                     )},
-                    {dataIndex: 'origin', title: t('operations.diagnostic_pd_member_address'),
+                    {dataIndex: 'origin', width: 360, title: t('operations.diagnostic_pd_member_address'),
                         render: origin => <code>{origin || unavailable}</code>},
-                    {dataIndex: 'origin_matches', title: t('operations.diagnostic_pd_origin_comparison'),
+                    {dataIndex: 'origin_matches', width: 200, title: t('operations.diagnostic_pd_origin_comparison'),
                         render: (matches, member) => member.endpoint_valid ? comparison(matches) : unavailable},
-                    {dataIndex: 'base_path_matches', title: t('operations.diagnostic_pd_path_comparison'),
+                    {dataIndex: 'base_path_matches', width: 140, title: t('operations.diagnostic_pd_path_comparison'),
                         render: (matches, member) => member.endpoint_valid ? comparison(matches) : unavailable},
                 ]} />
             <p>{t('operations.diagnostic_pd_address_privacy')}</p>
@@ -97,6 +98,18 @@ const PdMetricMapping = ({mapping, nodes}) => {
             })}</p>}
         </div>
     );
+};
+
+const RecoverySteps = ({unmappedPd, largeResponse, raftTooLarge}) => {
+    const {t} = useTranslation();
+    if (!unmappedPd && !largeResponse) {
+        return null;
+    }
+    const keys = unmappedPd ? ['pd_endpoint', 'pd_config', 'pd_restart']
+        : ['response_limit', ...(raftTooLarge ? ['raft_summary'] : []), 'response_config'];
+    return <ol className='operations-diagnostic-steps'>
+        {keys.map(key => <li key={key}>{t(`operations.diagnostic_step_${key}`)}</li>)}
+    </ol>;
 };
 
 const SourceDiagnostics = ({sources = {}, sourceName, nodes = [], focus = false, complete = false}) => {
@@ -137,6 +150,11 @@ const SourceDiagnostics = ({sources = {}, sourceName, nodes = [], focus = false,
                 const unmappedPd = type === 'PD' && (source.reason === 'pd_metrics_unmapped'
                     || failures.some(({status}) => status.reason === 'pd_metrics_unmapped'));
                 const mapping = source.diagnostics?.pd_metric_mapping;
+                const largeResponse = source.reason?.includes('response_too_large')
+                    || failures.some(({status}) => status.reason?.includes('response_too_large'));
+                const raftTooLarge = failures.some(({group, status}) => group === 'raft'
+                    && status.reason?.includes('response_too_large')
+                    && status.diagnostics?.request_path === '/metrics/raft');
                 const DetailsContainer = recovered ? 'div' : 'details';
                 const requestOwner = !source.diagnostics?.request_path && failures.length === 1
                     && (failures[0].status.diagnostics?.request_path
@@ -176,10 +194,12 @@ const SourceDiagnostics = ({sources = {}, sourceName, nodes = [], focus = false,
                             <summary>{t(unmappedPd ? 'operations.diagnostic_pd_check_addresses'
                                 : 'operations.diagnostic_check_details')}</summary>
                             <p>{t(unmappedPd ? 'operations.diagnostic_pd_mapping_action'
-                                : source.reason?.includes('response_too_large')
+                                : largeResponse
                                     ? 'operations.diagnostic_large_response_action'
                                     : 'operations.diagnostic_check_source_action')}</p>
                         </>}
+                        {!recovered && <RecoverySteps unmappedPd={unmappedPd}
+                            largeResponse={largeResponse} raftTooLarge={raftTooLarge} />}
                         {source.diagnostics !== requestDetails && <DiagnosticRequest diagnostics={source.diagnostics} />}
                         {unmappedPd && <PdMetricMapping mapping={mapping} nodes={nodes} />}
                         {source.cluster_state === 'Cluster_Not_Ready' && <p>
