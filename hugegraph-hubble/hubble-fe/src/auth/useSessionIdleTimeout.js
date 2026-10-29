@@ -38,6 +38,17 @@ const write = (key, value) => {
     try { localStorage.setItem(key, JSON.stringify(value)); }
     catch { /* Storage can be disabled; the current tab still enforces its deadline. */ }
 };
+const removeStaleActivityScopes = currentKey => {
+    try {
+        for (let index = localStorage.length - 1; index >= 0; index--) {
+            const candidate = localStorage.key(index);
+            if (candidate?.startsWith(SESSION_ACTIVITY_PREFIX) && candidate !== currentKey) {
+                localStorage.removeItem(candidate);
+            }
+        }
+    }
+    catch { /* Storage can be disabled; stale records do not affect the current tab timer. */ }
+};
 
 /** Network polling never counts as human activity. The scope is a noncredential per-login nonce. */
 export const useSessionIdleTimeout = enabled => {
@@ -147,6 +158,7 @@ export const useSessionIdleTimeout = enabled => {
             const firstSettings = !scope;
             scope = activityScope;
             key = SESSION_ACTIVITY_PREFIX + encodeURIComponent(scope);
+            if (firstSettings) removeStaleActivityScopes(key);
             // Load existing activity before writing so a tab opening later cannot renew an idle session.
             const saved = read(key);
             const savedActivity = Number.isFinite(saved?.lastActivity) && saved.lastActivity <= Date.now()
