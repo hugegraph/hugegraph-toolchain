@@ -56,7 +56,7 @@ import {
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
 import {operationsReturnState} from './navigation';
 import {DIAGNOSTICS_ID} from './SourceDiagnostics';
-import VermeerOverview, {VermeerHealth, VermeerSummary} from './VermeerOverview';
+import VermeerOverview, {VermeerHealth, VermeerReason, VermeerSummary} from './VermeerOverview';
 import './operations.scss';
 
 const Overview = () => {
@@ -383,11 +383,19 @@ const Overview = () => {
                         {t(isVermeer ? 'operations.vermeer_description' : 'operations.overview_description')}
                     </p>
                     <div className='operations-overall-status'>
-                        <HealthStatus
-                            status={activeSnapshot?.status}
-                            reason={activeSnapshot?.reason}
-                            size='large'
-                        />
+                        {isVermeer ? (
+                            <>
+                                <VermeerHealth cluster={activeSnapshot} size='large' />
+                                {activeSnapshot?.reason && (
+                                    <span className='operations-health-reason'>
+                                        <VermeerReason reason={activeSnapshot.reason} />
+                                    </span>
+                                )}
+                            </>
+                        ) : (
+                            <HealthStatus status={activeSnapshot?.status}
+                                reason={activeSnapshot?.reason} size='large' />
+                        )}
                         <span>
                             {t('operations.observed_at')}: {observed} · {observedAge}
                         </span>

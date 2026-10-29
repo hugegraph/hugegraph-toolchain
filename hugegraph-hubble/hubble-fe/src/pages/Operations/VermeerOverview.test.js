@@ -246,11 +246,12 @@ test('removes compute node information when an authorized refresh becomes forbid
 });
 
 test('a failed overview refresh marks retained compute readiness and resources as stale', async () => {
-    renderOverview('/operations/overview?service=vermeer');
+    const {container} = renderOverview('/operations/overview?service=vermeer');
     await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
     getOverview.mockRejectedValueOnce(new Error('network unavailable'));
     await userEvent.click(screen.getByRole('button', {name: 'Refresh'}));
-    await screen.findByText('Cluster refresh failed. The last observed compute snapshot is retained.');
+    await within(container.querySelector('.operations-overall-status'))
+        .findByText('Cluster refresh failed. The last observed compute snapshot is retained.');
     expect(screen.queryByText('Ready')).not.toBeInTheDocument();
     expect(screen.getByText('Workers ready — / registered 1')).toBeInTheDocument();
     expect(screen.queryByText('CPU 0.42 cores · RSS 1.2 GiB')).not.toBeInTheDocument();
@@ -262,8 +263,10 @@ test('does not treat an unsupported readiness API as healthy or render missing m
     data.vermeer.reason = 'vermeer_cluster_api_unsupported';
     data.vermeer.workers[0].metric_status.availability = 'UNAVAILABLE';
     getOverview.mockResolvedValue(data);
-    renderOverview('/operations/overview?service=vermeer');
-    expect(await screen.findByText('This Vermeer version does not support the cluster health API.'))
+    const {container} = renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    expect(within(container.querySelector('.operations-overall-status'))
+        .getByText('This Vermeer version does not support the cluster health API.'))
         .toBeInTheDocument();
     expect(screen.queryByText('Ready')).not.toBeInTheDocument();
     expect(screen.queryByText('Process CPU: 0 cores')).not.toBeInTheDocument();

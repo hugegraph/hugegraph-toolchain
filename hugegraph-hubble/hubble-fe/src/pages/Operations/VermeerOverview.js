@@ -53,7 +53,7 @@ const Reason = ({reason}) => {
     }) : null;
 };
 
-const VermeerHealth = ({cluster, node}) => {
+const VermeerHealth = ({cluster, node, size = 'normal'}) => {
     const {t} = useTranslation();
     const ready = node ? vermeerNodeReady(node, cluster) : null;
     const health = node ? (ready === true ? 'UP' : ready === false ? 'DEGRADED' : 'UNKNOWN')
@@ -64,7 +64,7 @@ const VermeerHealth = ({cluster, node}) => {
         : !cluster?.configured ? 'not_deployed'
             : health === 'UP' ? 'normal' : health === 'UNKNOWN' ? 'unknown' : 'attention';
     return (
-        <span className={'operations-health status-' + health.toLowerCase()}>
+        <span className={'operations-health status-' + health.toLowerCase() + ' is-' + size}>
             <Icon aria-hidden='true' /> {t('operations.vermeer_' + label)}
         </span>
     );
@@ -388,5 +388,5 @@ const VermeerOverview = ({cluster, mainStatus, view, selectedNode, fullDetail, o
     );
 };
 
-export {VermeerHealth, VermeerSummary};
+export {VermeerHealth, Reason as VermeerReason, VermeerSummary};
 export default VermeerOverview;
