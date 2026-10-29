@@ -19,7 +19,8 @@ Use `POST {prefix}/schema/vertexlabels`. `style` and `open_label_index` are
 optional in builds containing [Toolchain #859](https://github.com/apache/hugegraph-toolchain/pull/859).
 Missing or null vertex styles use the same name-based palette as labels created outside Hubble, displaying `~id`;
 missing or null `open_label_index` enables the label index. An explicit `false`
-is preserved. The same optional-field defaults apply to edge labels.
+is preserved. The same optional-field defaults apply to ordinary and sub edge
+labels; base edge labels retain their existing base-label creation contract.
 Existing explicit styles retain their color and display settings.
 Style keys use `display_fields` and `join_symbols`, not camel-case keys.
 `PRIMARY_KEY` labels still require existing properties and matching
