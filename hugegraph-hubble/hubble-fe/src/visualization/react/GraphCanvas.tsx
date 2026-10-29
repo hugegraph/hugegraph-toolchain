@@ -2,18 +2,18 @@
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to You under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import {useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore} from 'react';
@@ -75,11 +75,13 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
     const generationRef = useRef(0);
     const instanceRef = useRef<Instance | null>(null);
     const lastError = useRef<unknown>(Symbol('no-error'));
+    const snapshotOwnedError = useRef<unknown>(null);
     const [controller, setController] = useState<GraphControllerHandle | null>(null);
     const [hover, setHover] = useState<CanvasEvent | null>(null);
     const [position, setPosition] = useState({left: 8, top: 8});
     const [error, setError] = useState<unknown>(null);
     const snapshot = useGraphSnapshot(controller);
+    const snapshotError = snapshot.status === 'error' ? snapshot.error : null;
     const layoutKey = JSON.stringify(layout);
 
     const report = useCallback((failure: unknown, generation: number) => {
@@ -140,6 +142,7 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
         setError(null);
         setHover(null);
         lastError.current = Symbol('no-error');
+        snapshotOwnedError.current = null;
         const emit = (kind: 'onClick' | 'onDoubleClick' | 'onContextMenu', event: CanvasEvent) => {
             if (!current()) {
                 return;
@@ -228,6 +231,21 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
     }, [command, minimap, preset, replaceData, report, theme]);
 
     useEffect(() => {
+        const previous = snapshotOwnedError.current;
+        if (snapshotError !== null && snapshotError !== undefined) {
+            snapshotOwnedError.current = snapshotError;
+            setError(snapshotError);
+            return;
+        }
+        snapshotOwnedError.current = null;
+        // A locally reported data failure survives successful camera/resize commands.
+        // Only snapshot-only errors are cleared by a snapshot recovery.
+        if (previous !== null && previous !== undefined && lastError.current !== previous) {
+            setError((current: unknown) => current === previous ? null : current);
+        }
+    }, [snapshotError]);
+
+    useEffect(() => {
         const instance = instanceRef.current;
         if (!instance || instance.controller !== controller) {
             return;
@@ -240,6 +258,7 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
         setHover(null);
         setError(null);
         lastError.current = Symbol('no-error');
+        snapshotOwnedError.current = null;
         if (layoutChanged) {
             instance.layoutKey = layoutKey;
             command(() => instance.controller.setLayout(layout), instance.generation);
@@ -268,7 +287,7 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
         });
     }, [hover]);
 
-    const displayError = error ?? (snapshot.status === 'error' ? snapshot.error : null);
+    const displayError = error ?? snapshotError;
     return <div ref={containerRef} className={`graph-canvas ${className}`} data-theme={theme}
         role='region' aria-label={ariaLabel} aria-busy={snapshot.status === 'updating'}
         tabIndex={preset === 'interactive' ? 0 : undefined} style={{height: 400, ...style}}

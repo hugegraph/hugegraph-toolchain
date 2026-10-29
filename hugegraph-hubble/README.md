@@ -14,7 +14,7 @@ guide covers card navigation, editing, failure recovery, pagination and the
 repeatable stateful API fixture.
 
 New graph spaces start with 128 CPU cores, 128 GB memory, 128 compute CPU cores,
-128 GB compute memory, 10240 GB storage and 100 graphs. Server also defaults the
+128 GB compute memory, 256 GB storage and 100 graphs. Server also defaults the
 role limit to 100. Existing spaces retain their configured limits. Large finite
 quotas display their actual values; only the legacy `Integer.MAX_VALUE` sentinel
 is shown as unlimited, with `--` instead of a percentage because it has no finite
@@ -76,6 +76,14 @@ remain unverified because no live cluster is configured in this test environment
 ![Authenticated graph context after switching](docs/assets/graphspace-context-authenticated.png)
 ![Anonymous graph context after switching](docs/assets/graphspace-context-anonymous.png)
 ![Editing inherited compute limits](docs/assets/graphspace-inherited-compute.png)
+
+The advanced resource form groups graph, compute, and storage settings, aligns
+numeric fields and units, and stacks labels on narrow
+screens. This Chrome component screenshot uses controlled API fixtures; it does
+not establish a production login, deployment, or quota enforcement result.
+
+![Advanced GraphSpace resource form](docs/assets/graphspace-resource-form.png)
+
 
 ## Product Tour
 
@@ -560,6 +568,14 @@ and [source diagnostics](docs/assets/operations-source-diagnostics-authenticated
 anonymous [source health](docs/assets/operations-source-health-anonymous.png)
 and [source diagnostics](docs/assets/operations-source-diagnostics-anonymous.png).
 
+
+The following Chrome screenshot uses controlled administrator API fixtures with
+healthy PD members and an unmatched Kubernetes Service address. It illustrates
+the ordered mapping recovery steps and the contained address table. It does not
+verify the user's deployment, live PD connectivity, or authentication enforcement.
+
+![PD address mapping recovery with healthy members](docs/assets/operations-pd-mapping-recovery.png)
+
 ### Health contracts
 
 Operations health keeps node reachability separate from collection and data
@@ -931,6 +947,13 @@ Query execution waits until the graph context matches the current route, includi
 ## Query and submitted-task feedback
 
 See [query and submitted-task feedback](docs/query-task-feedback.md) for preview limits, task discovery, and failed-result recovery.
+
+The Chrome screenshot below uses ten-vertex API fixtures and an injected G6
+`RangeError` to verify one unobstructed inline renderer alert without duplicate
+toasts. It demonstrates error presentation; the original deployment's stack
+overflow cause was not reproduced or diagnosed by this fixture.
+
+![Single inline canvas renderer error](docs/assets/query-render-error-single.png)
 
 ### Graph count snapshots and result-read diagnostics
 

@@ -30,7 +30,8 @@
     box-shadow: 0 4px 18px #142b4926; text-align: left; overflow-wrap: anywhere;
 }
 .graph-canvas-error {
-    position: absolute; inset: 8px 8px auto; padding: 12px; border: 1px solid #ffccc7;
+    position: absolute; inset: 8px 8px auto; z-index: 4; padding: 12px; border: 1px solid #ffccc7;
+    max-height: calc(100% - 16px); overflow: auto; box-sizing: border-box;
     border-radius: 6px; color: #a8071a; background: #fff2f0; overflow-wrap: anywhere;
 }
 .graph-canvas[data-theme='dark'] .graph-canvas-tooltip { background: #1f2937; color: #f3f4f6; border-color: #4b5563; }

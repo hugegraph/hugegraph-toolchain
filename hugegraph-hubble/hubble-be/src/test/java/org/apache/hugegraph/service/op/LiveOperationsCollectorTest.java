@@ -1833,6 +1833,46 @@ public class LiveOperationsCollectorTest {
         return client;
     }
 
+    @Test
+    public void testRaftSummaryAvoidsDetailedRegistriesAndFallsBackOnlyWhenAbsent() throws IOException {
+        for (int status : new int[]{200, 404, 405, 401, 500}) {
+            HttpServer pd = pdServer(200, members("Cluster_OK"), 200, stores());
+            context(pd, "/v1/prom/targets/store", 200,
+                    targets("127.0.0.1:" + pd.getAddress().getPort()));
+            context(pd, "/metrics/system", 200, "{}");
+            context(pd, "/metrics/drive", 200, "{}");
+            context(pd, "/metrics/raft/summary", status, "{\"groups\":12000,\"enabled_groups\":11999}");
+            AtomicInteger detailed = new AtomicInteger();
+            pd.createContext("/metrics/raft", exchange -> {
+                detailed.incrementAndGet();
+                byte[] body = "{\"partition-1\":{\"enabled\":true}}".getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            });
+            LiveOperationsCollector collector = collector(true, pd);
+            Snapshot snapshot;
+            try {
+                snapshot = collector.collect(serverClient(), true);
+            } finally {
+                collector.close();
+                pd.stop(0);
+            }
+            boolean fallback = status == 404 || status == 405;
+            Assert.assertEquals(fallback ? 1 : 0, detailed.get());
+            MetricStatus metric = store(snapshot).getMetricStatuses().get("raft");
+            if (status == 200 || fallback) {
+                Assert.assertEquals("AVAILABLE", metric.getAvailability());
+                Assert.assertEquals(fallback ? 1L : 12000L,
+                                    ((Map<?, ?>) store(snapshot).getMetrics().get("raft")).get("groups"));
+            } else {
+                Assert.assertEquals("UNAVAILABLE", metric.getAvailability());
+                Assert.assertEquals("/metrics/raft/summary", metric.getDiagnostics().get("request_path"));
+                Assert.assertEquals(status, metric.getDiagnostics().get("http_status"));
+            }
+        }
+    }
+
     private static void storeMetricContexts(HttpServer pd) {
         context(pd, "/metrics/system", 200, "{\"heap\":{\"used\":1}}");
         context(pd, "/metrics/drive", 200, "{\"disk\":{\"total_space\":10}}");
@@ -1885,6 +1925,11 @@ public class LiveOperationsCollectorTest {
     private static void context(HttpServer server, String path, int status,
                                 String body) {
         server.createContext(path, exchange -> {
+            if (!path.equals(exchange.getRequestURI().getPath())) {
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+                return;
+            }
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(status, bytes.length);
             exchange.getResponseBody().write(bytes);
@@ -1895,6 +1940,11 @@ public class LiveOperationsCollectorTest {
     private static void delayedContext(HttpServer server, String path,
                                        int status, String body, long delayMillis) {
         server.createContext(path, exchange -> {
+            if (!path.equals(exchange.getRequestURI().getPath())) {
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+                return;
+            }
             try {
                 Thread.sleep(delayMillis);
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
@@ -2068,6 +2118,9 @@ public class LiveOperationsCollectorTest {
                 }
                 if (path.endsWith("/drive")) {
                     return "{\"disk\":{\"total_space\":10}}";
+                }
+                if (path.endsWith("/raft/summary")) {
+                    return "{\"groups\":1,\"enabled_groups\":1}";
                 }
                 if (path.endsWith("/raft")) {
                     return "{\"0\":{\"enabled\":true}}";

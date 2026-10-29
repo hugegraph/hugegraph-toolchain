@@ -257,6 +257,17 @@ public class OperationsPayloadParser {
             if ("drive".equals(group)) {
                 return this.driveMetrics(root);
             }
+            if ("raft_summary".equals(group)) {
+                JsonNode groups = root.path("groups");
+                JsonNode enabled = root.path("enabled_groups");
+                if (!groups.isIntegralNumber() || !groups.canConvertToLong() ||
+                    !enabled.isIntegralNumber() || !enabled.canConvertToLong() ||
+                    groups.longValue() < 0L || enabled.longValue() < 0L ||
+                    enabled.longValue() > groups.longValue()) {
+                    throw new MalformedUpstreamException("store_raft_summary");
+                }
+                return Map.of("groups", groups.longValue(), "enabled_groups", enabled.longValue());
+            }
             if ("raft".equals(group)) {
                 return this.raftMetrics(root);
             }

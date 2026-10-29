@@ -55,7 +55,7 @@ import java.util.List;
 public class GraphSpaceController extends BaseController {
     private static final int DEFAULT_MAX_GRAPH_NUMBER = 100;
     private static final int DEFAULT_MAX_ROLE_NUMBER = 100;
-    private static final int DEFAULT_STORAGE_VALUE = 10240;
+    private static final int DEFAULT_STORAGE_VALUE = 256;
     private static final int DEFAULT_MEMORY_VALUE = 128;
     private static final int DEFAULT_CPU_VALUE = 128;
 
@@ -244,7 +244,12 @@ public class GraphSpaceController extends BaseController {
         HugeClient client = this.requireGraphSpaceAdministrator();
 
         graphSpaceEntity.setName(graphspace);
+        boolean keepStorage = graphSpaceEntity.getStorageLimit() <= 0;
         applyResourceDefaults(graphSpaceEntity);
+        if (keepStorage) {
+            // Server interprets zero as preserving the existing storage quota.
+            graphSpaceEntity.setStorageLimit(0);
+        }
 
         // Update graphspace
         graphSpaceService.update(client, graphSpaceEntity.convertGraphSpace());
