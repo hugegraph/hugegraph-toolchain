@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.Proxy;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -172,7 +173,9 @@ public class OperationsHttpClient {
         } catch (UpstreamRequestException e) {
             throw e;
         } catch (InterruptedIOException e) {
-            throw new UpstreamRequestException("upstream_timeout", e,
+            String reason = boundedCall || e instanceof SocketTimeoutException ?
+                            "upstream_timeout" : "upstream_unavailable";
+            throw new UpstreamRequestException(reason, e,
                                                Map.of("request_path", target.getRawPath()));
         } catch (IOException | IllegalArgumentException e) {
             throw new UpstreamRequestException("upstream_unavailable", e,
