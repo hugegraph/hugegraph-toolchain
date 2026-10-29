@@ -35,7 +35,7 @@ const DUPLICATE_SCHEMA_TEMPLATE
 const normalizeSchema = schema => String(schema ?? '').replace(/\s+/g, ' ').trim();
 
 const isEquivalentBuiltinSchema = (actual, expected) => (
-    normalizeSchema(actual) === normalizeSchema(expected)
+    normalizeSchema(toGraphSchemaGroovy(actual)) === normalizeSchema(toGraphSchemaGroovy(expected))
 );
 
 const errorMessage = error => (

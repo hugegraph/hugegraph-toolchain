@@ -17,7 +17,7 @@
  */
 
 // Preserve the complete historical examples from GremlinUtil, including their
-// labels and ID strategies, without creating templates on the Server automatically.
+// labels and ID strategies. Browsing them does not write to the Server.
 const LEGACY_SCHEMA_TEMPLATES = {
     hlm: [
         "graph.schema().propertyKey('姓名').asText().ifNotExist().create();",

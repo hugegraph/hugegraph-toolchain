@@ -335,7 +335,8 @@ const Schema = () => {
         : {};
     const visibleData = listDataKey === listKey ? data : [];
     const visibleBuiltins = Object.entries(BUILTIN_SCHEMA_TEMPLATES).filter(
-        ([name]) => !templateWriteEnabled || !hiddenBuiltins.includes(name)
+        ([name]) => !visibleData.some(item => item.name === name)
+            && (!templateWriteEnabled || !hiddenBuiltins.includes(name))
     );
     const visibleGraphspaceName = graphspace === 'DEFAULT'
         ? t('graphspace.default_name')

@@ -566,3 +566,17 @@ it('hides graph-space A identity and rows while graph-space B is pending', async
     });
     await waitForLoadingToFinish();
 });
+
+it('does not offer an unsaved example whose name is already in the Server list', async () => {
+    api.manage.getGraphSpace.mockResolvedValue({status: 200, data: {nickname: 'Space'}});
+    api.manage.getSchemaList.mockResolvedValue({status: 200, data: {records: [
+        {name: 'hlm', schema: 'saved schema', creator: 'alice'},
+    ], total: 1}});
+    render(<Schema />);
+    expect(await screen.findByText('hlm')).toBeInTheDocument();
+    await waitForLoadingToFinish();
+    expect(screen.queryByRole('button', {name: 'Use example Dream of the Red Chamber'}))
+        .not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Use example COVID-19 Contact Network'}))
+        .toBeInTheDocument();
+});

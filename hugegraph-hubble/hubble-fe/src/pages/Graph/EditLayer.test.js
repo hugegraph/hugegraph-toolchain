@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import fs from 'fs';
+import path from 'path';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {message} from 'antd';
@@ -651,6 +653,31 @@ test('retries graph creation after the built-in template was already persisted',
         schema: 'people_network',
     }));
     await expectCreateComplete(dialog, onCancel, refresh);
+});
+
+test.each(['hlm', 'covid19'])('reuses the Server historical %s template without a false conflict', async name => {
+    const source = fs.readFileSync(path.resolve(__dirname,
+        '../../../../hubble-be/src/main/java/org/apache/hugegraph/util/GremlinUtil.java'), 'utf8');
+    const constant = source.split(`public static final String GREMLIN_${name.toUpperCase()}_SCHEMA =`)[1]
+        .split(/;\s*\n/)[0];
+    const schemaText = [...constant.matchAll(/"(?:[^"\\]|\\.)*"/g)]
+        .map(match => JSON.parse(match[0])).join('');
+    api.manage.getSchemaList.mockResolvedValue({status: 200,
+        data: {records: [{name, schema: schemaText}]}});
+    api.manage.addGraph.mockResolvedValue({status: 200});
+    render(<EditLayer visible onCancel={jest.fn()} refresh={jest.fn()} graphspace='DEFAULT' />);
+    const dialog = await screen.findByRole('dialog');
+    const current = within(dialog);
+    const schema = current.getByRole('combobox', {name: 'graph.form.schema'});
+    await waitFor(() => expect(schema).toBeEnabled());
+    await userEvent.type(current.getByPlaceholderText('graph.form.name_placeholder'), 'historical_graph');
+    await userEvent.click(schema);
+    await clickCurrentOption(schema, `schema_template.builtin.${name}`);
+    await userEvent.click(current.getByRole('button', {name: 'OK'}));
+    await waitFor(() => expect(api.manage.addGraph).toHaveBeenCalledWith('DEFAULT',
+        expect.objectContaining({schema: name})));
+    expect(api.manage.addSchema).not.toHaveBeenCalled();
+    expect(screen.queryByText('graph.form.schema_conflict')).not.toBeInTheDocument();
 });
 
 test('does not reuse a same-named built-in template with different content', async () => {
