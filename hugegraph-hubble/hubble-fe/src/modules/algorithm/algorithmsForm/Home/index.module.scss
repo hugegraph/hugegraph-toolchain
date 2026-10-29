@@ -88,3 +88,14 @@
         width: 280px;
     }
 }
+
+.engineTabs {
+    padding: 0 12px;
+    :global(.ant-tabs-nav) { margin-bottom: 8px; }
+}
+
+.engineGuide {
+    margin: 0 12px 12px;
+    color: #5c6880;
+    line-height: 1.5;
+}

@@ -789,7 +789,11 @@ async function main(configuration = options()) {
       }
       await page.goto(`${config.hubbleUrl}/algorithms/${encodeURIComponent(fixture.graphspace)}/${encodeURIComponent(fixture.graph)}`);
       await page.getByPlaceholder('Algorithm Query', {exact: true}).fill('Find Shortest Path');
-      await page.waitForTimeout(350); // Existing search input debounces its public filter for 200ms.
+      await eventually(page, 'shortest-path search filters the visible catalogue', async () => {
+        const names = await page.locator('.ant-collapse-item:visible .ant-collapse-header .ant-typography').allTextContents();
+        return names.includes('Find Shortest Path')
+          && names.every(name => name.includes('Find Shortest Path'));
+      });
       const title = page.locator('.ant-collapse-header .ant-typography').filter({hasText: /^Find Shortest Path$/});
       await title.click();
       const panel = title.locator('xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " ant-collapse-item ")][1]');
@@ -797,7 +801,7 @@ async function main(configuration = options()) {
       await panel.getByLabel('source', {exact: true}).fill(fixture.algorithm.sourceInput ?? String(fixture.algorithm.source));
       await panel.getByLabel('target', {exact: true}).fill(fixture.algorithm.targetInput ?? String(fixture.algorithm.target));
       if (fixture.algorithm.label) await panel.getByLabel('label', {exact: true}).fill(fixture.algorithm.label);
-      const run = panel.locator(':scope > .ant-collapse-header button');
+      const run = panel.locator(':scope > .ant-collapse-header button.ant-btn-primary');
       assert.equal(await run.count(), 1, 'Algorithm public header needs an unambiguous Run button');
       await eventually(page, 'valid real algorithm form enables run', () => run.isEnabled());
       const endpoint = `${scopePath(fixture)}/algorithms/oltp/allshortestpaths`;

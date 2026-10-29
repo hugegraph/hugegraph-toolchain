@@ -150,3 +150,47 @@ retain successful task metadata, while mismatched IDs, authorization errors and
 transient failures remain errors. Unexpected result-read failures show a single
 inline reason, task scope and retry guidance. They do not change the computation
 status to failed. Result state resets when the signed-in identity changes.
+
+## Switch between OLTP subgraph queries and OLAP whole-graph compute
+
+Open `algorithms/<graphspace>/<graph>`. The initial OLTP tab contains only
+interactive traversers and links to their REST API documentation. Select the
+OLAP tab to browse Vermeer whole-graph algorithms and their documentation.
+General instructions and setup links belong to the idle canvas; the sidebar
+retains search, algorithm entries and parameter reset. Help sits beside each
+algorithm name and supports both hover and keyboard focus.
+
+The OLAP tab owns the graph-loading entry. An unloaded graph explains that it
+must be loaded before computation; hover over **Load for graph compute** to
+identify the Vermeer engine. Query and async-task pages do not duplicate that
+loading control. Start or retry loading on the OLAP tab and inspect progress in
+async tasks. Switching back to OLTP does not cancel an acknowledged load.
+
+For browser verification, exercise both authenticated and anonymous PD modes:
+
+1. Open an explicit graph route and verify that only the OLTP catalog is shown.
+2. Select OLAP; verify the unloaded-state guidance, loading button and tooltip.
+3. Submit one load and verify its graphspace/graph scope and pending state.
+4. Return to OLTP and verify that the loading button is absent.
+5. Switch GraphSpace and verify the selected graph and account visibility.
+6. Delay or fail Vermeer discovery: OLTP remains usable, while Computer entries
+   remain hidden until discovery is confirmed. Retryable worker failures must
+   not briefly expose a different execution path before automatic recovery.
+7. Confirm Vermeer is disabled and Computer is unavailable: the canvas shows
+   neutral availability guidance with Vermeer and Helm documentation and a manual
+   recheck. A false capability does not establish why a service is unavailable.
+   HTTP errors and malformed
+   capabilities instead show a retryable check failure, without claiming missing
+   configuration. Switching tabs preserves a confirmed capability; switching
+   graph or identity ignores stale responses.
+8. Keep existing results visible when changing tabs; the canvas retains a compact
+   OLAP status, documentation and recovery row. Full guidance only replaces an
+   idle, empty canvas. Check help placement and focus at desktop and 768px widths.
+9. Withdraw Vermeer readiness while a graph load is known: the load controls and
+   graph-load polling pause until discovery is confirmed again. Preserve accepted
+   task identity so polling can resume without duplicate submissions.
+10. Switch Chinese/English after an OLTP result and during a pending query. The
+    graph stays a graph, no extra query is sent, and OLAP task IDs remain intact.
+
+An intercepted API run validates this navigation and feedback contract. It does
+not validate actual Vermeer readiness, graph loading or algorithm correctness.

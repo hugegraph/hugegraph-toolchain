@@ -21,7 +21,7 @@
  */
 import {useCallback, useEffect, useLayoutEffect, useState, useContext, useMemo, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Empty, Space} from 'antd';
+import {Button, Empty, Space} from 'antd';
 import {Link} from 'react-router-dom';
 import GraphAnalysisContext from '../../../Context';
 import Graph from '../../../component/Graph';
@@ -47,12 +47,13 @@ import GraphStatusView from '../../../component/GraphStatusView';
 import TaskNavigateView from '../../../component/TaskNavigateView';
 import Canvas3D from '../../../component/Canvas3D';
 import {
-    GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, ALGORITHM_NAME,
+    GRAPH_STATUS, GRAPH_LOAD_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, ALGORITHM_NAME,
     getAlgorithmDisplayName, getCanonicalAlgorithmName,
 } from '../../../../utils/constants';
 import c from './index.module.scss';
 import _ from 'lodash';
 import {USER_CHANGE_EVENT} from '../../../../utils/user';
+import {VERMEER_DOC} from '../../algorithmsForm/algorithmDocs';
 
 import {useAnalysisGraph} from '../../../component/Graph/useAnalysisGraph';
 import {toCanvas3DData, toElementDetails} from '../../../../utils/analysisGraphData';
@@ -77,6 +78,9 @@ const GraphResult = props => {
         propertyKeysRecords,
         graphRenderMode,
         onGraphRenderModeChange,
+        engine = 'oltp',
+        computerStatus = 'checking',
+        onRetryComputerCapability,
     } = props;
     const canonicalAlgorithmName = useMemo(
         () => getCanonicalAlgorithmName(algorithmName, t),
@@ -360,29 +364,73 @@ const GraphResult = props => {
         [UPLOAD_FAILED]: queryMessage || t('analysis.query_result.import_failed'),
     }), [LOADING, FAILED, STANDBY, UPLOAD_FAILED, queryMessage, t]);
 
+    const showDefaultGuide = queryStatus === STANDBY && _.isEmpty(data.vertices) && _.isEmpty(data.edges)
+        && graphData.nodes.length + graphData.edges.length === 0;
+    const isOlap = engine === 'olap';
+    const {graphSpace, graph, isVermeer, vermeerReady, vermeerError, retryVermeer, graphStatus} = graphSpaceInfo;
+    const computeStatusKey = !graphSpace || !graph ? 'olap_select_graph'
+        : vermeerError ? 'get_vermeer_failed'
+            : vermeerReady !== true ? 'vermeer_unconfirmed'
+                : isVermeer ? graphStatus === GRAPH_LOAD_STATUS.LOADED ? 'vermeer_ready' : 'vermeer_load_first'
+                    : computerStatus === 'available' ? 'computer_legacy_ready'
+                        : computerStatus === 'unavailable' ? 'olap_unconfigured'
+                            : computerStatus === 'error' ? 'computer_check_failed' : 'computer_checking';
+    const computeStatus = t(computeStatusKey === 'get_vermeer_failed'
+        ? 'analysis.topbar.get_vermeer_failed' : `analysis.algorithm.${computeStatusKey}`);
+    const retryComputeDiscovery = () => {
+        onRetryComputerCapability?.();
+        retryVermeer?.();
+    };
+    const canvasRetry = vermeerError ? retryVermeer
+        : isOlap && vermeerReady === true && !isVermeer && ['error', 'unavailable'].includes(computerStatus)
+            ? computerStatus === 'unavailable' ? retryComputeDiscovery : onRetryComputerCapability : null;
+    const showRecoveryRow = isOlap ? !showDefaultGuide : Boolean(canvasRetry);
+    const showSetupDocs = ['olap_unconfigured', 'vermeer_load_first',
+        'computer_check_failed', 'get_vermeer_failed'].includes(computeStatusKey);
+    const renderComputeDocs = compact => (
+        <Space wrap={!compact}>
+            <a href={VERMEER_DOC} target='_blank' rel='noreferrer'
+                aria-label={t('analysis.algorithm.vermeer_docs')} title={t('analysis.algorithm.vermeer_docs')}>
+                {compact ? 'Vermeer' : t('analysis.algorithm.vermeer_docs')}
+            </a>
+            <a href='https://github.com/apache/hugegraph/blob/master/helm/hugegraph/docs/vermeer.md#install-and-enable'
+                target='_blank' rel='noreferrer'
+                aria-label={t('analysis.algorithm.helm_guide')} title={t('analysis.algorithm.helm_guide')}>
+                {compact ? 'Helm' : t('analysis.algorithm.helm_guide')}
+            </a>
+        </Space>
+    );
+
     const renderMainContent = () => {
-        if (queryStatus === STANDBY && isEmptyGraph) {
+        if (showDefaultGuide) {
             return (
                 <Empty
                     className={c.emptyGraph}
                     description={(
-                        <div>
-                            <strong>{t('analysis.algorithm.empty_graph_title')}</strong>
-                            <p>{t('analysis.algorithm.empty_graph_description')}</p>
+                        <div className={c.canvasGuide}>
+                            <p>{t(`analysis.algorithm.${isOlap ? 'olap_guide' : 'oltp_guide'}`)}</p>
+                            {isOlap && <>
+                                <strong>{computeStatus}</strong>
+                                {canvasRetry && <Button type='link' onClick={canvasRetry}>
+                                    {t('analysis.algorithm.retry_compute_status')}
+                                </Button>}
+                                {renderComputeDocs(false)}
+                            </>}
+                            {isEmptyGraph && <>
+                                <strong>{t('analysis.algorithm.empty_graph_title')}</strong>
+                                <p>{t('analysis.algorithm.empty_graph_description')}</p>
+                            </>}
                         </div>
                     )}
                 >
-                    <Space>
-                        <Link
-                            to={`/graphspace/${graphSpaceInfo.graphSpace}/graph/`
-                                + `${graphSpaceInfo.graph}/meta`}
-                        >
+                    {isEmptyGraph && <Space wrap>
+                        <Link to={`/graphspace/${graphSpace}/graph/${graph}/meta`}>
                             {t('analysis.algorithm.create_schema')}
                         </Link>
                         <Link to='/source'>
                             {t('analysis.algorithm.prepare_data')}
                         </Link>
-                    </Space>
+                    </Space>}
                 </Empty>
             );
         }
@@ -435,6 +483,15 @@ const GraphResult = props => {
 
     return (
         <div className={c.graphResult}>
+            {showRecoveryRow && <div className={c.recoveryRow}>
+                {isOlap && <span className={c.recoveryStatus} title={computeStatus}>{computeStatus}</span>}
+                {isOlap && showSetupDocs && renderComputeDocs(true)}
+                {canvasRetry && <Button type='link' size='small'
+                    title={computeStatus}
+                    onClick={canvasRetry}>
+                    {t('analysis.algorithm.retry_compute_status')}
+                </Button>}
+            </div>}
             <GraphMenuBar
                 layout={layoutSettings}
                 defaultLayout={defaultLayout}
@@ -454,7 +511,9 @@ const GraphResult = props => {
                 showCanvasInfo={showCanvasInfo}
                 graphRenderMode={graphRenderMode}
             />
-            {renderMainContent()}
+            <div className={showRecoveryRow ? c.recoveryResult : undefined}>
+                {renderMainContent()}
+            </div>
             <NumberCard
                 hasPadding={panelType !== CLOSED}
                 data={{

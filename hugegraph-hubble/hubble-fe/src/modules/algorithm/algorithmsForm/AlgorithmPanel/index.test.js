@@ -20,6 +20,9 @@ import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AlgorithmPanel, {AlgorithmPanelGroup} from './index';
 import {AlgorithmPersistenceContext} from '../algorithmFormPersistence';
+import AlgorithmNameHeader from '../AlgorithmNameHeader';
+
+jest.mock('react-i18next', () => ({useTranslation: () => ({t: key => key})}));
 
 const Panel = ({name, title}) => (
     <AlgorithmPersistenceContext value={name}>
@@ -62,4 +65,28 @@ test('mounts validation fields eagerly when an algorithm requests forceRender', 
     </AlgorithmPersistenceContext>);
     expect(screen.getByLabelText('PageRank field')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: /PageRank/})).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('keeps algorithm help keyboard-accessible beside the title without toggling its panel', async () => {
+    const run = jest.fn();
+    const description = 'Explains the selected algorithm';
+    render(<AlgorithmPersistenceContext value='kout'>
+        <AlgorithmPanel title={<AlgorithmNameHeader name='Algorithm title' description={description}
+            handleRunning={run} />}><input aria-label='Algorithm source' /></AlgorithmPanel>
+    </AlgorithmPersistenceContext>);
+    const panel = screen.getByRole('button', {expanded: false});
+    const help = screen.getByRole('button', {name: description});
+    await userEvent.tab();
+    expect(panel).toHaveFocus();
+    await userEvent.tab();
+    expect(help).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(description);
+    await userEvent.keyboard('{Enter}');
+    expect(panel).toHaveAttribute('aria-expanded', 'false');
+    expect(run).not.toHaveBeenCalled();
+    await userEvent.tab();
+    expect(screen.getByRole('link')).toHaveFocus();
+    await userEvent.tab();
+    await userEvent.keyboard('{Enter}');
+    expect(run).toHaveBeenCalledTimes(1);
 });

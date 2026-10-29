@@ -18,7 +18,7 @@
 
 import PageHeader from '../../components/PageHeader';
 import {useState, useCallback, useEffect, useRef} from 'react';
-import {Alert, Button, Spin} from 'antd';
+import {Alert, Button} from 'antd';
 import AnalysisHome from '../analysis/Home';
 import AlgorithmHome from '../algorithm/Home';
 import AsyncTaskHome from '../asyncTasks/Home';
@@ -42,10 +42,10 @@ const GraphAnalysisHome = props => {
     const {t} = useTranslation();
 
     const [currentOlapMode, setCurrentOlapMode] = useState(false);
+    const [algorithmEngine, setAlgorithmEngine] = useState('oltp');
     const [isOlapModeLoading, setOlapModeLoading] = useState(false);
     const [olapError, setOlapError] = useState(false);
     const [vermeerReady, setVermeerReady] = useState(false);
-    const [vermeerLoading, setVermeerLoading] = useState(true);
     const [vermeerError, setVermeerError] = useState(false);
     const olapRequest = useRef(null);
     const olapGraph = useRef(null);
@@ -169,7 +169,7 @@ const GraphAnalysisHome = props => {
         clearTimeout(vermeerRetry.current);
         const request = Symbol('get-vermeer');
         vermeerRequest.current = request;
-        setVermeerLoading(true);
+        setVermeerReady(false);
         setVermeerError(false);
         try {
             const response = await api.auth.getVermeer(INLINE_ERROR_CONFIG);
@@ -180,12 +180,15 @@ const GraphAnalysisHome = props => {
             if (status !== 200) {
                 throw new Error('vermeer capability unavailable');
             }
-            const {enable} = data || {};
+            if (typeof data?.enable !== 'boolean') {
+                throw new Error('invalid Vermeer capability');
+            }
+            const {enable} = data;
             setContext(context => ({
                 ...context,
-                isVermeer: Boolean(enable),
+                isVermeer: enable,
             }));
-            setVermeerReady(true);
+            setVermeerReady(!data.retryable && !data.error);
             setVermeerError(Boolean(data?.error));
             if (!enable && data.retryable) {
                 vermeerRetry.current = setTimeout(refreshVermeer, 5000);
@@ -195,11 +198,6 @@ const GraphAnalysisHome = props => {
             if (vermeerRequest.current === request) {
                 setVermeerError(true);
                 setVermeerReady(false);
-            }
-        }
-        finally {
-            if (vermeerRequest.current === request) {
-                setVermeerLoading(false);
             }
         }
     }, []);
@@ -223,6 +221,7 @@ const GraphAnalysisHome = props => {
             onGraphInfoChange={onGraphInfoChange}
             showOlapSwitch={moduleName !== ASYNCTASKS}
             showNavigationButton={moduleName !== ASYNCTASKS}
+            showGraphLoad={moduleName === ALGORITHMS && algorithmEngine === 'olap'}
             isOlapModeEnable={currentOlapMode}
             isOlapModeLoading={isOlapModeLoading}
             onOlapModeChange={onOlapModeChange}
@@ -230,14 +229,11 @@ const GraphAnalysisHome = props => {
     );
 
     const renderModule = () => {
-        if (moduleName === ALGORITHMS && !vermeerReady) {
-            return vermeerLoading ? <Spin /> : null;
-        }
         switch (moduleName) {
             case GREMLIN:
                 return <AnalysisHome toolbarExtra={topBar} />;
             case ALGORITHMS:
-                return <AlgorithmHome />;
+                return <AlgorithmHome engine={algorithmEngine} onEngineChange={setAlgorithmEngine} />;
             case ASYNCTASKS:
                 return <AsyncTaskHome />;
             default:
@@ -246,17 +242,14 @@ const GraphAnalysisHome = props => {
     };
 
     return (
-        <GraphAnalysisContext.Provider value={{...context, vermeerReady}}>
+        <GraphAnalysisContext.Provider value={{...context, vermeerReady, vermeerError, retryVermeer: getVermeer}}>
             {moduleName !== GREMLIN && <PageHeader
                 className='graphAnalysisHeader'
                 onBack={false}
                 title={t(pageHeaderNameKeys[moduleName])}
-                subTitle={moduleName === ALGORITHMS
-                    ? t('analysis.algorithm.guide')
-                    : undefined}
                 extra={topBar}
             />}
-            {vermeerError && (
+            {vermeerError && moduleName !== ALGORITHMS && (
                 <Alert
                     type='error'
                     showIcon

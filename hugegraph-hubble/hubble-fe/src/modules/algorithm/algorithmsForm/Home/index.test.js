@@ -16,12 +16,39 @@
  * under the License.
  */
 
-import {render, screen} from '@testing-library/react';
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import {useState} from 'react';
 import AlgorithmFormHome from './index';
 
-jest.mock('../OltpHome', () => () => <div>OLTP forms</div>);
+let mockFinishOltp;
+jest.mock('../OltpHome', () => {
+    const React = jest.requireActual('react');
+    return function MockOltpHome(props) {
+        const [pending, setPending] = React.useState(false);
+        const submit = () => {
+            if (pending) {
+                return;
+            }
+            setPending(true);
+            const complete = props.onOltpFormSubmit?.('loading');
+            if (typeof complete !== 'function') {
+                throw new TypeError('Algorithm submit handler must return a completion callback');
+            }
+            mockFinishOltp = (...args) => {
+                complete(...args);
+                setPending(false);
+            };
+        };
+        return <button type='button' disabled={pending} onClick={submit}>OLTP forms</button>;
+    };
+});
 jest.mock('../OlapHome', () => props => (
-    <div data-testid='olap-readiness'>{String(props.canRunLouvain)}</div>
+    <div>
+        <div data-testid='olap-readiness'>{String(props.canRunLouvain)}</div>
+        <button type='button' onClick={() => props.onOlapFormSubmit?.('olap')}>
+            OLAP forms
+        </button>
+    </div>
 ));
 jest.mock('../../AlgorithmSearch', () => () => <div>algorithm search</div>);
 jest.mock('react-router-dom', () => ({
@@ -31,8 +58,13 @@ jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: key => key}),
 }));
 
+beforeEach(() => {
+    mockFinishOltp = undefined;
+});
+
 const renderForm = graphNums => render(
     <AlgorithmFormHome
+        engine='olap'
         graphNums={graphNums}
         graphSpace='DEFAULT'
         graph='hugegraph'
@@ -52,6 +84,7 @@ test('only confirmed zero edges prevent Louvain', () => {
 
     view.rerender(
         <AlgorithmFormHome
+            engine='olap'
             graphNums={{vertexCount: 3, edgeCount: 2}}
             graphSpace='DEFAULT'
             graph='hugegraph'
@@ -71,10 +104,60 @@ test.each([0, '0'])('lets the server validate Louvain after an approximate zero 
     expect(screen.getByTestId('olap-readiness')).toHaveTextContent('true');
 });
 
-test('promotes Vermeer documentation and keeps Computer documentation in its compatibility entry', () => {
+test('keeps generic guides and documentation out of the compact sidebar', () => {
     renderForm({vertexCount: 1, edgeCount: 1});
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.traverser_docs'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'analysis.algorithm.reset_parameters'})).toBeVisible();
+});
 
-    expect(screen.getByRole('link', {name: 'analysis.algorithm.vermeer_docs'}))
-        .toHaveAttribute('href', 'https://github.com/apache/hugegraph-computer/tree/master/vermeer');
-    expect(screen.queryByText('analysis.algorithm.computer_docs')).not.toBeInTheDocument();
+
+const Home = ({submitOltp, submitOlap}) => {
+    const [engine, setEngine] = useState('oltp');
+    return <AlgorithmFormHome engine={engine} onEngineChange={setEngine}
+        handleOltpFormSubmit={submitOltp} handleOlapFormSubmit={submitOlap}
+        graphSpace='DEFAULT' graph='g' />;
+};
+
+test('starts with OLTP and lets the user switch to a separate OLAP catalog', () => {
+    render(<Home />);
+    expect(screen.getByText('OLTP forms')).toBeVisible();
+    expect(screen.getByTestId('olap-readiness')).not.toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.oltp_guide')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.traverser_docs'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', {name: 'analysis.algorithm.olap_tab'}));
+    expect(screen.getByText('OLTP forms')).not.toBeVisible();
+    expect(screen.getByTestId('olap-readiness')).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', {name: 'analysis.algorithm.oltp_tab'}));
+    expect(screen.getByText('OLTP forms')).toBeVisible();
+    expect(screen.getByTestId('olap-readiness')).not.toBeVisible();
+});
+
+test('preserves the synchronous completion callback and pending state across tab switches', () => {
+    const complete = jest.fn();
+    const submit = jest.fn(() => complete);
+    render(<Home submitOltp={submit} submitOlap={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', {name: 'OLTP forms'}));
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', {name: 'OLTP forms'})).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('tab', {name: 'analysis.algorithm.olap_tab'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'analysis.algorithm.oltp_tab'}));
+    const run = screen.getByRole('button', {name: 'OLTP forms'});
+    expect(run).toBeDisabled();
+    fireEvent.click(run);
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    act(() => mockFinishOltp('success', 'task-1'));
+    expect(complete).toHaveBeenCalledWith('success', 'task-1');
+    expect(run).toBeEnabled();
+
+    fireEvent.click(run);
+    expect(submit).toHaveBeenCalledTimes(2);
 });

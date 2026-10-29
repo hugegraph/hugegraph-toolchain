@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import GraphAnalysisContext from '../../../Context';
 import OlapFormHome from '.';
 import * as api from '../../../../api';
@@ -34,7 +34,7 @@ jest.mock('../Olap/OlapItem', () => ({algorithmName}) => (
 
 jest.mock('../../../../utils/constants', () => ({
     GRAPH_LOAD_STATUS: {LOADED: 'LOADED'},
-    isAlgorithmNameMatched: () => true,
+    isAlgorithmNameMatched: (name, search) => name.toLowerCase().includes(search.toLowerCase()),
     TEXT_PATH: {ALGORITHM_COMMON: 'analysis.algorithm.common'},
     useTranslatedConstants: () => ({
         ALGORITHM_MODE: {OLAP: 'OLAP'},
@@ -63,154 +63,80 @@ jest.mock('react-i18next', () => ({
     useTranslation: () => ({t: key => key}),
 }));
 
-const home = (context = {
-    isVermeer: false,
-    graphStatus: 'LOADED',
-}, graph = 'hugegraph', graphSpace = 'DEFAULT') => (
-    <GraphAnalysisContext.Provider
-        value={context}
-    >
-        <OlapFormHome
-            graphSpace={graphSpace}
-            graph={graph}
-            search=""
-            currentAlgorithm=""
-            updateCurrentAlgorithm={jest.fn()}
-            onOlapFormSubmit={jest.fn()}
-            canRunLouvain
-        />
+const home = ({isVermeer = false, vermeerReady = true} = {}, computerStatus = 'available',
+    graph = 'hugegraph', search = '') => (
+    <GraphAnalysisContext.Provider value={{isVermeer, vermeerReady}}>
+        <OlapFormHome graphSpace='DEFAULT' graph={graph} search={search}
+            computerStatus={computerStatus} currentAlgorithm='' updateCurrentAlgorithm={jest.fn()}
+            onOlapFormSubmit={jest.fn()} canRunLouvain />
     </GraphAnalysisContext.Provider>
 );
-
-const renderHome = (context, graph, graphSpace) => render(home(context, graph, graphSpace));
 const expandComputer = () => fireEvent.click(screen.getByRole('button', {
     name: 'analysis.algorithm.computer_legacy_entry',
 }));
 
-beforeEach(() => {
-    jest.clearAllMocks();
-});
+beforeEach(() => jest.clearAllMocks());
 
-test('defaults to Vermeer guidance without silently probing or enabling Computer', () => {
-    renderHome();
-
-    expect(screen.getByText('analysis.algorithm.vermeer_olap')).toBeInTheDocument();
-    expect(screen.getByText('analysis.algorithm.vermeer_unavailable')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
-        .toHaveAttribute('aria-expanded', 'false');
-    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+test.each([false, true])('does not expose either OLAP engine before confirmation (previous enable=%s)', isVermeer => {
+    const view = render(home({isVermeer, vermeerReady: false}));
+    expect(screen.queryByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
+        .not.toBeInTheDocument();
     expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-});
-
-test('keeps unavailable Computer algorithms hidden after explicit expansion', async () => {
-    api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: false}});
-    renderHome();
-    expandComputer();
-
-    expect(await screen.findByText('analysis.algorithm.computer_legacy_unavailable'))
-        .toBeInTheDocument();
-    expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-});
-
-test.each([
-    ['graph', 'DEFAULT', null],
-    ['GraphSpace', null, 'hugegraph'],
-])('does not show a pending Computer check without a selected %s', (_label, graphSpace, graph) => {
-    renderHome(undefined, graph, graphSpace);
-    expandComputer();
-
-    expect(screen.getByText('analysis.algorithm.computer_select_graph')).toBeVisible();
-    expect(screen.queryByText('analysis.algorithm.computer_checking')).not.toBeInTheDocument();
-    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
-});
-
-test('renders Computer algorithms only after explicit expansion and capability success', async () => {
-    api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: true}});
-    renderHome();
-    expandComputer();
-
-    await waitFor(() => expect(screen.getAllByTestId('olap-item')).toHaveLength(15));
-    expect(screen.getByText('analysis.algorithm.computer_legacy_ready')).toBeInTheDocument();
-    expect(screen.getByText('Louvain')).toBeInTheDocument();
-    expect(screen.queryByText('SSSP')).not.toBeInTheDocument();
-    expect(api.analysis.getOlapCapability).toHaveBeenCalledWith(
-        'DEFAULT', 'hugegraph', {suppressBusinessErrorToast: true}
-    );
-    expandComputer();
-    expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-});
-
-test('shows only the nine supported Vermeer algorithms without probing Computer', () => {
-    renderHome({isVermeer: true, graphStatus: 'LOADED'});
-
+    view.rerender(home({isVermeer: true}));
     expect(screen.getAllByTestId('olap-item')).toHaveLength(9);
-    expect(screen.getByText('analysis.algorithm.vermeer_ready')).toBeInTheDocument();
-    expect(screen.getByText('SSSP')).toBeInTheDocument();
     expect(screen.queryByText('Louvain')).not.toBeInTheDocument();
-    expect(screen.queryByText('analysis.algorithm.computer_legacy_entry')).not.toBeInTheDocument();
+    expect(screen.getByText('SSSP')).toBeVisible();
     expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
 });
 
-test('explains that Vermeer must load the graph before algorithms can run', () => {
-    renderHome({isVermeer: true, graphStatus: 'created'});
+test.each(['checking', 'error', 'unavailable', 'select-graph'])(
+    'keeps Computer opt-in and forms hidden while shared capability is %s', status => {
+        render(home({}, status));
+        expect(screen.queryByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
+            .not.toBeInTheDocument();
+        expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
+        expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    }
+);
 
-    expect(screen.getByText('analysis.algorithm.vermeer_load_first')).toBeInTheDocument();
-    expect(screen.queryByText('analysis.algorithm.vermeer_ready')).not.toBeInTheDocument();
+test('allows confirmed-disabled Computer only after capability and explicit opt-in', () => {
+    render(home());
+    expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
+    expandComputer();
+    expect(screen.getAllByTestId('olap-item')).toHaveLength(15);
+    expect(screen.getByText('Louvain')).toBeVisible();
+    expect(screen.queryByText('SSSP')).not.toBeInTheDocument();
+    expandComputer();
+    expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
 });
 
-test('does not carry Computer opt-in or a late capability response into another graph', async () => {
-    let resolve;
-    api.analysis.getOlapCapability.mockReturnValue(new Promise(done => { resolve = done; }));
-    const view = renderHome();
+test('resets Computer opt-in when readiness is invalidated and retry later confirms disabled', () => {
+    const view = render(home());
     expandComputer();
-    view.rerender(home({isVermeer: false, graphStatus: 'LOADED'}, 'other'));
-    await act(async () => resolve({status: 200, data: {available: true}}));
-
-    expect(screen.getByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
-        .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getAllByTestId('olap-item')).toHaveLength(15);
+    view.rerender(home({vermeerReady: false}));
     expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
-
     view.rerender(home());
     expect(screen.getByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
         .toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
 });
 
-test('returning to a previously enabled graph requires a new Computer opt-in', async () => {
-    api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: true}});
-    const view = renderHome();
+test('requires a new Computer opt-in when changing graph', () => {
+    const view = render(home());
     expandComputer();
-    await screen.findByText('analysis.algorithm.computer_legacy_ready');
-
-    view.rerender(home({isVermeer: false, graphStatus: 'LOADED'}, 'other'));
-    view.rerender(home());
-
+    view.rerender(home({}, 'available', 'other'));
     expect(screen.getByRole('button', {name: 'analysis.algorithm.computer_legacy_entry'}))
         .toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
-    expandComputer();
-    await screen.findByText('analysis.algorithm.computer_legacy_ready');
-    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
 });
 
-test('ignores graph A capability after graph B has explicitly opted in', async () => {
-    let resolveA;
-    api.analysis.getOlapCapability
-        .mockReturnValueOnce(new Promise(done => { resolveA = done; }))
-        .mockResolvedValueOnce({status: 200, data: {available: false}});
-    const view = renderHome();
+test('keeps generic guidance outside the sidebar while retaining explicit search feedback', () => {
+    render(home({}, 'available', 'hugegraph', 'unmatched-name'));
+    expect(screen.queryByText('query_result.empty')).not.toBeInTheDocument();
     expandComputer();
-    view.rerender(home({isVermeer: false, graphStatus: 'LOADED'}, 'other'));
-    expandComputer();
-    await screen.findByText('analysis.algorithm.computer_legacy_unavailable');
-
-    await act(async () => resolveA({status: 200, data: {available: true}}));
-
-    expect(screen.getByText('analysis.algorithm.computer_legacy_unavailable')).toBeInTheDocument();
-    expect(screen.queryByTestId('olap-item')).not.toBeInTheDocument();
-    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('query_result.empty')).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.vermeer_unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText('analysis.algorithm.computer_legacy_ready')).not.toBeInTheDocument();
 });

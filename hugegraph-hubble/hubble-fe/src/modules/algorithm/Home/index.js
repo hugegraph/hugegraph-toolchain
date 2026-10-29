@@ -25,18 +25,16 @@ import AlgorithmFormHome from '../algorithmsForm/Home';
 import GraphResult from '../GraphResult/Home';
 import LogsDetail from '../LogsDetail/Home';
 import GraphAnalysisContext from '../../Context';
-import {GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE, useTranslatedConstants} from '../../../utils/constants';
+import {GRAPH_STATUS, PANEL_TYPE, GRAPH_RENDER_MODE} from '../../../utils/constants';
 import * as api from '../../../api';
 import {toGraphCounts} from '../../../utils/graphStatistics';
 import {USER_CHANGE_EVENT} from '../../../utils/user';
 import _ from 'lodash';
 import c from './index.module.scss';
 
+const ALGORITHM_MODE = {OLTP: 'oltp', OLAP: 'olap'};
 
-
-const AlgorithmHome = () => {
-    const {ALGORITHM_MODE} = useTranslatedConstants();
-
+const AlgorithmHome = ({engine = 'oltp', onEngineChange}) => {
     const {STANDBY} = GRAPH_STATUS;
     const {CLOSED} = PANEL_TYPE;
     const {OLTP, OLAP} = ALGORITHM_MODE;
@@ -44,7 +42,7 @@ const AlgorithmHome = () => {
     const defaultPageParams = {page: 1, pageSize: 10};
     const TYPE  = {GREMLIN: '0', ALGORITHM: '1', CYPHER: '2'};
 
-    const {graphSpace, graph} = useContext(GraphAnalysisContext);
+    const {graphSpace, graph, isVermeer, vermeerReady} = useContext(GraphAnalysisContext);
 
     const [metaDataState, setMetaDataState] = useState();
     const [propertyKeysState, setPropertyKeysState] = useState();
@@ -77,6 +75,34 @@ const AlgorithmHome = () => {
     const graphNumsScope = useMemo(() => ({graphSpace, graph, identityVersion}), [graphSpace, graph, identityVersion]);
     const metaData = metaDataState?.owner === graphNumsScope ? metaDataState.data : undefined;
     const propertyKeysRecords = propertyKeysState?.owner === graphNumsScope ? propertyKeysState.records : undefined;
+    const [computerProbeAttempt, setComputerProbeAttempt] = useState(0);
+    const [computerCapability, setComputerCapability] = useState(null);
+    const computerScope = useMemo(() => ({graphNumsScope, isVermeer, vermeerReady, computerProbeAttempt}),
+        [graphNumsScope, isVermeer, vermeerReady, computerProbeAttempt]);
+    const hasComputerCapability = computerCapability?.owner === computerScope;
+    const computerStatus = !graphSpace || !graph ? 'select-graph'
+        : vermeerReady !== true ? 'unconfirmed'
+            : isVermeer ? 'not-needed'
+                : hasComputerCapability ? computerCapability.status : 'checking';
+    const retryComputerCapability = useCallback(() => setComputerProbeAttempt(value => value + 1), []);
+
+    useEffect(() => {
+        if (engine !== 'olap' || vermeerReady !== true || isVermeer || !graphSpace || !graph
+            || hasComputerCapability) return undefined;
+        let cancelled = false;
+        api.analysis.getOlapCapability(graphSpace, graph, {suppressBusinessErrorToast: true})
+            .then(response => {
+                if (cancelled) return;
+                const available = response?.data?.available;
+                const status = response?.status === 200 && typeof available === 'boolean'
+                    ? available ? 'available' : 'unavailable' : 'error';
+                setComputerCapability({owner: computerScope, status});
+            }).catch(() => {
+                if (!cancelled) setComputerCapability({owner: computerScope, status: 'error'});
+            });
+        return () => { cancelled = true; };
+    }, [computerScope, engine, graph, graphSpace, hasComputerCapability, isVermeer, vermeerReady]);
+
     const metaDataRequest = useRef(null);
     const propertyKeysRequest = useRef(null);
     const graphNumsOwner = useRef(null);
@@ -440,16 +466,22 @@ const AlgorithmHome = () => {
             <div className={c.algorithmContent}>
                 <AlgorithmFormHome
                     key={JSON.stringify([graphSpace, graph, identityVersion])}
+                    engine={engine}
+                    onEngineChange={onEngineChange}
                     handleOltpFormSubmit={handleOltpFormSubmit}
                     handleOlapFormSubmit={handleOlapFormSubmit}
                     currentAlgorithm={algorithmOnCanvas}
                     updateCurrentAlgorithm={handleUpdateCurrentAlgorithm}
                     graphNums={graphNums}
+                    computerStatus={computerStatus}
                     metaData={metaData}
                     graphSpace={graphSpace}
                     graph={graph}
                 />
                 <GraphResult
+                    engine={engine}
+                    computerStatus={computerStatus}
+                    onRetryComputerCapability={retryComputerCapability}
                     data={queryResult}
                     metaData={metaData}
                     options={graphOptions}

@@ -28,6 +28,7 @@ jest.mock('../../../api', () => ({
         fetchFavoriteQueries: jest.fn(),
         getExecutionLogs: jest.fn(),
         getGraphData: jest.fn(),
+        getOlapCapability: jest.fn(),
     },
     manage: {
         getMetaEdgeList: jest.fn(),
@@ -57,8 +58,16 @@ jest.mock('../LogsDetail/Home', () => props => (
         )}
     </div>
 ));
+let mockLanguage = 'zh';
+const mockModeTranslations = {
+    zh: {OLTP: '交互式探索', OLAP: '集群批量计算'},
+    en: {OLTP: 'Interactive exploration', OLAP: 'Cluster batch computation'},
+};
 jest.mock('react-i18next', () => ({
-    useTranslation: () => ({t: key => key}),
+    useTranslation: () => ({t: key => {
+        const mode = key.match(/^analysis\.algorithm\.mode\.(OLTP|OLAP)$/)?.[1];
+        return mode ? mockModeTranslations[mockLanguage][mode] : key;
+    }}),
 }));
 
 const okList = {status: 200, data: {records: [], total: 0}};
@@ -71,6 +80,8 @@ const deferred = () => {
 };
 
 beforeEach(() => {
+    mockLanguage = 'zh';
+    api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: false}});
     api.analysis.fetchFavoriteQueries.mockResolvedValue(okList);
     api.analysis.getExecutionLogs.mockResolvedValue(okList);
     api.analysis.getGraphData.mockResolvedValue({
@@ -328,6 +339,48 @@ const startAlgorithm = kind => {
 };
 const algorithmResult = () => mockGraphResultProps.mock.lastCall[0];
 
+it('retains a completed OLTP graph while changing languages in both directions', async () => {
+    const view = render(countsHomeFor());
+    await screen.findByText('algorithm forms edges 0');
+    const data = {vertices: [{id: 'v1'}, {id: 'v2'}], edges: []};
+    await act(async () => { startAlgorithm('Oltp')(GRAPH_STATUS.SUCCESS, data); });
+    for (const language of ['en', 'zh']) {
+        mockLanguage = language;
+        view.rerender(countsHomeFor());
+        expect(algorithmResult().isQueryMode).toBe(true);
+        expect(algorithmResult().queryStatus).toBe(GRAPH_STATUS.SUCCESS);
+        expect(algorithmResult().data).toBe(data);
+        expect(algorithmResult().asyncTaskId).toBeUndefined();
+    }
+});
+
+it('renders an OLTP request completed after a language change as a graph', async () => {
+    const view = render(countsHomeFor());
+    await screen.findByText('algorithm forms edges 0');
+    let complete;
+    await act(async () => { complete = startAlgorithm('Oltp'); });
+    mockLanguage = 'en';
+    view.rerender(countsHomeFor());
+    const data = {vertices: [{id: 'late-result'}], edges: []};
+    await act(async () => { complete(GRAPH_STATUS.SUCCESS, data); });
+    expect(algorithmResult().isQueryMode).toBe(true);
+    expect(algorithmResult().data).toBe(data);
+    expect(algorithmResult().asyncTaskId).toBeUndefined();
+});
+
+it('retains a real OLAP task across language changes', async () => {
+    const view = render(countsHomeFor());
+    await screen.findByText('algorithm forms edges 0');
+    await act(async () => { startAlgorithm('Olap')(GRAPH_STATUS.SUCCESS, 'real-task'); });
+    for (const language of ['en', 'zh']) {
+        mockLanguage = language;
+        view.rerender(countsHomeFor());
+        expect(algorithmResult().isQueryMode).toBe(false);
+        expect(algorithmResult().asyncTaskId).toBe('real-task');
+        expect(algorithmResult().data).toEqual({});
+    }
+});
+
 it('keeps the latest algorithm result when OLTP and OLAP finish in reverse order', async () => {
     render(countsHomeFor());
     await screen.findByText('algorithm forms edges 0');
@@ -445,4 +498,100 @@ it('hides confirmed old Schema inputs as soon as the selected graph changes', as
     const vertexCalls = api.manage.getMetaVertexList.mock.calls.length;
     await act(async () => pending.resolve(schemaList('disposed')));
     expect(api.manage.getMetaVertexList).toHaveBeenCalledTimes(vertexCalls);
+});
+
+
+const computeHome = ({engine = 'olap', graph = 'g', graphSpace = 'DEFAULT',
+    isVermeer = false, vermeerReady = true} = {}) => (
+    <GraphAnalysisContext.Provider value={{graphSpace, graph, isVermeer, vermeerReady}}>
+        <AlgorithmHome engine={engine} />
+    </GraphAnalysisContext.Provider>
+);
+const computeStatus = () => mockGraphResultProps.mock.lastCall[0].computerStatus;
+
+it('probes Computer only on active OLAP after Vermeer is confirmed disabled with a selected graph', async () => {
+    const view = render(computeHome({engine: 'oltp'}));
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    view.rerender(computeHome({vermeerReady: false}));
+    expect(computeStatus()).toBe('unconfirmed');
+    view.rerender(computeHome({isVermeer: true}));
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    view.rerender(computeHome({graph: null}));
+    expect(computeStatus()).toBe('select-graph');
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    view.rerender(computeHome());
+    await waitFor(() => expect(computeStatus()).toBe('unavailable'));
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledWith('DEFAULT', 'g', {suppressBusinessErrorToast: true});
+    expect(mockAlgorithmFormProps.mock.lastCall[0].computerStatus).toBe('unavailable');
+});
+
+it.each([
+    [{status: 200, data: {available: true}}, 'available'],
+    [{status: 200, data: {available: false}}, 'unavailable'],
+    [{status: 401, data: {available: false}}, 'error'],
+    [{status: 503, data: {available: false}}, 'error'],
+    [{status: 200, data: {}}, 'error'],
+])('distinguishes confirmed Computer capability %j as %s', async (response, status) => {
+    api.analysis.getOlapCapability.mockResolvedValue(response);
+    render(computeHome());
+    await waitFor(() => expect(computeStatus()).toBe(status));
+    expect(mockAlgorithmFormProps.mock.lastCall[0].computerStatus).toBe(status);
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
+});
+
+it('shares one cached capability across tabs and retries a failed probe inline', async () => {
+    api.analysis.getOlapCapability.mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({status: 200, data: {available: true}});
+    const view = render(computeHome());
+    await waitFor(() => expect(computeStatus()).toBe('error'));
+    act(() => mockGraphResultProps.mock.lastCall[0].onRetryComputerCapability());
+    await waitFor(() => expect(computeStatus()).toBe('available'));
+    view.rerender(computeHome({engine: 'oltp'}));
+    view.rerender(computeHome());
+    expect(computeStatus()).toBe('available');
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
+});
+
+it.each(['graph', 'space', 'identity', 'readiness'])(
+    'does not leak an old Computer probe after %s changes', async change => {
+        const old = deferred();
+        const current = deferred();
+        api.analysis.getOlapCapability.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+        const view = render(computeHome());
+        expect(computeStatus()).toBe('checking');
+        if (change === 'graph') view.rerender(computeHome({graph: 'other'}));
+        if (change === 'space') view.rerender(computeHome({graphSpace: 'OTHER'}));
+        if (change === 'identity') act(() => setUser({id: 'computer-reader', user_name: 'computer-reader'}));
+        if (change === 'readiness') {
+            view.rerender(computeHome({vermeerReady: false}));
+            view.rerender(computeHome());
+        }
+        await act(async () => current.resolve({status: 200, data: {available: true}}));
+        expect(computeStatus()).toBe('available');
+        await act(async () => old.resolve({status: 200, data: {available: false}}));
+        expect(computeStatus()).toBe('available');
+        expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
+    }
+);
+
+it.each(['graph', 'identity'])('does not revive cached Computer capability when returning to a previous %s', async change => {
+    const first = deferred();
+    const second = deferred();
+    const returned = deferred();
+    api.analysis.getOlapCapability.mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise).mockReturnValueOnce(returned.promise);
+    const view = render(computeHome());
+    if (change === 'graph') view.rerender(computeHome({graph: 'other'}));
+    else act(() => setUser({id: 'computer-bob', user_name: 'computer-bob'}));
+    await act(async () => second.resolve({status: 200, data: {available: true}}));
+    expect(computeStatus()).toBe('available');
+    if (change === 'graph') view.rerender(computeHome());
+    else act(() => setUser({id: 'computer-alice', user_name: 'computer-alice'}));
+    expect(computeStatus()).toBe('checking');
+    await act(async () => first.resolve({status: 200, data: {available: true}}));
+    expect(computeStatus()).toBe('checking');
+    await act(async () => returned.resolve({status: 200, data: {available: false}}));
+    expect(computeStatus()).toBe('unavailable');
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(3);
 });

@@ -20,6 +20,7 @@
  * @file Oltp图算法表单列表
  */
 
+import {Empty} from 'antd';
 import {AlgorithmPanelGroup} from '../AlgorithmPanel';
 import _ from 'lodash';
 import {useTranslation} from 'react-i18next';
@@ -105,6 +106,7 @@ const OltpFormHome = props => {
 
     return (
         <div>
+            {isEmptyBasicOltp && <Empty description={t('query_result.empty')} />}
             {!isEmptyBasicOltp && (<div className={c.algorithmCatagery}>{OLTP}</div>)}
             {visibleGroups.map(group => (
                 <div key={group.key}>

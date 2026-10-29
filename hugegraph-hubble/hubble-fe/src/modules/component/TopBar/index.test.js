@@ -47,10 +47,10 @@ jest.mock('react-i18next', () => ({
 
 const renderTopBar = (
     context = {isVermeer: false},
-    {moduleName = 'gremlin', onGraphInfoChange = jest.fn()} = {}
+    {moduleName = 'algorithms', onGraphInfoChange = jest.fn(), showGraphLoad = true} = {}
 ) => render(
     <GraphAnalysisContext.Provider value={context}>
-        <TopBar
+        <TopBar showGraphLoad={showGraphLoad}
             moduleName={moduleName}
             onGraphInfoChange={onGraphInfoChange}
             showOlapSwitch={false}
@@ -155,7 +155,7 @@ it('loads status only for the selected Vermeer graph and respects its loading st
     });
     api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'loading'}});
 
-    renderTopBar({isVermeer: true});
+    renderTopBar({isVermeer: true, vermeerReady: true});
 
     expect(await screen.findByRole('button', {
         name: 'analysis.topbar.load_to_vermeer',
@@ -177,7 +177,7 @@ it('retains the selected loaded graph status and load date', async () => {
         data: {status: 'loaded', last_load_time: '2026-10-22T12:00:00Z'},
     });
 
-    renderTopBar({isVermeer: true});
+    renderTopBar({isVermeer: true, vermeerReady: true});
 
     expect(await screen.findByRole('button', {
         name: 'analysis.topbar.reload_to_vermeer',
@@ -192,7 +192,7 @@ it('makes a failed Vermeer load an explicit accessible entry to its tasks', asyn
     });
     api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'error'}});
 
-    renderTopBar({isVermeer: true});
+    renderTopBar({isVermeer: true, vermeerReady: true});
 
     const failure = await screen.findByRole('button', {
         name: /analysis.topbar.load_failed.*analysis.async_task.action.check_reason/,
@@ -213,7 +213,7 @@ it.each([['en-US', enAnalysis], ['zh-CN', zhAnalysis]])(
             status: 200, data: {records: [{name: 'graph-a'}]},
         });
         api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'error'}});
-        renderTopBar({isVermeer: true});
+        renderTopBar({isVermeer: true, vermeerReady: true});
 
         const action = translations.analysis.async_task.action.check_reason;
         const button = await screen.findByRole('button', {name: new RegExp(action)});
@@ -231,7 +231,7 @@ it.each(['created', 'loading', 'loaded'])('does not offer failure details for st
     });
     api.manage.getGraph.mockResolvedValue({status: 200, data: {status}});
 
-    renderTopBar({isVermeer: true});
+    renderTopBar({isVermeer: true, vermeerReady: true});
 
     await screen.findByRole('button', {name: status === 'loaded'
         ? 'analysis.topbar.reload_to_vermeer' : 'analysis.topbar.load_to_vermeer'});
@@ -254,8 +254,8 @@ it('refreshes selected graph details when the Vermeer capability resolves after 
     const capability = deferred();
     const view = renderTopBar({isVermeer: false}, {onGraphInfoChange});
     const capabilityReady = capability.promise.then(isVermeer => view.rerender(
-        <GraphAnalysisContext.Provider value={{isVermeer}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+        <GraphAnalysisContext.Provider value={{isVermeer, vermeerReady: true}}>
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     ));
     await waitFor(() => expect(onGraphInfoChange).toHaveBeenCalledWith(
@@ -293,8 +293,8 @@ it('does not automatically retry a forbidden detail request after capability act
     ));
 
     view.rerender(
-        <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+        <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: true}}>
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     );
 
@@ -326,8 +326,8 @@ it('ignores pending capability-triggered details after the route selects a diffe
         'A', expect.objectContaining({name: 'graph-a'})
     ));
     const enabledTopBar = (
-        <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+        <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: true}}>
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     );
     view.rerender(enabledTopBar);
@@ -337,8 +337,8 @@ it('ignores pending capability-triggered details after the route selects a diffe
     onGraphInfoChange.mockClear();
     Object.assign(mockParams, {graph: 'graph-b'});
     view.rerender(
-        <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
+        <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: true}}>
+            <TopBar showGraphLoad moduleName='gremlin' onGraphInfoChange={onGraphInfoChange} />
         </GraphAnalysisContext.Provider>
     );
     await waitFor(() => expect(onGraphInfoChange).toHaveBeenCalledWith(
@@ -361,7 +361,7 @@ it('treats a graph without Vermeer status as not yet loaded', async () => {
     });
     api.manage.getGraph.mockResolvedValue({status: 200, data: {backend: 'hstore'}});
 
-    renderTopBar({isVermeer: true});
+    renderTopBar({isVermeer: true, vermeerReady: true});
 
     expect(await screen.findByText('analysis.topbar.not_loaded')).toBeInTheDocument();
     expect(screen.getByRole('button', {
@@ -415,7 +415,7 @@ it('settles a rejected Vermeer load and lets the user retry', async () => {
         .mockRejectedValueOnce(new Error('offline'))
         .mockResolvedValueOnce({status: 200});
 
-    renderTopBar({isVermeer: true});
+    renderTopBar({isVermeer: true, vermeerReady: true});
 
     const reload = await screen.findByRole('button', {
         name: 'analysis.topbar.reload_to_vermeer',
@@ -459,7 +459,7 @@ it('ignores a late graph response after the route switches GraphSpace', async ()
     Object.assign(mockParams, {graphSpace: 'B'});
     view.rerender(
         <GraphAnalysisContext.Provider value={{isVermeer: false}}>
-            <TopBar
+            <TopBar showGraphLoad
                 moduleName='gremlin'
                 onGraphInfoChange={jest.fn()}
                 showOlapSwitch={false}
@@ -516,7 +516,7 @@ it.each(['gremlin', 'algorithms', 'asyncTasks'])(
         Object.assign(mockParams, {graph: 'graph-b'});
         view.rerender(
             <GraphAnalysisContext.Provider value={{isVermeer: false}}>
-                <TopBar
+                <TopBar showGraphLoad
                     moduleName={moduleName}
                     onGraphInfoChange={onGraphInfoChange}
                     showOlapSwitch={false}
@@ -547,7 +547,7 @@ it('tracks the accepted load task while graph metadata still reports loaded', as
         api.analysis.fetchAsyncTaskResult
             .mockResolvedValueOnce({status: 200, data: {task_status: 'queued'}})
             .mockResolvedValue({status: 200, data: {task_status: 'success'}});
-        const view = renderTopBar({isVermeer: true});
+        const view = renderTopBar({isVermeer: true, vermeerReady: true});
         await act(async () => {});
         fireEvent.click(screen.getByRole('button', {name: 'analysis.topbar.reload_to_vermeer'}));
         await act(async () => {});
@@ -589,8 +589,8 @@ it('resumes a queued load after switching away and back to its graph', async () 
         });
         const onGraphInfoChange = jest.fn();
         const topBar = () => (
-            <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-                <TopBar
+            <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: true}}>
+                <TopBar showGraphLoad
                     moduleName='algorithms'
                     onGraphInfoChange={onGraphInfoChange}
                     showOlapSwitch={false}
@@ -659,8 +659,8 @@ it('refreshes graph status when Vermeer becomes available again', async () => {
         'DEFAULT', expect.objectContaining({name: 'hugegraph', status: ''})
     ));
     view.rerender(
-        <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar
+        <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: true}}>
+            <TopBar showGraphLoad
                 moduleName='algorithms'
                 onGraphInfoChange={onGraphInfoChange}
                 showOlapSwitch={false}
@@ -693,8 +693,8 @@ it('preserves an in-flight load guard when switching away and back before its ac
         api.analysis.loadVermeerTask.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
         api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {task_status: 'queued'}});
         const onGraphInfoChange = jest.fn();
-        const topBar = () => <GraphAnalysisContext.Provider value={{isVermeer: true}}>
-            <TopBar moduleName='algorithms' onGraphInfoChange={onGraphInfoChange}
+        const topBar = () => <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: true}}>
+            <TopBar showGraphLoad moduleName='algorithms' onGraphInfoChange={onGraphInfoChange}
                 showOlapSwitch={false} showNavigationButton={false} isOlapModeEnable={false}
                 isOlapModeLoading={false} onOlapModeChange={jest.fn()} />
         </GraphAnalysisContext.Provider>;
@@ -752,4 +752,92 @@ it('resolves a route-selected late-page graph from the same bounded response', a
         brief: true, page_no: 1, page_size: 100, query: '', selected: 'graph_10000',
     }, expect.any(Object));
     expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+
+it('keeps the graph loading control confined to the OLAP surface', async () => {
+    Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
+    api.manage.getGraphList.mockResolvedValue({status: 200, data: {records: [{name: 'graph-a'}]}});
+    renderTopBar({isVermeer: true, vermeerReady: true}, {showGraphLoad: false});
+    await waitFor(() => expect(api.manage.getGraph).toHaveBeenCalled());
+    expect(await screen.findByText('analysis.topbar.loaded')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'analysis.topbar.reload_to_vermeer'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'analysis.topbar.load_to_vermeer'})).not.toBeInTheDocument();
+});
+
+it('withdraws load controls and metadata polling during unknown or failed rediscovery, then recovers the same graph', async () => {
+    jest.useFakeTimers();
+    Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
+    api.manage.getGraphList.mockResolvedValue({status: 200, data: {records: [{name: 'graph-a'}]}});
+    api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'loading'}});
+    const onGraphInfoChange = jest.fn();
+    const topBar = context => <GraphAnalysisContext.Provider value={context}>
+        <TopBar showGraphLoad moduleName='algorithms' onGraphInfoChange={onGraphInfoChange}
+            showNavigationButton showOlapSwitch={false} />
+    </GraphAnalysisContext.Provider>;
+    const view = render(topBar({isVermeer: true, vermeerReady: true}));
+    try {
+        await act(async () => {});
+        expect(screen.getByRole('button', {name: 'analysis.topbar.load_to_vermeer'})).toBeDisabled();
+        await act(async () => jest.advanceTimersByTime(2000));
+        expect(api.manage.getGraph).toHaveBeenCalledTimes(2);
+
+        view.rerender(topBar({isVermeer: true, vermeerReady: false}));
+        await act(async () => {});
+        expect(screen.queryByRole('button', {name: 'analysis.topbar.load_to_vermeer'})).not.toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'analysis.topbar.metadata_config'})).toBeEnabled();
+        const reads = api.manage.getGraph.mock.calls.length;
+        await act(async () => jest.advanceTimersByTime(6000));
+        expect(api.manage.getGraph).toHaveBeenCalledTimes(reads);
+
+        view.rerender(topBar({isVermeer: true, vermeerReady: false, vermeerError: true}));
+        await act(async () => jest.advanceTimersByTime(6000));
+        expect(screen.queryByRole('button', {name: /analysis.topbar.(load|reload)_to_vermeer/}))
+            .not.toBeInTheDocument();
+        expect(api.manage.getGraph).toHaveBeenCalledTimes(reads);
+        expect(onGraphInfoChange).toHaveBeenLastCalledWith('A', expect.objectContaining({name: 'graph-a'}));
+
+        api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'loaded'}});
+        view.rerender(topBar({isVermeer: true, vermeerReady: true}));
+        await act(async () => {});
+        expect(screen.getByRole('button', {name: 'analysis.topbar.reload_to_vermeer'})).toBeEnabled();
+        expect(api.manage.getGraph).toHaveBeenCalledTimes(reads + 1);
+        fireEvent.click(screen.getByRole('button', {name: 'analysis.topbar.metadata_config'}));
+        expect(mockNavigate).toHaveBeenLastCalledWith('/graphspace/A/graph/graph-a/meta');
+    }
+    finally {
+        view.unmount();
+        jest.useRealTimers();
+    }
+});
+
+it('pauses an accepted load task during rediscovery without forgetting it on recovery', async () => {
+    jest.useFakeTimers();
+    Object.assign(mockParams, {graphSpace: 'A', graph: 'graph-a'});
+    api.manage.getGraphList.mockResolvedValue({status: 200, data: {records: [{name: 'graph-a'}]}});
+    api.manage.getGraph.mockResolvedValue({status: 200, data: {status: 'loaded'}});
+    api.analysis.loadVermeerTask.mockResolvedValue({status: 200, data: {task_id: -13}});
+    api.analysis.fetchAsyncTaskResult.mockResolvedValue({status: 200, data: {task_status: 'running'}});
+    const topBar = ready => <GraphAnalysisContext.Provider value={{isVermeer: true, vermeerReady: ready}}>
+        <TopBar showGraphLoad moduleName='algorithms' />
+    </GraphAnalysisContext.Provider>;
+    const view = render(topBar(true));
+    try {
+        await act(async () => {});
+        fireEvent.click(screen.getByRole('button', {name: 'analysis.topbar.reload_to_vermeer'}));
+        await act(async () => {});
+        view.rerender(topBar(false));
+        await act(async () => jest.advanceTimersByTime(6000));
+        expect(api.analysis.fetchAsyncTaskResult).not.toHaveBeenCalled();
+        view.rerender(topBar(true));
+        await act(async () => {});
+        expect(screen.getByRole('button', {name: 'analysis.topbar.load_to_vermeer'})).toBeDisabled();
+        await act(async () => jest.advanceTimersByTime(2000));
+        expect(api.analysis.fetchAsyncTaskResult).toHaveBeenCalledWith('A', 'graph-a', -13);
+        expect(api.analysis.loadVermeerTask).toHaveBeenCalledTimes(1);
+    }
+    finally {
+        view.unmount();
+        jest.useRealTimers();
+    }
 });

@@ -44,12 +44,13 @@ async function check(page, role) {
     assert.equal(capability.status, 200);
     assert.equal(capability.data.enable, role !== 'observer');
     await page.goto(`${origin}/algorithms/${space}/${graph}`);
+    await page.getByRole('tab', {name: 'OLAP Whole-graph Compute', exact: true}).click();
     if (role !== 'observer') {
         if (process.env.VERMEER_WORKER_PID_FILE) {
             const pid = Number(fs.readFileSync(process.env.VERMEER_WORKER_PID_FILE, 'utf8'));
             // Opt-in fault injection only for the dedicated local development Worker.
             assert(fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes('vermeer-bin'));
-            const reload = page.getByRole('button', {name: 'Reload to Vermeer', exact: true});
+            const reload = page.getByRole('button', {name: 'Reload for graph compute', exact: true});
             await reload.waitFor();
             process.kill(pid, 'SIGSTOP');
             try {
@@ -94,11 +95,11 @@ async function check(page, role) {
         await page.getByText('demo1', {exact: false}).first().waitFor();
     }
     else {
+        assert.equal(await page.getByRole('button', {name: /Load for graph compute|Reload for graph compute/}).count(), 0);
         await page.goto(`${origin}/asyncTasks/${space}/${graph}`);
         const listing = await (await page.request.get(`${api}/async-tasks`)).json();
         assert.equal(listing.status, 200);
         assert(listing.data.records.every(task => task.id >= 0));
-        assert.equal(await page.getByRole('button', {name: /Load to Vermeer|Reload to Vermeer/}).count(), 0);
         const denied = await page.request.post(`${api}/algorithms/vermeer`, {
             data: {params: {'compute.algorithm': 'pagerank'}},
         });

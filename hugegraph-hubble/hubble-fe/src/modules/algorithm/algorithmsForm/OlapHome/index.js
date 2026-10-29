@@ -23,18 +23,15 @@
 import {AlgorithmPanelGroup} from '../AlgorithmPanel';
 import {useContext, useEffect, useState} from 'react';
 import {Button} from 'antd';
-import * as api from '../../../../api';
 import GraphAnalysisContext from '../../../Context';
 import _ from 'lodash';
 import {
-    GRAPH_LOAD_STATUS,
     isAlgorithmNameMatched,
     useTranslatedConstants,
 } from '../../../../utils/constants';
 import OlapItem from '../Olap/OlapItem';
 import c from './index.module.scss';
 import {useTranslation} from 'react-i18next';
-import {COMPUTER_DOC} from '../algorithmDocs';
 
 
 
@@ -48,6 +45,7 @@ const OlapFormHome = props => {
         canRunLouvain,
         graphSpace,
         graph,
+        computerStatus,
     } =  props;
     const {ALGORITHM_NAME} = useTranslatedConstants();
     const {t} = useTranslation();
@@ -101,43 +99,15 @@ const OlapFormHome = props => {
     ];
 
 
-    const {isVermeer, graphStatus} = useContext(GraphAnalysisContext);
+    const {isVermeer, vermeerReady} = useContext(GraphAnalysisContext);
     const scope = JSON.stringify([graphSpace, graph]);
     const [legacyScope, setLegacyScope] = useState(null);
-    const legacyExpanded = !isVermeer && legacyScope === scope;
-    const [computerCapability, setComputerCapability] = useState(null);
-    const computerAvailable = computerCapability?.scope === scope
-        ? computerCapability.available : null;
+    const legacyExpanded = vermeerReady === true && !isVermeer && legacyScope === scope;
+    const computerAvailable = computerStatus === 'available';
 
     useEffect(() => {
         setLegacyScope(null);
-    }, [scope, isVermeer]);
-
-    useEffect(() => {
-        let cancelled = false;
-        if (!legacyExpanded || !graphSpace || !graph) {
-            setComputerCapability(null);
-            return undefined;
-        }
-        setComputerCapability(null);
-        api.analysis.getOlapCapability(graphSpace, graph, {
-            suppressBusinessErrorToast: true,
-        }).then(response => {
-            if (!cancelled) {
-                setComputerCapability({
-                    scope,
-                    available: response?.status === 200 && response?.data?.available === true,
-                });
-            }
-        }).catch(() => {
-            if (!cancelled) {
-                setComputerCapability({scope, available: false});
-            }
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [graph, graphSpace, legacyExpanded, scope]);
+    }, [scope, isVermeer, vermeerReady]);
 
     const getSearchedList = (arr, value) => {
         return arr.filter(item => isAlgorithmNameMatched(item, value, t));
@@ -170,24 +140,14 @@ const OlapFormHome = props => {
         ),
     })).filter(group => !_.isEmpty(group.items));
     const isEmptyBasicOlap = _.isEmpty(visibleGroups);
-    const vermeerStatus = !isVermeer ? 'vermeer_unavailable'
-        : graphStatus === GRAPH_LOAD_STATUS.LOADED ? 'vermeer_ready' : 'vermeer_load_first';
-    const computerStatus = !graphSpace || !graph ? 'computer_select_graph'
-        : computerAvailable === false ? 'computer_legacy_unavailable'
-            : computerAvailable === true ? 'computer_legacy_ready' : 'computer_checking';
-
+    const olapAvailable = vermeerReady === true
+        && (isVermeer || (legacyExpanded && computerAvailable === true));
     return (
         <div>
-            <div className={c.algorithmCatagery}>
-                {t('analysis.algorithm.vermeer_olap')}
-            </div>
-            <p className={c.engineHint}>
-                {t(`analysis.algorithm.${vermeerStatus}`)}
-            </p>
-            {isVermeer && isEmptyBasicOlap && search && (
-                <p className={c.engineHint}>{t('analysis.algorithm.vermeer_no_match')}</p>
+            {isEmptyBasicOlap && search && olapAvailable && (
+                <p className={c.engineHint}>{t(isVermeer ? 'analysis.algorithm.vermeer_no_match' : 'query_result.empty')}</p>
             )}
-            {!isVermeer && (
+            {vermeerReady === true && !isVermeer && computerAvailable && (
                 <>
                     <Button
                         type='link'
@@ -198,17 +158,9 @@ const OlapFormHome = props => {
                     >
                         {t('analysis.algorithm.computer_legacy_entry')}
                     </Button>
-                    {legacyExpanded && (
-                        <p className={c.engineHint}>
-                            {t(`analysis.algorithm.${computerStatus}`)}{' '}
-                            <a href={COMPUTER_DOC} target='_blank' rel='noreferrer'>
-                                {t('analysis.algorithm.computer_legacy_docs')}
-                            </a>
-                        </p>
-                    )}
                 </>
             )}
-            {(isVermeer || (legacyExpanded && computerAvailable === true)) && visibleGroups.map(group => (
+            {olapAvailable && visibleGroups.map(group => (
                 <div key={group.key}>
                     <div className={c.algorithmGoal}>
                         {t(`analysis.algorithm.group.${group.key}`)}

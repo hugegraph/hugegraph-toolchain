@@ -161,6 +161,17 @@ const AlgorithmNameHeader = props => {
             </div>
             <div className={c.panelHeaderName}>
                 {renderAlgorithmName(name)}
+                <Tooltip placement="rightTop" title={description} trigger={['hover', 'focus']}>
+                    <Button
+                        className={c.panelHeaderHelp}
+                        type="text"
+                        size="small"
+                        aria-label={description || displayName}
+                        icon={<QuestionCircleOutlined />}
+                        onClick={event => event.stopPropagation()}
+                        onKeyDown={event => event.stopPropagation()}
+                    />
+                </Tooltip>
             </div>
             <div className={c.panelHeaderRight}>
                 <Tooltip title={helpLinkLabel}>
@@ -174,9 +185,6 @@ const AlgorithmNameHeader = props => {
                             <LinkOutlined />
                         </a>
                     </span>
-                </Tooltip>
-                <Tooltip placement="rightTop" title={description}>
-                    <QuestionCircleOutlined />
                 </Tooltip>
                 {renderRunningButton()}
             </div>

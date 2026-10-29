@@ -1107,3 +1107,26 @@ These Chromium screenshots use intercepted APIs in authenticated administrator
 mode. Anonymous PD access, GraphSpace switching and account visibility were also
 checked. They validate the UI contract; native count correctness and retention
 policies require separate live deployment verification.
+
+### OLTP and OLAP algorithm workflows
+
+The catalog separates **OLTP Subgraph Queries** and **OLAP Whole-graph Compute**.
+The sidebar keeps the algorithm list compact, with help beside each algorithm
+name. Setup and loading guidance appears in the idle canvas, with a compact
+status row when results are already visible. When graph compute is unavailable,
+the canvas offers a recheck and links to Vermeer documentation and the Helm startup
+guide. OLTP remains usable while compute discovery is pending or has failed;
+OLAP offers a backend only after discovery is confirmed. Load a graph for Vermeer
+from the OLAP tab, then inspect progress and results in async tasks.
+Changing the UI language retains graph results and submitted task IDs.
+
+![OLTP query result and compact algorithm help](docs/assets/analytics/oltp-query-result.png)
+
+![OLAP loading guidance](docs/assets/analytics/olap-load-guide.png)
+
+![Unavailable graph compute with documentation and recheck](docs/assets/analytics/olap-unavailable.png)
+
+These screenshots come from a Chromium run with explicitly intercepted APIs in
+authenticated administrator mode. The corresponding anonymous PD flow, loading
+submission scope and GraphSpace switching were also checked. They demonstrate UI
+navigation and feedback; it does not establish live loading or algorithm results.
