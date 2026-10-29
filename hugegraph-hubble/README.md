@@ -993,15 +993,20 @@ policies require separate live deployment verification.
 
 The catalog separates **OLTP Subgraph Queries** and **OLAP Whole-graph Compute**.
 The sidebar keeps the algorithm list compact, with help beside each algorithm
-name. Setup and loading guidance appears in the idle canvas. When graph compute
-is not configured, the canvas links to Vermeer documentation and the Helm startup
+name. Setup and loading guidance appears in the idle canvas, with a compact
+status row when results are already visible. When graph compute is unavailable,
+the canvas offers a recheck and links to Vermeer documentation and the Helm startup
 guide. OLTP remains usable while compute discovery is pending or has failed;
 OLAP offers a backend only after discovery is confirmed. Load a graph for Vermeer
 from the OLAP tab, then inspect progress and results in async tasks.
 
+![OLTP query result and compact algorithm help](docs/assets/analytics/oltp-query-result.png)
+
 ![OLAP loading guidance](docs/assets/analytics/olap-load-guide.png)
 
-This screenshot comes from a Chromium run with explicitly intercepted APIs in
+![Unavailable graph compute with documentation and recheck](docs/assets/analytics/olap-unavailable.png)
+
+These screenshots come from a Chromium run with explicitly intercepted APIs in
 authenticated administrator mode. The corresponding anonymous PD flow, loading
-submission scope and GraphSpace switching were also checked. It demonstrates UI
+submission scope and GraphSpace switching were also checked. They demonstrate UI
 navigation and feedback; it does not establish live loading or algorithm results.

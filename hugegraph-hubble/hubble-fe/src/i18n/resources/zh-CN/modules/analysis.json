@@ -567,7 +567,7 @@
       "vermeer_ready": "通过 Vermeer 执行；图已加载，可运行下方算法",
       "vermeer_load_first": "请先将当前图加载到图计算服务，加载完成后即可运行算法",
       "olap_select_graph": "请先选择 GraphSpace 和图，再进行全图计算",
-      "olap_unconfigured": "图计算尚未配置启动",
+      "olap_unconfigured": "图计算当前不可用",
       "computer_check_failed": "无法确认图计算服务可用性，请检查访问权限和服务状态后重试",
       "retry_compute_status": "重新检查图计算状态",
       "helm_guide": "Helm 一键启动指南",

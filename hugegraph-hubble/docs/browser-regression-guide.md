@@ -177,12 +177,18 @@ For browser verification, exercise both authenticated and anonymous PD modes:
    remain hidden until discovery is confirmed. Retryable worker failures must
    not briefly expose a different execution path before automatic recovery.
 7. Confirm Vermeer is disabled and Computer is unavailable: the canvas shows
-   startup guidance with Vermeer and Helm documentation. HTTP errors and malformed
+   neutral availability guidance with Vermeer and Helm documentation and a manual
+   recheck. A false capability does not establish why a service is unavailable.
+   HTTP errors and malformed
    capabilities instead show a retryable check failure, without claiming missing
    configuration. Switching tabs preserves a confirmed capability; switching
    graph or identity ignores stale responses.
-8. Keep existing results visible when changing tabs; guidance only replaces an
+8. Keep existing results visible when changing tabs; the canvas retains a compact
+   OLAP status, documentation and recovery row. Full guidance only replaces an
    idle, empty canvas. Check help placement and focus at desktop and 768px widths.
+9. Withdraw Vermeer readiness while a graph load is known: the load controls and
+   graph-load polling pause until discovery is confirmed again. Preserve accepted
+   task identity so polling can resume without duplicate submissions.
 
 An intercepted API run validates this navigation and feedback contract. It does
 not validate actual Vermeer readiness, graph loading or algorithm correctness.

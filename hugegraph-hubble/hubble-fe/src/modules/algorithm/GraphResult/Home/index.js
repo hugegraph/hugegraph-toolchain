@@ -366,23 +366,43 @@ const GraphResult = props => {
 
     const showDefaultGuide = queryStatus === STANDBY && _.isEmpty(data.vertices) && _.isEmpty(data.edges)
         && graphData.nodes.length + graphData.edges.length === 0;
-    const canvasRetry = graphSpaceInfo.vermeerError ? graphSpaceInfo.retryVermeer
-        : engine === 'olap' && computerStatus === 'error' ? onRetryComputerCapability : null;
-    const showRecoveryRow = canvasRetry && !(engine === 'olap' && showDefaultGuide);
+    const isOlap = engine === 'olap';
+    const {graphSpace, graph, isVermeer, vermeerReady, vermeerError, retryVermeer, graphStatus} = graphSpaceInfo;
+    const computeStatusKey = !graphSpace || !graph ? 'olap_select_graph'
+        : vermeerError ? 'get_vermeer_failed'
+            : vermeerReady !== true ? 'vermeer_unconfirmed'
+                : isVermeer ? graphStatus === GRAPH_LOAD_STATUS.LOADED ? 'vermeer_ready' : 'vermeer_load_first'
+                    : computerStatus === 'available' ? 'computer_legacy_ready'
+                        : computerStatus === 'unavailable' ? 'olap_unconfigured'
+                            : computerStatus === 'error' ? 'computer_check_failed' : 'computer_checking';
+    const computeStatus = t(computeStatusKey === 'get_vermeer_failed'
+        ? 'analysis.topbar.get_vermeer_failed' : `analysis.algorithm.${computeStatusKey}`);
+    const retryComputeDiscovery = () => {
+        onRetryComputerCapability?.();
+        retryVermeer?.();
+    };
+    const canvasRetry = vermeerError ? retryVermeer
+        : isOlap && vermeerReady === true && !isVermeer && ['error', 'unavailable'].includes(computerStatus)
+            ? computerStatus === 'unavailable' ? retryComputeDiscovery : onRetryComputerCapability : null;
+    const showRecoveryRow = isOlap ? !showDefaultGuide : Boolean(canvasRetry);
+    const showSetupDocs = ['olap_unconfigured', 'vermeer_load_first',
+        'computer_check_failed', 'get_vermeer_failed'].includes(computeStatusKey);
+    const renderComputeDocs = compact => (
+        <Space wrap={!compact}>
+            <a href={VERMEER_DOC} target='_blank' rel='noreferrer'
+                aria-label={t('analysis.algorithm.vermeer_docs')} title={t('analysis.algorithm.vermeer_docs')}>
+                {compact ? 'Vermeer' : t('analysis.algorithm.vermeer_docs')}
+            </a>
+            <a href='https://github.com/apache/hugegraph/blob/master/helm/hugegraph/docs/vermeer.md#install-and-enable'
+                target='_blank' rel='noreferrer'
+                aria-label={t('analysis.algorithm.helm_guide')} title={t('analysis.algorithm.helm_guide')}>
+                {compact ? 'Helm' : t('analysis.algorithm.helm_guide')}
+            </a>
+        </Space>
+    );
 
     const renderMainContent = () => {
         if (showDefaultGuide) {
-            const isOlap = engine === 'olap';
-            const {graphSpace, graph, isVermeer, vermeerReady, vermeerError, retryVermeer, graphStatus} = graphSpaceInfo;
-            const statusKey = !graphSpace || !graph ? 'olap_select_graph'
-                : vermeerError ? 'get_vermeer_failed'
-                    : vermeerReady !== true ? 'vermeer_unconfirmed'
-                        : isVermeer ? graphStatus === GRAPH_LOAD_STATUS.LOADED ? 'vermeer_ready' : 'vermeer_load_first'
-                            : computerStatus === 'available' ? 'computer_legacy_ready'
-                                : computerStatus === 'unavailable' ? 'olap_unconfigured'
-                                    : computerStatus === 'error' ? 'computer_check_failed' : 'computer_checking';
-            const retry = vermeerError ? retryVermeer
-                : computerStatus === 'error' ? onRetryComputerCapability : null;
             return (
                 <Empty
                     className={c.emptyGraph}
@@ -390,20 +410,11 @@ const GraphResult = props => {
                         <div className={c.canvasGuide}>
                             <p>{t(`analysis.algorithm.${isOlap ? 'olap_guide' : 'oltp_guide'}`)}</p>
                             {isOlap && <>
-                                <strong>{t(statusKey === 'get_vermeer_failed'
-                                    ? 'analysis.topbar.get_vermeer_failed' : `analysis.algorithm.${statusKey}`)}</strong>
-                                {retry && <Button type='link' onClick={retry}>
+                                <strong>{computeStatus}</strong>
+                                {canvasRetry && <Button type='link' onClick={canvasRetry}>
                                     {t('analysis.algorithm.retry_compute_status')}
                                 </Button>}
-                                <Space wrap>
-                                    <a href={VERMEER_DOC} target='_blank' rel='noreferrer'>
-                                        {t('analysis.algorithm.vermeer_docs')}
-                                    </a>
-                                    <a href='https://github.com/apache/hugegraph/blob/master/helm/hugegraph/docs/vermeer.md#install-and-enable'
-                                        target='_blank' rel='noreferrer'>
-                                        {t('analysis.algorithm.helm_guide')}
-                                    </a>
-                                </Space>
+                                {renderComputeDocs(false)}
                             </>}
                             {isEmptyGraph && <>
                                 <strong>{t('analysis.algorithm.empty_graph_title')}</strong>
@@ -473,12 +484,13 @@ const GraphResult = props => {
     return (
         <div className={c.graphResult}>
             {showRecoveryRow && <div className={c.recoveryRow}>
-                <Button type='link' size='small'
-                    title={t(graphSpaceInfo.vermeerError
-                        ? 'analysis.topbar.get_vermeer_failed' : 'analysis.algorithm.computer_check_failed')}
+                {isOlap && <span className={c.recoveryStatus} title={computeStatus}>{computeStatus}</span>}
+                {isOlap && showSetupDocs && renderComputeDocs(true)}
+                {canvasRetry && <Button type='link' size='small'
+                    title={computeStatus}
                     onClick={canvasRetry}>
                     {t('analysis.algorithm.retry_compute_status')}
-                </Button>
+                </Button>}
             </div>}
             <GraphMenuBar
                 layout={layoutSettings}

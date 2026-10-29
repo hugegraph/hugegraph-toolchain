@@ -47,10 +47,25 @@
 .recoveryRow {
     display: flex;
     align-items: center;
+    gap: 8px;
+    min-width: 0;
     height: 28px;
     padding: 0 8px;
     border-left: 1px solid #E7E8E9;
     margin-left: -1px;
+
+    > :global(.ant-space),
+    > :global(.ant-btn) {
+        flex-shrink: 0;
+    }
+}
+
+.recoveryStatus {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .recoveryResult {

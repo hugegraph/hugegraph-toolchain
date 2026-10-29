@@ -61,7 +61,8 @@ const TopBar = props => {
         taskId,
     } = useParams();
 
-    const {isVermeer} = useContext(GraphAnalysisContext);
+    const {isVermeer, vermeerReady} = useContext(GraphAnalysisContext);
+    const vermeerAvailable = isVermeer && vermeerReady === true;
     const [currentGraphSpace, setCurrentGraphSpace] = useState(graphSpaceFromParam);
     const [, setGraphSpaceLoading] = useState(false);
     const [graphSpaceError, setGraphSpaceError] = useState(false);
@@ -85,7 +86,7 @@ const TopBar = props => {
     const currentGraphStatus = loadTask === undefined ? metadataGraphStatus : LOADING;
     const showLoadFailureAction = currentGraphStatus === ERROR && !isLoadRequestLoading;
 
-    const showVermeerGraphInfo = isVermeer && !_.isEmpty(currentGraph) &&
+    const showVermeerGraphInfo = vermeerAvailable && !_.isEmpty(currentGraph) &&
                                 Boolean(currentGraphStatus);
 
     const renderLoadTime = () => {
@@ -163,7 +164,7 @@ const TopBar = props => {
                     throw new Error('selected graph unavailable');
                 }
                 graph = graph || {};
-                if (isVermeer && graph.name) {
+                if (vermeerAvailable && graph.name) {
                     const detail = await api.manage.getGraph(
                         currentGraphSpace, graph.name, INLINE_ERROR_CONFIG
                     );
@@ -195,7 +196,7 @@ const TopBar = props => {
                 }
             }
         },
-        [currentGraphSpace, graphFromParam, isVermeer]
+        [currentGraphSpace, graphFromParam, vermeerAvailable]
     );
 
     useEffect(() => () => {
@@ -210,7 +211,7 @@ const TopBar = props => {
     }, [graphKey]);
 
     useEffect(() => {
-        if (!isVermeer || loadTask !== undefined || currentGraphStatus !== LOADING) {
+        if (!vermeerAvailable || loadTask !== undefined || currentGraphStatus !== LOADING) {
             return;
         }
         let active = true;
@@ -227,10 +228,10 @@ const TopBar = props => {
             clearTimeout(timer);
             graphRequest.current = null;
         };
-    }, [currentGraphStatus, getGraphs, isVermeer, loadTask]);
+    }, [currentGraphStatus, getGraphs, vermeerAvailable, loadTask]);
 
     useEffect(() => {
-        if (loadTask === undefined) {
+        if (!vermeerAvailable || loadTask === undefined) {
             return;
         }
         let active = true;
@@ -273,7 +274,7 @@ const TopBar = props => {
             active = false;
             clearTimeout(timer);
         };
-    }, [currentGraph.name, currentGraphSpace, getGraphs, graphKey, loadTask]);
+    }, [currentGraph.name, currentGraphSpace, getGraphs, graphKey, loadTask, vermeerAvailable]);
 
     useEffect(
         () => {
@@ -368,7 +369,7 @@ const TopBar = props => {
     }, [navigate]);
 
     const onLoadBtnClick = useCallback(async () => {
-        if (pendingLoadRequests.current.has(graphKey) || loadTask !== undefined) {
+        if (!vermeerAvailable || pendingLoadRequests.current.has(graphKey) || loadTask !== undefined) {
             return;
         }
         const params = {
@@ -422,6 +423,7 @@ const TopBar = props => {
         getGraphs,
         graphKey,
         loadTask,
+        vermeerAvailable,
         t,
     ]);
 

@@ -567,7 +567,7 @@
       "vermeer_ready": "Runs on Vermeer. The graph is loaded and ready for the algorithms below",
       "vermeer_load_first": "Load the current graph for graph compute first. Algorithms are available once loading completes",
       "olap_select_graph": "Select a GraphSpace and graph before graph compute",
-      "olap_unconfigured": "Graph compute has not been configured and started",
+      "olap_unconfigured": "Graph compute is currently unavailable",
       "computer_check_failed": "Unable to check graph compute availability. Check access and service status, then retry",
       "retry_compute_status": "Retry graph compute status",
       "helm_guide": "Helm one-command startup guide",

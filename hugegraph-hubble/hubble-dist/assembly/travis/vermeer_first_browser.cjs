@@ -175,7 +175,7 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
  });
  await check('unavailable Computer shows canvas setup guidance without an executable compatibility entry',async()=>{
   state.computerAvailable=false; await goAlgorithms(); await searchFor('PageRank');
-  await page.getByText('图计算尚未配置启动',{exact:true}).waitFor();
+  await page.getByText('图计算当前不可用',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).count(),0);
   assert(await page.getByRole('link',{name:'Vermeer 图计算指南',exact:true}).isVisible());
   assert(await page.getByRole('link',{name:'Helm 一键启动指南',exact:true}).isVisible());
