@@ -143,17 +143,39 @@ const VermeerNode = ({node, cluster, onOpen}) => {
     );
 };
 
+const observedTierCount = (cluster, role, members) => {
+    if (vermeerAvailable(cluster)) {
+        return members.length;
+    }
+    if (cluster?.stale) {
+        if (members.length > 0) {
+            return members.length;
+        }
+        if (role === 'WORKER' && Number.isInteger(cluster.registered_workers)
+            && cluster.registered_workers >= 0) {
+            return cluster.registered_workers;
+        }
+    }
+    return null;
+};
+
 const VermeerTopology = ({cluster, nodes, onOpen}) => {
     const {t} = useTranslation();
     return (
         <div className='operations-vermeer-topology' aria-label={t('operations.vermeer_topology')}>
             {['MASTER', 'WORKER'].map(role => {
                 const members = nodes.filter(node => node.role === role);
+                const count = observedTierCount(cluster, role, members);
                 return (
                     <section className='operations-vermeer-tier' key={role}>
                         <div className='operations-tier-label'>
                             <strong>{t('operations.vermeer_tier_' + role.toLowerCase())}</strong>
-                            <span>{t('operations.node_count', {count: members.length})}</span>
+                            <span>
+                                {count === null ? t('operations.vermeer_node_count_unknown')
+                                    : t('operations.node_count', {count})}
+                                {cluster?.stale && count !== null
+                                    && ' · ' + t('operations.vermeer_historical_snapshot')}
+                            </span>
                         </div>
                         <div className='operations-vermeer-branch' data-role={role} data-node-count={members.length}>
                             {members.length ? members.map(node => (
@@ -164,7 +186,9 @@ const VermeerTopology = ({cluster, nodes, onOpen}) => {
                                     onOpen={onOpen}
                                 />
                             )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description={t('operations.vermeer_no_' + role.toLowerCase())} />}
+                                description={role === 'WORKER' && count !== 0
+                                    ? t('operations.vermeer_worker_info_unavailable')
+                                    : t('operations.vermeer_no_' + role.toLowerCase())} />}
                         </div>
                     </section>
                 );
@@ -295,6 +319,7 @@ const VermeerOverview = ({cluster, mainStatus, view, selectedNode, fullDetail, o
     const nodes = vermeerNodes(cluster);
     const selected = vermeerSelectedNode(nodes, selectedNode);
     const available = vermeerAvailable(cluster);
+    const listCountKnown = available || Boolean(cluster?.stale && nodes.length > 0);
     const columns = [
         {title: t('operations.node'), key: 'name', render: (_, node) => (
             <Button type='link' className='operations-node-name-link'
@@ -361,7 +386,11 @@ const VermeerOverview = ({cluster, mainStatus, view, selectedNode, fullDetail, o
                         </div>
                     )}
                     <div className='operations-vermeer-node-list'>
-                        <h3>{t('operations.node_list_view')} ({nodes.length})</h3>
+                        <h3>{t('operations.node_list_view')} ({listCountKnown ? nodes.length
+                            : t('operations.vermeer_node_count_unknown')})
+                            {cluster?.stale && listCountKnown
+                                && ' · ' + t('operations.vermeer_historical_snapshot')}
+                        </h3>
                         <Table rowKey={vermeerNodeId} dataSource={nodes} columns={columns}
                             pagination={nodes.length > 10 ? {pageSize: 10} : false} size='small'
                             scroll={{x: 800}}

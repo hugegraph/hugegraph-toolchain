@@ -187,6 +187,58 @@ test('shows all same-tier Workers without promoting them to additional hierarchy
     expect(container.querySelectorAll('.operations-vermeer-tier')).toHaveLength(2);
 });
 
+test('unknown topology does not claim zero nodes or no registered Workers', async () => {
+    const data = snapshot();
+    data.vermeer = {...data.vermeer, status: 'UNKNOWN', availability: 'UNAVAILABLE',
+        reason: 'vermeer_credentials_unavailable', registered_workers: null, ready_workers: null,
+        master: null, workers: []};
+    getOverview.mockResolvedValue(data);
+    const {container} = renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const tiers = container.querySelectorAll('.operations-vermeer-tier');
+    for (const tier of tiers) {
+        expect(within(tier).queryByText(/^0 nodes?$/)).not.toBeInTheDocument();
+        expect(within(tier).getByText('Count unavailable')).toBeInTheDocument();
+    }
+    expect(within(tiers[1]).queryByText('No registered Workers')).not.toBeInTheDocument();
+    expect(within(tiers[1]).getByText('Worker information unavailable')).toBeInTheDocument();
+    const listHeading = container.querySelector('.operations-vermeer-node-list h3');
+    expect(listHeading).not.toHaveTextContent('Node list (0)');
+    expect(listHeading).toHaveTextContent('Count unavailable');
+});
+
+test('a confirmed empty Worker registry still shows a real zero and registration empty state', async () => {
+    const data = snapshot(0);
+    data.status = 'DEGRADED';
+    data.reason = 'vermeer_attention';
+    data.vermeer.status = 'DEGRADED';
+    data.vermeer.reason = 'no_workers';
+    getOverview.mockResolvedValue(data);
+    const {container} = renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const tiers = container.querySelectorAll('.operations-vermeer-tier');
+    expect(within(tiers[1]).getByText('0 nodes')).toBeInTheDocument();
+    expect(within(tiers[1]).getByText('No registered Workers')).toBeInTheDocument();
+    expect(container.querySelector('.operations-vermeer-node-list h3')).toHaveTextContent('Node list (1)');
+});
+
+test.each([0, 2])('stale snapshots retain known historical counts for %s Workers', async count => {
+    const data = snapshot(count);
+    data.vermeer = {...data.vermeer, availability: 'UNAVAILABLE', status: 'UNKNOWN', stale: true,
+        last_success_at: 1000, ready_workers: null};
+    getOverview.mockResolvedValue(data);
+    const {container} = renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const tiers = container.querySelectorAll('.operations-vermeer-tier');
+    expect(within(tiers[0]).getByText('1 node · Historical snapshot')).toBeInTheDocument();
+    expect(within(tiers[1]).getByText(count + ' nodes · Historical snapshot')).toBeInTheDocument();
+    expect(container.querySelector('.operations-vermeer-node-list h3'))
+        .toHaveTextContent('Node list (' + (count + 1) + ') · Historical snapshot');
+    if (count === 0) {
+        expect(within(tiers[1]).getByText('No registered Workers')).toBeInTheDocument();
+    }
+});
+
 test('explains Master readiness with its own checks rather than Worker channels', async () => {
     const data = snapshot();
     data.vermeer.master.checks = {http_ready: true, initialized: true, service_online: true};

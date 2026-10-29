@@ -35,6 +35,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,15 +70,19 @@ public class VermeerOperationsService {
     private final boolean enabled;
     private final String address;
     private final String tokenFile;
-    private final long ttlMillis;
+    private final long ttlNanos;
     private final OperationsHttpClient http;
     private final ObjectMapper mapper;
     private final Clock clock;
-    private final Object credentialLock = new Object();
+    private final LongSupplier ticker;
+    private final VermeerTokenReader tokenReader;
+    private final int tokenReadTimeoutMillis;
+    private long appliedCredentialRead;
+    private boolean credentialReadSucceeded;
     private String credentialFingerprint;
     private Map<String, Object> cached;
     private Map<String, Object> lastSuccess;
-    private long cachedAt;
+    private long cachedAtNanos;
     private CompletableFuture<Map<String, Object>> inFlight;
 
     @Autowired
@@ -89,19 +95,32 @@ public class VermeerOperationsService {
                      config.get(HubbleOptions.OPERATIONS_CONNECT_TIMEOUT),
                      config.get(HubbleOptions.OPERATIONS_READ_TIMEOUT),
                      config.get(HubbleOptions.OPERATIONS_MAX_RESPONSE_BYTES)),
-             mapper, Clock.systemUTC());
+             mapper, Clock.systemUTC(), System::nanoTime,
+             config.get(HubbleOptions.OPERATIONS_READ_TIMEOUT), null);
     }
 
     VermeerOperationsService(boolean enabled, String address, String tokenFile,
                              int ttlSeconds, OperationsHttpClient http,
                              ObjectMapper mapper, Clock clock) {
+        this(enabled, address, tokenFile, ttlSeconds, http, mapper, clock,
+             System::nanoTime, 2500, null);
+    }
+
+    VermeerOperationsService(boolean enabled, String address, String tokenFile,
+                             int ttlSeconds, OperationsHttpClient http,
+                             ObjectMapper mapper, Clock clock,
+                             LongSupplier ticker, int tokenReadTimeoutMillis,
+                             VermeerTokenReader.Reader reader) {
         this.enabled = enabled;
         this.address = address == null ? "" : address.trim();
         this.tokenFile = tokenFile == null ? "" : tokenFile.trim();
-        this.ttlMillis = ttlSeconds * 1000L;
+        this.ttlNanos = TimeUnit.SECONDS.toNanos(ttlSeconds);
         this.http = http;
         this.mapper = mapper;
         this.clock = clock;
+        this.ticker = ticker;
+        this.tokenReadTimeoutMillis = tokenReadTimeoutMillis;
+        this.tokenReader = new VermeerTokenReader(reader == null ? this::readToken : reader);
     }
 
     public Map<String, Object> enrich(Map<String, Object> overview,
@@ -123,43 +142,58 @@ public class VermeerOperationsService {
     }
 
     private Map<String, Object> snapshot(boolean refresh) {
-        long now = this.clock.millis();
         if (!this.enabled) {
-            return this.empty("UNSUPPORTED", "vermeer_disabled", now);
+            return this.empty("UNSUPPORTED", "vermeer_disabled", this.clock.millis());
         }
+        VermeerTokenReader.Read credentials = this.tokenFile.isEmpty() ?
+                new VermeerTokenReader.Read(0L, "") :
+                this.tokenReader.read(this.tokenReadTimeoutMillis);
+        long now = this.clock.millis();
         String token;
         String fingerprint;
         CompletableFuture<Map<String, Object>> future;
         Map<String, Object> previousSuccess = null;
         boolean collect = false;
-        synchronized (this.credentialLock) {
-            try {
-                token = this.readToken();
-            } catch (IOException | IllegalArgumentException e) {
-                synchronized (this) {
+        synchronized (this) {
+            if (credentials.token() == null) {
+                // A late failure must not erase a newer accepted credential read.
+                if (credentials.sequence() > this.appliedCredentialRead ||
+                    credentials.sequence() == this.appliedCredentialRead &&
+                    !this.credentialReadSucceeded) {
                     this.clearLocked();
+                    this.appliedCredentialRead = credentials.sequence();
+                    this.credentialReadSucceeded = false;
                 }
                 return this.empty("UNAVAILABLE",
                                   "vermeer_credentials_unavailable", now);
             }
+            token = credentials.token();
             fingerprint = fingerprint(token);
-            synchronized (this) {
-                if (!Objects.equals(fingerprint, this.credentialFingerprint)) {
-                    this.clearLocked();
-                    this.credentialFingerprint = fingerprint;
+            if (credentials.sequence() < this.appliedCredentialRead) {
+                if (!this.credentialReadSucceeded ||
+                    !Objects.equals(fingerprint, this.credentialFingerprint)) {
+                    return this.empty("UNAVAILABLE",
+                                      "vermeer_credentials_unavailable", now);
                 }
-                if (!refresh && this.cached != null &&
-                    now - this.cachedAt < this.ttlMillis) {
-                    return this.cached;
-                }
-                if (this.inFlight != null) {
-                    future = this.inFlight;
-                } else {
-                    future = new CompletableFuture<>();
-                    this.inFlight = future;
-                    previousSuccess = this.lastSuccess;
-                    collect = true;
-                }
+            } else {
+                this.appliedCredentialRead = credentials.sequence();
+                this.credentialReadSucceeded = true;
+            }
+            if (!Objects.equals(fingerprint, this.credentialFingerprint)) {
+                this.clearLocked();
+                this.credentialFingerprint = fingerprint;
+            }
+            if (!refresh && this.cached != null &&
+                this.ticker.getAsLong() - this.cachedAtNanos < this.ttlNanos) {
+                return this.cached;
+            }
+            if (this.inFlight != null) {
+                future = this.inFlight;
+            } else {
+                future = new CompletableFuture<>();
+                this.inFlight = future;
+                previousSuccess = this.lastSuccess;
+                collect = true;
             }
         }
         if (!collect) {
@@ -187,7 +221,7 @@ public class VermeerOperationsService {
                     this.lastSuccess = null;
                 }
                 this.cached = result;
-                this.cachedAt = this.clock.millis();
+                this.cachedAtNanos = this.ticker.getAsLong();
                 this.inFlight = null;
             }
         }
@@ -287,7 +321,7 @@ public class VermeerOperationsService {
         this.cached = null;
         this.lastSuccess = null;
         this.credentialFingerprint = null;
-        this.cachedAt = 0L;
+        this.cachedAtNanos = 0L;
         this.inFlight = null;
     }
 

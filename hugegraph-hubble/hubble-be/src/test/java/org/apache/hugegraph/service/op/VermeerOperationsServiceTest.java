@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -198,8 +199,7 @@ public class VermeerOperationsServiceTest {
         for (int status : List.of(401, 403, 404, 405)) {
             StubHttp http = new StubHttp();
             TestClock clock = new TestClock();
-            VermeerOperationsService service = new VermeerOperationsService(
-                    true, "http://vermeer.internal:6688", "", 5, http, MAPPER, clock);
+            VermeerOperationsService service = service(http, clock);
             service.enrich(main("UP"), ADMIN, false);
             http.failure = new UpstreamRequestException("upstream_http_status_" + status);
             Map<?, ?> denied = cluster(service.enrich(main("UP"), ADMIN, true));
@@ -208,17 +208,17 @@ public class VermeerOperationsServiceTest {
             Assert.assertNull(denied.get("last_success_at"));
 
             service.enrich(main("UP"), ADMIN, false);
-            clock.now += 4999;
+            clock.elapsedMillis += 4999;
             service.enrich(main("UP"), ADMIN, false);
             Assert.assertEquals(2, http.requests);
-            clock.now++;
+            clock.elapsedMillis++;
             service.enrich(main("UP"), ADMIN, false);
             Assert.assertEquals(3, http.requests);
             service.enrich(main("UP"), ADMIN, true);
             Assert.assertEquals(4, http.requests);
 
             http.failure = null;
-            clock.now += 5000;
+            clock.elapsedMillis += 5000;
             Assert.assertEquals("UP", cluster(service.enrich(main("UP"), ADMIN, false)).get("status"));
             Assert.assertEquals(5, http.requests);
         }
@@ -370,16 +370,49 @@ public class VermeerOperationsServiceTest {
     public void testCacheRefreshAndExpiration() {
         StubHttp http = new StubHttp();
         TestClock clock = new TestClock();
-        VermeerOperationsService service = new VermeerOperationsService(
-                true, "http://vermeer.internal:6688", "", 5, http, MAPPER, clock);
+        VermeerOperationsService service = service(http, clock);
         service.enrich(main("UP"), ADMIN, false);
         service.enrich(main("UP"), ADMIN, false);
         Assert.assertEquals(1, http.requests);
         service.enrich(main("UP"), ADMIN, true);
         Assert.assertEquals(2, http.requests);
-        clock.now += 5001;
+        clock.elapsedMillis += 5001;
         service.enrich(main("UP"), ADMIN, false);
         Assert.assertEquals(3, http.requests);
+    }
+
+    @Test
+    public void testWallClockRollbackDoesNotExtendCacheLifetime() {
+        StubHttp http = new StubHttp();
+        TestClock clock = new TestClock();
+        VermeerOperationsService service = service(http, clock);
+        service.enrich(main("UP"), ADMIN, false);
+
+        clock.now -= TimeUnit.HOURS.toMillis(1);
+        clock.elapsedMillis += 5000;
+        http.failure = new UpstreamRequestException("upstream_timeout");
+        Map<?, ?> expired = cluster(service.enrich(main("UP"), ADMIN, false));
+
+        Assert.assertEquals(2, http.requests);
+        Assert.assertEquals("UNKNOWN", expired.get("status"));
+        Assert.assertEquals(clock.now, expired.get("observed_at"));
+    }
+
+    @Test
+    public void testWallClockForwardDoesNotExpireCacheEarly() {
+        StubHttp http = new StubHttp();
+        TestClock clock = new TestClock();
+        VermeerOperationsService service = service(http, clock);
+        service.enrich(main("UP"), ADMIN, false);
+
+        clock.now += TimeUnit.HOURS.toMillis(1);
+        clock.elapsedMillis += 4999;
+        service.enrich(main("UP"), ADMIN, false);
+        Assert.assertEquals(1, http.requests);
+
+        clock.elapsedMillis++;
+        service.enrich(main("UP"), ADMIN, false);
+        Assert.assertEquals(2, http.requests);
     }
 
     @Test
@@ -410,8 +443,14 @@ public class VermeerOperationsServiceTest {
     }
 
     private static VermeerOperationsService service(StubHttp http) {
+        return service(http, new TestClock());
+    }
+
+    private static VermeerOperationsService service(StubHttp http, TestClock clock) {
         return new VermeerOperationsService(true, "http://vermeer.internal:6688", "",
-                                            5, http, MAPPER, new TestClock());
+                                            5, http, MAPPER, clock,
+                                            () -> TimeUnit.MILLISECONDS.toNanos(clock.elapsedMillis),
+                                            2500, null);
     }
 
     private static Map<String, Object> main(String status) {
@@ -491,6 +530,7 @@ public class VermeerOperationsServiceTest {
     private static final class TestClock extends Clock {
 
         private long now = 1000L;
+        private long elapsedMillis;
 
         @Override
         public ZoneId getZone() {

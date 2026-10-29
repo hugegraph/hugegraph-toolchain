@@ -71,6 +71,15 @@ can return a fresh cached compute snapshot without waiting for that refresh.
 Credential rotation starts a new generation; an older in-flight response cannot
 overwrite the new credential's cache.
 
+Each overview request still verifies the configured credential before using the
+compute cache. Concurrent file reads share one bounded background read outside
+the cache lock, with a caller wait limited by `operations.read_timeout_ms`.
+An unreadable or stalled credential file produces `UNKNOWN` with reason
+`vermeer_credentials_unavailable`, without cached compute nodes or resources.
+A timed-out read cannot publish a late token; retries do not create additional
+readers while the underlying file operation remains blocked. Cache expiry uses
+monotonic elapsed time, independently of wall-clock adjustments.
+
 `GET /api/v1.3/operations/overview` retains its existing `nodes`, `facts` and
 `sources` for the main cluster and adds `vermeer`, `main_cluster_status` and
 `main_cluster_reason`. The separate Vermeer object contains `configured`,
@@ -86,6 +95,7 @@ according to the caller's existing Operations capabilities.
 | Registered Worker has an incomplete connection or task stream | Worker not ready, with the failing check |
 | No registered Worker | Compute service needs attention |
 | Older Master has no cluster API | Readiness unavailable; upgrade the paired image |
+| Monitoring credential file is unreadable or times out | Readiness and node counts unknown; no cached compute details |
 | Master request fails after a successful observation | Current state unknown; previous evidence marked stale |
 | CPU/RSS sampling fails while task streams remain ready | Worker remains ready; resources unavailable |
 | Vermeer is disabled | No main-overview entry; direct links show Not deployed |
@@ -98,7 +108,10 @@ verdict.
 
 Worker counts mean **ready / registered**, not expected Helm replicas. A Worker
 removed from the registration set is not invented as an offline historical
-node. CPU is process CPU time divided by the sampling window, expressed in
+node. An unavailable registry is not an observed zero: the topology and node
+list show unavailable counts, while a successfully observed empty registry
+retains its zero-Worker explanation. Stale counts are labeled historical.
+CPU is process CPU time divided by the sampling window, expressed in
 cores; memory is process RSS, displayed in binary units. The compute information
 panel sums each valid measurement from fresh samples, including partial
 samples, and shows the collected-node coverage separately for CPU and RSS.
@@ -113,6 +126,15 @@ node details all show the last successful observation time. The failure reason
 and stale marker make clear that current readiness is not confirmed.
 Without a successful observation, the time remains unavailable; a failed probe
 does not create a successful observation timestamp.
+
+### Credential file unavailable
+
+![Unknown compute node counts when the monitoring credential cannot be read](images/showcase/operations-vermeer-credentials-unavailable.png)
+
+Actual Chromium capture with controlled API test data: unreadable credentials
+clear earlier compute details, and unavailable counts do not imply zero Workers.
+The main-cluster topology and the return action remain available. This image
+does not establish live authentication or Helm deployment acceptance.
 
 ## Paired rollout
 

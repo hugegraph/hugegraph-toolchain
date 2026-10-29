@@ -1660,7 +1660,10 @@
     "vermeer_launch_time": "Started at",
     "vermeer_node_information": "Node information",
     "vermeer_reason_vermeer_snapshot_refresh_failed": "Cluster refresh failed. The last observed compute snapshot is retained.",
-    "vermeer_reason_metrics_warming_up": "Process metrics are warming up. Wait at least one second, then refresh to collect the second sample."
+    "vermeer_reason_metrics_warming_up": "Process metrics are warming up. Wait at least one second, then refresh to collect the second sample.",
+    "vermeer_node_count_unknown": "Count unavailable",
+    "vermeer_worker_info_unavailable": "Worker information unavailable",
+    "vermeer_historical_snapshot": "Historical snapshot"
   },
   "navigation_page": {
     "title": "Navigation",
