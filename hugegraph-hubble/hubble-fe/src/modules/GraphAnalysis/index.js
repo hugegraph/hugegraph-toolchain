@@ -169,6 +169,7 @@ const GraphAnalysisHome = props => {
         clearTimeout(vermeerRetry.current);
         const request = Symbol('get-vermeer');
         vermeerRequest.current = request;
+        setVermeerReady(false);
         setVermeerError(false);
         try {
             const response = await api.auth.getVermeer(INLINE_ERROR_CONFIG);
@@ -179,12 +180,15 @@ const GraphAnalysisHome = props => {
             if (status !== 200) {
                 throw new Error('vermeer capability unavailable');
             }
-            const {enable} = data || {};
+            if (typeof data?.enable !== 'boolean') {
+                throw new Error('invalid Vermeer capability');
+            }
+            const {enable} = data;
             setContext(context => ({
                 ...context,
-                isVermeer: Boolean(enable),
+                isVermeer: enable,
             }));
-            setVermeerReady(true);
+            setVermeerReady(!data.retryable && !data.error);
             setVermeerError(Boolean(data?.error));
             if (!enable && data.retryable) {
                 vermeerRetry.current = setTimeout(refreshVermeer, 5000);
@@ -238,17 +242,14 @@ const GraphAnalysisHome = props => {
     };
 
     return (
-        <GraphAnalysisContext.Provider value={{...context, vermeerReady}}>
+        <GraphAnalysisContext.Provider value={{...context, vermeerReady, vermeerError, retryVermeer: getVermeer}}>
             {moduleName !== GREMLIN && <PageHeader
                 className='graphAnalysisHeader'
                 onBack={false}
                 title={t(pageHeaderNameKeys[moduleName])}
-                subTitle={moduleName === ALGORITHMS
-                    ? t('analysis.algorithm.guide')
-                    : undefined}
                 extra={topBar}
             />}
-            {vermeerError && (
+            {vermeerError && moduleName !== ALGORITHMS && (
                 <Alert
                     type='error'
                     showIcon

@@ -104,12 +104,11 @@ test.each([0, '0'])('lets the server validate Louvain after an approximate zero 
     expect(screen.getByTestId('olap-readiness')).toHaveTextContent('true');
 });
 
-test('promotes Vermeer documentation and keeps Computer documentation in its compatibility entry', () => {
+test('keeps generic guides and documentation out of the compact sidebar', () => {
     renderForm({vertexCount: 1, edgeCount: 1});
-
-    expect(screen.getByRole('link', {name: 'analysis.algorithm.vermeer_docs'}))
-        .toHaveAttribute('href', 'https://github.com/apache/hugegraph-computer/tree/master/vermeer');
-    expect(screen.queryByText('analysis.algorithm.computer_docs')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.traverser_docs'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'analysis.algorithm.reset_parameters'})).toBeVisible();
 });
 
 
@@ -124,15 +123,15 @@ test('starts with OLTP and lets the user switch to a separate OLAP catalog', () 
     render(<Home />);
     expect(screen.getByText('OLTP forms')).toBeVisible();
     expect(screen.getByTestId('olap-readiness')).not.toBeVisible();
-    expect(screen.getByText('analysis.algorithm.oltp_guide')).toBeVisible();
-    expect(screen.getByRole('link', {name: 'analysis.algorithm.traverser_docs'})).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.oltp_guide')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.traverser_docs'})).not.toBeInTheDocument();
     expect(screen.queryByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', {name: 'analysis.algorithm.olap_tab'}));
     expect(screen.getByText('OLTP forms')).not.toBeVisible();
     expect(screen.getByTestId('olap-readiness')).toBeVisible();
-    expect(screen.getByText('analysis.algorithm.olap_guide')).toBeVisible();
-    expect(screen.getByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.vermeer_docs'})).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', {name: 'analysis.algorithm.oltp_tab'}));
     expect(screen.getByText('OLTP forms')).toBeVisible();

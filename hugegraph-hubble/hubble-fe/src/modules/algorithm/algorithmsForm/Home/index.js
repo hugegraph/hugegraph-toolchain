@@ -29,7 +29,6 @@ import c from './index.module.scss';
 import {useTranslation} from 'react-i18next';
 import {clearPersistedAlgorithmForms} from '../algorithmFormPersistence';
 import {isKnownZeroCount} from '../../../../utils/graphStatistics';
-import {VERMEER_DOC} from '../algorithmDocs';
 
 const AlgorithmFormHome = props => {
     const {
@@ -40,6 +39,7 @@ const AlgorithmFormHome = props => {
         graphNums,
         graphSpace,
         graph,
+        computerStatus,
         engine = 'oltp',
         onEngineChange,
     } =  props;
@@ -68,22 +68,8 @@ const AlgorithmFormHome = props => {
                     {key: 'olap', label: t('analysis.algorithm.olap_tab')},
                 ]}
             />
-            <p className={c.engineGuide}>{t(`analysis.algorithm.${engine}_guide`)}</p>
             <AlgorithmSearch onSearch={handleSearch} />
             <Space className={c.docs} wrap size={12}>
-                {engine === 'oltp' ? <a
-                    href="https://hugegraph.apache.org/docs/clients/restful-api/traverser/"
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    {t('analysis.algorithm.traverser_docs')}
-                </a> : <a
-                    href={VERMEER_DOC}
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    {t('analysis.algorithm.vermeer_docs')}
-                </a>}
                 <Button type='link' size='small' onClick={resetParameters}>
                     {t('analysis.algorithm.reset_parameters')}
                 </Button>
@@ -107,6 +93,7 @@ const AlgorithmFormHome = props => {
                     canRunLouvain={canRunLouvain}
                     graphSpace={graphSpace}
                     graph={graph}
+                    computerStatus={computerStatus}
                 />
             </div>
         </div>

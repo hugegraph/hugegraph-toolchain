@@ -566,6 +566,12 @@
       "vermeer_olap": "Vermeer · OLAP 全图计算",
       "vermeer_ready": "通过 Vermeer 执行；图已加载，可运行下方算法",
       "vermeer_load_first": "请先将当前图加载到图计算服务，加载完成后即可运行算法",
+      "olap_select_graph": "请先选择 GraphSpace 和图，再进行全图计算",
+      "olap_unconfigured": "图计算尚未配置启动",
+      "computer_check_failed": "无法确认图计算服务可用性，请检查访问权限和服务状态后重试",
+      "retry_compute_status": "重新检查图计算状态",
+      "helm_guide": "Helm 一键启动指南",
+      "vermeer_unconfirmed": "图计算服务状态尚未确认",
       "vermeer_unavailable": "当前会话暂时无法使用 Vermeer；如使用 Computer，请展开下方兼容入口",
       "vermeer_no_match": "当前 Hubble 的 Vermeer 接口未提供匹配的算法",
       "computer_legacy_entry": "Computer 兼容入口（按需展开）",
@@ -972,8 +978,8 @@
           "select_direction": "顶点向外发散的方向"
         }
       },
-      "oltp_tab": "OLTP 交互探索",
-      "olap_tab": "OLAP 图计算",
+      "oltp_tab": "OLTP 子图查询",
+      "olap_tab": "OLAP 全图计算",
       "oltp_guide": "直接查询当前图，适合邻居、路径等局部交互探索",
       "olap_guide": "在此浏览全图算法。使用 Vermeer 前需先加载当前图；Computer 兼容入口使用独立的执行路径"
     },

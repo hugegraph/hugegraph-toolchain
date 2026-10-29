@@ -151,12 +151,14 @@ transient failures remain errors. Unexpected result-read failures show a single
 inline reason, task scope and retry guidance. They do not change the computation
 status to failed. Result state resets when the signed-in identity changes.
 
-## Switch between OLTP exploration and OLAP graph compute
+## Switch between OLTP subgraph queries and OLAP whole-graph compute
 
 Open `algorithms/<graphspace>/<graph>`. The initial OLTP tab contains only
 interactive traversers and links to their REST API documentation. Select the
 OLAP tab to browse Vermeer whole-graph algorithms and their documentation.
-Search and parameter reset remain available within the selected catalog.
+General instructions and setup links belong to the idle canvas; the sidebar
+retains search, algorithm entries and parameter reset. Help sits beside each
+algorithm name and supports both hover and keyboard focus.
 
 The OLAP tab owns the graph-loading entry. An unloaded graph explains that it
 must be loaded before computation; hover over **Load for graph compute** to
@@ -171,6 +173,16 @@ For browser verification, exercise both authenticated and anonymous PD modes:
 3. Submit one load and verify its graphspace/graph scope and pending state.
 4. Return to OLTP and verify that the loading button is absent.
 5. Switch GraphSpace and verify the selected graph and account visibility.
+6. Delay or fail Vermeer discovery: OLTP remains usable, while Computer entries
+   remain hidden until discovery is confirmed. Retryable worker failures must
+   not briefly expose a different execution path before automatic recovery.
+7. Confirm Vermeer is disabled and Computer is unavailable: the canvas shows
+   startup guidance with Vermeer and Helm documentation. HTTP errors and malformed
+   capabilities instead show a retryable check failure, without claiming missing
+   configuration. Switching tabs preserves a confirmed capability; switching
+   graph or identity ignores stale responses.
+8. Keep existing results visible when changing tabs; guidance only replaces an
+   idle, empty canvas. Check help placement and focus at desktop and 768px widths.
 
 An intercepted API run validates this navigation and feedback contract. It does
 not validate actual Vermeer readiness, graph loading or algorithm correctness.

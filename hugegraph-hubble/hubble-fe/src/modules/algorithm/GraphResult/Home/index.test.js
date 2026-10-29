@@ -20,7 +20,7 @@ import {act, fireEvent, render, screen} from '@testing-library/react';
 import GraphResult from './index';
 import {USER_CHANGE_EVENT} from '../../../../utils/user';
 import GraphAnalysisContext from '../../../Context';
-import {GRAPH_STATUS, GRAPH_RENDER_MODE, PANEL_TYPE} from '../../../../utils/constants';
+import {GRAPH_STATUS, GRAPH_LOAD_STATUS, GRAPH_RENDER_MODE, PANEL_TYPE} from '../../../../utils/constants';
 
 const mockFlushLayout = jest.fn();
 const mockCancelLayout = jest.fn();
@@ -350,3 +350,111 @@ test.each(['node', 'edge'].flatMap(kind => ['graph', 'account'].map(change => [k
         expect(drawer.mock.lastCall[0].open).toBe(false);
     }
 );
+
+const renderGuide = (props = {}, context = {}) => render(
+    <GraphAnalysisContext.Provider value={{graphSpace: 'DEFAULT', graph: 'g',
+        isVermeer: false, vermeerReady: true, ...context}}>
+        <GraphResult data={{}} engine='olap' queryStatus={GRAPH_STATUS.STANDBY}
+            panelType={PANEL_TYPE.CLOSED} graphRenderMode={GRAPH_RENDER_MODE.CANVAS2D}
+            updatePanelType={jest.fn()} {...props} />
+    </GraphAnalysisContext.Provider>
+);
+
+test('shows unconfigured graph compute and verified startup documentation in the default canvas', () => {
+    renderGuide({computerStatus: 'unavailable'});
+    expect(screen.getByText('analysis.algorithm.olap_guide')).toBeVisible();
+    expect(screen.getByText('analysis.algorithm.olap_unconfigured')).toBeVisible();
+    expect(screen.getByRole('link', {name: 'analysis.algorithm.vermeer_docs'}))
+        .toHaveAttribute('href', 'https://github.com/apache/hugegraph-computer/tree/master/vermeer');
+    expect(screen.getByRole('link', {name: 'analysis.algorithm.helm_guide'}))
+        .toHaveAttribute('href', 'https://github.com/apache/hugegraph/blob/master/helm/hugegraph/docs/vermeer.md#install-and-enable');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test.each([
+    ['checking', {}, 'computer_checking'],
+    ['error', {}, 'computer_check_failed'],
+    ['available', {}, 'computer_legacy_ready'],
+    ['unavailable', {vermeerReady: false}, 'vermeer_unconfirmed'],
+    ['unavailable', {graph: null}, 'olap_select_graph'],
+    ['unavailable', {isVermeer: true, graphStatus: 'created'}, 'vermeer_load_first'],
+    ['unavailable', {isVermeer: true, graphStatus: GRAPH_LOAD_STATUS.LOADED}, 'vermeer_ready'],
+])('shows %s compute state %j as %s without claiming it is unconfigured', (status, context, key) => {
+    renderGuide({computerStatus: status}, context);
+    expect(screen.getByText(`analysis.algorithm.${key}`)).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.olap_unconfigured')).not.toBeInTheDocument();
+});
+
+test('retries a failed Computer check from the canvas without a modal', () => {
+    const retry = jest.fn();
+    renderGuide({computerStatus: 'error', onRetryComputerCapability: retry});
+    fireEvent.click(screen.getByRole('button', {name: 'analysis.algorithm.retry_compute_status'}));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('retries an uncertain Vermeer status using the existing parent action', () => {
+    const retryVermeer = jest.fn();
+    renderGuide({}, {vermeerReady: false, vermeerError: true, retryVermeer});
+    expect(screen.getByText('analysis.topbar.get_vermeer_failed')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', {name: 'analysis.algorithm.retry_compute_status'}));
+    expect(retryVermeer).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', {name: 'analysis.algorithm.retry_compute_status'}))
+        .not.toHaveAttribute('title');
+});
+
+test.each([GRAPH_STATUS.SUCCESS, GRAPH_STATUS.LOADING, GRAPH_STATUS.FAILED, GRAPH_STATUS.STANDBY])(
+    'keeps a single compute retry reachable without replacing existing %s results', queryStatus => {
+        const retryVermeer = jest.fn();
+        mockModel = {...mockModel, graphData: {nodes: [{id: 'existing'}], edges: []}};
+        renderGuide({queryStatus, isQueryMode: true, data: {vertices: [{id: 'existing'}], edges: []}},
+            {vermeerReady: false, vermeerError: true, retryVermeer});
+        expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+        const retry = screen.getByRole('button', {name: 'analysis.algorithm.retry_compute_status'});
+        expect(retry).toHaveAttribute('title', 'analysis.topbar.get_vermeer_failed');
+        expect(retry.compareDocumentPosition(screen.getByText('graph menu')) & Node.DOCUMENT_POSITION_FOLLOWING)
+            .toBeTruthy();
+        fireEvent.click(retry);
+        expect(retryVermeer).toHaveBeenCalledTimes(1);
+        expect(mockCounts.mock.lastCall[0].data.currentGraphNodesNum).toBe(1);
+    }
+);
+
+test('keeps discovery retry reachable from the OLTP canvas without adding OLAP guidance', () => {
+    const retryVermeer = jest.fn();
+    renderGuide({engine: 'oltp'}, {vermeerError: true, retryVermeer});
+    fireEvent.click(screen.getByRole('button', {name: 'analysis.algorithm.retry_compute_status'}));
+    expect(retryVermeer).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+});
+
+test('keeps Computer capability retry reachable alongside existing canvas data', () => {
+    const retry = jest.fn();
+    mockModel = {...mockModel, graphData: {nodes: [{id: 'existing'}], edges: []}};
+    renderGuide({computerStatus: 'error', onRetryComputerCapability: retry,
+        data: {vertices: [{id: 'existing'}], edges: []}});
+    fireEvent.click(screen.getByRole('button', {name: 'analysis.algorithm.retry_compute_status'}));
+    expect(retry).toHaveBeenCalledTimes(1);
+});
+
+test('keeps OLTP default guidance usable while graph compute is unknown', () => {
+    renderGuide({engine: 'oltp'}, {vermeerReady: false});
+    expect(screen.getByText('analysis.algorithm.oltp_guide')).toBeVisible();
+    expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', {name: 'analysis.algorithm.helm_guide'})).not.toBeInTheDocument();
+});
+
+test.each([GRAPH_STATUS.SUCCESS, GRAPH_STATUS.LOADING, GRAPH_STATUS.FAILED])(
+    'does not overlay generic guidance over %s query/task feedback', queryStatus => {
+        renderGuide({computerStatus: 'unavailable', queryStatus});
+        expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+        expect(screen.queryByText('analysis.algorithm.olap_unconfigured')).not.toBeInTheDocument();
+    }
+);
+
+test('does not replace existing canvas data with default guidance', () => {
+    mockModel = {...mockModel, graphData: {nodes: [{id: 'existing'}], edges: []}};
+    renderGuide({data: {vertices: [{id: 'existing'}], edges: []}, computerStatus: 'unavailable'});
+    expect(screen.queryByText('analysis.algorithm.olap_guide')).not.toBeInTheDocument();
+    expect(screen.queryByText('analysis.algorithm.olap_unconfigured')).not.toBeInTheDocument();
+});

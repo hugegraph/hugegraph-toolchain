@@ -991,9 +991,13 @@ policies require separate live deployment verification.
 
 ### OLTP and OLAP algorithm workflows
 
-The algorithm catalog separates interactive OLTP exploration from OLAP graph
-compute. Load a graph for Vermeer from the OLAP tab, then inspect computation
-progress and results in async tasks.
+The catalog separates **OLTP Subgraph Queries** and **OLAP Whole-graph Compute**.
+The sidebar keeps the algorithm list compact, with help beside each algorithm
+name. Setup and loading guidance appears in the idle canvas. When graph compute
+is not configured, the canvas links to Vermeer documentation and the Helm startup
+guide. OLTP remains usable while compute discovery is pending or has failed;
+OLAP offers a backend only after discovery is confirmed. Load a graph for Vermeer
+from the OLAP tab, then inspect progress and results in async tasks.
 
 ![OLAP loading guidance](docs/assets/analytics/olap-load-guide.png)
 

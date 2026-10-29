@@ -33,16 +33,18 @@ jest.mock('../analysis/Home', () => ({toolbarExtra}) => <div>analysis module{too
 jest.mock('../algorithm/Home', () => function MockAlgorithmHome({onEngineChange}) {
     const {useContext} = require('react');
     const Context = require('../Context').default;
-    const {isVermeer} = useContext(Context);
+    const {isVermeer, vermeerError, retryVermeer} = useContext(Context);
     return <div>algorithm module<span>{isVermeer ? 'Vermeer enabled' : 'Vermeer disabled'}</span>
+        {vermeerError && <button onClick={retryVermeer}>analysis.topbar.retry_vermeer</button>}
         <button onClick={() => onEngineChange('olap')}>choose OLAP</button>
         <button onClick={() => onEngineChange('oltp')}>choose OLTP</button></div>;
 });
 jest.mock('../asyncTasks/Home', () => function MockAsyncTaskHome() {
     const {useContext} = require('react');
     const Context = require('../Context').default;
-    const {vermeerReady} = useContext(Context);
-    return <div>async module<span>{vermeerReady ? 'engine known' : 'engine pending'}</span></div>;
+    const {vermeerReady, retryVermeer} = useContext(Context);
+    return <div>async module<span>{vermeerReady ? 'engine known' : 'engine pending'}</span>
+        <button onClick={retryVermeer}>retry engine</button></div>;
 });
 jest.mock('../component/TopBar', () => props => (
     <div>
@@ -112,6 +114,7 @@ it('keeps the algorithm page mounted while Vermeer is pending, unavailable and r
 
     await act(async () => pending.resolve({status: 503}));
     await screen.findByRole('button', {name: 'analysis.topbar.retry_vermeer'});
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByText('algorithm module')).toBe(algorithm);
     fireEvent.click(screen.getByRole('button', {
         name: 'analysis.topbar.retry_vermeer',
@@ -142,10 +145,51 @@ it('keeps task discovery available while engine-dependent filters await capabili
     expect(screen.getByText('engine known')).toBeVisible();
 });
 
-it('shows the algorithm usage guide beside only the algorithm page title', async () => {
+it.each([{}, {enable: null}, {enable: 'false'}, {enable: false, error: true}])(
+    'does not confirm malformed or failed engine discovery: %j', async data => {
+        api.auth.getVermeer.mockResolvedValue({status: 200, data});
+        render(<GraphAnalysisHome moduleName='asyncTasks' />);
+        await screen.findByRole('button', {name: 'analysis.topbar.retry_vermeer'});
+        expect(screen.getByText('engine pending')).toBeVisible();
+        expect(screen.queryByText('engine known')).not.toBeInTheDocument();
+    }
+);
+
+it('does not offer a confirmed fallback while a worker is awaiting automatic rediscovery', async () => {
+    jest.useFakeTimers();
+    try {
+        api.auth.getVermeer
+            .mockResolvedValueOnce({status: 200, data: {enable: false, retryable: true}})
+            .mockResolvedValueOnce({status: 200, data: {enable: true}});
+        render(<GraphAnalysisHome moduleName='asyncTasks' />);
+        await act(async () => Promise.resolve());
+        expect(screen.getByText('engine pending')).toBeVisible();
+        await act(async () => jest.advanceTimersByTimeAsync(5000));
+        expect(screen.getByText('engine known')).toBeVisible();
+        expect(api.auth.getVermeer).toHaveBeenCalledTimes(2);
+    }
+    finally {
+        jest.useRealTimers();
+    }
+});
+
+it('withdraws a confirmed fallback while a manual discovery request is pending', async () => {
+    const retry = deferred();
+    api.auth.getVermeer
+        .mockResolvedValueOnce({status: 200, data: {enable: false}})
+        .mockReturnValueOnce(retry.promise);
+    render(<GraphAnalysisHome moduleName='asyncTasks' />);
+    expect(await screen.findByText('engine known')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', {name: 'retry engine'}));
+    expect(screen.getByText('engine pending')).toBeVisible();
+    await act(async () => retry.resolve({status: 200, data: {enable: true}}));
+    expect(screen.getByText('engine known')).toBeVisible();
+});
+
+it('leaves algorithm guidance to the canvas instead of repeating it in the page header', async () => {
     const algorithm = render(<GraphAnalysisHome moduleName='algorithms' />);
-    expect(await screen.findByText('analysis.algorithm.guide')).toBeInTheDocument();
     await screen.findByText('algorithm module');
+    expect(screen.queryByText('analysis.algorithm.guide')).not.toBeInTheDocument();
     algorithm.unmount();
 
     render(<GraphAnalysisHome moduleName='gremlin' />);
@@ -256,7 +300,7 @@ it('keeps Server algorithms available and manually retries a non-retryable Verme
         await act(async () => {});
         expect(screen.getByText('algorithm module')).toBeVisible();
         expect(screen.getByText('Vermeer disabled')).toBeVisible();
-        expect(screen.getByText('analysis.topbar.get_vermeer_failed')).toBeVisible();
+        expect(screen.queryByText('analysis.topbar.get_vermeer_failed')).not.toBeInTheDocument();
         const retry = screen.getByRole('button', {name: 'analysis.topbar.retry_vermeer'});
         await act(async () => jest.advanceTimersByTime(15000));
         expect(api.auth.getVermeer).toHaveBeenCalledTimes(1);

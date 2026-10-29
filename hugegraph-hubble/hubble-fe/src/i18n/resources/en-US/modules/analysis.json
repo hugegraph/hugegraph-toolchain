@@ -566,6 +566,12 @@
       "vermeer_olap": "Vermeer · OLAP graph computing",
       "vermeer_ready": "Runs on Vermeer. The graph is loaded and ready for the algorithms below",
       "vermeer_load_first": "Load the current graph for graph compute first. Algorithms are available once loading completes",
+      "olap_select_graph": "Select a GraphSpace and graph before graph compute",
+      "olap_unconfigured": "Graph compute has not been configured and started",
+      "computer_check_failed": "Unable to check graph compute availability. Check access and service status, then retry",
+      "retry_compute_status": "Retry graph compute status",
+      "helm_guide": "Helm one-command startup guide",
+      "vermeer_unconfirmed": "Graph compute availability has not been confirmed",
       "vermeer_unavailable": "Vermeer is unavailable in this session. If you use Computer, open its compatibility entry below",
       "vermeer_no_match": "The current Hubble Vermeer API does not provide a matching algorithm",
       "computer_legacy_entry": "Computer compatibility (expand if needed)",
@@ -972,8 +978,8 @@
           "select_direction": "Traversal direction from the vertex"
         }
       },
-      "oltp_tab": "OLTP exploration",
-      "olap_tab": "OLAP graph compute",
+      "oltp_tab": "OLTP Subgraph Queries",
+      "olap_tab": "OLAP Whole-graph Compute",
       "oltp_guide": "Query the current graph directly for interactive neighbor and path exploration",
       "olap_guide": "Browse whole-graph algorithms here. Vermeer requires loading the current graph first; the Computer compatibility entry uses its own execution path"
     },

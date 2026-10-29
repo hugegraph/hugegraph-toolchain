@@ -28,6 +28,7 @@ jest.mock('../../../api', () => ({
         fetchFavoriteQueries: jest.fn(),
         getExecutionLogs: jest.fn(),
         getGraphData: jest.fn(),
+        getOlapCapability: jest.fn(),
     },
     manage: {
         getMetaEdgeList: jest.fn(),
@@ -71,6 +72,7 @@ const deferred = () => {
 };
 
 beforeEach(() => {
+    api.analysis.getOlapCapability.mockResolvedValue({status: 200, data: {available: false}});
     api.analysis.fetchFavoriteQueries.mockResolvedValue(okList);
     api.analysis.getExecutionLogs.mockResolvedValue(okList);
     api.analysis.getGraphData.mockResolvedValue({
@@ -445,4 +447,100 @@ it('hides confirmed old Schema inputs as soon as the selected graph changes', as
     const vertexCalls = api.manage.getMetaVertexList.mock.calls.length;
     await act(async () => pending.resolve(schemaList('disposed')));
     expect(api.manage.getMetaVertexList).toHaveBeenCalledTimes(vertexCalls);
+});
+
+
+const computeHome = ({engine = 'olap', graph = 'g', graphSpace = 'DEFAULT',
+    isVermeer = false, vermeerReady = true} = {}) => (
+    <GraphAnalysisContext.Provider value={{graphSpace, graph, isVermeer, vermeerReady}}>
+        <AlgorithmHome engine={engine} />
+    </GraphAnalysisContext.Provider>
+);
+const computeStatus = () => mockGraphResultProps.mock.lastCall[0].computerStatus;
+
+it('probes Computer only on active OLAP after Vermeer is confirmed disabled with a selected graph', async () => {
+    const view = render(computeHome({engine: 'oltp'}));
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    view.rerender(computeHome({vermeerReady: false}));
+    expect(computeStatus()).toBe('unconfirmed');
+    view.rerender(computeHome({isVermeer: true}));
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    view.rerender(computeHome({graph: null}));
+    expect(computeStatus()).toBe('select-graph');
+    expect(api.analysis.getOlapCapability).not.toHaveBeenCalled();
+    view.rerender(computeHome());
+    await waitFor(() => expect(computeStatus()).toBe('unavailable'));
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledWith('DEFAULT', 'g', {suppressBusinessErrorToast: true});
+    expect(mockAlgorithmFormProps.mock.lastCall[0].computerStatus).toBe('unavailable');
+});
+
+it.each([
+    [{status: 200, data: {available: true}}, 'available'],
+    [{status: 200, data: {available: false}}, 'unavailable'],
+    [{status: 401, data: {available: false}}, 'error'],
+    [{status: 503, data: {available: false}}, 'error'],
+    [{status: 200, data: {}}, 'error'],
+])('distinguishes confirmed Computer capability %j as %s', async (response, status) => {
+    api.analysis.getOlapCapability.mockResolvedValue(response);
+    render(computeHome());
+    await waitFor(() => expect(computeStatus()).toBe(status));
+    expect(mockAlgorithmFormProps.mock.lastCall[0].computerStatus).toBe(status);
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(1);
+});
+
+it('shares one cached capability across tabs and retries a failed probe inline', async () => {
+    api.analysis.getOlapCapability.mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({status: 200, data: {available: true}});
+    const view = render(computeHome());
+    await waitFor(() => expect(computeStatus()).toBe('error'));
+    act(() => mockGraphResultProps.mock.lastCall[0].onRetryComputerCapability());
+    await waitFor(() => expect(computeStatus()).toBe('available'));
+    view.rerender(computeHome({engine: 'oltp'}));
+    view.rerender(computeHome());
+    expect(computeStatus()).toBe('available');
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
+});
+
+it.each(['graph', 'space', 'identity', 'readiness'])(
+    'does not leak an old Computer probe after %s changes', async change => {
+        const old = deferred();
+        const current = deferred();
+        api.analysis.getOlapCapability.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+        const view = render(computeHome());
+        expect(computeStatus()).toBe('checking');
+        if (change === 'graph') view.rerender(computeHome({graph: 'other'}));
+        if (change === 'space') view.rerender(computeHome({graphSpace: 'OTHER'}));
+        if (change === 'identity') act(() => setUser({id: 'computer-reader', user_name: 'computer-reader'}));
+        if (change === 'readiness') {
+            view.rerender(computeHome({vermeerReady: false}));
+            view.rerender(computeHome());
+        }
+        await act(async () => current.resolve({status: 200, data: {available: true}}));
+        expect(computeStatus()).toBe('available');
+        await act(async () => old.resolve({status: 200, data: {available: false}}));
+        expect(computeStatus()).toBe('available');
+        expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(2);
+    }
+);
+
+it.each(['graph', 'identity'])('does not revive cached Computer capability when returning to a previous %s', async change => {
+    const first = deferred();
+    const second = deferred();
+    const returned = deferred();
+    api.analysis.getOlapCapability.mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise).mockReturnValueOnce(returned.promise);
+    const view = render(computeHome());
+    if (change === 'graph') view.rerender(computeHome({graph: 'other'}));
+    else act(() => setUser({id: 'computer-bob', user_name: 'computer-bob'}));
+    await act(async () => second.resolve({status: 200, data: {available: true}}));
+    expect(computeStatus()).toBe('available');
+    if (change === 'graph') view.rerender(computeHome());
+    else act(() => setUser({id: 'computer-alice', user_name: 'computer-alice'}));
+    expect(computeStatus()).toBe('checking');
+    await act(async () => first.resolve({status: 200, data: {available: true}}));
+    expect(computeStatus()).toBe('checking');
+    await act(async () => returned.resolve({status: 200, data: {available: false}}));
+    expect(computeStatus()).toBe('unavailable');
+    expect(api.analysis.getOlapCapability).toHaveBeenCalledTimes(3);
 });

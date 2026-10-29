@@ -88,7 +88,7 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
  const browser=await chromium.launch({headless:true,executablePath:chromiumExecutablePath(),args:['--no-sandbox']});
  try {
  const {page,state}=await setup(browser,true);
- const goAlgorithms=async()=>{await page.goto(base+'/algorithms/DEFAULT/hugegraph'); await page.getByText('Vermeer · OLAP 全图计算',{exact:true}).waitFor();};
+ const goAlgorithms=async()=>{await page.goto(base+'/algorithms/DEFAULT/hugegraph'); await page.getByRole('tab',{name:'OLAP 全图计算',exact:true}).click();};
  const search=()=>page.getByPlaceholder("算法查询");
  const searchFor=async value=>{await search().fill(value); await page.getByText('K-out API（GET，基础版）',{exact:true}).waitFor({state:'hidden'});};
  const pagerank=()=>page.locator('.ant-collapse-item').filter({has:page.getByRole('link',{name:/^PageRank /})});
@@ -101,13 +101,13 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   await goAlgorithms();
   await page.getByText('通过 Vermeer 执行；图已加载，可运行下方算法',{exact:true}).waitFor();
   assert.equal(state.capabilityCalls,0);
-  assert.equal(await page.getByText('Vermeer · OLAP 全图计算',{exact:true}).locator('..').locator('.ant-collapse-item').count(),9);
+  assert.equal(await page.locator('.ant-collapse-item:visible').count(),9);
   assert.equal(await page.getByText('Computer 兼容入口（按需展开）',{exact:true}).count(),0);
   assert.equal(await page.getByRole('link',{name:'Vermeer 图计算指南',exact:true}).getAttribute('href'),'https://github.com/apache/hugegraph-computer/tree/master/vermeer');
   await searchFor('PageRank');
   await pagerank().waitFor();
   assert.equal(await pagerank().getByRole('link').getAttribute('href'),'https://github.com/apache/hugegraph-computer/tree/master/vermeer');
-  const run=pagerank().locator('.ant-collapse-header button');
+  const run=pagerank().locator('.ant-collapse-header button.ant-btn-primary');
   assert.equal(await run.isDisabled(),false);
   await pagerank().scrollIntoViewIfNeeded(); await screenshot(page,'02-vermeer-ready');
   await run.click(); await page.getByText('查看任务进度',{exact:true}).waitFor();
@@ -124,16 +124,16 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
  });
  await check('Vermeer unloaded graph explains loading and disables execution',async()=>{
   state.loaded=false; await goAlgorithms(); await searchFor('PageRank');
-  await page.getByText('通过 Vermeer 执行。请先在顶部将当前图加载到 Vermeer',{exact:true}).waitFor();
-  assert(await pagerank().locator('.ant-collapse-header button').isDisabled());
+  await page.getByText('请先将当前图加载到图计算服务，加载完成后即可运行算法',{exact:true}).waitFor();
+  assert(await pagerank().locator('.ant-collapse-header button.ant-btn-primary').isDisabled());
   await pagerank().scrollIntoViewIfNeeded(); await screenshot(page,'05-vermeer-unloaded');
  });
- await check('unavailable Vermeer never automatically probes or exposes Computer',async()=>{
+ await check('confirmed-disabled Vermeer checks capability once and keeps Computer opt-in explicit',async()=>{
   state.enabled=false; await goAlgorithms(); await searchFor('PageRank');
-  await page.getByText('当前会话暂时无法使用 Vermeer；如使用 Computer，请展开下方兼容入口',{exact:true}).waitFor();
   const toggle=page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true});
+  await toggle.waitFor();
   assert.equal(await toggle.getAttribute('aria-expanded'),'false');
-  assert.equal(state.capabilityCalls,0); assert.equal(await pagerank().count(),0);
+  assert.equal(state.capabilityCalls,1); assert.equal(await pagerank().count(),0);
   await screenshot(page,'06-computer-collapsed');
   await toggle.click(); await pagerank().waitFor();
   await page.getByText('下方算法使用 Computer 兼容接口，任务不会发送到 Vermeer',{exact:false}).waitFor();
@@ -141,7 +141,7 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   assert((await pagerank().getByRole('link').getAttribute('href')).includes('/quickstart/computing/hugegraph-computer/'));
   await screenshot(page,'07-computer-opt-in');
  });
- await check('resetting parameters clears the per-visit Computer opt-in without an automatic probe',async()=>{
+ await check('resetting parameters clears Computer opt-in while retaining confirmed scope capability',async()=>{
   const calls=state.capabilityCalls;
   await page.getByRole('button',{name:'重置参数',exact:true}).click();
   await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true,expanded:false}).waitFor();
@@ -149,32 +149,36 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   assert.equal(state.capabilityCalls,calls);
   await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).click();
   await pagerank().waitFor();
-  assert.equal(state.capabilityCalls,calls+1);
+  assert.equal(state.capabilityCalls,calls);
  });
  await check('Computer opt-in is cleared after graph A to B to A',async()=>{
   const calls=state.capabilityCalls;
   const toggle=page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true});
+  let expectedCalls=calls;
   for(const [label,graph] of [['测试图','second'],['记忆图','hugegraph']]) {
+   const capability=page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/graphs/'+graph+'/algorithms/olap/capability'));
    await page.getByRole('combobox',{name:'当前图',exact:true}).click();
    await page.locator('.ant-select-item-option').filter({hasText:label}).click();
    await page.waitForURL('**/algorithms/DEFAULT/'+graph);
+   await capability;
    await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true,expanded:false}).waitFor();
    assert.equal(await toggle.getAttribute('aria-expanded'),'false');
    assert.equal(await pagerank().count(),0);
-   assert.equal(state.capabilityCalls,calls);
+   assert.equal(state.capabilityCalls,++expectedCalls);
   }
   await searchFor('PageRank');
   await toggle.scrollIntoViewIfNeeded();
   await screenshot(page,'12-computer-return-collapsed');
   await toggle.click(); await pagerank().waitFor();
-  assert.equal(state.capabilityCalls,calls+1);
-  assert.equal(await page.getByRole('link',{name:'Computer 配置文档',exact:true}).getAttribute('href'),
-   'https://hugegraph.apache.org/docs/quickstart/computing/hugegraph-computer/#6-built-in-algorithms-and-development');
+  assert.equal(state.capabilityCalls,expectedCalls);
+  assert((await pagerank().getByRole('link').getAttribute('href')).includes('/quickstart/computing/hugegraph-computer/'));
  });
- await check('unavailable Computer capability stays non-runnable after opt-in',async()=>{
+ await check('unavailable Computer shows canvas setup guidance without an executable compatibility entry',async()=>{
   state.computerAvailable=false; await goAlgorithms(); await searchFor('PageRank');
-  await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).click();
-  await page.getByText('当前图无法使用 Computer 兼容接口。请检查已有 Computer 部署',{exact:false}).waitFor();
+  await page.getByText('图计算尚未配置启动',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Computer 兼容入口（按需展开）',exact:true}).count(),0);
+  assert(await page.getByRole('link',{name:'Vermeer 图计算指南',exact:true}).isVisible());
+  assert(await page.getByRole('link',{name:'Helm 一键启动指南',exact:true}).isVisible());
   assert.equal(await pagerank().count(),0); await screenshot(page,'08-computer-unavailable');
  });
  await check('task types identify the real Vermeer and compatibility Computer engines',async()=>{
@@ -225,6 +229,7 @@ async function check(name,fn){try{await fn();checks.push({name,status:'passed'})
   await anonymous.page.getByRole('combobox',{name:'当前图',exact:true}).click();
   await anonymous.page.locator('.ant-select-item-option').filter({hasText:'测试图'}).click();
   await anonymous.page.waitForURL('**/algorithms/soc_graph/second');
+  await anonymous.page.getByRole('tab',{name:'OLAP 全图计算',exact:true}).click();
   await anonymous.page.getByText('通过 Vermeer 执行；图已加载，可运行下方算法',{exact:true}).waitFor();
   assert.equal(anonymous.state.capabilityCalls,0); await screenshot(anonymous.page,'11-context-switched');
  });
