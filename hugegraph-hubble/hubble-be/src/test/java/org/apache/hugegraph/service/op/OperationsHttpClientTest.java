@@ -289,6 +289,21 @@ public class OperationsHttpClientTest {
     }
 
     @Test
+    public void testSendsBearerServiceIdentityWithoutReturningIt() throws IOException {
+        AtomicReference<String> authorization = new AtomicReference<>();
+        HttpServer server = server(200, "ok", null, authorization);
+        OperationsHttpClient client = new OperationsHttpClient(1000, 1000, 64);
+        try {
+            String response = client.getBearer(uri(server, "/"), "service-token",
+                                               Collections.emptySet());
+            Assert.assertEquals("Bearer service-token", authorization.get());
+            Assert.assertFalse(response.contains("service-token"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     public void testClassifiesReadTimeout() throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/", exchange -> {

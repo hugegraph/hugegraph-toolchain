@@ -85,6 +85,14 @@ public class OperationsHttpClient {
                             false).getBody();
     }
 
+    public String getBearer(URI target, String token,
+                            Set<String> allowedOrigins) {
+        String authorization = token == null || token.isEmpty() ?
+                               null : "Bearer " + token;
+        return this.requestAuthorized(target, authorization, allowedOrigins,
+                                      "application/json", false).getBody();
+    }
+
     // Readiness uses 503 with a structured explanation; ordinary GETs still reject it.
     public ProbeResponse probe(URI target, String username, String password,
                                Set<String> allowedOrigins) {
@@ -95,6 +103,21 @@ public class OperationsHttpClient {
     private ProbeResponse request(URI target, String username, String password,
                                    Set<String> allowedOrigins, String accept,
                                    boolean readiness) {
+        String authorization = null;
+        if (username != null && !username.trim().isEmpty()) {
+            String credential = username + ':' +
+                                (password == null ? "" : password);
+            String encoded = Base64.getEncoder().encodeToString(
+                    credential.getBytes(StandardCharsets.UTF_8));
+            authorization = "Basic " + encoded;
+        }
+        return this.requestAuthorized(target, authorization, allowedOrigins,
+                                      accept, readiness);
+    }
+
+    private ProbeResponse requestAuthorized(URI target, String authorization,
+                                             Set<String> allowedOrigins,
+                                             String accept, boolean readiness) {
         validateTarget(target, allowedOrigins);
         if (!"application/json".equals(accept) &&
             !"text/plain".equals(accept)) {
@@ -110,12 +133,8 @@ public class OperationsHttpClient {
                     .url(target.toString())
                     .get()
                     .header("Accept", accept);
-            if (username != null && !username.trim().isEmpty()) {
-                String credential = username + ':' +
-                                    (password == null ? "" : password);
-                String encoded = Base64.getEncoder().encodeToString(
-                        credential.getBytes(StandardCharsets.UTF_8));
-                request.header("Authorization", "Basic " + encoded);
+            if (authorization != null) {
+                request.header("Authorization", authorization);
             }
             try (Response response = requestClient.newCall(request.build())
                                               .execute()) {

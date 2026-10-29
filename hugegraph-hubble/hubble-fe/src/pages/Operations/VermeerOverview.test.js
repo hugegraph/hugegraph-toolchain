@@ -1,0 +1,293 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {render, screen, waitFor, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {MemoryRouter, useLocation, useNavigate} from 'react-router-dom';
+import Overview from './Overview';
+import {getOverview} from '../../api/operations';
+import {getDashboard} from '../../api/auth';
+import {formatProcessBytes, processMetric, vermeerNodeReady, vermeerResourceSummary} from './vermeer';
+import i18n from '../../i18n';
+
+jest.mock('../../api/operations');
+jest.mock('../../api/auth');
+
+const snapshot = (count = 1) => ({
+    status: 'UP', main_cluster_status: 'UP', observed_at: 1000,
+    nodes: [{id: 'server-1', name: 'Server 1', type: 'SERVER', status: 'UP'}],
+    sources: {}, facts: {},
+    vermeer: {
+        configured: true, availability: 'AVAILABLE', status: 'UP', observed_at: 1000,
+        registered_workers: count, ready_workers: count,
+        master: {id: 'master-1', name: 'master-01', ready: true, version: '1.8.0'},
+        workers: Array.from({length: count}, (_, index) => ({
+            id: 'worker-' + (index + 1), name: 'worker-' + (index + 1), ready: true, version: '1.8.0',
+            group: 'default', checks: {registered: true, connection_ready: true},
+            metrics: {cpu_cores: 0.42, rss_bytes: 1288490188},
+            metric_status: {availability: 'AVAILABLE'},
+        })),
+    },
+});
+
+const Navigation = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
+    return <>
+        <output aria-label='Current URL'>{location.pathname + location.search}</output>
+        <button onClick={() => navigate(-1)}>History back</button>
+    </>;
+};
+
+const renderOverview = (url = '/operations/overview') => render(
+    <MemoryRouter initialEntries={[url]}><Overview /><Navigation /></MemoryRouter>
+);
+
+beforeAll(() => {
+    Object.defineProperty(window, 'matchMedia', {writable: true, value: query => ({
+        matches: false, media: query, onchange: null,
+        addListener: () => {}, removeListener: () => {},
+        addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    })});
+});
+
+beforeEach(() => {
+    getDashboard.mockReturnValue(new Promise(() => {}));
+    getOverview.mockResolvedValue(snapshot());
+});
+
+afterEach(() => {
+    jest.clearAllMocks();
+    i18n.changeLanguage('en-US');
+});
+
+test('keeps Vermeer collapsed until opened, then uses Master and Worker tiers', async () => {
+    const {container} = renderOverview();
+    const entry = await screen.findByRole('button', {name: 'View compute cluster'});
+    expect(entry.closest('.operations-main-topology')).not.toBeNull();
+    expect(entry.closest('.tier-store')).toBeNull();
+    expect(container.querySelector('.operations-vermeer-topology')).toBeNull();
+    expect(screen.queryByRole('button', {name: /master-01/})).not.toBeInTheDocument();
+
+    await userEvent.click(entry);
+
+    expect(screen.getByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'})).toBeInTheDocument();
+    const tiers = container.querySelectorAll('.operations-vermeer-tier');
+    expect(tiers).toHaveLength(2);
+    expect(within(tiers[0]).getByText('Master tier')).toBeInTheDocument();
+    expect(within(tiers[1]).getByText('Worker tier')).toBeInTheDocument();
+    expect(screen.getByText('Workers ready 1 / registered 1')).toBeInTheDocument();
+    const facts = container.querySelector('.operations-vermeer-facts');
+    expect(within(facts).getByRole('heading', {name: 'Compute cluster information'})).toBeInTheDocument();
+    expect(within(facts).getByText('Registered Workers')).toBeInTheDocument();
+    expect(within(facts).getByText('Ready / registered Workers')).toBeInTheDocument();
+});
+
+test('preserves the main view and query across service navigation and browser back', async () => {
+    renderOverview('/operations/overview?view=nodes&source=attention');
+    await userEvent.click(await screen.findByRole('button', {name: 'View compute cluster'}));
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent(
+        '/operations/overview?view=nodes&source=attention&service=vermeer'
+    );
+    await userEvent.click(screen.getByRole('button', {name: 'Back to main cluster'}));
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent(
+        '/operations/overview?view=nodes&source=attention'
+    );
+    await userEvent.click(screen.getByRole('button', {name: 'History back'}));
+    expect(await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'}))
+        .toBeInTheDocument();
+});
+
+test('changing the compute view does not alter the main-cluster view on return', async () => {
+    renderOverview('/operations/overview?source=attention');
+    await userEvent.click(await screen.findByRole('button', {name: 'View compute cluster'}));
+    await userEvent.click(screen.getByRole('radio', {name: 'Node list'}).closest('label'));
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent('compute_view=nodes');
+    await userEvent.click(screen.getByRole('button', {name: 'Back to main cluster'}));
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent('/operations/overview?source=attention');
+    expect(screen.getByRole('radio', {name: 'Topology'})).toBeChecked();
+    expect(screen.getByLabelText('Current URL')).not.toHaveTextContent('compute_view');
+});
+
+test('opens node details and a full view without losing the compute context', async () => {
+    renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    await userEvent.click(screen.getByRole('button', {name: 'worker-1'}));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Master reverse connection')).toBeInTheDocument();
+    expect(within(dialog).getByText('RSS memory: 1.2 GiB')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', {name: 'View full node details'}));
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent('detail=full');
+    expect(screen.getByRole('heading', {name: 'worker-1'})).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'Back to compute cluster'}));
+    expect(screen.getByText('Workers ready 1 / registered 1')).toBeInTheDocument();
+});
+
+test('never presents old readiness as current when the snapshot becomes stale', async () => {
+    const data = snapshot();
+    data.vermeer = {...data.vermeer, status: 'UNKNOWN', availability: 'UNAVAILABLE', stale: true,
+        ready_workers: null, reason: 'vermeer_cluster_unavailable'};
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    expect(screen.getAllByText('Readiness unconfirmed').length).toBeGreaterThan(1);
+    expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+    expect(screen.getByText('Workers ready — / registered 1')).toBeInTheDocument();
+});
+
+test('shows all same-tier Workers without promoting them to additional hierarchy levels', async () => {
+    getOverview.mockResolvedValue(snapshot(9));
+    const {container} = renderOverview('/operations/overview?service=vermeer');
+    await screen.findByText('Workers ready 9 / registered 9');
+    const workers = container.querySelector('.operations-vermeer-branch[data-role="WORKER"]');
+    expect(within(workers).getAllByRole('button')).toHaveLength(9);
+    expect(container.querySelectorAll('.operations-vermeer-tier')).toHaveLength(2);
+});
+
+test('explains Master readiness with its own checks rather than Worker channels', async () => {
+    const data = snapshot();
+    data.vermeer.master.checks = {http_ready: true, initialized: true, service_online: true};
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer&node=master-1');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('HTTP service responding')).toBeInTheDocument();
+    expect(within(dialog).getByText('Master initialization')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Graph loading channel')).not.toBeInTheDocument();
+});
+
+test('an undeployed optional compute service stays neutral', async () => {
+    const data = snapshot();
+    data.vermeer = {configured: false, availability: 'UNSUPPORTED', status: 'UNKNOWN', workers: []};
+    getOverview.mockResolvedValue(data);
+    renderOverview();
+    const entry = await screen.findByRole('button', {name: 'View compute cluster'});
+    expect(entry).toBeDisabled();
+    expect(within(entry).getByText('Not deployed')).toBeInTheDocument();
+    expect(screen.queryByText('Compute service needs attention')).not.toBeInTheDocument();
+});
+
+test('the header distinguishes simultaneous main-cluster and compute attention', async () => {
+    const data = snapshot();
+    data.status = 'DEGRADED';
+    data.main_cluster_status = 'DEGRADED';
+    data.main_cluster_reason = 'cluster_not_ready';
+    data.vermeer.status = 'DEGRADED';
+    data.vermeer.ready_workers = 0;
+    getOverview.mockResolvedValue(data);
+    renderOverview();
+    const health = await screen.findByLabelText('Deployment service health');
+    expect(within(health).getByText(/Main cluster/)).toBeInTheDocument();
+    expect(within(health).getByText('Attention')).toBeInTheDocument();
+    expect(within(health).getByText('Compute service needs attention')).toBeInTheDocument();
+});
+
+test('compute failure does not relabel an independently healthy main cluster', async () => {
+    const data = snapshot();
+    data.status = 'DEGRADED';
+    data.vermeer.status = 'DEGRADED';
+    data.vermeer.ready_workers = 0;
+    getOverview.mockResolvedValue(data);
+    renderOverview();
+    const health = await screen.findByLabelText('Deployment service health');
+    expect(within(health).getByText('UP')).toBeInTheDocument();
+    expect(within(health).getByText('Compute service needs attention')).toBeInTheDocument();
+});
+
+test('removes compute node information when an authorized refresh becomes forbidden', async () => {
+    renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    getOverview.mockRejectedValueOnce(Object.assign(new Error('forbidden'), {status: 403}));
+    await userEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+    await waitFor(() => expect(screen.queryByText('master-01')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', {name: /worker-1/})).not.toBeInTheDocument();
+});
+
+test('a failed overview refresh marks retained compute readiness and resources as stale', async () => {
+    renderOverview('/operations/overview?service=vermeer');
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    getOverview.mockRejectedValueOnce(new Error('network unavailable'));
+    await userEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+    await screen.findByText('Cluster refresh failed. The last observed compute snapshot is retained.');
+    expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+    expect(screen.getByText('Workers ready — / registered 1')).toBeInTheDocument();
+    expect(screen.queryByText('CPU 0.42 cores · RSS 1.2 GiB')).not.toBeInTheDocument();
+});
+
+test('does not treat an unsupported readiness API as healthy or render missing metrics as zero', async () => {
+    const data = snapshot();
+    data.vermeer.availability = 'UNSUPPORTED';
+    data.vermeer.reason = 'vermeer_cluster_api_unsupported';
+    data.vermeer.workers[0].metric_status.availability = 'UNAVAILABLE';
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer');
+    expect(await screen.findByText('This Vermeer version does not support the cluster health API.'))
+        .toBeInTheDocument();
+    expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+    expect(screen.queryByText('Process CPU: 0 cores')).not.toBeInTheDocument();
+});
+
+test('resource collection failure explains missing metrics without changing Worker readiness', async () => {
+    const data = snapshot();
+    data.vermeer.workers[0].metric_status = {availability: 'UNAVAILABLE', reason: 'metrics_timeout'};
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer&node=worker-1');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Process resource collection timed out.')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Not ready')).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Process CPU: Unavailable')).toBeInTheDocument();
+});
+
+test('expired resource snapshots are not displayed as current process measurements', async () => {
+    const data = snapshot();
+    data.vermeer.workers[0].metric_status = {availability: 'AVAILABLE', stale: true, fresh: false};
+    getOverview.mockResolvedValue(data);
+    renderOverview('/operations/overview?service=vermeer&node=worker-1');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Process CPU: Unavailable')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Process CPU: 0.42 cores')).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/stale/i)).toBeInTheDocument();
+    expect(within(dialog).queryByText('Not ready')).not.toBeInTheDocument();
+});
+
+test('resource summary counts only fresh process samples and states coverage per metric', () => {
+    const data = snapshot();
+    const nodes = [
+        {...data.vermeer.master, metrics: {cpu_cores: 0.12, rss_bytes: 1024},
+            metric_status: {availability: 'AVAILABLE'}},
+        {...data.vermeer.workers[0], metrics: {cpu_cores: 0.42, rss_bytes: 2048}},
+    ];
+    expect(vermeerResourceSummary(nodes, data.vermeer)).toEqual({
+        cpu: {value: 0.54, collected: 2}, rss: {value: 3072, collected: 2}, total: 2,
+    });
+    nodes[0].metric_status.stale = true;
+    expect(vermeerResourceSummary(nodes, data.vermeer)).toEqual({
+        cpu: {value: 0.42, collected: 1}, rss: {value: 2048, collected: 1}, total: 2,
+    });
+    expect(vermeerResourceSummary(nodes, {...data.vermeer, stale: true})).toEqual({
+        cpu: {value: null, collected: 0}, rss: {value: null, collected: 0}, total: 2,
+    });
+});
+
+test('resource formatting rejects unknown and non-finite values without confusing zero with missing', () => {
+    expect(processMetric(null, 'en-US')).toBeNull();
+    expect(processMetric(Infinity, 'en-US')).toBeNull();
+    expect(processMetric(0, 'en-US')).toBe('0');
+    expect(formatProcessBytes(1288490188, 'en-US')).toBe('1.2 GiB');
+    expect(vermeerNodeReady({ready: true}, {configured: true, stale: true, availability: 'AVAILABLE'}))
+        .toBeNull();
+});

@@ -35,6 +35,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.service.op.OperationsCapabilityService;
 import org.apache.hugegraph.service.op.OperationsDataService;
+import org.apache.hugegraph.service.op.VermeerOperationsService;
 
 @RestController
 @RequestMapping(Constant.API_VERSION + "operations")
@@ -42,6 +43,9 @@ public class OperationsController extends BaseController {
 
     @Autowired
     private OperationsDataService dataService;
+
+    @Autowired
+    private VermeerOperationsService vermeerService;
 
     @GetMapping("capabilities")
     public Map<String, Object> capabilities() {
@@ -56,7 +60,9 @@ public class OperationsController extends BaseController {
         HugeClient client = this.authClient(null, null);
         Set<String> capabilities = this.currentCapabilities(client);
         OperationsCapabilityService.requireHealth(capabilities);
-        return this.dataService.overview(client, capabilities, refresh);
+        Map<String, Object> overview = new LinkedHashMap<>(
+                this.dataService.overview(client, capabilities, refresh));
+        return this.vermeerService.enrich(overview, capabilities, refresh);
     }
 
     public Map<String, Object> nodes(String type, String status, String query,

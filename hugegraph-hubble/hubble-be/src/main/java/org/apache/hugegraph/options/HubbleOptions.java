@@ -461,6 +461,29 @@ public class HubbleOptions extends OptionHolder {
                     ""
             );
 
+    public static final ConfigOption<Boolean> OPERATIONS_VERMEER_ENABLED =
+            new ConfigOption<>(
+                    "operations.vermeer.enabled",
+                    "Collect the deployment-wide Vermeer cluster health.",
+                    false
+            );
+
+    public static final ConfigOption<String> OPERATIONS_VERMEER_ADDRESS =
+            new ConfigOption<>(
+                    "operations.vermeer.address",
+                    "Operator-configured Vermeer Master HTTP origin.",
+                    null,
+                    ""
+            );
+
+    public static final ConfigOption<String> OPERATIONS_VERMEER_TOKEN_FILE =
+            new ConfigOption<>(
+                    "operations.vermeer.token_file",
+                    "Read-only service token file; never returned by an API.",
+                    null,
+                    ""
+            );
+
     public static final ConfigOption<String> DASHBOARD_ADDRESS =
             new ConfigOption<>(
                     "dashboard.address",

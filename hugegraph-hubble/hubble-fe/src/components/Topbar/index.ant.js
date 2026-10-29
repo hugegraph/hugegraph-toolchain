@@ -146,7 +146,13 @@ const Topbar = () => {
                 >
                     <BrandLockup compact />
                 </Link>
-                <GraphContextSwitcher />
+                {location.pathname.startsWith('/operations/') ? (
+                    <div className={style.deploymentContext} aria-label={t('operations.deployment_scope')}>
+                        <span>{t('operations.current_deployment')}</span>
+                        <span aria-hidden='true'>/</span>
+                        <strong>{t('operations.deployment_cluster')}</strong>
+                    </div>
+                ) : <GraphContextSwitcher />}
             </div>
             <TopbarPageContextHost className={style.pageContext} />
             <div className={style.rightContainer}>

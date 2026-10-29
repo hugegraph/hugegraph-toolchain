@@ -26,6 +26,7 @@ import org.apache.hugegraph.exception.ForbiddenException;
 import org.apache.hugegraph.service.auth.AuthModeService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.op.OperationsDataService;
+import org.apache.hugegraph.service.op.VermeerOperationsService;
 import org.apache.hugegraph.testutil.Assert;
 import org.junit.After;
 import org.junit.Test;
@@ -149,6 +150,12 @@ public class OperationsControllerTest {
         ReflectionTestUtils.setField(controller, "authMode", authMode);
         ReflectionTestUtils.setField(controller, "userService", userService);
         ReflectionTestUtils.setField(controller, "dataService", dataService);
+        VermeerOperationsService vermeerService = Mockito.mock(
+                                                  VermeerOperationsService.class);
+        Mockito.when(vermeerService.enrich(Mockito.anyMap(), Mockito.anySet(),
+                                           Mockito.anyBoolean()))
+               .thenAnswer(invocation -> invocation.getArgument(0));
+        ReflectionTestUtils.setField(controller, "vermeerService", vermeerService);
         return new Fixture(controller, dataService);
     }
 
