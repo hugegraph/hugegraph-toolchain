@@ -229,9 +229,12 @@ const Overview = () => {
     }
 
     const unavailable = t('operations.unavailable');
-    const observed = formatObservedAt(data?.observed_at, i18n.language, unavailable);
+    const activeSnapshot = isVermeer ? data?.vermeer : data;
+    const observed = formatObservedAt(
+        activeSnapshot?.observed_at, i18n.language, unavailable
+    );
     const observedAge = formatObservedAge(
-        data?.observed_at, i18n.language, unavailable
+        activeSnapshot?.observed_at, i18n.language, unavailable
     );
     const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
     const attentionNodes = selectAttentionNodes(nodes);
@@ -381,14 +384,14 @@ const Overview = () => {
                     </p>
                     <div className='operations-overall-status'>
                         <HealthStatus
-                            status={data?.status}
-                            reason={data?.reason}
+                            status={activeSnapshot?.status}
+                            reason={activeSnapshot?.reason}
                             size='large'
                         />
                         <span>
                             {t('operations.observed_at')}: {observed} · {observedAge}
                         </span>
-                        {data?.stale && <strong>{t('operations.stale')}</strong>}
+                        {activeSnapshot?.stale && <strong>{t('operations.stale')}</strong>}
                     </div>
                     {data?.vermeer?.configured && (
                         <div className='operations-deployment-health'
