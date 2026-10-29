@@ -248,3 +248,40 @@ test('human input before the cached deadline is retained while the initial metad
     expect(api.auth.logout).not.toHaveBeenCalled();
     await advance(890000); await flush(); expect(api.auth.logout).toHaveBeenCalledTimes(1);
 });
+
+test('first-login input after the idle deadline cannot renew a pending uncached session', async () => {
+    let resolve;
+    api.auth.getSessionSettings.mockImplementationOnce(() => new Promise(done => {resolve = done;}));
+    renderHook(() => useSessionIdleTimeout(true));
+    await advance(950000);
+    fireEvent.keyDown(window, {key: 'a'});
+    await act(async () => resolve(settings()));
+    expect(api.auth.logout).toHaveBeenCalledTimes(1);
+    expect(api.auth.logout).toHaveBeenCalledWith(scope);
+    expect(user.getUser()).toEqual({});
+});
+
+test('uncached input before the initial deadline is retained during a slow metadata response', async () => {
+    let resolve;
+    api.auth.getSessionSettings.mockImplementationOnce(() => new Promise(done => {resolve = done;}));
+    renderHook(() => useSessionIdleTimeout(true));
+    await advance(800000);
+    fireEvent.keyDown(window, {key: 'a'});
+    await advance(100000);
+    await act(async () => resolve(settings()));
+    expect(api.auth.logout).not.toHaveBeenCalled();
+    await advance(800000);
+    expect(api.auth.logout).toHaveBeenCalledTimes(1);
+});
+
+test('a long input gap cannot revive an uncached session while metadata is pending', async () => {
+    let resolve;
+    api.auth.getSessionSettings.mockImplementationOnce(() => new Promise(done => {resolve = done;}));
+    renderHook(() => useSessionIdleTimeout(true));
+    await advance(100000);
+    fireEvent.keyDown(window, {key: 'a'});
+    await advance(950000);
+    fireEvent.keyDown(window, {key: 'b'});
+    await act(async () => resolve(settings()));
+    expect(api.auth.logout).toHaveBeenCalledTimes(1);
+});

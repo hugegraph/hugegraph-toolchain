@@ -59,7 +59,7 @@ export const useSessionIdleTimeout = enabled => {
         let pendingSettings;
         const settingsRequestAt = Date.now();
         let timeoutSeconds;
-        let lastActivity = Date.now();
+        let lastActivity = settingsRequestAt;
         let firstInputAt;
         let lastInputAt;
         let longestInputGap = 0;
@@ -149,8 +149,15 @@ export const useSessionIdleTimeout = enabled => {
             key = SESSION_ACTIVITY_PREFIX + encodeURIComponent(scope);
             // Load existing activity before writing so a tab opening later cannot renew an idle session.
             const saved = read(key);
-            if (saved && Number.isFinite(saved.lastActivity) && saved.lastActivity <= Date.now()) {
-                lastActivity = firstSettings ? saved.lastActivity : Math.max(lastActivity, saved.lastActivity);
+            const savedActivity = Number.isFinite(saved?.lastActivity) && saved.lastActivity <= Date.now()
+                ? saved.lastActivity : undefined;
+            if (firstSettings) {
+                // Until metadata arrives, input has no known timeout to check against. Rebuild
+                // its deadline from the cached activity or initial load, never from that input.
+                lastActivity = savedActivity ?? settingsRequestAt;
+            }
+            else if (savedActivity !== undefined) {
+                lastActivity = Math.max(lastActivity, savedActivity);
             }
             sync();
             const pending = pendingSettings?.activityScope === scope ? pendingSettings : null;
@@ -164,10 +171,10 @@ export const useSessionIdleTimeout = enabled => {
             }
             pendingSettings = null;
             // Input received while the initial GET was pending can renew an unexpired session,
-            // but an input after the cached deadline (or a long idle gap) cannot revive it.
+            // but an input after the initial deadline (or a long idle gap) cannot revive it.
             const priorSeconds = validTimeout(saved?.timeoutSeconds) ? saved.timeoutSeconds : timeoutSeconds;
-            if (firstSettings && Number.isFinite(saved?.lastActivity) && firstInputAt !== undefined
-                && firstInputAt < saved.lastActivity + priorSeconds * 1000
+            if (firstSettings && firstInputAt !== undefined
+                && firstInputAt < lastActivity + priorSeconds * 1000
                 && longestInputGap < priorSeconds * 1000) {
                 lastActivity = Math.max(lastActivity, lastInputAt);
             }

@@ -100,3 +100,25 @@ test('ignores a previous identity settings response after the session panel remo
     await act(async () => finishOld(settings(172800)));
     expect(screen.getByRole('spinbutton')).toHaveValue('60');
 });
+
+test('shows a non-whole-minute current timeout without rounding beyond its ceiling', async () => {
+    api.auth.getSessionSettings.mockResolvedValue({status: 200, data: {
+        idle_timeout_seconds: 3599, min_idle_seconds: 900, max_idle_seconds: 3599,
+    }});
+    api.auth.updateSessionSettings.mockResolvedValue({status: 200, data: {
+        idle_timeout_seconds: 3540, min_idle_seconds: 900, max_idle_seconds: 3599,
+    }});
+    render(<SessionSettings />);
+    const input = screen.getByRole('spinbutton');
+    await waitFor(() => expect(input).toHaveValue(String(3599 / 60)));
+    const save = screen.getByRole('button', {name: 'common.action.save'});
+    expect(save).toBeDisabled();
+    await userEvent.clear(input);
+    await userEvent.type(input, '58.5');
+    expect(save).toBeDisabled();
+    await userEvent.clear(input);
+    await userEvent.type(input, '59');
+    await userEvent.click(save);
+    expect(api.auth.updateSessionSettings).toHaveBeenCalledWith(3540);
+    await waitFor(() => expect(input).toHaveValue('59'));
+});

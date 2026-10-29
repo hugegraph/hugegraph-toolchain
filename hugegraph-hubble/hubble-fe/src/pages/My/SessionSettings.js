@@ -86,7 +86,7 @@ const SessionSettings = () => {
                 <Space wrap>
                     <label htmlFor='session-idle-minutes'>{t('my.session.minutes')}</label>
                     <InputNumber id='session-idle-minutes' value={minutes} onChange={setMinutes}
-                        min={min} max={max} precision={0} disabled={!settings || saving || readOnly} />
+                        min={min} max={max} disabled={!settings || saving || readOnly} />
                     <Button type='primary' onClick={save} loading={saving}
                         disabled={!valid || minutes * 60 === settings?.idle_timeout_seconds}>
                         {t('common.action.save')}
