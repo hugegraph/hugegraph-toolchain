@@ -23,7 +23,7 @@ import Overview from './Overview';
 import {getOverview} from '../../api/operations';
 import {getDashboard} from '../../api/auth';
 import i18n from '../../i18n';
-import {formatObservedAt} from './topology';
+import {formatObservedAge, formatObservedAt} from './topology';
 
 jest.mock('../../api/operations');
 jest.mock('../../api/auth');
@@ -31,6 +31,7 @@ jest.mock('../../api/auth');
 const MAIN_OBSERVED = Date.UTC(2026, 9, 29, 8, 0, 0);
 const COMPUTE_LAST_SUCCESS = Date.UTC(2026, 9, 29, 8, 30, 0);
 const COMPUTE_OBSERVED = Date.UTC(2026, 9, 29, 9, 0, 0);
+const RETRY_OBSERVED = Date.UTC(2026, 9, 29, 10, 0, 0);
 
 const snapshot = () => ({
     status: 'DEGRADED', reason: 'cluster_not_ready', observed_at: MAIN_OBSERVED, stale: true,
@@ -172,4 +173,90 @@ test.each([
         expect(mainHeader).toHaveTextContent(formatObservedAt(MAIN_OBSERVED, 'en-US', 'Unavailable'));
         expect(mainHeader).not.toHaveTextContent(formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable'));
         expect(Boolean(within(mainHeader).queryByText('Stale'))).toBe(mainStale);
+    });
+
+test.each([
+    ['UP', true, COMPUTE_OBSERVED],
+    ['UNKNOWN', true, COMPUTE_OBSERVED],
+    ['UNKNOWN', false, RETRY_OBSERVED],
+    ['UP', false, RETRY_OBSERVED],
+])('compute header status %s and stale=%s choose observation time independently',
+    async (status, stale, expectedTime) => {
+        jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
+        const data = snapshot();
+        data.vermeer = {...data.vermeer, status, stale, observed_at: RETRY_OBSERVED,
+            last_success_at: COMPUTE_OBSERVED,
+            availability: status === 'UNKNOWN' || stale ? 'UNAVAILABLE' : 'AVAILABLE'};
+        getOverview.mockResolvedValue(data);
+        const {container} = renderCompute();
+        await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+        const header = container.querySelector('.operations-overall-status');
+        expect(header).toHaveTextContent(formatObservedAt(expectedTime, 'en-US', 'Unavailable'));
+        expect(header).toHaveTextContent(formatObservedAge(expectedTime, 'en-US', 'Unavailable'));
+        const otherTime = stale ? RETRY_OBSERVED : COMPUTE_OBSERVED;
+        expect(header).not.toHaveTextContent(formatObservedAt(otherTime, 'en-US', 'Unavailable'));
+        expect(Boolean(within(header).queryByText('Stale'))).toBe(stale);
+    });
+
+test('a stale compute snapshot without a successful observation does not reuse the failed-attempt clock', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
+    const data = snapshot();
+    data.vermeer = {...data.vermeer, status: 'UNKNOWN', stale: true, availability: 'UNAVAILABLE',
+        observed_at: RETRY_OBSERVED};
+    delete data.vermeer.last_success_at;
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const header = container.querySelector('.operations-overall-status');
+    expect(header).toHaveTextContent('Observed: Unavailable · Unavailable');
+    expect(header).not.toHaveTextContent(formatObservedAt(RETRY_OBSERVED, 'en-US', 'Unavailable'));
+    expect(header).not.toHaveTextContent('0s ago');
+    expect(within(header).getByText('Stale')).toBeInTheDocument();
+});
+
+test('the main aggregate header keeps its observation time even when it is stale', async () => {
+    const lastSuccess = MAIN_OBSERVED - 60 * 60 * 1000;
+    const data = {...snapshot(), last_success_at: lastSuccess};
+    getOverview.mockResolvedValue(data);
+    const {container} = render(<MemoryRouter><Overview /></MemoryRouter>);
+    await screen.findByRole('heading', {level: 2, name: 'Cluster Overview'});
+    const header = container.querySelector('.operations-overall-status');
+    expect(header).toHaveTextContent(formatObservedAt(MAIN_OBSERVED, 'en-US', 'Unavailable'));
+    expect(header).not.toHaveTextContent(formatObservedAt(lastSuccess, 'en-US', 'Unavailable'));
+    expect(within(header).getByText('Stale')).toBeInTheDocument();
+});
+
+test.each([
+    ['failed probe without success', 'UNAVAILABLE', false, undefined, null],
+    ['successful fresh snapshot', 'AVAILABLE', false, undefined, COMPUTE_OBSERVED],
+    ['retained real success', 'UNAVAILABLE', true, COMPUTE_OBSERVED, COMPUTE_OBSERVED],
+    ['stale snapshot without success', 'AVAILABLE', true, undefined, null],
+])('a later Hubble refresh failure preserves only successful evidence from %s',
+    async (_, availability, stale, lastSuccess, expectedTime) => {
+        jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
+        const data = snapshot();
+        data.vermeer = {...data.vermeer, availability, stale,
+            status: availability === 'AVAILABLE' && !stale ? 'UP' : 'UNKNOWN',
+            observed_at: availability === 'AVAILABLE' && !stale ? COMPUTE_OBSERVED : RETRY_OBSERVED};
+        if (lastSuccess === undefined) {
+            delete data.vermeer.last_success_at;
+        } else {
+            data.vermeer.last_success_at = lastSuccess;
+        }
+        getOverview.mockResolvedValue(data);
+        const {container} = renderCompute();
+        await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+        getOverview.mockRejectedValueOnce(new Error('Hubble network unavailable'));
+        await userEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+        const header = container.querySelector('.operations-overall-status');
+        await within(header).findByText('Cluster refresh failed. The last observed compute snapshot is retained.');
+        if (expectedTime === null) {
+            expect(header).toHaveTextContent('Observed: Unavailable · Unavailable');
+        } else {
+            expect(header).toHaveTextContent(formatObservedAt(expectedTime, 'en-US', 'Unavailable'));
+            expect(header).toHaveTextContent(formatObservedAge(expectedTime, 'en-US', 'Unavailable'));
+        }
+        expect(header).not.toHaveTextContent(formatObservedAt(RETRY_OBSERVED, 'en-US', 'Unavailable'));
+        expect(header).not.toHaveTextContent('0s ago');
+        expect(within(header).getByText('Stale')).toBeInTheDocument();
     });

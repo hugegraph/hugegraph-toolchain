@@ -114,14 +114,18 @@ const Overview = () => {
             }
             else if (dataRef.current) {
                 const previous = dataRef.current;
+                const previousVermeer = previous.vermeer;
+                const lastComputeSuccess = previousVermeer?.last_success_at
+                    ?? (previousVermeer?.availability === 'AVAILABLE' && !previousVermeer.stale
+                        ? previousVermeer.observed_at : null);
                 const snapshot = {...previous, stale: true,
                     nodes: previous.nodes?.map(markNodeReadinessStale),
-                    vermeer: previous.vermeer?.configured ? {
-                        ...previous.vermeer, stale: true, status: 'UNKNOWN',
+                    vermeer: previousVermeer?.configured ? {
+                        ...previousVermeer, stale: true, status: 'UNKNOWN',
                         availability: 'UNAVAILABLE', ready_workers: null,
                         reason: 'vermeer_snapshot_refresh_failed',
-                        last_success_at: previous.vermeer.last_success_at ?? previous.vermeer.observed_at,
-                    } : previous.vermeer};
+                        last_success_at: lastComputeSuccess,
+                    } : previousVermeer};
                 dataRef.current = snapshot;
                 setData(snapshot);
             }
@@ -231,7 +235,7 @@ const Overview = () => {
     const unavailable = t('operations.unavailable');
     const activeSnapshot = isVermeer ? data?.vermeer : data;
     const activeObservedAt = isVermeer && activeSnapshot?.stale
-        ? activeSnapshot.last_success_at ?? activeSnapshot.observed_at
+        ? activeSnapshot.last_success_at
         : activeSnapshot?.observed_at;
     const observed = formatObservedAt(
         activeObservedAt, i18n.language, unavailable
