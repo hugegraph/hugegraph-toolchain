@@ -45,6 +45,7 @@ public class OperationsHttpClient {
 
     private final int connectTimeoutMillis;
     private final int readTimeoutMillis;
+    private final int callTimeoutMillis;
     private final int maxResponseBytes;
     private final OkHttpClient client;
 
@@ -58,17 +59,14 @@ public class OperationsHttpClient {
         }
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
+        this.callTimeoutMillis = (int) Math.min(
+                Integer.MAX_VALUE,
+                (long) connectTimeoutMillis + readTimeoutMillis);
         this.maxResponseBytes = maxResponseBytes;
-        // Idle-read timeouts alone let a continuously progressing response hold
-        // the collector indefinitely. Bound the complete HTTP call by the
-        // existing connection budget plus one read budget, without a new option.
-        long callTimeoutMillis = Math.min(Integer.MAX_VALUE,
-                                          (long) connectTimeoutMillis + readTimeoutMillis);
         this.client = new OkHttpClient.Builder()
                 .connectTimeout(this.connectTimeoutMillis,
                                 TimeUnit.MILLISECONDS)
                 .readTimeout(this.readTimeoutMillis, TimeUnit.MILLISECONDS)
-                .callTimeout(callTimeoutMillis, TimeUnit.MILLISECONDS)
                 .followRedirects(false)
                 .followSslRedirects(false)
                 .proxy(Proxy.NO_PROXY)
@@ -96,7 +94,7 @@ public class OperationsHttpClient {
         String authorization = token == null || token.isEmpty() ?
                                null : "Bearer " + token;
         return this.requestAuthorized(target, authorization, allowedOrigins,
-                                      "application/json", false).getBody();
+                                      "application/json", false, true).getBody();
     }
 
     // Readiness uses 503 with a structured explanation; ordinary GETs still reject it.
@@ -118,12 +116,13 @@ public class OperationsHttpClient {
             authorization = "Basic " + encoded;
         }
         return this.requestAuthorized(target, authorization, allowedOrigins,
-                                      accept, readiness);
+                                      accept, readiness, false);
     }
 
     private ProbeResponse requestAuthorized(URI target, String authorization,
                                              Set<String> allowedOrigins,
-                                             String accept, boolean readiness) {
+                                             String accept, boolean readiness,
+                                             boolean boundedCall) {
         validateTarget(target, allowedOrigins);
         if (!"application/json".equals(accept) &&
             !"text/plain".equals(accept)) {
@@ -132,9 +131,16 @@ public class OperationsHttpClient {
         try {
             InetAddress[] addresses = InetAddress.getAllByName(target.getHost());
             validateResolvedAddresses(target.getHost(), addresses);
-            OkHttpClient requestClient = this.client.newBuilder()
-                    .dns(pinnedDns(target.getHost(), addresses))
-                    .build();
+            OkHttpClient.Builder requestBuilder = this.client.newBuilder()
+                    .dns(pinnedDns(target.getHost(), addresses));
+            if (boundedCall) {
+                // Vermeer is an optional enrichment on the overview request.
+                // Bound its whole exchange, including a progressing response body,
+                // without changing the existing idle-read semantics of PD/Store probes.
+                requestBuilder.callTimeout(this.callTimeoutMillis,
+                                           TimeUnit.MILLISECONDS);
+            }
+            OkHttpClient requestClient = requestBuilder.build();
             Request.Builder request = new Request.Builder()
                     .url(target.toString())
                     .get()

@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,6 +61,9 @@ public class VermeerOperationsService {
             "http_ready", "initialized", "service_online");
     private static final Set<String> METRIC_AVAILABILITIES = Set.of(
             "AVAILABLE", "UNAVAILABLE", "UNSUPPORTED", "PARTIAL", "MALFORMED");
+    private static final Set<String> CLEAR_SUCCESS_REASONS = Set.of(
+            "vermeer_access_denied", "vermeer_cluster_api_unsupported",
+            "vermeer_configuration_invalid");
 
     private final boolean enabled;
     private final String address;
@@ -71,6 +76,7 @@ public class VermeerOperationsService {
     private Map<String, Object> cached;
     private Map<String, Object> lastSuccess;
     private long cachedAt;
+    private CompletableFuture<Map<String, Object>> inFlight;
 
     @Autowired
     public VermeerOperationsService(HugeConfig config, ObjectMapper mapper) {
@@ -115,28 +121,77 @@ public class VermeerOperationsService {
         return overview;
     }
 
-    private synchronized Map<String, Object> snapshot(boolean refresh) {
+    private Map<String, Object> snapshot(boolean refresh) {
         long now = this.clock.millis();
         if (!this.enabled) {
             return this.empty("UNSUPPORTED", "vermeer_disabled", now);
         }
         String token;
+        String fingerprint;
+        CompletableFuture<Map<String, Object>> future;
+        Map<String, Object> previousSuccess = null;
+        boolean collect = false;
+        synchronized (this) {
+            try {
+                token = this.readToken();
+            } catch (IOException | IllegalArgumentException e) {
+                this.clearLocked();
+                return this.empty("UNAVAILABLE",
+                                  "vermeer_credentials_unavailable", now);
+            }
+            fingerprint = fingerprint(token);
+            if (!Objects.equals(fingerprint, this.credentialFingerprint)) {
+                this.clearLocked();
+                this.credentialFingerprint = fingerprint;
+            }
+            if (!refresh && this.cached != null &&
+                now - this.cachedAt < this.ttlMillis) {
+                return this.cached;
+            }
+            if (this.inFlight != null) {
+                future = this.inFlight;
+            } else {
+                future = new CompletableFuture<>();
+                this.inFlight = future;
+                previousSuccess = this.lastSuccess;
+                collect = true;
+            }
+        }
+        if (!collect) {
+            return await(future);
+        }
+        Map<String, Object> result;
         try {
-            token = this.readToken();
-        } catch (IOException | IllegalArgumentException e) {
-            this.clear();
-            return this.empty("UNAVAILABLE",
-                              "vermeer_credentials_unavailable", now);
+            result = this.collect(token, now, previousSuccess);
+        } catch (RuntimeException e) {
+            synchronized (this) {
+                if (this.inFlight == future &&
+                    Objects.equals(this.credentialFingerprint, fingerprint)) {
+                    this.inFlight = null;
+                }
+            }
+            future.completeExceptionally(e);
+            throw e;
         }
-        String fingerprint = fingerprint(token);
-        if (!Objects.equals(fingerprint, this.credentialFingerprint)) {
-            this.clear();
-            this.credentialFingerprint = fingerprint;
+        synchronized (this) {
+            if (this.inFlight == future &&
+                Objects.equals(this.credentialFingerprint, fingerprint)) {
+                if ("AVAILABLE".equals(result.get("availability"))) {
+                    this.lastSuccess = result;
+                } else if (CLEAR_SUCCESS_REASONS.contains(result.get("reason"))) {
+                    this.lastSuccess = null;
+                }
+                this.cached = result;
+                this.cachedAt = this.clock.millis();
+                this.inFlight = null;
+            }
         }
-        if (!refresh && this.cached != null &&
-            now - this.cachedAt < this.ttlMillis) {
-            return this.cached;
-        }
+        future.complete(result);
+        return result;
+    }
+
+    private Map<String, Object> collect(String token, long now,
+                                        Map<String, Object> previousSuccess) {
         Map<String, Object> result;
         try {
             URI origin = this.origin();
@@ -147,34 +202,40 @@ public class VermeerOperationsService {
                 result = this.normalize(this.mapper.readTree(payload), now);
             } catch (IOException | IllegalArgumentException e) {
                 result = this.failed("MALFORMED",
-                                     "vermeer_cluster_response_invalid", now);
-            }
-            if ("AVAILABLE".equals(result.get("availability"))) {
-                this.lastSuccess = result;
+                                     "vermeer_cluster_response_invalid", now,
+                                     previousSuccess);
             }
         } catch (UpstreamRequestException e) {
             String reason = e.getMessage();
             if ("upstream_http_status_401".equals(reason) ||
                 "upstream_http_status_403".equals(reason)) {
-                this.lastSuccess = null;
                 result = this.empty("UNAVAILABLE", "vermeer_access_denied", now);
             } else if ("upstream_http_status_404".equals(reason) ||
                        "upstream_http_status_405".equals(reason)) {
-                this.lastSuccess = null;
                 result = this.empty("UNSUPPORTED",
                                     "vermeer_cluster_api_unsupported", now);
             } else {
                 result = this.failed("UNAVAILABLE",
-                                     "vermeer_upstream_unavailable", now);
+                                     "vermeer_upstream_unavailable", now,
+                                     previousSuccess);
             }
         } catch (IllegalArgumentException e) {
-            this.clear();
             result = this.empty("UNAVAILABLE",
                                 "vermeer_configuration_invalid", now);
         }
-        this.cached = result;
-        this.cachedAt = now;
         return result;
+    }
+
+    private static Map<String, Object> await(
+            CompletableFuture<Map<String, Object>> future) {
+        try {
+            return future.join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+            }
+            throw e;
+        }
     }
 
     private URI origin() {
@@ -217,10 +278,12 @@ public class VermeerOperationsService {
         }
     }
 
-    private void clear() {
+    private void clearLocked() {
         this.cached = null;
         this.lastSuccess = null;
         this.credentialFingerprint = null;
+        this.cachedAt = 0L;
+        this.inFlight = null;
     }
 
     private Map<String, Object> normalize(JsonNode root, long now) {
@@ -400,11 +463,12 @@ public class VermeerOperationsService {
     }
 
     private Map<String, Object> failed(String availability, String reason,
-                                       long now) {
-        if (this.lastSuccess == null) {
+                                       long now,
+                                       Map<String, Object> previousSuccess) {
+        if (previousSuccess == null) {
             return this.empty(availability, reason, now);
         }
-        Map<String, Object> result = new LinkedHashMap<>(this.lastSuccess);
+        Map<String, Object> result = new LinkedHashMap<>(previousSuccess);
         result.put("availability", availability);
         result.put("status", "UNKNOWN");
         result.put("reason", reason);
