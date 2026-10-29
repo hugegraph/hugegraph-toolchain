@@ -2,8 +2,8 @@
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to You under the Apache License, Version 2.0 (the
+ * work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -138,6 +138,7 @@ public class CypherController extends GremlinController {
             return result;
         } catch (Throwable e) {
             status = ExecuteStatus.ASYNC_TASK_FAILED;
+            throwIfTransportTimeout(e);
             this.checkAnonymousAuthenticationFailure(e);
             throw e;
         } finally {
@@ -147,6 +148,17 @@ public class CypherController extends GremlinController {
             history.setDuration(duration);
             history.setAsyncId(asyncId);
             this.historyService.update(history);
+        }
+    }
+
+    static void throwIfTransportTimeout(Throwable failure) {
+        for (Throwable cause :
+             org.apache.commons.lang3.exception.ExceptionUtils.getThrowables(failure)) {
+            if (cause instanceof java.net.SocketTimeoutException ||
+                cause instanceof java.net.http.HttpTimeoutException ||
+                cause instanceof java.util.concurrent.TimeoutException) {
+                throw new ExternalException(504, "cypher.execute.timeout", failure);
+            }
         }
     }
 

@@ -62,6 +62,79 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 public class QueryServiceTest {
 
     @Test
+    public void testWrappedTransportTimeoutHasSafeGatewayStatus() throws Exception {
+        for (Throwable cause : List.of(new java.net.SocketTimeoutException("Read timed out"),
+                                       new java.net.http.HttpTimeoutException("private host"),
+                                       new java.util.concurrent.TimeoutException("private host"))) {
+            GremlinManager gremlin = this.mockGremlin();
+            org.apache.hugegraph.rest.ClientException failure =
+                    new org.apache.hugegraph.rest.ClientException(
+                            "private upstream URL", new RuntimeException(cause));
+            Mockito.when(gremlin.execute(Mockito.any())).thenThrow(failure);
+            ExternalException error = (ExternalException) Assert.assertThrows(ExternalException.class, () ->
+                    this.serviceWithConfig().executeSingleGremlinQuery(
+                            this.mockClient(gremlin), new GremlinQuery("g.V().count()")));
+            Assert.assertEquals(504, error.status());
+            Assert.assertEquals("gremlin.execute.timeout", error.getMessage());
+            Assert.assertSame(failure, error.getCause());
+        }
+    }
+
+    @Test
+    public void testRawAndWrappedCypherTimeoutsHaveSafeGatewayStatus() throws Exception {
+        for (boolean wrapped : List.of(false, true)) {
+            CypherManager cypher = Mockito.mock(CypherManager.class);
+            HugeClient client = Mockito.mock(HugeClient.class);
+            Mockito.when(client.cypher()).thenReturn(cypher);
+            java.net.SocketTimeoutException timeout = new java.net.SocketTimeoutException("private host");
+            Exception failure = wrapped ? new org.apache.hugegraph.rest.ClientException("private URL", timeout) :
+                                timeout;
+            Mockito.when(cypher.cypher(Mockito.anyString())).thenAnswer(call -> { throw failure; });
+            ExternalException error = (ExternalException) Assert.assertThrows(ExternalException.class, () ->
+                    this.serviceWithConfig().executeCypherQuery(client, "RETURN 1"));
+            Assert.assertEquals(504, error.status());
+            Assert.assertEquals("cypher.execute.timeout", error.getMessage());
+        }
+    }
+
+    @Test
+    public void testRealSlowGremlinHttpRequestReturnsGatewayTimeout() throws Exception {
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            if (exchange.getRequestURI().getPath().endsWith("/versions")) {
+                byte[] body = ("{\"versions\":{\"version\":\"v1\",\"core\":\"1.8.0\"," +
+                              "\"gremlin\":\"3.8.1\",\"api\":\"0.72.0.0\"}}")
+                              .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            } else {
+                try {
+                    release.await(5, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    exchange.close();
+                }
+            }
+        });
+        server.start();
+        try (HugeClient client = HugeClient.builder("http://127.0.0.1:" + server.getAddress().getPort(),
+                                                    "DEFAULT", "hugegraph").configTimeout(1).build()) {
+            ExternalException error = (ExternalException) Assert.assertThrows(ExternalException.class, () ->
+                    this.serviceWithConfig().executeSingleGremlinQuery(client, new GremlinQuery("1+2")));
+            Assert.assertEquals(504, error.status());
+            Assert.assertEquals("gremlin.execute.timeout", error.getMessage());
+            Assert.assertTrue(error.getCause() instanceof java.net.SocketTimeoutException);
+        } finally {
+            release.countDown();
+            server.stop(0);
+        }
+    }
+
+    @Test
     public void testDefaultReadLimitIsReported() throws Exception {
         GremlinManager gremlin = this.mockGremlin();
         GremlinResult result = this.serviceWithConfig().executeGremlinQuery(
