@@ -534,7 +534,7 @@ const Schema = () => {
                                         <Typography.Paragraph type='secondary'>
                                             {t(`schema_template.builtin_description.${name}`)}
                                         </Typography.Paragraph>
-                                        {!templateWriteEnabled && (
+                                        <div style={{maxHeight: 280, overflow: 'auto'}}>
                                             <CodeEditor
                                                 value={schema}
                                                 lang='groovy'
@@ -544,7 +544,7 @@ const Schema = () => {
                                                     name: t(`schema_template.builtin.${name}`),
                                                 })}
                                             />
-                                        )}
+                                        </div>
                                     </Card>
                                 </Col>
                             ))}
