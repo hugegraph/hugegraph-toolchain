@@ -72,7 +72,7 @@ const VermeerHealth = ({cluster, node, size = 'normal'}) => {
 
 const VermeerSummary = ({cluster, onOpen}) => {
     const {t} = useTranslation();
-    if (!cluster) {
+    if (!cluster?.configured) {
         return null;
     }
     const workerCount = Number.isInteger(cluster.registered_workers)
@@ -83,7 +83,6 @@ const VermeerSummary = ({cluster, onOpen}) => {
                 type='button'
                 className='operations-vermeer-summary'
                 onClick={onOpen}
-                disabled={!cluster.configured}
                 aria-label={t('operations.vermeer_open')}
             >
                 <DeploymentUnitOutlined className='operations-vermeer-icon' aria-hidden='true' />
@@ -92,17 +91,13 @@ const VermeerSummary = ({cluster, onOpen}) => {
                     <span>{t('operations.vermeer_compute_service')}</span>
                     <VermeerHealth cluster={cluster} />
                     {cluster.stale && <small>{t('operations.stale')}</small>}
-                    {cluster.configured && (
-                        <small>{t('operations.vermeer_members', {
-                            masters: cluster.master ? 1 : '—', workers: workerCount,
-                        })}</small>
-                    )}
+                    <small>{t('operations.vermeer_members', {
+                        masters: cluster.master ? 1 : '—', workers: workerCount,
+                    })}</small>
                 </span>
-                {cluster.configured && <RightOutlined aria-hidden='true' />}
+                <RightOutlined aria-hidden='true' />
             </button>
-            {cluster.configured && (
-                <span className='operations-vermeer-entry-hint'>{t('operations.vermeer_open')}</span>
-            )}
+            <span className='operations-vermeer-entry-hint'>{t('operations.vermeer_open')}</span>
         </div>
     );
 };

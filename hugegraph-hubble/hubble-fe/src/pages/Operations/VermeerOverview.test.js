@@ -198,14 +198,15 @@ test('explains Master readiness with its own checks rather than Worker channels'
     expect(within(dialog).queryByText('Graph loading channel')).not.toBeInTheDocument();
 });
 
-test('an undeployed optional compute service stays neutral', async () => {
+test('an undeployed optional compute service stays out of the main overview', async () => {
     const data = snapshot();
     data.vermeer = {configured: false, availability: 'UNSUPPORTED', status: 'UNKNOWN', workers: []};
     getOverview.mockResolvedValue(data);
-    renderOverview();
-    const entry = await screen.findByRole('button', {name: 'View compute cluster'});
-    expect(entry).toBeDisabled();
-    expect(within(entry).getByText('Not deployed')).toBeInTheDocument();
+    const {container} = renderOverview();
+    await screen.findByRole('heading', {level: 2, name: 'Cluster Overview'});
+    expect(screen.queryByRole('button', {name: 'View compute cluster'})).not.toBeInTheDocument();
+    expect(screen.queryByText('Not deployed')).not.toBeInTheDocument();
+    expect(container.querySelector('.operations-main-topology.has-vermeer')).toBeNull();
     expect(screen.queryByText('Compute service needs attention')).not.toBeInTheDocument();
 });
 

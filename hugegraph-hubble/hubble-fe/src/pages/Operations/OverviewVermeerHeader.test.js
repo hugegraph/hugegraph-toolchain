@@ -29,6 +29,7 @@ jest.mock('../../api/operations');
 jest.mock('../../api/auth');
 
 const MAIN_OBSERVED = Date.UTC(2026, 9, 29, 8, 0, 0);
+const COMPUTE_LAST_SUCCESS = Date.UTC(2026, 9, 29, 8, 30, 0);
 const COMPUTE_OBSERVED = Date.UTC(2026, 9, 29, 9, 0, 0);
 
 const snapshot = () => ({
@@ -146,13 +147,22 @@ test.each([
         data.vermeer = {...data.vermeer, stale: computeStale, status: computeStatus,
             availability: computeStale ? 'UNAVAILABLE' : 'AVAILABLE',
             reason: computeStale ? 'vermeer_upstream_unavailable' : null,
+            last_success_at: computeStale ? COMPUTE_LAST_SUCCESS : COMPUTE_OBSERVED,
             ready_workers: computeStale ? null : 1};
         getOverview.mockResolvedValue(data);
         const {container} = renderCompute();
         await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
         const header = container.querySelector('.operations-overall-status');
-        expect(header).toHaveTextContent(formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable'));
+        const expectedObserved = computeStale ? COMPUTE_LAST_SUCCESS : COMPUTE_OBSERVED;
+        expect(header).toHaveTextContent(
+            formatObservedAt(expectedObserved, 'en-US', 'Unavailable')
+        );
         expect(header).not.toHaveTextContent(formatObservedAt(MAIN_OBSERVED, 'en-US', 'Unavailable'));
+        if (computeStale) {
+            expect(header).not.toHaveTextContent(
+                formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable')
+            );
+        }
         expect(Boolean(within(header).queryByText('Stale'))).toBe(computeStale);
         expect(header.querySelector(computeStale ? '.status-unknown' : '.status-up')).not.toBeNull();
 

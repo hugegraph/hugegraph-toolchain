@@ -1,11 +1,13 @@
 # Vermeer in Operations
 
 The cluster overview keeps HugeGraph Server, PD and Store as the main topology.
-Vermeer appears as a separate compute-service summary. Select it to enter the
-compute view, and use **Return to main cluster** to restore the main view.
+When Vermeer health collection is configured, a separate compute-service summary
+opens the compute view. Use **Back to main cluster** to restore the main view.
 The compute topology places Master above Worker; Worker peers wrap within the
 same layer as the deployment grows. Node details expose readiness checks and
-process resource observations.
+process resource observations. Disabled integration does not occupy the default
+main-cluster topology; an explicit compute-view URL still shows a neutral
+not-deployed explanation.
 
 Operations describes the current deployment. Its top bar does not filter nodes
 by the graph or GraphSpace selected elsewhere in Hubble. Existing Operations
@@ -26,11 +28,20 @@ port. It must not contain credentials, a path or a query. Hubble contacts only
 this Master; addresses returned for Workers are displayed as metadata and do
 not become browser-side request targets.
 
-The token file contains a Vermeer administrator token. The backend reads it
-without exposing it in API responses. A deployment using anonymous Vermeer
-authentication may leave `token_file` empty. Do not use a signing factor as a
-Bearer token. The HugeGraph Helm chart configures the service origin and mounts
-its existing init-container-generated token read-only into Hubble; signing
+The Operations keys are intentionally separate from the existing
+`vermeer.url` and `vermeer.token_file` direct-analysis settings. Direct graph
+analysis can use a narrower GraphSpace-scoped credential, while
+`GET /api/v1/admin/cluster` requires an administrator credential in an
+authenticated deployment. Operators may point both integrations at the same
+Master, but should not copy a limited direct-analysis token into the Operations
+setting. The HugeGraph Helm chart uses the same release-local Master and
+administrator service token for both integrations because that token has the
+required scope.
+
+The Operations token file is read only by Hubble Backend and is never returned
+in API responses. A deployment using anonymous Vermeer authentication may leave
+`operations.vermeer.token_file` empty. Do not use a signing factor as a Bearer
+token. The Helm chart mounts the generated token read-only into Hubble; signing
 material remains outside the running Hubble container.
 
 Vermeer is disabled by default. Disabled integration is a neutral state and
@@ -47,10 +58,18 @@ This requires a paired Vermeer build providing schema version 1, including:
 - registered and ready Worker counts;
 - independently timestamped process CPU/RSS observations and metric availability.
 
-The HTTP exchange, including a continuously streaming response body, is limited
-to `operations.connect_timeout_ms` plus `operations.read_timeout_ms`. The
-separate DNS address validation precedes this HTTP call budget. Master and
-Worker raw IDs may overlap; the UI includes the role in node-selection keys.
+Only the Vermeer Bearer exchange, including a continuously streaming response
+body, is limited to `operations.connect_timeout_ms` plus
+`operations.read_timeout_ms`. Existing PD, Store and readiness requests retain
+their idle-read and source-specific deadline behavior. DNS validation precedes
+the Vermeer HTTP call budget. Master and Worker raw IDs may overlap; the UI
+includes the role in node-selection keys.
+
+Concurrent explicit Vermeer refreshes share one in-flight collection. Network
+and JSON parsing run outside the cache monitor, while an ordinary overview read
+can return a fresh cached compute snapshot without waiting for that refresh.
+Credential rotation starts a new generation; an older in-flight response cannot
+overwrite the new credential's cache.
 
 `GET /api/v1.3/operations/overview` retains its existing `nodes`, `facts` and
 `sources` for the main cluster and adds `vermeer`, `main_cluster_status` and
@@ -69,13 +88,13 @@ according to the caller's existing Operations capabilities.
 | Older Master has no cluster API | Readiness unavailable; upgrade the paired image |
 | Master request fails after a successful observation | Current state unknown; previous evidence marked stale |
 | CPU/RSS sampling fails while task streams remain ready | Worker remains ready; resources unavailable |
-| Vermeer is disabled | Not deployed; no impact on overall health |
+| Vermeer is disabled | No main-overview entry; direct links show Not deployed |
 
 A configured Vermeer that needs attention can lower an otherwise healthy
-deployment overview to **Needs attention**. The UI also shows the main cluster's
-own status, so compute-service trouble does not claim that the graph database
-is down. A space-scoped Worker availability result is not a global cluster
-health verdict.
+deployment overview to **Attention**. The UI also shows the main cluster's own
+status, so compute-service trouble does not claim that the graph database is
+down. A space-scoped Worker availability result is not a global cluster health
+verdict.
 
 Worker counts mean **ready / registered**, not expected Helm replicas. A Worker
 removed from the registration set is not invented as an offline historical
@@ -88,6 +107,10 @@ is fresh. Partial coverage is not a complete cluster resource total. These
 observations are not host or Pod-limit percentages. The initial CPU observation
 may report `metrics_warming_up`; wait at least one second and refresh for a
 second sample.
+
+When a failed refresh retains earlier evidence, the compute header, facts and
+node details all show the last successful observation time. The failure reason
+and stale marker make clear that current readiness is not confirmed.
 
 ## Paired rollout
 

@@ -230,11 +230,14 @@ const Overview = () => {
 
     const unavailable = t('operations.unavailable');
     const activeSnapshot = isVermeer ? data?.vermeer : data;
+    const activeObservedAt = isVermeer && activeSnapshot?.stale
+        ? activeSnapshot.last_success_at ?? activeSnapshot.observed_at
+        : activeSnapshot?.observed_at;
     const observed = formatObservedAt(
-        activeSnapshot?.observed_at, i18n.language, unavailable
+        activeObservedAt, i18n.language, unavailable
     );
     const observedAge = formatObservedAge(
-        activeSnapshot?.observed_at, i18n.language, unavailable
+        activeObservedAt, i18n.language, unavailable
     );
     const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
     const attentionNodes = selectAttentionNodes(nodes);
@@ -497,8 +500,9 @@ const Overview = () => {
                                     ? <Empty description={t('operations.empty_cluster')} />
                                     : view === 'topology'
                                         ? (
-                                            <div className={data.vermeer
-                                                ? 'operations-main-topology has-vermeer' : 'operations-main-topology'}>
+                                            <div className={data.vermeer?.configured
+                                                ? 'operations-main-topology has-vermeer'
+                                                : 'operations-main-topology'}>
                                                 <ClusterTopology
                                                     nodes={nodes}
                                                     returnState={operationsReturnState(location)}
