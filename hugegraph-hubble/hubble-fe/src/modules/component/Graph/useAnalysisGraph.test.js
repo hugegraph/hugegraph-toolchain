@@ -259,6 +259,29 @@ test('reports active local write-apply failures to the submitting drawer without
     expect(message.error).toHaveBeenCalledWith('toolbar failed');
 });
 
+test('keeps controller failures in the canvas while preserving drawer error ownership', async () => {
+    const owner = createController();
+    const failure = new RangeError('Maximum call stack size exceeded');
+    let state = owner.getSnapshot();
+    owner.getSnapshot = () => state;
+    const view = renderHook(() => useAnalysisGraph(initial));
+    act(() => view.result.current.onReady(owner));
+    owner.applyStyle.mockImplementationOnce(async () => {
+        state = {...state, status: 'error', error: failure};
+        throw failure;
+    });
+    await act(async () => { await view.result.current.changeSettings([]); });
+    expect(message.error).not.toHaveBeenCalled();
+    owner.updateElements.mockRejectedValueOnce(failure);
+    await act(async () => { await expect(view.result.current.addElements(raw)).rejects.toBe(failure); });
+    expect(message.error).not.toHaveBeenCalled();
+    // A separate business error must not be suppressed by an old engine failure.
+    owner.applyStyle.mockRejectedValueOnce(new Error('settings could not be saved'));
+    await act(async () => { await view.result.current.changeSettings([]); });
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith('settings could not be saved');
+});
+
 test('a late local write-apply failure cannot notify or write through a new scope', async () => {
     let reject;
     const pending = new Promise((_, fail) => { reject = fail; });
