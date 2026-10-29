@@ -98,7 +98,7 @@ test('ignores a closed editor response when creating a new GraphSpace', async ()
         name: 'old', auth: true, storage_limit: 917,
     }}));
     expect(screen.getByPlaceholderText('graphspace.form.id_placeholder')).toHaveValue('new_space');
-    expect(document.querySelector('#control-hooks_storage_limit')).toHaveValue('10240');
+    expect(document.querySelector('#control-hooks_storage_limit')).toHaveValue('256');
 });
 
 test('submits once while keeping the resource form mounted and retryable after failure', async () => {
@@ -259,7 +259,7 @@ test('creates a GraphSpace with visible resource defaults', async () => {
         memory_limit: 128,
         compute_cpu_limit: 128,
         compute_memory_limit: 128,
-        storage_limit: 10240,
+        storage_limit: 256,
     });
 });
 
@@ -479,4 +479,21 @@ test('both locales explain clearing and the paired Server requirement', () => {
         const pages = require(`../../i18n/resources/${locale}/modules/pages.json`);
         expect(pages.graphspace.form.compute_inheritance_help).toContain('apache/hugegraph#3391');
     }
+});
+
+test('preserves an existing storage quota when saving a space opened with the new defaults', async () => {
+    api.manage.getGraphSpace.mockResolvedValue({
+        status: 200,
+        data: {name: 'existing_space', auth: true, storage_limit: 10240},
+    });
+    render(<EditLayer visible detail={{name: 'existing_space'}}
+        onCancel={jest.fn()} refresh={jest.fn()} />);
+
+    await waitFor(() => expect(document.querySelector('#control-hooks_storage_limit'))
+        .toHaveValue('10240'));
+    fireEvent.click(screen.getByRole('button', {name: 'common.action.save'}));
+
+    await waitFor(() => expect(api.manage.updateGraphSpace).toHaveBeenCalledWith(
+        'existing_space', expect.objectContaining({storage_limit: 10240}), expect.anything()
+    ));
 });

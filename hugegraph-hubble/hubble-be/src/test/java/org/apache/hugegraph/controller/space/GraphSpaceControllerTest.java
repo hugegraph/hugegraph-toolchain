@@ -284,7 +284,7 @@ public class GraphSpaceControllerTest {
         Assert.assertEquals(128, graphSpace.getMemoryLimit());
         Assert.assertEquals(0, graphSpace.getComputeCpuLimit());
         Assert.assertEquals(0, graphSpace.getComputeMemoryLimit());
-        Assert.assertEquals(10240, graphSpace.getStorageLimit());
+        Assert.assertEquals(256, graphSpace.getStorageLimit());
         Map<?, ?> wire = JsonUtil.fromJson(JsonUtil.toJson(graphSpace.convertReq()), Map.class);
         Assert.assertFalse(wire.containsKey("compute_cpu_limit"));
         Assert.assertFalse(wire.containsKey("compute_memory_limit"));

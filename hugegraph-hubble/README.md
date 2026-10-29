@@ -14,7 +14,7 @@ guide covers card navigation, editing, failure recovery, pagination and the
 repeatable stateful API fixture.
 
 New graph spaces start with 128 CPU cores, 128 GB memory, 128 compute CPU cores,
-128 GB compute memory, 10240 GB storage and 100 graphs. Server also defaults the
+128 GB compute memory, 256 GB storage and 100 graphs. Server also defaults the
 role limit to 100. Existing spaces retain their configured limits. Large finite
 quotas display their actual values; only the legacy `Integer.MAX_VALUE` sentinel
 is shown as unlimited, with `--` instead of a percentage because it has no finite
@@ -76,6 +76,14 @@ remain unverified because no live cluster is configured in this test environment
 ![Authenticated graph context after switching](docs/assets/graphspace-context-authenticated.png)
 ![Anonymous graph context after switching](docs/assets/graphspace-context-anonymous.png)
 ![Editing inherited compute limits](docs/assets/graphspace-inherited-compute.png)
+
+The advanced resource form groups graph, compute, and storage settings, aligns
+numeric fields and units, and stacks labels on narrow
+screens. This Chrome component screenshot uses controlled API fixtures; it does
+not establish a production login, deployment, or quota enforcement result.
+
+![Advanced GraphSpace resource form](docs/assets/graphspace-resource-form.png)
+
 
 ## Product Tour
 
