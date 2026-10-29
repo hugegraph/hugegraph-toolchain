@@ -46,8 +46,8 @@ public class VermeerOperationsServiceTerminalTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
-    public void testKnownDenialAtDeadlineDiscardsHistoricalSnapshot() throws Exception {
-        for (int status : List.of(401, 403)) {
+    public void testKnownTerminalAtDeadlineDiscardsHistoricalSnapshot() throws Exception {
+        for (int status : List.of(401, 403, 404, 405)) {
             ControlledHttp http = new ControlledHttp(status);
             BoundaryClock clock = new BoundaryClock(http);
             VermeerOperationsService service = service(http, clock, new AtomicReference<>("old"));
@@ -68,8 +68,8 @@ public class VermeerOperationsServiceTerminalTest {
                 clock.releaseWorker.countDown();
                 awaitIdle(http.denier.get());
                 clock.releaseCaller.countDown();
-                assertEmptyDenied(request.get(2L, TimeUnit.SECONDS));
-                assertEmptyDenied(cluster(service, false));
+                assertEmptyTerminal(request.get(2L, TimeUnit.SECONDS), status);
+                assertEmptyTerminal(cluster(service, false), status);
             } finally {
                 clock.releaseWorker.countDown();
                 clock.releaseCaller.countDown();
@@ -80,24 +80,26 @@ public class VermeerOperationsServiceTerminalTest {
     }
 
     @Test
-    public void testLateDenialClearsOnlyItsCachedHistoricalSnapshot() throws Exception {
-        ControlledHttp http = new ControlledHttp(403);
-        VermeerOperationsService service = service(http, Clock.systemUTC(), new AtomicReference<>("old"));
-        Assert.assertEquals("UP", cluster(service, false).get("status"));
-        ExecutorService callers = Executors.newSingleThreadExecutor();
-        try {
-            Map<?, ?> timedOut = timedOutDenial(service, http, callers);
-            Assert.assertEquals(1, ((List<?>) timedOut.get("workers")).size());
-            http.releaseDeny.countDown();
-            awaitIdle(http.denier.get());
+    public void testLateTerminalClearsOnlyItsCachedHistoricalSnapshot() throws Exception {
+        for (int status : List.of(401, 403, 404, 405)) {
+            ControlledHttp http = new ControlledHttp(status);
+            VermeerOperationsService service = service(http, Clock.systemUTC(), new AtomicReference<>("old"));
+            Assert.assertEquals("UP", cluster(service, false).get("status"));
+            ExecutorService callers = Executors.newSingleThreadExecutor();
+            try {
+                Map<?, ?> timedOut = timedOutDenial(service, http, callers);
+                Assert.assertEquals(1, ((List<?>) timedOut.get("workers")).size());
+                http.releaseDeny.countDown();
+                awaitIdle(http.denier.get());
 
-            assertEmptyDenied(cluster(service, false));
-            // A settled response is immutable, even when the retained cache is revoked.
-            Assert.assertEquals(1, ((List<?>) timedOut.get("workers")).size());
-            Assert.assertEquals(true, timedOut.get("stale"));
-        } finally {
-            http.releaseDeny.countDown();
-            callers.shutdownNow();
+                assertEmptyTerminal(cluster(service, false), status);
+                // A settled response is immutable, even when the retained cache is revoked.
+                Assert.assertEquals(1, ((List<?>) timedOut.get("workers")).size());
+                Assert.assertEquals(true, timedOut.get("stale"));
+            } finally {
+                http.releaseDeny.countDown();
+                callers.shutdownNow();
+            }
         }
     }
 
@@ -206,7 +208,13 @@ public class VermeerOperationsServiceTerminalTest {
     }
 
     private static void assertEmptyDenied(Map<?, ?> cluster) {
-        Assert.assertEquals("vermeer_access_denied", cluster.get("reason"));
+        assertEmptyTerminal(cluster, 403);
+    }
+
+    private static void assertEmptyTerminal(Map<?, ?> cluster, int status) {
+        Assert.assertEquals(status >= 404 ? "vermeer_cluster_api_unsupported" : "vermeer_access_denied",
+                            cluster.get("reason"));
+        Assert.assertEquals(status >= 404 ? "UNSUPPORTED" : "UNAVAILABLE", cluster.get("availability"));
         assertNoHistory(cluster);
     }
 

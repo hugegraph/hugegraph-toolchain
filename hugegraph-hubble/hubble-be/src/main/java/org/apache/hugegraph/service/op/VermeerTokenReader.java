@@ -55,6 +55,15 @@ final class VermeerTokenReader {
         this.executor.allowCoreThreadTimeOut(true);
     }
 
+    void close() {
+        this.executor.shutdownNow();
+        try {
+            this.executor.awaitTermination(1L, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     Read read(int timeoutMillis) {
         Attempt attempt;
         synchronized (this) {

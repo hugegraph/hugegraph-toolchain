@@ -262,7 +262,7 @@ const VermeerNodeDetails = ({node, cluster}) => {
     const {t, i18n} = useTranslation();
     const checks = node.checks ?? {};
     const observedAt = vermeerAvailable(cluster)
-        ? node.observed_at ?? cluster.observed_at : vermeerObservedAt(cluster);
+        ? node.observed_at ?? vermeerObservedAt(cluster) : vermeerObservedAt(cluster);
     const checkKeys = node.role === 'MASTER' ? ['http_ready', 'initialized', 'service_online']
         : ['registered', 'connection_ready', 'load_stream_ready', 'compute_stream_ready',
             'superstep_stream_ready'];

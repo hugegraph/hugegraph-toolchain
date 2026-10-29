@@ -17,6 +17,8 @@
 
 package org.apache.hugegraph.service.op;
 
+import jakarta.annotation.PreDestroy;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -137,6 +139,17 @@ public class VermeerOperationsService {
                     return thread;
                 });
         this.collector.allowCoreThreadTimeOut(true);
+    }
+
+    @PreDestroy
+    public void close() {
+        this.collector.shutdownNow();
+        this.tokenReader.close();
+        try {
+            this.collector.awaitTermination(1L, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public Map<String, Object> enrich(Map<String, Object> overview,

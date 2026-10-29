@@ -183,7 +183,7 @@ test.each([
     ['UP', true, COMPUTE_OBSERVED],
     ['UNKNOWN', true, COMPUTE_OBSERVED],
     ['UNKNOWN', false, COMPUTE_OBSERVED],
-    ['UP', false, COMPUTE_OBSERVED],
+    ['UP', false, RETRY_OBSERVED],
 ])('compute header status %s and stale=%s choose observation time independently',
     async (status, stale, expectedTime) => {
         jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
@@ -197,7 +197,7 @@ test.each([
         const header = container.querySelector('.operations-overall-status');
         expect(header).toHaveTextContent(formatObservedAt(expectedTime, 'en-US', 'Unavailable'));
         expect(header).toHaveTextContent(formatObservedAge(expectedTime, 'en-US', 'Unavailable'));
-        const otherTime = RETRY_OBSERVED;
+        const otherTime = expectedTime === RETRY_OBSERVED ? COMPUTE_OBSERVED : RETRY_OBSERVED;
         expect(header).not.toHaveTextContent(formatObservedAt(otherTime, 'en-US', 'Unavailable'));
         expect(Boolean(within(header).queryByText('Stale'))).toBe(stale);
     });
@@ -239,7 +239,7 @@ test('a first collection timeout explains the unconfirmed readiness in Chinese w
 });
 
 test.each([
-    ['fresh with successful timestamp', 'AVAILABLE', false, COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
+    ['fresh with successful timestamp', 'AVAILABLE', false, COMPUTE_LAST_SUCCESS, RETRY_OBSERVED],
     ['fresh legacy response', 'AVAILABLE', false, null, RETRY_OBSERVED],
     ['retained successful snapshot', 'UNAVAILABLE', true, COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
     ['retained snapshot without success', 'UNAVAILABLE', true, null, null],
@@ -276,6 +276,43 @@ test('fresh node details preserve an explicit node observation distinct from the
     const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
         .toHaveTextContent(formatObservedAt(COMPUTE_LAST_SUCCESS, 'en-US', 'Unavailable'));
+});
+
+test.each([-15, 15])('fresh source time is preserved when the Hubble clock differs by %s minutes', async offset => {
+    const collectorTime = COMPUTE_OBSERVED + offset * 60 * 1000;
+    jest.spyOn(Date, 'now').mockReturnValue(collectorTime);
+    const data = snapshot();
+    data.vermeer.last_success_at = collectorTime;
+    data.vermeer.workers[0].observed_at = COMPUTE_OBSERVED;
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const expected = formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable');
+    const header = container.querySelector('.operations-overall-status');
+    expect(header).toHaveTextContent(expected);
+    expect(header).not.toHaveTextContent(formatObservedAt(collectorTime, 'en-US', 'Unavailable'));
+    expect(container.querySelector('.operations-vermeer-facts .operations-fact:last-child strong'))
+        .toHaveTextContent(expected);
+    await userEvent.click(screen.getByRole('button', {name: 'worker-01'}));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
+        .toHaveTextContent(expected);
+});
+
+test('fresh snapshots without a source timestamp fall back to the successful collection clock', async () => {
+    const data = snapshot();
+    data.vermeer.observed_at = null;
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const expected = formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable');
+    expect(container.querySelector('.operations-overall-status')).toHaveTextContent(expected);
+    expect(container.querySelector('.operations-vermeer-facts .operations-fact:last-child strong'))
+        .toHaveTextContent(expected);
+    await userEvent.click(screen.getByRole('button', {name: 'worker-01'}));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
+        .toHaveTextContent(expected);
 });
 
 test('a stale formerly UP main snapshot remains visibly stale beside fresh compute health', async () => {
@@ -326,6 +363,8 @@ test('the main aggregate header keeps its observation time even when it is stale
 test.each([
     ['failed probe without success', 'UNAVAILABLE', false, undefined, null],
     ['successful fresh snapshot', 'AVAILABLE', false, undefined, COMPUTE_OBSERVED],
+    ['fresh snapshot with a separate collector clock', 'AVAILABLE', false,
+        COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
     ['retained real success', 'UNAVAILABLE', true, COMPUTE_OBSERVED, COMPUTE_OBSERVED],
     ['stale snapshot without success', 'AVAILABLE', true, undefined, null],
 ])('a later Hubble refresh failure preserves only successful evidence from %s',

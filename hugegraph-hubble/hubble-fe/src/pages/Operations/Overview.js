@@ -116,7 +116,9 @@ const Overview = () => {
             else if (dataRef.current) {
                 const previous = dataRef.current;
                 const previousVermeer = previous.vermeer;
-                const lastComputeSuccess = vermeerObservedAt(previousVermeer);
+                const lastComputeSuccess = previousVermeer?.last_success_at
+                    ?? (previousVermeer?.availability === 'AVAILABLE' && !previousVermeer.stale
+                        ? previousVermeer.observed_at : null);
                 const snapshot = {...previous, stale: true,
                     nodes: previous.nodes?.map(markNodeReadinessStale),
                     vermeer: previousVermeer?.configured ? {

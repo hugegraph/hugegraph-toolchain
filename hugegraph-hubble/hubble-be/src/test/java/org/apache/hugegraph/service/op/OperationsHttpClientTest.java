@@ -408,12 +408,15 @@ public class OperationsHttpClientTest {
             try {
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 exchange.sendResponseHeaders(readiness ? 503 : 200, bytes.length);
-                for (byte value : bytes) {
-                    exchange.getResponseBody().write(value);
+                for (int offset = 0; offset < bytes.length; offset += 8) {
+                    exchange.getResponseBody().write(bytes, offset, Math.min(8, bytes.length - offset));
                     exchange.getResponseBody().flush();
-                    // Body transfer exceeds Vermeer's 1100ms total budget,
-                    // but never pauses long enough for a 1000ms idle timeout.
-                    Thread.sleep(50L);
+                    // Six chunks span at least 1250ms, beyond the 1100ms call
+                    // budget but below the 1000ms idle timeout between chunks.
+                    // Avoid per-byte flushes whose overhead varies by platform.
+                    if (offset + 8 < bytes.length) {
+                        Thread.sleep(250L);
+                    }
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -426,6 +429,7 @@ public class OperationsHttpClientTest {
         server.start();
         OperationsHttpClient client = new OperationsHttpClient(100, 1000, 128);
         try {
+            long started = System.nanoTime();
             if (readiness) {
                 OperationsHttpClient.ProbeResponse response = client.probe(
                         uri(server, "/v1/ready"), "hubble", "private-password", Collections.emptySet());
@@ -435,6 +439,8 @@ public class OperationsHttpClientTest {
                 Assert.assertEquals(body, client.get(uri(server, "/v1/members"),
                                                     "hubble", "private-password"));
             }
+            Assert.assertTrue(System.nanoTime() - started >
+                              TimeUnit.MILLISECONDS.toNanos(client.callTimeoutMillis()));
             Assert.assertTrue(authorization.get().startsWith("Basic "));
         } finally {
             server.stop(0);

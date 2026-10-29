@@ -96,6 +96,15 @@ monotonic elapsed time, independently of wall-clock adjustments.
 Worker data, and readiness counts. Topology and metric fields are projected
 according to the caller's existing Operations capabilities.
 
+For an `AVAILABLE` snapshot, `vermeer.observed_at` is the Master's reported
+observation time; `last_success_at` records the successful Hubble collection on
+Hubble's clock. For an empty failed or unsupported response, `observed_at`
+records the attempt time, while `availability=UNAVAILABLE` or `UNSUPPORTED`,
+`status=UNKNOWN` and `last_success_at=null` explicitly mean no retained success.
+Here `stale=false` means there is no historical payload, not that the service
+was observed healthy. API consumers must inspect availability and success
+evidence rather than interpret the attempt timestamp as service readiness.
+
 ## Interpret the state
 
 | Observation | Display |
@@ -133,6 +142,9 @@ second sample.
 When a failed refresh retains earlier evidence, the compute header, facts and
 node details all show the last successful observation time. The failure reason
 and stale marker make clear that current readiness is not confirmed.
+Fresh header/facts use the Master's `observed_at`; fresh node details preserve
+the node's own observation time. They do not replace source time with Hubble's
+collection time when the two clocks differ.
 Without a successful observation, the time remains unavailable; a failed probe
 does not create a successful observation timestamp.
 The main-cluster status also retains its own stale marker in the deployment
@@ -164,6 +176,16 @@ Actual topology-surface capture at a 375px viewport using controlled API data.
 Peer nodes wrap inside their existing Server, PD or Store layer. The compact
 Vermeer entry remains beside Store without a fourth tier or a connecting edge.
 It opens the compute view and restores the main view on return.
+
+### Source observation clocks
+
+![Fresh compute header and facts use the source observation time](images/showcase/operations-vermeer-fresh-clock.png)
+
+Actual Chromium capture with controlled API data: the Master reports 09:00
+while Hubble's successful collection time is 09:15. The fresh header and facts
+show 09:00; node details retain each node's own observation time. This verifies
+clock selection in the UI, not real-service clock synchronization or Helm
+deployment acceptance.
 
 ## Paired rollout
 
