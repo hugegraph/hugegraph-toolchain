@@ -92,6 +92,20 @@ test.each([0, -1])('can enable an editable idle limit after loading disabled dep
     expect(api.auth.logout).toHaveBeenCalledTimes(1);
 });
 
+test('accepts an administrator-authorized update above seven days', async () => {
+    api.auth.getSessionSettings.mockResolvedValue(settings(172800));
+    renderHook(() => useSessionIdleTimeout(true));
+    await flush();
+    await advance(1000);
+    fireEvent(window, new CustomEvent(SESSION_SETTINGS_EVENT, {detail: {
+        timeoutSeconds: 864000, activityScope: 'deployment-scope', source: 'update', requestedAt: Date.now(),
+    }}));
+    await advance(172800000);
+    expect(api.auth.logout).not.toHaveBeenCalled();
+    await advance(691199000);
+    expect(api.auth.logout).toHaveBeenCalledTimes(1);
+});
+
 test('segments a deployment timeout longer than the browser maximum timer delay', async () => {
     const seconds = 2592000;
     const maximumTimerDelay = 2147483647;

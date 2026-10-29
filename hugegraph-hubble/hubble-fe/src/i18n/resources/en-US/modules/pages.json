@@ -519,11 +519,12 @@
   "my": {
     "session": {
       "title": "Session timeout",
-      "description": "Set the idle logout timeout for this login. Mouse, keyboard and touch activity in tabs sharing this login restart the browser timer; background refreshes do not. The server separately enforces HTTP request-idle expiry and can end the session earlier when local page activity sends no requests. Signing in again uses the deployment default. This does not extend the HugeGraph token or change your password expiry",
+      "description": "Set the idle logout timeout for this login within the administrator-defined limit. Personal settings cannot relax this limit. Mouse, keyboard and touch activity in tabs sharing this login restart the browser timer; background refreshes do not. The server separately enforces HTTP request-idle expiry and can end the session earlier when local page activity sends no requests. Signing in again uses the deployment default capped by the administrator limit. This does not extend the HugeGraph token or change your password expiry",
       "minutes": "Idle timeout (minutes)",
       "saved": "Session timeout updated",
       "unavailable": "Unable to load the session timeout.",
-      "range": "Allowed: {{min}}–{{max}} minutes"
+      "range": "Allowed: {{min}}–{{max}} minutes",
+      "deploymentOnly": "This deployment keeps session expiry under administrator control; personal editing is unavailable"
     },
     "empty_value": "No information",
     "level": {

@@ -23,11 +23,21 @@ import java.util.Map;
 import org.apache.hugegraph.common.Constant;
 import org.apache.hugegraph.exception.ParameterizedException;
 import org.apache.hugegraph.exception.UnauthorizedException;
+import org.apache.hugegraph.handler.ExceptionAdvisor;
+import org.apache.hugegraph.handler.ResponseAdvisor;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class SessionControllerTest {
 
@@ -57,7 +67,7 @@ public class SessionControllerTest {
         Assert.assertEquals(Integer.valueOf(48 * 60 * 60),
                             settings.get("idle_timeout_seconds"));
         Assert.assertEquals(Integer.valueOf(900), settings.get("min_idle_seconds"));
-        Assert.assertEquals(Integer.valueOf(604800), settings.get("max_idle_seconds"));
+        Assert.assertEquals(Integer.valueOf(172800), settings.get("max_idle_seconds"));
     }
 
     @Test
@@ -76,7 +86,7 @@ public class SessionControllerTest {
         Object scope = this.controller.get().get("activity_scope");
         this.controller.update(settings(3600));
         this.controller.update(settings(900));
-        SessionController.resetPreferences(this.session);
+        SessionController.resetPreferences(this.session, 0);
         Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
         Assert.assertNotEquals(scope, this.controller.get().get("activity_scope"));
     }
@@ -102,8 +112,108 @@ public class SessionControllerTest {
         }
         this.controller.update(settings(900));
         Assert.assertEquals(900, this.session.getMaxInactiveInterval());
-        this.controller.update(settings(604800));
-        Assert.assertEquals(604800, this.session.getMaxInactiveInterval());
+        this.controller.update(settings(172800));
+        Assert.assertEquals(172800, this.session.getMaxInactiveInterval());
+    }
+
+    @Test
+    public void testDirectHttpCannotRaiseDeploymentCeilingOrMutateIt() throws Exception {
+        MockMvc mvc = httpEndpoint(0);
+        assertHttpTimeout(mvc, 604800, 400);
+        Assert.assertEquals(172800, this.session.getMaxInactiveInterval());
+        assertHttpTimeout(mvc, 3600, 200);
+        assertHttpTimeout(mvc, 900, 200);
+        assertHttpTimeout(mvc, 172801, 400);
+        Assert.assertEquals(900, this.session.getMaxInactiveInterval());
+        assertHttpTimeout(mvc, 172800, 200);
+        Assert.assertEquals(172800, this.session.getMaxInactiveInterval());
+    }
+
+    @Test
+    public void testExplicitAdministratorCeilingCapsInitialAndNewLoginTimeouts() throws Exception {
+        ReflectionTestUtils.setField(this.controller, "configuredMaxIdleSeconds", 7200);
+        Assert.assertEquals(7200, this.controller.get().get("idle_timeout_seconds"));
+        Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
+        Assert.assertEquals(7200, this.controller.get().get("max_idle_seconds"));
+        this.controller.update(settings(900));
+        SessionController.resetPreferences(this.session, 7200);
+        Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
+        this.controller.update(settings(7200));
+        assertThrows(ParameterizedException.class, () -> this.controller.update(settings(7201)));
+        Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
+        MockMvc mvc = httpEndpoint(7200);
+        assertHttpTimeout(mvc, 7201, 400);
+        Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
+        assertHttpTimeout(mvc, 3600, 200);
+        assertHttpTimeout(mvc, 7201, 400);
+        Assert.assertEquals(3600, this.session.getMaxInactiveInterval());
+        assertHttpTimeout(mvc, 7200, 200);
+    }
+
+    @Test
+    public void testAdministratorCanAuthorizeMoreThanSevenDays() {
+        ReflectionTestUtils.setField(this.controller, "configuredMaxIdleSeconds", 14 * 86400);
+        Assert.assertEquals(14 * 86400, this.controller.get().get("max_idle_seconds"));
+        this.controller.update(settings(10 * 86400));
+        Assert.assertEquals(10 * 86400, this.session.getMaxInactiveInterval());
+        SessionController.resetPreferences(this.session, 14 * 86400);
+        Assert.assertEquals(172800, this.session.getMaxInactiveInterval());
+    }
+
+    @Test
+    public void testUnconfiguredCeilingInheritsLongDeploymentDefault() {
+        this.session.setMaxInactiveInterval(30 * 86400);
+        Assert.assertEquals(30 * 86400, this.controller.get().get("max_idle_seconds"));
+        this.controller.update(settings(10 * 86400));
+        this.controller.update(settings(30 * 86400));
+        assertThrows(ParameterizedException.class,
+                     () -> this.controller.update(settings(30 * 86400 + 1)));
+        Assert.assertEquals(30 * 86400, this.session.getMaxInactiveInterval());
+    }
+
+    @Test
+    public void testShortDeploymentAndCeilingStayReadOnly() {
+        this.session.setMaxInactiveInterval(600);
+        Assert.assertEquals(600, this.controller.get().get("max_idle_seconds"));
+        assertThrows(ParameterizedException.class, () -> this.controller.update(settings(900)));
+        Assert.assertEquals(600, this.session.getMaxInactiveInterval());
+        ReflectionTestUtils.setField(this.controller, "configuredMaxIdleSeconds", 300);
+        Assert.assertEquals(300, this.controller.get().get("idle_timeout_seconds"));
+        assertThrows(ParameterizedException.class, () -> this.controller.update(settings(900)));
+        Assert.assertEquals(300, this.session.getMaxInactiveInterval());
+    }
+
+    @Test
+    public void testUnlimitedDeploymentStaysReadOnlyUnlessAdministratorSetsCeiling() {
+        for (int disabled : new int[]{0, -1}) {
+            this.setup();
+            this.session.setMaxInactiveInterval(disabled);
+            Assert.assertEquals(disabled, this.controller.get().get("idle_timeout_seconds"));
+            Assert.assertEquals(0, this.controller.get().get("max_idle_seconds"));
+            assertThrows(ParameterizedException.class, () -> this.controller.update(settings(900)));
+            Assert.assertEquals(disabled, this.session.getMaxInactiveInterval());
+            ReflectionTestUtils.setField(this.controller, "configuredMaxIdleSeconds", 7200);
+            Assert.assertEquals(7200, this.controller.get().get("idle_timeout_seconds"));
+            this.controller.update(settings(900));
+            SessionController.resetPreferences(this.session, 7200);
+            Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
+        }
+    }
+
+    private void assertHttpTimeout(MockMvc mvc, int seconds, int expectedStatus) throws Exception {
+        mvc.perform(put(Constant.API_VERSION + "auth/session").session(this.session)
+                       .contentType(MediaType.APPLICATION_JSON)
+                       .content("{\"idle_timeout_seconds\":" + seconds + "}"))
+           .andExpect(status().is(expectedStatus))
+           .andExpect(jsonPath("$.status").value(expectedStatus));
+    }
+
+    private static MockMvc httpEndpoint(int configuredMax) {
+        SessionController endpoint = new SessionController();
+        ReflectionTestUtils.setField(endpoint, "configuredMaxIdleSeconds", configuredMax);
+        return MockMvcBuilders.standaloneSetup(endpoint)
+                              .setControllerAdvice(new ExceptionAdvisor(), new ResponseAdvisor())
+                              .build();
     }
 
     @Test

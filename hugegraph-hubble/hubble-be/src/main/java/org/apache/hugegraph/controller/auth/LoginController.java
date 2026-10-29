@@ -40,6 +40,7 @@ import org.apache.hugegraph.service.auth.AuthContextService;
 import org.apache.hugegraph.service.auth.UserService;
 import org.apache.hugegraph.service.auth.LoginAttemptGuard;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -64,6 +65,9 @@ public class LoginController extends BaseController {
     private static final int CONNECT_TIMEOUT_MILLIS = 5000;
     private static final int READ_TIMEOUT_MILLIS = 30000;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    @Value("${hubble.session.max-idle-seconds:0}")
+    private int configuredMaxIdleSeconds;
 
     @Autowired
     UserService userService;
@@ -111,7 +115,8 @@ public class LoginController extends BaseController {
 
             this.getRequest().getSession();
             this.getRequest().changeSessionId();
-            SessionController.resetPreferences(this.getRequest().getSession());
+            SessionController.resetPreferences(this.getRequest().getSession(),
+                                               this.configuredMaxIdleSeconds);
             this.setUser(login.name());
             this.setToken(result.token());
             // HugeGraph 1.7's Gremlin HTTP channel only accepts Basic auth.

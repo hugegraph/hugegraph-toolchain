@@ -410,9 +410,21 @@ Use matching Server, PD, and Store minor versions in a distributed cluster. **Se
 The personal center uses the current authentication context to display the account
 role, including GraphSpace administrators. The session panel reads the deployed
 servlet idle timeout (48 hours by default) and lets signed-in users change their
-current browser session to 15 minutes–7 days. The backend validates this range and
-requires the existing username/token session; anonymous deployments expose no
+current browser session within the administrator-defined range. The backend
+validates this range and requires the existing username/token session; anonymous deployments expose no
 personal center or session settings.
+
+Administrators configure `hubble.session.max-idle-seconds` in the backend Spring
+configuration (or `HUBBLE_SESSION_MAX_IDLE_SECONDS` in the environment). `0`, the
+default, inherits the original `server.servlet.session.timeout` as the personal
+ceiling. A positive value explicitly authorizes that ceiling in seconds, including
+values above seven days. Personal changes never alter this ceiling. The initial
+timeout and subsequent sign-ins are also capped by it. For example, a 48-hour
+servlet default with a 2-hour ceiling starts at 2 hours and permits 15–120 minutes.
+A positive deployment default below 15 minutes, or a ceiling below 15 minutes,
+keeps its effective timeout and makes personal editing unavailable. An unlimited
+servlet default with no explicit ceiling stays unlimited and read-only; configure
+a positive ceiling to enable bounded personal choices.
 
 An application-wide timer tracks mouse, keyboard and touch activity across tabs
 sharing the same login. Background requests do not extend this timer. Changing

@@ -26,7 +26,7 @@ jest.mock('../../api', () => ({auth: {
     getSessionSettings: jest.fn(), updateSessionSettings: jest.fn(),
 }}));
 const settings = seconds => ({status: 200, data: {
-    idle_timeout_seconds: seconds, min_idle_seconds: 900, max_idle_seconds: 604800,
+    idle_timeout_seconds: seconds, min_idle_seconds: 900, max_idle_seconds: 172800,
 }});
 beforeEach(() => {
     jest.clearAllMocks();
@@ -52,6 +52,29 @@ test('keeps an unavailable settings error visible and supports retry', async () 
     await userEvent.click(screen.getByRole('button', {name: 'my.load.retry'}));
     await waitFor(() => expect(screen.getByRole('spinbutton')).toHaveValue('2880'));
     expect(screen.queryByText('my.session.unavailable')).not.toBeInTheDocument();
+});
+test('uses the administrator ceiling returned by the server', async () => {
+    api.auth.getSessionSettings.mockResolvedValue({status: 200, data: {
+        idle_timeout_seconds: 3600, min_idle_seconds: 900, max_idle_seconds: 7200,
+    }});
+    render(<SessionSettings />);
+    const input = screen.getByRole('spinbutton');
+    await waitFor(() => expect(input).toHaveValue('60'));
+    expect(input).toHaveAttribute('aria-valuemax', '120');
+    await userEvent.clear(input);
+    await userEvent.type(input, '121');
+    expect(screen.getByRole('button', {name: 'common.action.save'})).toBeDisabled();
+    expect(api.auth.updateSessionSettings).not.toHaveBeenCalled();
+});
+test.each([600, 0, -1])('keeps read-only deployment timeout %s visible without enabling editing', async seconds => {
+    api.auth.getSessionSettings.mockResolvedValue({status: 200, data: {
+        idle_timeout_seconds: seconds, min_idle_seconds: 900, max_idle_seconds: Math.max(seconds, 0),
+    }});
+    render(<SessionSettings />);
+    expect(await screen.findByText('my.session.deploymentOnly')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton')).toBeDisabled();
+    expect(screen.getByRole('button', {name: 'common.action.save'})).toBeDisabled();
+    expect(api.auth.updateSessionSettings).not.toHaveBeenCalled();
 });
 test('keeps the pending value on failed save so the user can retry', async () => {
     api.auth.updateSessionSettings.mockRejectedValueOnce(new Error('offline'));

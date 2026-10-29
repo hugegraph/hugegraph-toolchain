@@ -76,6 +76,7 @@ const SessionSettings = () => {
     };
     const min = settings?.min_idle_seconds / 60;
     const max = settings?.max_idle_seconds / 60;
+    const readOnly = settings && max < min;
     const valid = Number.isInteger(minutes) && minutes >= min && minutes <= max;
     return (
         <Card title={t('my.session.title')} style={{width: 'min(100%, 780px)'}}>
@@ -85,13 +86,13 @@ const SessionSettings = () => {
                 <Space wrap>
                     <label htmlFor='session-idle-minutes'>{t('my.session.minutes')}</label>
                     <InputNumber id='session-idle-minutes' value={minutes} onChange={setMinutes}
-                        min={min} max={max} precision={0} disabled={!settings || saving} />
+                        min={min} max={max} precision={0} disabled={!settings || saving || readOnly} />
                     <Button type='primary' onClick={save} loading={saving}
                         disabled={!valid || minutes * 60 === settings?.idle_timeout_seconds}>
                         {t('common.action.save')}
                     </Button>
                     {settings && <Typography.Text type='secondary'>
-                        {t('my.session.range', {min, max})}
+                        {readOnly ? t('my.session.deploymentOnly') : t('my.session.range', {min, max})}
                     </Typography.Text>}
                 </Space>
             )}

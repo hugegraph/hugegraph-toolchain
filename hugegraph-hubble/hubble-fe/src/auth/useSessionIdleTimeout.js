@@ -27,7 +27,7 @@ export const SESSION_ACTIVITY_PREFIX = 'hubble.session.activity.';
 const MAX_TIMER_DELAY = 2147483647;
 const validDeploymentTimeout = seconds => Number.isSafeInteger(seconds);
 const validTimeout = seconds => validDeploymentTimeout(seconds) && seconds > 0;
-const validUpdatedTimeout = seconds => validTimeout(seconds) && seconds >= 900 && seconds <= 604800;
+const validUpdatedTimeout = seconds => validTimeout(seconds) && seconds >= 900;
 const newerSetting = (nextAt, nextSource, currentAt, currentSource) => nextAt > currentAt
     || (nextAt === currentAt && (nextSource === 'update' || currentSource !== 'update'));
 const read = key => {
