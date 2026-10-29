@@ -1594,7 +1594,7 @@
     "vermeer_check_compute_stream_ready": "Compute task channel",
     "vermeer_check_superstep_stream_ready": "Superstep channel",
     "vermeer_checks_unavailable": "Readiness checks are unavailable",
-    "vermeer_stale_description": "These are the last observed node details. Current readiness is unconfirmed.",
+    "vermeer_stale_description": "Last observed node details; current readiness is unconfirmed",
     "vermeer_full_detail": "View full node details",
     "vermeer_main_cluster": "Main cluster",
     "vermeer_main_context": "The main cluster status remains visible in this compute view.",
