@@ -25,7 +25,8 @@ import {clearPersistedAlgorithmFormsForUser} from '../modules/algorithm/algorith
 export const SESSION_SETTINGS_EVENT = 'hubble.session-settings-change';
 export const SESSION_ACTIVITY_PREFIX = 'hubble.session.activity.';
 const MAX_TIMER_DELAY = 2147483647;
-const validTimeout = seconds => Number.isSafeInteger(seconds) && seconds > 0;
+const validDeploymentTimeout = seconds => Number.isSafeInteger(seconds);
+const validTimeout = seconds => validDeploymentTimeout(seconds) && seconds > 0;
 const validUpdatedTimeout = seconds => validTimeout(seconds) && seconds >= 900 && seconds <= 604800;
 const newerSetting = (nextAt, nextSource, currentAt, currentSource) => nextAt > currentAt
     || (nextAt === currentAt && (nextSource === 'update' || currentSource !== 'update'));
@@ -139,7 +140,7 @@ export const useSessionIdleTimeout = enabled => {
             schedule();
         };
         const applySettings = (seconds, activityScope, requestedAt, source = 'load') => {
-            const valid = source === 'update' ? validUpdatedTimeout(seconds) : validTimeout(seconds);
+            const valid = source === 'update' ? validUpdatedTimeout(seconds) : validDeploymentTimeout(seconds);
             if (!active || expired || !valid || typeof activityScope !== 'string'
                 || !activityScope || activityScope.length > 128) return;
             if (scope && scope !== activityScope) return;
@@ -178,7 +179,8 @@ export const useSessionIdleTimeout = enabled => {
             const requestedAt = detail?.requestedAt ?? Date.now();
             const source = detail?.source === 'load' ? 'load' : 'update';
             const valid = source === 'update'
-                ? validUpdatedTimeout(detail?.timeoutSeconds) : validTimeout(detail?.timeoutSeconds);
+                ? validUpdatedTimeout(detail?.timeoutSeconds)
+                : validDeploymentTimeout(detail?.timeoutSeconds);
             if (!valid || typeof detail?.activityScope !== 'string'
                 || !detail.activityScope || !Number.isFinite(requestedAt)
                 || requestedAt < settingsRequestAt || requestedAt > Date.now()) return;
