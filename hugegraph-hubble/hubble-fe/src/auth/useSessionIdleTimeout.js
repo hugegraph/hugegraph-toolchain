@@ -176,20 +176,23 @@ export const useSessionIdleTimeout = enabled => {
         const settingsChanged = event => {
             const detail = event.detail;
             const requestedAt = detail?.requestedAt ?? Date.now();
-            if (!validUpdatedTimeout(detail?.timeoutSeconds) || typeof detail?.activityScope !== 'string'
+            const source = detail?.source === 'load' ? 'load' : 'update';
+            const valid = source === 'update'
+                ? validUpdatedTimeout(detail?.timeoutSeconds) : validTimeout(detail?.timeoutSeconds);
+            if (!valid || typeof detail?.activityScope !== 'string'
                 || !detail.activityScope || !Number.isFinite(requestedAt)
                 || requestedAt < settingsRequestAt || requestedAt > Date.now()) return;
-            const update = {...detail, requestedAt, source: 'update'};
+            const changed = {...detail, requestedAt, source};
             if (!scope) {
                 // Only our own current-identity GET establishes the session scope. Keep a newer
                 // settings response until that GET resolves, without accepting another login's scope.
-                if (!pendingSettings || newerSetting(requestedAt, update.source,
+                if (!pendingSettings || newerSetting(requestedAt, changed.source,
                     pendingSettings.requestedAt, pendingSettings.source)) {
-                    pendingSettings = update;
+                    pendingSettings = changed;
                 }
             }
-            else if (scope === update.activityScope) {
-                applySettings(update.timeoutSeconds, update.activityScope, requestedAt, update.source);
+            else if (scope === changed.activityScope) {
+                applySettings(changed.timeoutSeconds, changed.activityScope, requestedAt, changed.source);
             }
         };
         const storageChanged = event => { if (event.key === key) check(); };
