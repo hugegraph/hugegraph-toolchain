@@ -51,6 +51,28 @@ async function previewBuild(frontend) {
   return {url: `http://127.0.0.1:${address.port}`, close: () => server.close()};
 }
 
+export function terminateBrowserProcess(child, signal, dependencies = {}) {
+  const platform = dependencies.platform || process.platform;
+  const killProcess = dependencies.killProcess || process.kill;
+  const runTaskkill = dependencies.runTaskkill || spawnSync;
+  try {
+    if (platform === 'win32' && child.pid) {
+      const result = runTaskkill('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore', windowsHide: true,
+      });
+      if (result.error) {
+        if (result.error.code === 'ENOENT') child.kill(signal);
+        else throw result.error;
+      }
+      return;
+    }
+    if (platform !== 'win32' && child.pid) killProcess(-child.pid, signal);
+    else child.kill(signal);
+  } catch (error) {
+    if (error.code !== 'ESRCH') throw error;
+  }
+}
+
 export function runBrowser(url, outputDir, signal) {
   return new Promise((resolve, reject) => {
     if (signal.aborted) { reject(new Error('Verification interrupted')); return; }
@@ -61,12 +83,7 @@ export function runBrowser(url, outputDir, signal) {
     });
     let forceTimer;
     let timedOut = false;
-    const kill = name => {
-      try {
-        if (grouped && child.pid) process.kill(-child.pid, name);
-        else child.kill(name);
-      } catch (error) { if (error.code !== 'ESRCH') throw error; }
-    };
+    const kill = name => terminateBrowserProcess(child, name);
     const stop = () => {
       kill('SIGTERM');
       forceTimer = setTimeout(() => kill('SIGKILL'), 3000);
