@@ -83,7 +83,7 @@ export const useSessionIdleTimeout = enabled => {
             else {
                 // Revoke the server session through the same endpoint as explicit logout.
                 const deadline = new Promise(resolve => { logoutTimer = window.setTimeout(resolve, 5000); });
-                const logout = Promise.resolve().then(() => api.auth.logout()).catch(() => undefined);
+                const logout = Promise.resolve().then(() => api.auth.logout(scope)).catch(() => undefined);
                 Promise.race([logout, deadline]).finally(() => {
                     window.clearTimeout(logoutTimer);
                     finishLogout();

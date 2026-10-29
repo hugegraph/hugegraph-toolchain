@@ -47,6 +47,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.apache.hugegraph.driver.HugeClient;
@@ -275,7 +276,20 @@ public class LoginController extends BaseController {
     // FIXME: Change logout to POST and add CSRF/Origin protection after coordinating
     // the API change with the frontend; explicitly harden the session cookie as well.
     @GetMapping("/logout")
-    public void logout() {
-        this.clearAuthSession();
+    public void logout(@RequestParam(name = "expected_activity_scope", required = false) String expectedScope) {
+        if (expectedScope == null) {
+            this.clearAuthSession();
+            return;
+        }
+        jakarta.servlet.http.HttpSession session = this.getRequest().getSession(false);
+        if (session == null) {
+            return;
+        }
+        synchronized (session) {
+            // A timer in an older tab must not revoke a newer login sharing its cookie.
+            if (expectedScope.equals(session.getAttribute(SessionController.ACTIVITY_SCOPE_KEY))) {
+                this.clearAuthSession();
+            }
+        }
     }
 }

@@ -58,6 +58,7 @@ test('expires on human inactivity despite background API traffic and clears logi
     expect(api.auth.logout).not.toHaveBeenCalled();
     await advance(1000); await flush();
     expect(api.auth.logout).toHaveBeenCalledTimes(1);
+    expect(api.auth.logout).toHaveBeenCalledWith(scope);
     expect(user.getUser()).toEqual({});
     expect(clearPersistedAlgorithmFormsForUser).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('redirect')).toBeNull();
@@ -120,7 +121,7 @@ test('remote expiry clears this tab without sending a second logout request', as
 test('anonymous and signed-out pages never request or create a session', async () => {
     const view = renderHook(({enabled}) => useSessionIdleTimeout(enabled), {initialProps: {enabled: false}});
     await flush(); expect(api.auth.getSessionSettings).not.toHaveBeenCalled();
-    user.clearLogin(); view.rerender({enabled: true}); await flush();
+    act(() => user.clearLogin()); view.rerender({enabled: true}); await flush();
     fireEvent.pointerMove(window); await advance(604800000);
     expect(api.auth.getSessionSettings).not.toHaveBeenCalled();
     expect(api.auth.logout).not.toHaveBeenCalled(); expect(localStorage.length).toBe(0);

@@ -214,3 +214,13 @@ describe('session activity settings notifications', () => {
         }
     });
 });
+
+
+test('scopes idle logout while keeping explicit logout unscoped', () => {
+    auth.logout('old-login-scope');
+    expect(mockRequest.get).toHaveBeenLastCalledWith('/auth/logout', {
+        params: {expected_activity_scope: 'old-login-scope'},
+    });
+    auth.logout();
+    expect(mockRequest.get).toHaveBeenLastCalledWith('/auth/logout');
+});

@@ -23,8 +23,10 @@ const login = data => {
     return request.post('/auth/login', data);
 };
 
-const logout = () => {
-    return request.get('/auth/logout');
+const logout = expectedActivityScope => {
+    return typeof expectedActivityScope === 'string'
+        ? request.get('/auth/logout', {params: {expected_activity_scope: expectedActivityScope}})
+        : request.get('/auth/logout');
 };
 
 const status = () => {

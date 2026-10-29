@@ -118,6 +118,34 @@ public class SessionControllerTest {
         assertThrows(UnauthorizedException.class, () -> this.controller.get());
     }
 
+    @Test
+    public void testAnOldTabCannotLogOutANewerSessionScope() {
+        LoginController login = new LoginController() {
+            @Override
+            protected jakarta.servlet.http.HttpServletRequest getRequest() {
+                return SessionControllerTest.this.request;
+            }
+        };
+        String scope = (String) this.controller.get().get("activity_scope");
+        login.logout("scope-from-an-earlier-login");
+        Assert.assertEquals("token", this.session.getAttribute(Constant.TOKEN_KEY));
+        login.logout(scope);
+        Assert.assertNull(this.session.getAttribute(Constant.TOKEN_KEY));
+        Assert.assertNull(this.session.getAttribute(Constant.USERNAME_KEY));
+    }
+
+    @Test
+    public void testExplicitLogoutDoesNotRequireAnActivityScope() {
+        LoginController login = new LoginController() {
+            @Override
+            protected jakarta.servlet.http.HttpServletRequest getRequest() {
+                return SessionControllerTest.this.request;
+            }
+        };
+        login.logout(null);
+        Assert.assertNull(this.session.getAttribute(Constant.TOKEN_KEY));
+    }
+
     private static void assertThrows(Class<? extends RuntimeException> type,
                                      Runnable operation) {
         try {

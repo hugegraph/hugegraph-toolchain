@@ -421,6 +421,9 @@ endpoint before clearing local account state (with a five-second local fallback
 if logout stalls). Anonymous mode never creates a session for this timer.
 The servlet request-idle timeout is also updated. Signing in again restores the
 original deployment timeout and starts a fresh, noncredential activity scope.
+Idle logout includes that expected scope: a stale tab can clear its own local
+state without revoking a newer login sharing the browser's session cookie.
+Explicit user-initiated logout continues to clear the current login.
 This does not change the password lifetime or renew the HugeGraph token
 (currently issued for 30 days).
 
