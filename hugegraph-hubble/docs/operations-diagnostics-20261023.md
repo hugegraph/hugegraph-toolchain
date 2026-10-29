@@ -86,3 +86,36 @@ Set `HUBBLE_URL` for the frontend address and
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for a custom Chromium executable. Generated
 reports and screenshots are temporary outputs; keep them outside Git. The fixture
 does not contact a deployed cluster or establish deployment acceptance.
+
+
+## PD Service addresses and bounded Raft collection
+
+A PD Service or load-balancer URL is valid for connection discovery but does not
+uniquely identify the node serving CPU/JVM metrics. Hubble keeps the discovered
+PD topology and refuses to attach one member's system metrics to another member.
+The diagnostics panel compares the configured `pd.server` with advertised member
+REST addresses and separates that mapping issue from node health and readiness.
+If member-specific system metrics are needed, review the intended routing before
+changing `pd.server` to a reachable member address (or correcting its `restUrl`),
+then restart Hubble. A scheme-less address uses `server.protocol`.
+
+For Store Raft counters, Hubble first requests `/metrics/raft/summary`, whose
+response is `{"groups":32,"enabled_groups":32}`. The enabled count means JRaft
+metrics collection is enabled, not that the groups are healthy. HTTP 404/405
+falls back to the older `/metrics/raft` contract. Authorization, transport,
+malformed payloads and server errors do not trigger the larger request.
+
+The older endpoint serializes complete per-group metric registries including
+timer and histogram data, while Hubble displays only two aggregate counters.
+Its response can therefore exceed the default 1,048,576-byte (1 MiB) collection
+limit even when nodes are online. Upgrading Store to a version that provides
+the summary endpoint avoids that payload amplification.
+
+For older deployments, the diagnostic request shows the active limit and known
+response bytes. `At least` means collection stopped after reading that many
+bytes; it does not establish the complete size. Inspect the complete response
+and partition count before adjusting `operations.max_response_bytes` in
+`hugegraph-hubble.properties`. Choose a value within the available memory budget,
+restart Hubble and refresh. The setting limits every upstream response, and
+concurrent collection can hold multiple responses at once. Hubble retains the
+bounded-read protection and does not silently raise the default.

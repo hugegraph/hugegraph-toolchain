@@ -568,6 +568,14 @@ and [source diagnostics](docs/assets/operations-source-diagnostics-authenticated
 anonymous [source health](docs/assets/operations-source-health-anonymous.png)
 and [source diagnostics](docs/assets/operations-source-diagnostics-anonymous.png).
 
+
+The following Chrome screenshot uses controlled administrator API fixtures with
+healthy PD members and an unmatched Kubernetes Service address. It illustrates
+the ordered mapping recovery steps and the contained address table. It does not
+verify the user's deployment, live PD connectivity, or authentication enforcement.
+
+![PD address mapping recovery with healthy members](docs/assets/operations-pd-mapping-recovery.png)
+
 ### Health contracts
 
 Operations health keeps node reachability separate from collection and data

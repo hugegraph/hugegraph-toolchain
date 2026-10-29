@@ -562,6 +562,21 @@
 
     code { overflow-wrap: anywhere; }
 
+    .operations-pd-mapping {
+        min-width: 0;
+        .ant-table-wrapper { max-width: 100%; }
+        .ant-descriptions-item-content { min-width: 0; }
+    }
+
+    .operations-diagnostic-steps {
+        display: grid;
+        gap: 8px;
+        padding-inline-start: 24px;
+        margin: 12px 0 16px;
+        max-width: 90ch;
+        color: var(--workbench-color-text-secondary);
+    }
+
     .operations-readiness-note {
         margin: 10px 0;
         color: var(--workbench-color-text-secondary);
