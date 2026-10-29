@@ -42,7 +42,7 @@ public class CypherControllerTimeoutTest {
                     () -> CypherController.throwIfTransportTimeout(failure));
             Assert.assertEquals(504, error.status());
             Assert.assertEquals("cypher.execute.timeout", error.getMessage());
-            Assert.assertSame(failure, error.getCause());
+            org.junit.Assert.assertSame(failure, error.getCause());
         }
     }
 
