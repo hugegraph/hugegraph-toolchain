@@ -71,6 +71,17 @@ public class SessionControllerTest {
     }
 
     @Test
+    public void testNewLoginRestoresOriginalDeploymentTimeoutAndScope() {
+        this.session.setMaxInactiveInterval(7200);
+        Object scope = this.controller.get().get("activity_scope");
+        this.controller.update(settings(3600));
+        this.controller.update(settings(900));
+        SessionController.resetPreferences(this.session);
+        Assert.assertEquals(7200, this.session.getMaxInactiveInterval());
+        Assert.assertNotEquals(scope, this.controller.get().get("activity_scope"));
+    }
+
+    @Test
     public void testUpdateOnlyChangesCurrentSession() {
         MockHttpSession other = new MockHttpSession();
         other.setMaxInactiveInterval(172800);

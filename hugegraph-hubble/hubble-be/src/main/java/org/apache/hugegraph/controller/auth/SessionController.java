@@ -38,6 +38,7 @@ public class SessionController extends BaseController {
 
     static final String ACTIVITY_SCOPE_KEY = "hubble.activity_scope";
 
+    private static final String ORIGINAL_IDLE_KEY = "hubble.original_idle_seconds";
     private static final int MIN_IDLE_SECONDS = 15 * 60;
     private static final int MAX_IDLE_SECONDS = 7 * 24 * 60 * 60;
 
@@ -56,8 +57,24 @@ public class SessionController extends BaseController {
                     "Idle timeout must be between %s and %s seconds",
                     MIN_IDLE_SECONDS, MAX_IDLE_SECONDS);
         }
-        session.setMaxInactiveInterval(seconds);
+        synchronized (session) {
+            if (session.getAttribute(ORIGINAL_IDLE_KEY) == null) {
+                session.setAttribute(ORIGINAL_IDLE_KEY, session.getMaxInactiveInterval());
+            }
+            session.setMaxInactiveInterval(seconds);
+        }
         return settings(session);
+    }
+
+    static void resetPreferences(HttpSession session) {
+        synchronized (session) {
+            Object original = session.getAttribute(ORIGINAL_IDLE_KEY);
+            if (original instanceof Integer) {
+                session.setMaxInactiveInterval((Integer) original);
+            }
+            session.removeAttribute(ORIGINAL_IDLE_KEY);
+            session.removeAttribute(ACTIVITY_SCOPE_KEY);
+        }
     }
 
     private HttpSession currentSession() {
