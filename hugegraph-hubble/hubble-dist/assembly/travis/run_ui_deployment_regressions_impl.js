@@ -42,6 +42,31 @@ const graphsBySpace = {
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
+function mobileOverviewFixture() {
+    const observed = {availability: 'AVAILABLE', observed_at: now, last_success_at: now, fresh: true, stale: false};
+    const mainNode = (type, index) => ({id: `${type.toLowerCase()}-mobile-${index}`, type,
+        name: `${type} 393201bf434064eae5f87314b9d3-${index}`, version: '1.8.0',
+        role: type === 'PD' ? (index === 1 ? 'LEADER' : 'FOLLOWER') : null,
+        status: type === 'SERVER' ? 'UP' : 'UNKNOWN', observed_at: now,
+        metrics: type === 'STORE' ? {backend: {leaders: index}} : {},
+        metric_statuses: {system: type === 'SERVER' ? observed
+            : {...observed, availability: 'UNAVAILABLE', reason: 'metric_unavailable'}}});
+    const computeNode = role => ({id: role.toLowerCase(), name: `${role.toLowerCase()}-mobile`, role,
+        status: 'UP', ready: true, group: 'default', version: '1.8.0', observed_at: now,
+        checks: {registered: true, connection_ready: true, load_stream_ready: true,
+            compute_stream_ready: true, superstep_stream_ready: true},
+        metrics: {cpu_cores: role === 'MASTER' ? 0.12 : 0.42, rss_bytes: 1288490189},
+        metric_status: observed});
+    return {status: 'DEGRADED', main_cluster_status: 'DEGRADED', reason: 'cluster_not_ready',
+        observed_at: now, stale: false,
+        sources: {server: {...observed, status: 'UP'}, pd: {...observed, status: 'DEGRADED'},
+            stores: {...observed, status: 'DEGRADED'}}, facts: {pd_leader: 'pd-mobile-1'},
+        nodes: [mainNode('SERVER', 1), mainNode('SERVER', 2),
+            ...[1, 2, 3].map(n => mainNode('PD', n)), ...[1, 2, 3].map(n => mainNode('STORE', n))],
+        vermeer: {configured: true, availability: 'AVAILABLE', status: 'UP', stale: false,
+            observed_at: now, last_success_at: now, registered_workers: 1, ready_workers: 1,
+            master: computeNode('MASTER'), workers: [computeNode('WORKER')]}};
+}
 const task = { id: 80001, task_name: 'g.V().limit(100002)', task_type: 'gremlin', task_status: 'failed', task_create: now - 49000, task_update: now - 45602 };
 const taskResult = { ...task, task_result: 'org.apache.hugegraph.exception.LimitExceedException: Task result size 77849617 exceeded limit 16777216 bytes' };
 function pageResult(records, selected) { return { records, total: records.length, current: 1, size: 100, pages: 1, selected: records.find(x => x.name === selected) ?? null }; }
@@ -71,7 +96,8 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false };
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
+        operationsOverview: null, extraCapabilities: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
         const req = route.request();
@@ -120,7 +146,7 @@ async function setup(browser, auth) {
         }
         else if (p === '/auth/context') {
             const admin = auth && state.loggedIn;
-            data = { mode: auth ? 'AUTH' : 'NON_AUTH', role: admin ? 'SUPERADMIN' : 'ANONYMOUS', capabilities: auth && !admin ? [] : capabilities, actions: { graphspaces: admin ? ['create', 'read', 'update', 'delete'] : auth ? [] : ['read'] }, scopes: { all_graphspaces: admin } };
+            data = { mode: auth ? 'AUTH' : 'NON_AUTH', role: admin ? 'SUPERADMIN' : 'ANONYMOUS', capabilities: auth && !admin ? [] : [...capabilities, ...state.extraCapabilities], actions: { graphspaces: admin ? ['create', 'read', 'update', 'delete'] : auth ? [] : ['read'] }, scopes: { all_graphspaces: admin } };
         }
         else if (p === '/auth/status')
             data = {};
@@ -160,7 +186,9 @@ async function setup(browser, auth) {
         else if (p.endsWith('/graph_read_mode'))
             data = { status: '1' };
         else if (p === '/vermeer')
-            data = { enable: false };
+            data = { enable: Boolean(state.operationsOverview?.vermeer?.configured) };
+        else if (p === '/dashboard')
+            data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
@@ -186,9 +214,15 @@ async function setup(browser, auth) {
         else if (p.endsWith('/async-tasks'))
             data = pageResult([]); // The scheduler metadata must discover this task before the list does.
         else if (p === '/operations/nodes')
-            data = { items: [node(1), node(2), node(3)], total: 3, page: 1, page_size: 20, observed_at: now, stale: false, sources: { pd: source } };
+            data = state.operationsOverview
+                ? {items: state.operationsOverview.nodes, total: state.operationsOverview.nodes.length,
+                    observed_at: now, stale: false, sources: state.operationsOverview.sources}
+                : { items: [node(1), node(2), node(3)], total: 3, page: 1, page_size: 20, observed_at: now, stale: false, sources: { pd: source } };
+        else if (p.startsWith('/operations/nodes/') && state.operationsOverview)
+            data = {node: state.operationsOverview.nodes.find(item => item.id === decodeURIComponent(p.slice('/operations/nodes/'.length))),
+                observed_at: now, stale: false, sources: state.operationsOverview.sources};
         else if (p === '/operations/overview')
-            data = { sources: { pd: source }, observed_at: now, stale: false, nodes: [] };
+            data = state.operationsOverview ?? { sources: { pd: source }, observed_at: now, stale: false, nodes: [] };
         else if (p.endsWith('/is_auth'))
             data = { auth: false };
         else if (p.endsWith('/get'))
@@ -439,6 +473,64 @@ async function main() {
             }
             await page.setViewportSize({width: 1440, height: 1600});
             await screenshot(page, 'pd-unmapped-diagnostics');
+            await page.setViewportSize({width: 1440, height: 1000});
+        });
+        await check('mobile operations preserves readable main tiers and Store-row compute access', async () => {
+            state.operationsOverview = mobileOverviewFixture();
+            state.extraCapabilities = ['operations_metrics_read'];
+            for (const width of [320, 375]) {
+                await page.setViewportSize({width, height: 900});
+                await page.goto(base + '/operations/overview');
+                const topology = page.locator('.operations-main-topology');
+                await topology.waitFor();
+                assert.equal(await topology.locator('.operations-tier').count(), 3);
+                assert.equal(await topology.locator('.operations-topology-node').count(), 8);
+                await assertNoHorizontalOverflow(page);
+                const cards = await topology.locator('.operations-topology-node').evaluateAll(nodes =>
+                    nodes.map(element => {
+                        const box = element.getBoundingClientRect();
+                        const copy = element.querySelector('.operations-node-copy');
+                        const range = document.createRange();
+                        range.selectNodeContents(copy);
+                        const text = range.getBoundingClientRect();
+                        return {width: box.width, height: box.height, copyWidth: copy.clientWidth,
+                            textInside: text.left >= box.left && text.right <= box.right + 1};
+                    }));
+                assert(cards.every(card => card.width >= 112 && card.height >= 44
+                    && card.copyWidth >= 70 && card.textInside), 'Mobile main cards must remain readable');
+                const peerLayout = await topology.evaluate(element => {
+                    const stores = element.querySelector('.tier-store').getBoundingClientRect();
+                    const entry = element.querySelector('.operations-vermeer-summary').getBoundingClientRect();
+                    return {storeRight: stores.right, storeBottom: stores.bottom,
+                        entryLeft: entry.left, entryBottom: entry.bottom};
+                });
+                assert(peerLayout.entryLeft > peerLayout.storeRight
+                    && Math.abs(peerLayout.entryBottom - peerLayout.storeBottom) <= 1,
+                'Vermeer must stay beside the Store layer without adding a fourth tier');
+                await screenshot(page, `operations-mobile-${width}`);
+                const mainNode = topology.locator('.tier-server .operations-topology-node').first();
+                const target = await mainNode.getAttribute('href');
+                await assertUsableControl(mainNode);
+                await mainNode.click();
+                await page.waitForURL(base + target);
+                await page.getByRole('heading', {name: state.operationsOverview.nodes[0].name, exact: true}).waitFor();
+                await page.locator('.operations-node-detail .operations-page-header button').first().click();
+                await topology.waitFor();
+                const summary = page.getByRole('button', {name: '查看计算集群', exact: true});
+                await assertUsableControl(summary);
+                await summary.click();
+                await page.locator('.operations-vermeer-workbench').waitFor();
+                assert.equal(await page.locator('.operations-vermeer-node').count(), 2);
+                assert.deepEqual(await page.locator('.operations-vermeer-resource-fact strong').allTextContents(),
+                    ['0.54 核', '2.4 GiB']);
+                await assertNoHorizontalOverflow(page);
+                await screenshot(page, `operations-mobile-compute-${width}`);
+                await page.getByRole('button', {name: '返回主集群', exact: true}).click();
+                await topology.waitFor();
+                assert.equal(new URL(page.url()).searchParams.get('service'), null);
+            }
+            state.operationsOverview = null;
+            state.extraCapabilities = [];
             await page.setViewportSize({width: 1440, height: 1000});
         });
         const anonymous = await setup(browser, false);

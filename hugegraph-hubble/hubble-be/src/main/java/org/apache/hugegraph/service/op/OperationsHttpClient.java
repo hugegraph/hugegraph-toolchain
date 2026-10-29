@@ -21,6 +21,7 @@ package org.apache.hugegraph.service.op;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.Proxy;
 import java.net.SocketTimeoutException;
@@ -45,6 +46,7 @@ public class OperationsHttpClient {
 
     private final int connectTimeoutMillis;
     private final int readTimeoutMillis;
+    private final int callTimeoutMillis;
     private final int maxResponseBytes;
     private final OkHttpClient client;
 
@@ -58,6 +60,9 @@ public class OperationsHttpClient {
         }
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
+        this.callTimeoutMillis = (int) Math.min(
+                Integer.MAX_VALUE,
+                (long) connectTimeoutMillis + readTimeoutMillis);
         this.maxResponseBytes = maxResponseBytes;
         this.client = new OkHttpClient.Builder()
                 .connectTimeout(this.connectTimeoutMillis,
@@ -73,6 +78,10 @@ public class OperationsHttpClient {
         return this.get(target, username, password, Set.of());
     }
 
+    int callTimeoutMillis() {
+        return this.callTimeoutMillis;
+    }
+
     public String get(URI target, String username, String password,
                       Set<String> allowedOrigins) {
         return this.get(target, username, password, allowedOrigins,
@@ -85,6 +94,14 @@ public class OperationsHttpClient {
                             false).getBody();
     }
 
+    public String getBearer(URI target, String token,
+                            Set<String> allowedOrigins) {
+        String authorization = token == null || token.isEmpty() ?
+                               null : "Bearer " + token;
+        return this.requestAuthorized(target, authorization, allowedOrigins,
+                                      "application/json", false, true).getBody();
+    }
+
     // Readiness uses 503 with a structured explanation; ordinary GETs still reject it.
     public ProbeResponse probe(URI target, String username, String password,
                                Set<String> allowedOrigins) {
@@ -95,6 +112,22 @@ public class OperationsHttpClient {
     private ProbeResponse request(URI target, String username, String password,
                                    Set<String> allowedOrigins, String accept,
                                    boolean readiness) {
+        String authorization = null;
+        if (username != null && !username.trim().isEmpty()) {
+            String credential = username + ':' +
+                                (password == null ? "" : password);
+            String encoded = Base64.getEncoder().encodeToString(
+                    credential.getBytes(StandardCharsets.UTF_8));
+            authorization = "Basic " + encoded;
+        }
+        return this.requestAuthorized(target, authorization, allowedOrigins,
+                                      accept, readiness, false);
+    }
+
+    private ProbeResponse requestAuthorized(URI target, String authorization,
+                                             Set<String> allowedOrigins,
+                                             String accept, boolean readiness,
+                                             boolean boundedCall) {
         validateTarget(target, allowedOrigins);
         if (!"application/json".equals(accept) &&
             !"text/plain".equals(accept)) {
@@ -103,19 +136,22 @@ public class OperationsHttpClient {
         try {
             InetAddress[] addresses = InetAddress.getAllByName(target.getHost());
             validateResolvedAddresses(target.getHost(), addresses);
-            OkHttpClient requestClient = this.client.newBuilder()
-                    .dns(pinnedDns(target.getHost(), addresses))
-                    .build();
+            OkHttpClient.Builder requestBuilder = this.client.newBuilder()
+                    .dns(pinnedDns(target.getHost(), addresses));
+            if (boundedCall) {
+                // Vermeer is an optional enrichment on the overview request.
+                // Bound its whole exchange, including a progressing response body,
+                // without changing the existing idle-read semantics of PD/Store probes.
+                requestBuilder.callTimeout(this.callTimeoutMillis,
+                                           TimeUnit.MILLISECONDS);
+            }
+            OkHttpClient requestClient = requestBuilder.build();
             Request.Builder request = new Request.Builder()
                     .url(target.toString())
                     .get()
                     .header("Accept", accept);
-            if (username != null && !username.trim().isEmpty()) {
-                String credential = username + ':' +
-                                    (password == null ? "" : password);
-                String encoded = Base64.getEncoder().encodeToString(
-                        credential.getBytes(StandardCharsets.UTF_8));
-                request.header("Authorization", "Basic " + encoded);
+            if (authorization != null) {
+                request.header("Authorization", authorization);
             }
             try (Response response = requestClient.newCall(request.build())
                                               .execute()) {
@@ -140,8 +176,10 @@ public class OperationsHttpClient {
             }
         } catch (UpstreamRequestException e) {
             throw e;
-        } catch (SocketTimeoutException e) {
-            throw new UpstreamRequestException("upstream_timeout", e,
+        } catch (InterruptedIOException e) {
+            String reason = boundedCall || e instanceof SocketTimeoutException ?
+                            "upstream_timeout" : "upstream_unavailable";
+            throw new UpstreamRequestException(reason, e,
                                                Map.of("request_path", target.getRawPath()));
         } catch (IOException | IllegalArgumentException e) {
             throw new UpstreamRequestException("upstream_unavailable", e,

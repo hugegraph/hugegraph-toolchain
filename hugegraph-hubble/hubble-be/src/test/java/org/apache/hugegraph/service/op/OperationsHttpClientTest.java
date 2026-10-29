@@ -19,6 +19,7 @@
 package org.apache.hugegraph.service.op;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.URI;
@@ -26,6 +27,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.net.httpserver.HttpServer;
@@ -289,6 +292,21 @@ public class OperationsHttpClientTest {
     }
 
     @Test
+    public void testSendsBearerServiceIdentityWithoutReturningIt() throws IOException {
+        AtomicReference<String> authorization = new AtomicReference<>();
+        HttpServer server = server(200, "ok", null, authorization);
+        OperationsHttpClient client = new OperationsHttpClient(1000, 1000, 64);
+        try {
+            String response = client.getBearer(uri(server, "/"), "service-token",
+                                               Collections.emptySet());
+            Assert.assertEquals("Bearer service-token", authorization.get());
+            Assert.assertFalse(response.contains("service-token"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     public void testClassifiesReadTimeout() throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/", exchange -> {
@@ -306,6 +324,124 @@ public class OperationsHttpClientTest {
                     Assert.assertThrows(UpstreamRequestException.class, () ->
                             client.get(uri(server, "/"), null, null));
             Assert.assertEquals("upstream_timeout", error.getMessage());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test(timeout = 6000L)
+    public void testBearerCallDeadlineBoundsContinuouslyProgressingBody()
+           throws IOException {
+        this.assertVermeerCallDeadline("private-service-token");
+    }
+
+    @Test(timeout = 6000L)
+    public void testAnonymousVermeerCallStillBoundsContinuouslyProgressingBody()
+           throws IOException {
+        this.assertVermeerCallDeadline(null);
+    }
+
+    private void assertVermeerCallDeadline(String token) throws IOException {
+        AtomicInteger chunks = new AtomicInteger();
+        AtomicReference<String> authorization = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/", exchange -> {
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            try {
+                exchange.sendResponseHeaders(200, 80L);
+                for (int index = 0; index < 80; index++) {
+                    exchange.getResponseBody().write('x');
+                    exchange.getResponseBody().flush();
+                    chunks.incrementAndGet();
+                    // Progress every 50ms prevents the 1000ms idle-read timeout.
+                    Thread.sleep(50L);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (IOException ignored) {
+                // The call deadline closes the connection while the server streams.
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        OperationsHttpClient client = new OperationsHttpClient(100, 1000, 128);
+        long started = System.nanoTime();
+        try {
+            UpstreamRequestException error = (UpstreamRequestException)
+                    Assert.assertThrows(UpstreamRequestException.class, () ->
+                    client.getBearer(uri(server, "/api/v1/admin/cluster?token=private-query"),
+                                     token, Collections.emptySet()));
+
+            Assert.assertEquals("upstream_timeout", error.getMessage());
+            Assert.assertTrue(error.getCause() instanceof InterruptedIOException);
+            Assert.assertFalse(error.getCause() instanceof java.net.SocketTimeoutException);
+            Assert.assertEquals(token == null ? null : "Bearer " + token, authorization.get());
+            Assert.assertTrue(chunks.get() >= 3);
+            Assert.assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started) < 3000L);
+            Assert.assertEquals(Map.of("request_path", "/api/v1/admin/cluster"), error.getDiagnostics());
+            Assert.assertFalse(error.getDiagnostics().toString().contains("private-"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test(timeout = 6000L)
+    public void testBasicGetKeepsIdleReadSemanticsWhileBodyProgresses()
+           throws IOException {
+        this.assertProgressingResponseWithoutVermeerDeadline(false);
+    }
+
+    @Test(timeout = 6000L)
+    public void testReadinessProbeKeepsIdleReadSemanticsWhileBodyProgresses()
+           throws IOException {
+        this.assertProgressingResponseWithoutVermeerDeadline(true);
+    }
+
+    private void assertProgressingResponseWithoutVermeerDeadline(boolean readiness)
+                 throws IOException {
+        String body = "{\"ready\":true,\"detail\":\"streaming-progress\"}";
+        AtomicReference<String> authorization = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/", exchange -> {
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            try {
+                byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(readiness ? 503 : 200, bytes.length);
+                for (int offset = 0; offset < bytes.length; offset += 8) {
+                    exchange.getResponseBody().write(bytes, offset, Math.min(8, bytes.length - offset));
+                    exchange.getResponseBody().flush();
+                    // Six chunks span at least 1250ms, beyond the 1100ms call
+                    // budget but below the 1000ms idle timeout between chunks.
+                    // Avoid per-byte flushes whose overhead varies by platform.
+                    if (offset + 8 < bytes.length) {
+                        Thread.sleep(250L);
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (IOException ignored) {
+                // The regression closes this connection before the fix.
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        OperationsHttpClient client = new OperationsHttpClient(100, 1000, 128);
+        try {
+            long started = System.nanoTime();
+            if (readiness) {
+                OperationsHttpClient.ProbeResponse response = client.probe(
+                        uri(server, "/v1/ready"), "hubble", "private-password", Collections.emptySet());
+                Assert.assertEquals(503, response.getStatus());
+                Assert.assertEquals(body, response.getBody());
+            } else {
+                Assert.assertEquals(body, client.get(uri(server, "/v1/members"),
+                                                    "hubble", "private-password"));
+            }
+            Assert.assertTrue(System.nanoTime() - started >
+                              TimeUnit.MILLISECONDS.toNanos(client.callTimeoutMillis()));
+            Assert.assertTrue(authorization.get().startsWith("Basic "));
         } finally {
             server.stop(0);
         }

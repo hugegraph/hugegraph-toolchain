@@ -19,6 +19,7 @@
 import {Alert, Button, Empty, message, Progress, Radio, Skeleton, Table, Tooltip} from 'antd';
 import {
     ApartmentOutlined,
+    ArrowLeftOutlined,
     CrownOutlined,
     DatabaseOutlined,
     DeploymentUnitOutlined,
@@ -55,6 +56,8 @@ import {
 import {TopbarPageContextSlot} from '../../components/Topbar/PageContextSlot';
 import {operationsReturnState} from './navigation';
 import {DIAGNOSTICS_ID} from './SourceDiagnostics';
+import VermeerOverview, {VermeerHealth, VermeerReason, VermeerSummary} from './VermeerOverview';
+import {vermeerObservedAt} from './vermeer';
 import './operations.scss';
 
 const Overview = () => {
@@ -68,7 +71,28 @@ const Overview = () => {
     const [error, setError] = useState(null);
     const [dashboard, setDashboard] = useState({status: 'checking', url: ''});
     const requestSequence = useRef(0);
-    const view = searchParams.get('view') === 'nodes' ? 'nodes' : 'topology';
+    const isVermeer = searchParams.get('service') === 'vermeer' && Array.isArray(data?.nodes);
+    const viewKey = isVermeer ? 'compute_view' : 'view';
+    const view = searchParams.get(viewKey) === 'nodes' ? 'nodes' : 'topology';
+    const changeService = service => {
+        const next = new URLSearchParams(searchParams);
+        service ? next.set('service', service) : next.delete('service');
+        next.delete('compute_view');
+        next.delete('node');
+        next.delete('detail');
+        setSearchParams(next);
+    };
+    const selectVermeerNode = node => {
+        const next = new URLSearchParams(searchParams);
+        node ? next.set('node', node) : next.delete('node');
+        next.delete('detail');
+        setSearchParams(next);
+    };
+    const openFullDetail = () => {
+        const next = new URLSearchParams(searchParams);
+        next.set('detail', 'full');
+        setSearchParams(next);
+    };
 
     const load = useCallback(async refresh => {
         const request = ++requestSequence.current;
@@ -90,8 +114,19 @@ const Overview = () => {
                 setData(null);
             }
             else if (dataRef.current) {
-                const snapshot = {...dataRef.current, stale: true,
-                    nodes: dataRef.current.nodes?.map(markNodeReadinessStale)};
+                const previous = dataRef.current;
+                const previousVermeer = previous.vermeer;
+                const lastComputeSuccess = previousVermeer?.last_success_at
+                    ?? (previousVermeer?.availability === 'AVAILABLE' && !previousVermeer.stale
+                        ? previousVermeer.observed_at : null);
+                const snapshot = {...previous, stale: true,
+                    nodes: previous.nodes?.map(markNodeReadinessStale),
+                    vermeer: previousVermeer?.configured ? {
+                        ...previousVermeer, stale: true, status: 'UNKNOWN',
+                        availability: 'UNAVAILABLE', ready_workers: null,
+                        reason: 'vermeer_snapshot_refresh_failed',
+                        last_success_at: lastComputeSuccess,
+                    } : previousVermeer};
                 dataRef.current = snapshot;
                 setData(snapshot);
             }
@@ -152,9 +187,13 @@ const Overview = () => {
     const changeView = useCallback(event => {
         const next = new URLSearchParams(searchParams);
         event.target.value === 'nodes'
-            ? next.set('view', 'nodes') : next.delete('view');
+            ? next.set(viewKey, 'nodes') : next.delete(viewKey);
+        if (isVermeer) {
+            next.delete('node');
+            next.delete('detail');
+        }
         setSearchParams(next, {replace: true});
-    }, [searchParams, setSearchParams]);
+    }, [isVermeer, searchParams, setSearchParams, viewKey]);
     const openDashboard = useCallback(() => {
         const popup = window.open(
             `${dashboard.url}/monitor/machine`,
@@ -195,9 +234,13 @@ const Overview = () => {
     }
 
     const unavailable = t('operations.unavailable');
-    const observed = formatObservedAt(data?.observed_at, i18n.language, unavailable);
+    const activeSnapshot = isVermeer ? data?.vermeer : data;
+    const activeObservedAt = isVermeer ? vermeerObservedAt(activeSnapshot) : activeSnapshot?.observed_at;
+    const observed = formatObservedAt(
+        activeObservedAt, i18n.language, unavailable
+    );
     const observedAge = formatObservedAge(
-        data?.observed_at, i18n.language, unavailable
+        activeObservedAt, i18n.language, unavailable
     );
     const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
     const attentionNodes = selectAttentionNodes(nodes);
@@ -334,21 +377,46 @@ const Overview = () => {
         <main className='operations-page operations-overview'>
             <header className='operations-page-header'>
                 <div>
-                    <h2>{t('operations.overview')}</h2>
+                    {isVermeer && (
+                        <Button type='link' className='operations-return-main'
+                            aria-label={t('operations.vermeer_back_main')}
+                            icon={<ArrowLeftOutlined />} onClick={() => changeService(null)}>
+                            {t('operations.vermeer_back_main')}
+                        </Button>
+                    )}
+                    <h2>{t(isVermeer ? 'operations.vermeer_cluster' : 'operations.overview')}</h2>
                     <p className='operations-page-description'>
-                        {t('operations.overview_description')}
+                        {t(isVermeer ? 'operations.vermeer_description' : 'operations.overview_description')}
                     </p>
                     <div className='operations-overall-status'>
-                        <HealthStatus
-                            status={data?.status}
-                            reason={data?.reason}
-                            size='large'
-                        />
+                        {isVermeer ? (
+                            <>
+                                <VermeerHealth cluster={activeSnapshot} size='large' />
+                                {activeSnapshot?.reason && (
+                                    <span className='operations-health-reason'>
+                                        <VermeerReason reason={activeSnapshot.reason} />
+                                    </span>
+                                )}
+                            </>
+                        ) : (
+                            <HealthStatus status={activeSnapshot?.status}
+                                reason={activeSnapshot?.reason} size='large' />
+                        )}
                         <span>
                             {t('operations.observed_at')}: {observed} · {observedAge}
                         </span>
-                        {data?.stale && <strong>{t('operations.stale')}</strong>}
+                        {activeSnapshot?.stale && <strong>{t('operations.stale')}</strong>}
                     </div>
+                    {data?.vermeer?.configured && (
+                        <div className='operations-deployment-health'
+                            aria-label={t('operations.deployment_health')}>
+                            <span>{t('operations.vermeer_main_cluster')}: {' '}
+                                <HealthStatus status={data.main_cluster_status ?? data.status}
+                                    reason={data.main_cluster_reason} stale={data.stale} />
+                            </span>
+                            <span>Vermeer: <VermeerHealth cluster={data.vermeer} /></span>
+                        </div>
+                    )}
                 </div>
                 <div className='operations-header-actions operations-header-tools'>
                     {dashboard.status !== 'hidden' && (
@@ -380,7 +448,24 @@ const Overview = () => {
                 </div>
             </header>
 
-            {data?.nodes ? (
+            {isVermeer ? (
+                <>
+                    <TopbarPageContextSlot>
+                        <Radio.Group role='radiogroup' aria-label={t('operations.overview_view_mode')}
+                            className='operations-view-switch' value={view} onChange={changeView}
+                            optionType='button' buttonStyle='solid' options={[
+                                {label: t('operations.topology_view'), value: 'topology'},
+                                {label: t('operations.node_list_view'), value: 'nodes'},
+                            ]} />
+                    </TopbarPageContextSlot>
+                    {error && <Alert type='warning' showIcon title={t('operations.refresh_failed')} />}
+                    <VermeerOverview cluster={data.vermeer}
+                        mainStatus={data.main_cluster_status ?? data.status} mainStale={data.stale} view={view}
+                        selectedNode={searchParams.get('node')}
+                        fullDetail={searchParams.get('detail') === 'full'}
+                        onSelect={selectVermeerNode} onFullDetail={openFullDetail} />
+                </>
+            ) : data?.nodes ? (
                 <>
                     <section className='operations-workbench'>
                         {error && (
@@ -418,10 +503,16 @@ const Overview = () => {
                                     ? <Empty description={t('operations.empty_cluster')} />
                                     : view === 'topology'
                                         ? (
-                                            <ClusterTopology
-                                                nodes={nodes}
-                                                returnState={operationsReturnState(location)}
-                                            />
+                                            <div className={data.vermeer?.configured
+                                                ? 'operations-main-topology has-vermeer'
+                                                : 'operations-main-topology'}>
+                                                <ClusterTopology
+                                                    nodes={nodes}
+                                                    returnState={operationsReturnState(location)}
+                                                />
+                                                <VermeerSummary cluster={data.vermeer}
+                                                    onOpen={() => changeService('vermeer')} />
+                                            </div>
                                         )
                                         : (
                                             <Table
@@ -442,6 +533,10 @@ const Overview = () => {
                                                 size='small'
                                             />
                                         )}
+                                {(view === 'nodes' || nodes.length === 0) && (
+                                    <VermeerSummary cluster={data.vermeer}
+                                        onOpen={() => changeService('vermeer')} />
+                                )}
                             </section>
                             <aside className='operations-facts'>
                                 <h3>{t('operations.cluster_facts')}</h3>

@@ -137,6 +137,15 @@ describe('Topbar request errors', () => {
         mockUseAuthContext.mockReturnValue({context: {role: 'SUPERADMIN'}});
     });
 
+    it('uses deployment scope in operations instead of suggesting graph filtering', async () => {
+        api.auth.status.mockResolvedValue({status: 200});
+        render(<MemoryRouter initialEntries={['/operations/overview']}><Topbar /></MemoryRouter>);
+        expect(screen.getByLabelText('operations.deployment_scope')).toBeInTheDocument();
+        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+        await waitFor(() => expect(api.auth.status).toHaveBeenCalledTimes(1));
+        expect(api.manage.getGraphList).not.toHaveBeenCalled();
+    });
+
     it('catches rejected auth status checks from the request layer', async () => {
         const catchHandler = jest.fn();
         api.auth.status.mockReturnValue({

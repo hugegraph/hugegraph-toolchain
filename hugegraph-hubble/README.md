@@ -404,6 +404,37 @@ Track asynchronous queries and algorithms, then expand compact results inline.
 
 ![Hubble asynchronous task results](docs/images/showcase/async-tasks.jpg)
 
+### Cluster Operations and Vermeer
+
+The cluster overview keeps Server, PD, and Store topology as the main view.
+When Vermeer monitoring is enabled, a compact compute-cluster summary appears beside the Store row,
+with no Store-to-Vermeer connector or additional topology layer. Open it to inspect
+the Master layer above the Worker layer, then return to the main cluster without
+losing the selected topology or node-list view. Worker nodes wrap within the
+same layer as the deployment grows. Node details distinguish readiness checks
+from process CPU and RSS telemetry; the compute summary reports collection
+coverage rather than treating partial samples as a cluster total. Missing or stale
+observations do not imply that a registered node is ready.
+
+These browser captures use controlled API fixtures for the 1 Master + 1 Worker
+and 1 Master + 10 Worker scenarios. They illustrate the implemented interface,
+not the health of a live Helm deployment.
+
+![Main cluster overview with a compact Vermeer summary](docs/images/showcase/operations-vermeer-overview.png)
+
+![Vermeer compute perspective with Master above Worker](docs/images/showcase/operations-vermeer-compute.png)
+
+![Vermeer Worker nodes wrap within the same layer](docs/images/showcase/operations-vermeer-many-workers.png)
+
+Stale evidence retains node identity while current readiness remains unconfirmed:
+[last successful observation](docs/images/showcase/operations-vermeer-stale-history.png)
+and [English node details](docs/images/showcase/operations-vermeer-stale-en.png).
+An [installation without Vermeer monitoring](docs/images/showcase/operations-vermeer-disabled.png)
+keeps the main topology free of an unused compute entry.
+
+See [Vermeer operations integration](docs/operations-vermeer.md) for deployment
+configuration, state semantics, permissions, and the coordinated image rollout.
+
 ## Authentication, connections, and compatibility
 
 Hubble uses one capability-driven connection boundary for `1.8/master`. Authentication mode is detected from the connected HugeGraph Server; Hubble does not maintain a separate authentication switch. Account and permission entry points are hidden when Server allows anonymous access. Connection switching always goes through the backend resolver. In PD mode, a valid server address returned by discovery is sufficient; a manually configured server URL is not required.
@@ -620,6 +651,35 @@ points appeared only in authenticated mode. These fixtures do not validate live
 Server/PD/Store connectivity, authentication enforcement, or the connection
 resolver. Screenshots: [PD data health in anonymous mode](docs/assets/operations-pd-data-health-anonymous.png)
 and [Server backend health after administrator login](docs/assets/operations-server-backend-health-authenticated.png).
+
+### Vermeer backend configuration
+
+Enable deployment-wide Vermeer monitoring independently of the selected graph.
+Hubble reads `GET /api/v1/admin/cluster` using an internal Master HTTP origin and
+an administrator token file; browsers receive neither the credential nor Worker
+request targets:
+
+```properties
+operations.vermeer.enabled=true
+operations.vermeer.address=http://vermeer-master:6688
+operations.vermeer.token_file=/var/run/hugegraph/vermeer/token
+```
+
+The paired Helm chart supplies the Service address and read-only, memory-backed
+token mount. For other deployments, mount the token read-only and rotate it
+before expiry. Hubble rereads it and invalidates old observations on rotation;
+401/403 responses also discard retained node data. Collection is disabled by
+default and remains neutral to the main cluster's health.
+
+`GET /api/v1.3/operations/overview` adds `vermeer`, `main_cluster_status` and
+`main_cluster_reason`, retaining the original graph `nodes` and `facts`.
+The existing Operations health, topology and metrics capabilities also govern
+this source; resource data is omitted without metrics access.
+
+See [Cluster Operations and Vermeer](#cluster-operations-and-vermeer) for the UI
+and [Vermeer operations integration](docs/operations-vermeer.md) for the separate
+administrator settings, readiness/registration and resource semantics, cache
+behavior, HTTP limits and paired image rollout.
 
 ## Functional Modules Overview
 
