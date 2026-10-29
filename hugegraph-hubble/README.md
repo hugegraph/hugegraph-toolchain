@@ -414,16 +414,28 @@ current browser session to 15 minutes–7 days. The backend validates this range
 requires the existing username/token session; anonymous deployments expose no
 personal center or session settings.
 
-This is the interval without Hubble HTTP requests. Background refresh requests
-restart it too; it is not a mouse/keyboard inactivity timer. Signing in again uses
-the deployment default. It does not change the password lifetime or renew the
-HugeGraph token (currently issued for 30 days).
+An application-wide timer tracks mouse, keyboard and touch activity across tabs
+sharing the same login. Background requests do not extend this timer. Changing
+the setting applies immediately, and an expired timer calls the existing logout
+endpoint before clearing local account state (with a five-second local fallback
+if logout stalls). Anonymous mode never creates a session for this timer.
+The servlet request-idle timeout is also updated. Signing in again restores the
+original deployment timeout and starts a fresh, noncredential activity scope.
+This does not change the password lifetime or renew the HugeGraph token
+(currently issued for 30 days).
 
 The Chrome screenshot uses explicit API fixtures. The interaction check covers
 GraphSpace administrator display while legacy status says `USER`, saving 60 minutes
 as 3600 seconds, changing identity to a regular user, changing the connection mode
 to standalone admin, and anonymous account-page hiding; it is not live cluster or
-long-duration expiry acceptance.
+long-duration expiry acceptance. In a separate controlled-API App check,
+Playwright's browser clock advanced beyond a 15-minute timeout while background
+authorization refreshes continued to succeed; the existing logout endpoint ran
+and the app returned to login. Changing 15 to 30 minutes kept the session alive
+after the old deadline and logged it out after the updated deadline. These are
+simulated-time checks, not a 15/30-minute live-cluster soak. A second shared-login
+tab receiving keyboard input also kept both tabs alive beyond their original
+15-minute deadlines while background authorization requests remained successful.
 
 ![Personal role and session idle setting](docs/assets/personal-session-idle.png)
 
