@@ -617,7 +617,6 @@ public class VermeerOperationsService {
         result.put("availability", availability);
         result.put("status", "UNKNOWN");
         result.put("reason", reason);
-        result.put("observed_at", now);
         result.put("stale", true);
         result.put("ready_workers", null);
         result.put("metrics_availability", "UNAVAILABLE");

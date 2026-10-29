@@ -133,6 +133,58 @@ test('an undeployed compute direct link has an explicit neutral header', async (
     expect(within(header).getByText('Not deployed')).toBeInTheDocument();
     expect(within(header).getByText('Vermeer is not enabled in this deployment.')).toBeInTheDocument();
     expect(within(header).queryByText('UNKNOWN')).not.toBeInTheDocument();
+    expect(header).toHaveTextContent('Observed: Unavailable · Unavailable');
+});
+
+test.each(['backend failure', 'Hubble network failure'])(
+    'a %s retains the source snapshot clock across repeated failures', async failure => {
+        jest.spyOn(Date, 'now').mockReturnValue(RETRY_OBSERVED);
+        const data = snapshot();
+        const collectorTime = COMPUTE_OBSERVED + 15 * 60 * 1000;
+        data.vermeer.last_success_at = collectorTime;
+        data.vermeer.workers[0].observed_at = COMPUTE_LAST_SUCCESS;
+        getOverview.mockResolvedValue(data);
+        const {container} = renderCompute();
+        await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+        await userEvent.click(screen.getByRole('button', {name: 'worker-01'}));
+        const dialog = await screen.findByRole('dialog');
+        const expected = formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable');
+        const nodeExpected = formatObservedAt(COMPUTE_LAST_SUCCESS, 'en-US', 'Unavailable');
+        expect(container.querySelector('.operations-overall-status')).toHaveTextContent(expected);
+        expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
+            .toHaveTextContent(nodeExpected);
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            if (failure === 'backend failure') {
+                getOverview.mockResolvedValueOnce({...data, vermeer: {...data.vermeer,
+                    availability: 'UNAVAILABLE', status: 'UNKNOWN', stale: true, ready_workers: null,
+                    reason: 'vermeer_upstream_unavailable'}});
+            } else {
+                getOverview.mockRejectedValueOnce(new Error('Hubble network unavailable'));
+            }
+            await userEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+            expect(getOverview).toHaveBeenCalledTimes(attempt + 1);
+            const header = container.querySelector('.operations-overall-status');
+            await within(header).findByText('Stale');
+            expect(header).toHaveTextContent(expected);
+            expect(header).not.toHaveTextContent(formatObservedAt(collectorTime, 'en-US', 'Unavailable'));
+            expect(container.querySelector('.operations-vermeer-facts .operations-fact:last-child strong'))
+                .toHaveTextContent(expected);
+            expect(dialog.querySelector('.ant-descriptions-row:last-child .ant-descriptions-item-content'))
+                .toHaveTextContent(nodeExpected);
+        }
+    });
+
+test('historical legacy snapshots without a source clock use the last successful collection time', async () => {
+    const data = snapshot();
+    data.vermeer = {...data.vermeer, availability: 'UNAVAILABLE', status: 'UNKNOWN', stale: true,
+        observed_at: null, last_success_at: COMPUTE_LAST_SUCCESS};
+    getOverview.mockResolvedValue(data);
+    const {container} = renderCompute();
+    await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
+    const expected = formatObservedAt(COMPUTE_LAST_SUCCESS, 'en-US', 'Unavailable');
+    expect(container.querySelector('.operations-overall-status')).toHaveTextContent(expected);
+    expect(container.querySelector('.operations-vermeer-facts .operations-fact:last-child strong'))
+        .toHaveTextContent(expected);
 });
 
 test.each([
@@ -154,14 +206,14 @@ test.each([
         const {container} = renderCompute();
         await screen.findByRole('heading', {level: 2, name: 'Vermeer Compute Cluster'});
         const header = container.querySelector('.operations-overall-status');
-        const expectedObserved = computeStale ? COMPUTE_LAST_SUCCESS : COMPUTE_OBSERVED;
+        const expectedObserved = COMPUTE_OBSERVED;
         expect(header).toHaveTextContent(
             formatObservedAt(expectedObserved, 'en-US', 'Unavailable')
         );
         expect(header).not.toHaveTextContent(formatObservedAt(MAIN_OBSERVED, 'en-US', 'Unavailable'));
         if (computeStale) {
             expect(header).not.toHaveTextContent(
-                formatObservedAt(COMPUTE_OBSERVED, 'en-US', 'Unavailable')
+                formatObservedAt(COMPUTE_LAST_SUCCESS, 'en-US', 'Unavailable')
             );
         }
         expect(Boolean(within(header).queryByText('Stale'))).toBe(computeStale);
@@ -180,9 +232,9 @@ test.each([
     });
 
 test.each([
-    ['UP', true, COMPUTE_OBSERVED],
-    ['UNKNOWN', true, COMPUTE_OBSERVED],
-    ['UNKNOWN', false, COMPUTE_OBSERVED],
+    ['UP', true, RETRY_OBSERVED],
+    ['UNKNOWN', true, RETRY_OBSERVED],
+    ['UNKNOWN', false, RETRY_OBSERVED],
     ['UP', false, RETRY_OBSERVED],
 ])('compute header status %s and stale=%s choose observation time independently',
     async (status, stale, expectedTime) => {
@@ -241,7 +293,7 @@ test('a first collection timeout explains the unconfirmed readiness in Chinese w
 test.each([
     ['fresh with successful timestamp', 'AVAILABLE', false, COMPUTE_LAST_SUCCESS, RETRY_OBSERVED],
     ['fresh legacy response', 'AVAILABLE', false, null, RETRY_OBSERVED],
-    ['retained successful snapshot', 'UNAVAILABLE', true, COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
+    ['retained successful snapshot', 'UNAVAILABLE', true, COMPUTE_LAST_SUCCESS, RETRY_OBSERVED],
     ['retained snapshot without success', 'UNAVAILABLE', true, null, null],
 ])('%s preserves successful service clocks and the node observation clock',
     async (_, availability, stale, lastSuccess, expectedTime) => {
@@ -364,7 +416,7 @@ test.each([
     ['failed probe without success', 'UNAVAILABLE', false, undefined, null],
     ['successful fresh snapshot', 'AVAILABLE', false, undefined, COMPUTE_OBSERVED],
     ['fresh snapshot with a separate collector clock', 'AVAILABLE', false,
-        COMPUTE_LAST_SUCCESS, COMPUTE_LAST_SUCCESS],
+        COMPUTE_LAST_SUCCESS, COMPUTE_OBSERVED],
     ['retained real success', 'UNAVAILABLE', true, COMPUTE_OBSERVED, COMPUTE_OBSERVED],
     ['stale snapshot without success', 'AVAILABLE', true, undefined, null],
 ])('a later Hubble refresh failure preserves only successful evidence from %s',
@@ -373,7 +425,8 @@ test.each([
         const data = snapshot();
         data.vermeer = {...data.vermeer, availability, stale,
             status: availability === 'AVAILABLE' && !stale ? 'UP' : 'UNKNOWN',
-            observed_at: availability === 'AVAILABLE' && !stale ? COMPUTE_OBSERVED : RETRY_OBSERVED};
+            observed_at: (availability === 'AVAILABLE' && !stale) || lastSuccess != null
+                ? COMPUTE_OBSERVED : RETRY_OBSERVED};
         if (lastSuccess === undefined) {
             delete data.vermeer.last_success_at;
         } else {

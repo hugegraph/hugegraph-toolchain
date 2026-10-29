@@ -477,6 +477,7 @@ async function main() {
         });
         await check('mobile operations preserves readable main tiers and Store-row compute access', async () => {
             state.operationsOverview = mobileOverviewFixture();
+            state.operationsOverview.vermeer.last_success_at = now + 15 * 60 * 1000;
             state.extraCapabilities = ['operations_metrics_read'];
             for (const width of [320, 375]) {
                 await page.setViewportSize({width, height: 900});
@@ -525,9 +526,25 @@ async function main() {
                     ['0.54 核', '2.4 GiB']);
                 await assertNoHorizontalOverflow(page);
                 await screenshot(page, `operations-mobile-compute-${width}`);
+                const sourceTime = await page.evaluate(time => new Intl.DateTimeFormat('zh-CN',
+                    {dateStyle: 'medium', timeStyle: 'medium'}).format(new Date(time)), now);
+                const observation = page.locator('.operations-vermeer-facts .operations-vermeer-fact-value').last();
+                assert.equal(await observation.innerText(), sourceTime);
+                Object.assign(state.operationsOverview.vermeer, {availability: 'UNAVAILABLE',
+                    status: 'UNKNOWN', reason: 'vermeer_upstream_timeout', stale: true, ready_workers: null});
+                const refreshed = page.waitForResponse(response =>
+                    response.url().includes('/operations/overview?refresh=true'));
+                await page.getByRole('button', {name: '刷新', exact: true}).click();
+                await refreshed;
+                await page.locator('.operations-vermeer-facts > .operations-vermeer-resource-note').waitFor();
+                assert.equal(await observation.innerText(), sourceTime,
+                    'A retained snapshot must keep its source time despite Hubble clock skew');
+                assert((await page.locator('.operations-overall-status').innerText()).includes(sourceTime));
                 await page.getByRole('button', {name: '返回主集群', exact: true}).click();
                 await topology.waitFor();
                 assert.equal(new URL(page.url()).searchParams.get('service'), null);
+                state.operationsOverview = mobileOverviewFixture();
+                state.operationsOverview.vermeer.last_success_at = now + 15 * 60 * 1000;
             }
             state.operationsOverview = null;
             state.extraCapabilities = [];

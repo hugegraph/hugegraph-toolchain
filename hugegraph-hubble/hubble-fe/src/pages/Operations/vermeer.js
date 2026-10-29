@@ -18,9 +18,12 @@
 const vermeerAvailable = cluster => cluster?.configured === true
     && cluster?.availability === 'AVAILABLE' && !cluster?.stale;
 
-const vermeerObservedAt = cluster => vermeerAvailable(cluster)
-    ? cluster.observed_at ?? cluster.last_success_at ?? null
-    : cluster?.last_success_at ?? null;
+const vermeerObservedAt = cluster => {
+    if (cluster?.configured !== true || (!vermeerAvailable(cluster) && cluster.last_success_at == null)) {
+        return null;
+    }
+    return cluster.observed_at ?? cluster.last_success_at ?? null;
+};
 
 const vermeerNodeReady = (node, cluster) => {
     if (!vermeerAvailable(cluster) || typeof node?.ready !== 'boolean') {

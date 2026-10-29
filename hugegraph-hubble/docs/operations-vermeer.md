@@ -98,7 +98,9 @@ according to the caller's existing Operations capabilities.
 
 For an `AVAILABLE` snapshot, `vermeer.observed_at` is the Master's reported
 observation time; `last_success_at` records the successful Hubble collection on
-Hubble's clock. For an empty failed or unsupported response, `observed_at`
+Hubble's clock. A failed refresh that retains that snapshot also retains its
+source `observed_at`; failure does not advance either successful timestamp.
+For an empty failed or unsupported response, `observed_at`
 records the attempt time, while `availability=UNAVAILABLE` or `UNSUPPORTED`,
 `status=UNKNOWN` and `last_success_at=null` explicitly mean no retained success.
 Here `stale=false` means there is no historical payload, not that the service
@@ -142,9 +144,10 @@ second sample.
 When a failed refresh retains earlier evidence, the compute header, facts and
 node details all show the last successful observation time. The failure reason
 and stale marker make clear that current readiness is not confirmed.
-Fresh header/facts use the Master's `observed_at`; fresh node details preserve
-the node's own observation time. They do not replace source time with Hubble's
-collection time when the two clocks differ.
+Header/facts use the Master's `observed_at`, including when the same snapshot
+becomes stale; node details preserve the node's own observation time. Hubble's
+`last_success_at` is only a fallback when source time is absent. A failed
+refresh does not switch the display to Hubble's clock when the two clocks differ.
 Without a successful observation, the time remains unavailable; a failed probe
 does not create a successful observation timestamp.
 The main-cluster status also retains its own stale marker in the deployment
@@ -186,6 +189,13 @@ while Hubble's successful collection time is 09:15. The fresh header and facts
 show 09:00; node details retain each node's own observation time. This verifies
 clock selection in the UI, not real-service clock synchronization or Helm
 deployment acceptance.
+
+![The same source observation time after a failed refresh](images/showcase/operations-vermeer-stale-clock.png)
+
+The same controlled API scenario after a timeout: the header and facts still
+show 09:00, while readiness is unconfirmed and the retained nodes and resources
+are marked stale. No later successful observation was introduced. This is a
+browser capture of the failure state, not a live Helm deployment check.
 
 ## Paired rollout
 

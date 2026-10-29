@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -175,6 +176,65 @@ public class VermeerOperationsServiceTest {
         Assert.assertEquals("UNKNOWN", worker.get("status"));
         Assert.assertNull(worker.get("ready"));
         Assert.assertEquals(true, worker.get("stale"));
+    }
+
+    @Test
+    public void testRetainedFailuresPreserveSourceTimeAndSuccessfulCollectionTime() {
+        long sourceTime = Instant.parse("2026-10-29T09:00:00Z").toEpochMilli();
+        long collectedTime = Instant.parse("2026-10-29T09:15:00Z").toEpochMilli();
+        for (String failure : List.of("http", "malformed", "deadline")) {
+            StubHttp http = new StubHttp();
+            http.payload = http.payload.replace("\"observed_at\":1000", "\"observed_at\":" + sourceTime);
+            TestClock clock = new TestClock();
+            clock.now = collectedTime;
+            VermeerOperationsService service = service(http, clock);
+            try {
+                Map<?, ?> fresh = cluster(service.enrich(main("UP"), ADMIN, false));
+                Assert.assertEquals(sourceTime, fresh.get("observed_at"));
+                Assert.assertEquals(collectedTime, fresh.get("last_success_at"));
+                clock.now += TimeUnit.MINUTES.toMillis(1L);
+                configureFailure(http, failure);
+
+                Map<?, ?> retained = cluster(service.enrich(main("UP"), ADMIN, true));
+
+                Assert.assertEquals(sourceTime, retained.get("observed_at"));
+                Assert.assertEquals(collectedTime, retained.get("last_success_at"));
+                Assert.assertEquals("UNKNOWN", retained.get("status"));
+                Assert.assertEquals(true, retained.get("stale"));
+                Assert.assertEquals(sourceTime, ((Map<?, ?>) retained.get("master")).get("observed_at"));
+                Map<?, ?> worker = (Map<?, ?>) ((List<?>) retained.get("workers")).get(0);
+                Assert.assertEquals(sourceTime, worker.get("observed_at"));
+            } finally {
+                if (http.release != null) {
+                    http.release.countDown();
+                }
+                service.close();
+            }
+        }
+    }
+
+    @Test
+    public void testFailureWithoutSuccessRetainsAttemptTimeWithoutHistoricalData() {
+        for (String failure : List.of("http", "malformed", "deadline")) {
+            StubHttp http = new StubHttp();
+            configureFailure(http, failure);
+            TestClock clock = new TestClock();
+            clock.now = Instant.parse("2026-10-29T09:16:00Z").toEpochMilli();
+            VermeerOperationsService service = service(http, clock);
+            try {
+                Map<?, ?> failed = cluster(service.enrich(main("UP"), ADMIN, false));
+                Assert.assertEquals(clock.now, failed.get("observed_at"));
+                Assert.assertNull(failed.get("last_success_at"));
+                Assert.assertNull(failed.get("master"));
+                Assert.assertEquals(List.of(), failed.get("workers"));
+                Assert.assertEquals(false, failed.get("stale"));
+            } finally {
+                if (http.release != null) {
+                    http.release.countDown();
+                }
+                service.close();
+            }
+        }
     }
 
     @Test
@@ -395,7 +455,7 @@ public class VermeerOperationsServiceTest {
 
         Assert.assertEquals(2, http.requests);
         Assert.assertEquals("UNKNOWN", expired.get("status"));
-        Assert.assertEquals(clock.now, expired.get("observed_at"));
+        Assert.assertEquals(1000L, expired.get("observed_at"));
     }
 
     @Test
@@ -444,6 +504,16 @@ public class VermeerOperationsServiceTest {
 
     private static VermeerOperationsService service(StubHttp http) {
         return service(http, new TestClock());
+    }
+
+    private static void configureFailure(StubHttp http, String failure) {
+        if ("http".equals(failure)) {
+            http.failure = new UpstreamRequestException("upstream_timeout");
+        } else if ("malformed".equals(failure)) {
+            http.payload = "{invalid-json";
+        } else {
+            http.release = new CountDownLatch(1);
+        }
     }
 
     private static VermeerOperationsService service(StubHttp http, TestClock clock) {
@@ -509,6 +579,7 @@ public class VermeerOperationsServiceTest {
         private URI target;
         private Set<String> allowed;
         private String token;
+        private CountDownLatch release;
 
         private StubHttp() {
             super(100, 100, 65536);
@@ -520,6 +591,16 @@ public class VermeerOperationsServiceTest {
             this.target = target;
             this.token = token;
             this.allowed = allowed;
+            if (this.release != null) {
+                try {
+                    if (!this.release.await(5L, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Controlled request was not released");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new UpstreamRequestException("upstream_interrupted");
+                }
+            }
             if (this.failure != null) {
                 throw this.failure;
             }
