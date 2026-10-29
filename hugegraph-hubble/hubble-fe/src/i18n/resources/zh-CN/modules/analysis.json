@@ -975,7 +975,7 @@
       "oltp_tab": "OLTP 交互探索",
       "olap_tab": "OLAP 图计算",
       "oltp_guide": "直接查询当前图，适合邻居、路径等局部交互探索",
-      "olap_guide": "使用 Vermeer 进行全图计算。先加载当前图，再提交算法；进度和结果可在异步任务中查看"
+      "olap_guide": "在此浏览全图算法。使用 Vermeer 前需先加载当前图；Computer 兼容入口使用独立的执行路径"
     },
     "async_task": {
       "result_next": "下一页结果",
