@@ -405,6 +405,28 @@ The compatibility boundary is deliberately small:
 
 Use matching Server, PD, and Store minor versions in a distributed cluster. **Server/PD 1.8 or later is strongly recommended for the best Hubble experience.** Support for 1.5 and 1.7 is intentionally limited to minimum usability and does not imply feature parity with the current release. Version checks stay in the client adapter/resolver rather than being scattered through controllers or pages. See [`AGENTS.md`](AGENTS.md) for verification rules.
 
+### Personal session timeout
+
+The personal center uses the current authentication context to display the account
+role, including GraphSpace administrators. The session panel reads the deployed
+servlet idle timeout (48 hours by default) and lets signed-in users change their
+current browser session to 15 minutes–7 days. The backend validates this range and
+requires the existing username/token session; anonymous deployments expose no
+personal center or session settings.
+
+This is the interval without Hubble HTTP requests. Background refresh requests
+restart it too; it is not a mouse/keyboard inactivity timer. Signing in again uses
+the deployment default. It does not change the password lifetime or renew the
+HugeGraph token (currently issued for 30 days).
+
+The Chrome screenshot uses explicit API fixtures. The interaction check covers
+GraphSpace administrator display while legacy status says `USER`, saving 60 minutes
+as 3600 seconds, changing identity to a regular user, changing the connection mode
+to standalone admin, and anonymous account-page hiding; it is not live cluster or
+long-duration expiry acceptance.
+
+![Personal role and session idle setting](docs/assets/personal-session-idle.png)
+
 ## Import resource cleanup
 
 Import tasks close their Loader before publishing completion. The built-in example import also closes its Loader.

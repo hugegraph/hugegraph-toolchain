@@ -28,6 +28,7 @@ import * as api from '../../api';
 import * as rules from '../../utils/rules';
 import * as user from '../../utils/user';
 import {useAuthContext} from '../../auth/AuthContext';
+import SessionSettings from './SessionSettings';
 import {
     clearPersistedAlgorithmFormsForUser,
 } from '../../modules/algorithm/algorithmsForm/algorithmFormPersistence';
@@ -36,7 +37,7 @@ const PASSWORD_CHANGED_LOGIN_PATH = '/login?notice=credential-updated';
 
 const My = () => {
     const {t} = useTranslation();
-    const {context} = useAuthContext();
+    const {context, identityEpoch} = useAuthContext();
     const [editLayerVisible, setEditLayerVisible] = useState(false);
     const [changePass, setChangePass] = useState(false);
     const [refresh, setRefresh] = useState(false);
@@ -68,8 +69,12 @@ const My = () => {
     };
     const profileName = data.user_nickname || data.user_name;
     const avatarText = profileName ? String(profileName).trim().charAt(0).toUpperCase() : '';
-    const accessLabel = accessLevel
-        ? t(`my.level.${accessLevel}`)
+    const profileLevel = context?.role === 'SUPERADMIN' ? 'ADMIN'
+        : ['SPACEADMIN', 'USER'].includes(context?.role) ? context.role
+            : data.is_superadmin ? 'ADMIN'
+                : (Array.isArray(data.adminSpaces) && data.adminSpaces.length > 0) ? 'SPACEADMIN' : accessLevel;
+    const accessLabel = profileLevel
+        ? t(`my.level.${profileLevel}`)
         : (Array.isArray(data.adminSpaces) && data.adminSpaces.length > 0
             ? data.adminSpaces.join(', ')
             : '');
@@ -168,7 +173,7 @@ const My = () => {
         return () => {
             profileRequest.current = null;
         };
-    }, [refresh, loadProfile]);
+    }, [refresh, loadProfile, identityEpoch]);
 
     return (
         <>
@@ -313,6 +318,7 @@ const My = () => {
                             ) : null}
                     </Form>
                 </section>
+                {!profileError && !spinning && <SessionSettings key={identityEpoch} />}
             </div>
 
             <EditLayer

@@ -517,6 +517,14 @@
     }
   },
   "my": {
+    "session": {
+      "title": "Session timeout",
+      "description": "Set the idle timeout for this browser session. Hubble requests, including background refreshes, restart the idle timer. Signing in again uses the deployment default. This does not extend the HugeGraph token or change your password expiry.",
+      "minutes": "Idle timeout (minutes)",
+      "saved": "Session timeout updated",
+      "unavailable": "Unable to load the session timeout.",
+      "range": "Allowed: {{min}}–{{max}} minutes"
+    },
     "empty_value": "No information",
     "level": {
       "ADMIN": "Administrator",

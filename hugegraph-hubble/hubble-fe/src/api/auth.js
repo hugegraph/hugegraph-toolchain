@@ -215,3 +215,11 @@ const getVermeer = config => {
 };
 
 export {getDashboard, getVermeer};
+
+// Session preferences apply only to the current authenticated browser session.
+export const getSessionSettings = () => request.get('/auth/session', {
+    suppressBusinessErrorToast: true,
+});
+export const updateSessionSettings = idleTimeoutSeconds => request.put('/auth/session', {
+    idle_timeout_seconds: idleTimeoutSeconds,
+});
