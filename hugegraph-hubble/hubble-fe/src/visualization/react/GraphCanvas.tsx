@@ -238,11 +238,10 @@ export const GraphCanvas = (props: GraphCanvasProps) => {
             return;
         }
         snapshotOwnedError.current = null;
-        if (previous !== null && previous !== undefined) {
+        // A locally reported data failure survives successful camera/resize commands.
+        // Only snapshot-only errors are cleared by a snapshot recovery.
+        if (previous !== null && previous !== undefined && lastError.current !== previous) {
             setError((current: unknown) => current === previous ? null : current);
-            if (lastError.current === previous) {
-                lastError.current = Symbol('no-error');
-            }
         }
     }, [snapshotError]);
 

@@ -82,3 +82,41 @@ test('a newer snapshot error replaces and then clears the synchronized local ren
     });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
+
+test('a locally reported data failure survives unrelated updating and ready snapshots', async () => {
+    let snapshot: ControllerSnapshot = {
+        status: 'ready', data, canUndo: false, canRedo: false, selectedIds: [], hoveredIds: [],
+    };
+    const listeners = new Set<() => void>();
+    const publish = (status: ControllerSnapshot['status'], error?: unknown) => {
+        snapshot = {...snapshot, status, error} as ControllerSnapshot;
+        listeners.forEach(listener => listener());
+    };
+    const controller = {
+        replaceData: jest.fn().mockResolvedValue({status: 'applied', value: undefined}),
+        setLayout: jest.fn().mockResolvedValue(undefined),
+        resize: jest.fn().mockResolvedValue(undefined),
+        fitView: jest.fn().mockResolvedValue(undefined),
+        dispose: jest.fn().mockResolvedValue(undefined),
+        getSnapshot: () => snapshot,
+        subscribe: (listener: () => void) => {listeners.add(listener); return () => listeners.delete(listener);},
+    };
+    factory.mockReturnValue(controller as unknown as ReturnType<typeof createGraphController>);
+    const view = render(<GraphCanvas data={data} />);
+    await act(async () => {});
+    const failure = new RangeError('Maximum call stack size exceeded');
+    controller.replaceData.mockImplementationOnce(async () => {
+        publish('error', failure);
+        throw failure;
+    });
+    view.rerender(<GraphCanvas data={{nodes: [], edges: []}} datasetKey='failed-query' />);
+    await act(async () => {});
+    expect(screen.getByRole('alert')).toHaveTextContent(failure.message);
+    act(() => publish('updating'));
+    expect(screen.getByRole('alert')).toHaveTextContent(failure.message);
+    act(() => publish('ready'));
+    expect(screen.getByRole('alert')).toHaveTextContent(failure.message);
+    view.rerender(<GraphCanvas data={{nodes: [], edges: []}} datasetKey='retry-query' />);
+    await act(async () => {});
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
