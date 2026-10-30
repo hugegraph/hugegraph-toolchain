@@ -25,6 +25,7 @@ const {spawnSync} = require('child_process');
 const REQUIRED_CHECKS = Object.freeze([
     'authenticated login and GraphSpace/account visibility',
     'GraphSpace title date and header whitespace navigate exactly to selected space',
+    'dense schema card keeps type names readable and opens the full schema',
     'GraphSpace menu edit does not navigate and current quota is editable',
     'late GraphSpace details cannot overwrite a newly opened editor',
     'Graph context switches via actual header selectors',
@@ -63,7 +64,7 @@ function validateReport(report) {
 }
 
 const screenshotNames = new Set([
-    'graphspace-authenticated', 'graphspace-edit', 'graph-context-switch',
+    'graphspace-authenticated', 'graphspace-edit', 'graph-context-switch', 'dense-schema-card',
     'query-routine-limit', 'query-truncated', 'query-preview-details',
     'query-core-1440', 'query-core-1024',
     'query-core-1440', 'query-core-1024',
