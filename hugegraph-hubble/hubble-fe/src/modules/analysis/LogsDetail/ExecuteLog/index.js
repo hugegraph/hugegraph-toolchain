@@ -97,7 +97,7 @@ export async function copyStatement(content, t) {
     input.style.position = 'fixed';
     input.style.opacity = '0';
     document.body.appendChild(input);
-    let copied = false;
+    let copied;
     try {
         input.focus();
         input.select();
