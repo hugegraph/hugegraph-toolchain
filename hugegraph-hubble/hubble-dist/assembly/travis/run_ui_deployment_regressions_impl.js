@@ -33,12 +33,23 @@ const spaces = [
     { name: 'DEFAULT', nickname: '默认图空间', create_time: '2026-10-13', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 100, storage_used_kb: 10752 },
     { name: 'soc_graph', nickname: '记忆库', create_time: '2026-10-15', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 10, storage_used_kb: 252590 },
 ];
-const graph = (name, nickname) => ({ name, nickname, status: 'CREATED' });
+const graph = (graphspace, name, nickname) => ({ graphspace, name, nickname, status: 'CREATED' });
 // The destination graph must not exist in DEFAULT: stale selector data cannot pass.
 const graphsBySpace = {
-    DEFAULT: [graph('hugegraph', '记忆图'), graph('default_only', '默认空间专属图')],
-    soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
+    DEFAULT: [graph('DEFAULT', 'hugegraph', '记忆图'), graph('DEFAULT', 'default_only', '默认空间专属图')],
+    soc_graph: [graph('soc_graph', 'hugegraph', '记忆图'), graph('soc_graph', 'second', '测试图')],
 };
+const hasFixtureScope = scope => Object.entries(graphsBySpace).some(([space, graphs]) => (
+    graphs.some(item => scope === `${space}/graphs/${item.name}`)
+));
+function graphViewFixture(method, pathname) {
+    const prefix = '/graphspaces/', suffix = '/schema/graphview';
+    const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+        ? pathname.slice(prefix.length, -suffix.length) : '';
+    if (!hasFixtureScope(scope)) return {status: 404};
+    if (method !== 'GET') return {status: 405};
+    return {status: 200, data: {vertices: [], edges: []}};
+}
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
@@ -81,7 +92,7 @@ function queryFixture(method, pathname, body, truncated = false) {
     const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
         ? pathname.slice(prefix.length, -suffix.length) : '';
     const queries = {'DEFAULT/graphs/hugegraph': 'g.V()', 'soc_graph/graphs/second': 'g.V().limit(2)'};
-    if (!Object.hasOwn(queries, scope) && scope !== 'soc_graph/graphs/hugegraph') return {status: 404};
+    if (!hasFixtureScope(scope)) return {status: 404};
     if (method === 'GET') return {status: 200, data: {vertexcount: null, edgecount: null}};
     if (method !== 'POST') return {status: 405};
     if (!queries[scope] || body?.content !== queries[scope] || body?.preview !== true) return {status: 400};
@@ -96,8 +107,8 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
-        operationsOverview: null, extraCapabilities: [] };
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
+        operationsOverview: null, extraCapabilities: [], sessionSeconds: 172800, sessionUpdates: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
         const req = route.request();
@@ -146,12 +157,29 @@ async function setup(browser, auth) {
         }
         else if (p === '/auth/context') {
             const admin = auth && state.loggedIn;
-            data = { mode: auth ? 'AUTH' : 'NON_AUTH', role: admin ? 'SUPERADMIN' : 'ANONYMOUS', capabilities: auth && !admin ? [] : [...capabilities, ...state.extraCapabilities], actions: { graphspaces: admin ? ['create', 'read', 'update', 'delete'] : auth ? [] : ['read'] }, scopes: { all_graphspaces: admin } };
+            data = { mode: auth ? 'AUTH' : 'NON_AUTH', role: admin ? 'SUPERADMIN' : 'ANONYMOUS', capabilities: auth && !admin ? [] : [...capabilities, ...state.extraCapabilities], actions: { graphspaces: admin ? ['create', 'read', 'update', 'delete'] : auth ? [] : ['read'], account: admin ? ['read', 'update'] : [] }, scopes: { all_graphspaces: admin } };
         }
         else if (p === '/auth/status')
             data = {};
+        else if (p === '/auth/users/getpersonal')
+            data = {user_name: 'smoke_admin', user_nickname: '测试管理员', user_description: 'None'};
         else if (p === '/auth/session') {
-            const response = sessionFixture(state, method);
+            let response = sessionFixture(state, 'GET');
+            if (response.status === 200 && method === 'PUT') {
+                const seconds = req.postDataJSON()?.idle_timeout_seconds;
+                if (!Number.isInteger(seconds) || seconds < 900 || seconds > 30 * 86400) {
+                    response = {status: 400, message: 'Invalid timeout'};
+                } else {
+                    state.sessionSeconds = seconds;
+                    state.sessionUpdates.push(seconds);
+                }
+            } else if (method !== 'GET') {
+                response = {status: 405};
+            }
+            if (response.status === 200) {
+                response.data.idle_timeout_seconds = state.sessionSeconds;
+                response.data.max_idle_seconds = 30 * 86400;
+            }
             if (response.status !== 200) unexpected.add(`${method} ${p}`);
             await route.fulfill({status: response.status, contentType: 'application/json',
                 body: JSON.stringify(response)});
@@ -181,6 +209,9 @@ async function setup(browser, auth) {
         else if (p.endsWith('/graphs')) {
             const graphSpace = p.split('/')[2];
             assert(graphsBySpace[graphSpace], `Unexpected graph-list scope: ${graphSpace}`);
+            if (state.graphGate) {
+                await state.graphGate;
+            }
             data = pageResult(graphsBySpace[graphSpace], url.searchParams.get('selected'));
         }
         else if (p.endsWith('/graph_read_mode'))
@@ -191,6 +222,12 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (p.endsWith('/schema/graphview')) {
+            const response = graphViewFixture(method, p);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json', body: JSON.stringify(response)});
+            return;
+        }
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -292,6 +329,22 @@ async function main() {
             await page.getByTestId('graphspace-page-title').waitFor();
             assert(await page.locator('a[href="/account"]').isVisible());
             await screenshot(page, 'graphspace-authenticated');
+        });
+        await check('profile displays stored remarks and saves a 30-day session', async () => {
+            await page.goto(base + '/profile');
+            await page.getByTestId('profile-surface').waitFor();
+            await page.getByText('None', {exact: true}).waitFor();
+            await page.locator('label.ant-radio-button-wrapper').filter({hasText: /^天$/}).click();
+            const input = page.getByRole('spinbutton', {name: '闲置退出（天）'});
+            await input.fill('30');
+            const updated = page.waitForResponse(response => response.url().endsWith('/auth/session')
+                && response.request().method() === 'PUT');
+            await page.getByRole('button', {name: /保\s*存/}).click();
+            assert.equal((await updated).status(), 200);
+            assert.deepEqual(state.sessionUpdates, [30 * 86400]);
+            await page.locator('label.ant-radio-button-wrapper').filter({hasText: /^小时$/}).click();
+            assert.equal(await page.getByRole('spinbutton', {name: '闲置退出（小时）'}).inputValue(), '720');
+            await screenshot(page, 'profile-session-units');
         });
         await check('GraphSpace title date and header whitespace navigate exactly to selected space', async () => {
             const card = () => page.locator('.ant-card').filter({ has: page.getByText('记忆库', { exact: true }) }).first();
@@ -553,6 +606,23 @@ async function main() {
             await anonymous.page.getByText('图模式', { exact: true }).click();
             await screenshot(anonymous.page, 'graphspace-anonymous');
         });
+        await check('algorithm search waits for selected graph in authenticated and anonymous modes', async () => {
+            for (const item of [{page, state}, anonymous]) {
+                let release;
+                item.state.graphGate = new Promise(resolve => { release = resolve; });
+                try {
+                    await item.page.goto(base + '/algorithms/DEFAULT/hugegraph');
+                    const search = item.page.getByPlaceholder('算法查询', {exact: true});
+                    await search.waitFor({state: 'visible'});
+                    assert(await search.isDisabled(), 'Search must be disabled while graph options are pending');
+                    release();
+                    await search.fill('查找最短路径');
+                    await item.page.getByText('查找最短路径', {exact: true}).first().waitFor({state: 'visible'});
+                    assert.equal(await search.inputValue(), '查找最短路径');
+                }
+                finally { release(); item.state.graphGate = null; }
+            }
+        });
     }
     catch (e) {
         failure = e.message;
@@ -574,4 +644,4 @@ async function main() {
 if (require.main === module) {
     main().catch(error => { console.error(error.stack); process.exitCode = 1; });
 }
-module.exports = {sessionFixture, queryFixture};
+module.exports = {sessionFixture, queryFixture, graphViewFixture, graphsBySpace};
