@@ -507,7 +507,7 @@ public class OltpAlgoService {
             Steps.StepEntity stepEntity = new Steps.StepEntity(body.getLabel());
             builder.source(body.getSource()).maxDepth(body.getMaxDepth()).
                     nearest(body.isNearest()).capacity(body.getCapacity()).limit(body.getLimit()).
-                    withPath(false).withVertex(true).withEdge(true).
+                    withPath(true).withVertex(true).withEdge(true).
                     steps().direction(body.getDirection()).degree(body.getMaxDegree())
                    .skipDegree(body.getMaxDegree()).edgeSteps(stepEntity);
             Kout result = traverser.kout(builder.build());
@@ -551,6 +551,7 @@ public class OltpAlgoService {
         try {
             TraverserManager traverser = client.traverser();
             body.withVertex = true;
+            body.withPath = true;
             body.withEdge = true;
             body.countOnly = false;
             Kout result = traverser.kout(body);

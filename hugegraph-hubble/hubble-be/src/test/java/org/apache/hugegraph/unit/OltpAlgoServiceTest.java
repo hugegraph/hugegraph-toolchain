@@ -21,6 +21,7 @@ package org.apache.hugegraph.unit;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 
 import org.junit.Test;
@@ -33,6 +34,7 @@ import org.apache.hugegraph.driver.GremlinManager;
 import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.TraverserManager;
 import org.apache.hugegraph.entity.algorithm.WeightedShortestPathEntity;
+import org.apache.hugegraph.entity.algorithm.KoutEntity;
 import org.apache.hugegraph.entity.query.GraphView;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.query.ExecuteHistoryService;
@@ -40,11 +42,69 @@ import org.apache.hugegraph.service.algorithm.OltpAlgoService;
 import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Path;
 import org.apache.hugegraph.structure.graph.Vertex;
+import org.apache.hugegraph.structure.constant.Direction;
 import org.apache.hugegraph.structure.gremlin.ResultSet;
+import org.apache.hugegraph.structure.traverser.Kout;
+import org.apache.hugegraph.structure.traverser.KoutRequest;
 import org.apache.hugegraph.structure.traverser.WeightedPath;
 import org.apache.hugegraph.testutil.Assert;
 
 public class OltpAlgoServiceTest {
+
+    @Test
+    public void testKoutRequestsPathsAndReturnsEdgesForBothForms()
+           throws Exception {
+        Vertex marko = new Vertex("person");
+        marko.id("marko");
+        Vertex vadas = new Vertex("person");
+        vadas.id("vadas");
+        Edge knows = new Edge("knows");
+        knows.id("S1:marko>vadas");
+        knows.source(marko);
+        knows.target(vadas);
+
+        Kout result = new Kout();
+        this.setField(result, "paths", Collections.emptyList());
+        this.setField(result, "edges", Collections.singleton(knows));
+
+        TraverserManager traverser = Mockito.mock(TraverserManager.class);
+        Mockito.when(traverser.kout(Mockito.any(KoutRequest.class)))
+               .thenAnswer(invocation -> {
+                   KoutRequest request = invocation.getArgument(0);
+                   // Server returns edge records only when paths are requested.
+                   Assert.assertTrue(request.withPath);
+                   Assert.assertTrue(request.withEdge);
+                   return result;
+               });
+        GremlinManager gremlin = Mockito.mock(GremlinManager.class);
+        Mockito.when(gremlin.gremlin(Mockito.anyString()))
+               .thenAnswer(invocation -> new GremlinRequest.Builder(
+                       invocation.getArgument(0), gremlin));
+        Mockito.when(gremlin.execute(Mockito.any()))
+               .thenReturn(this.resultSet(marko, vadas));
+        HugeClient client = Mockito.mock(HugeClient.class);
+        Mockito.when(client.getGraphSpaceName()).thenReturn("DEFAULT");
+        Mockito.when(client.getGraphName()).thenReturn("hugegraph");
+        Mockito.when(client.traverser()).thenReturn(traverser);
+        Mockito.when(client.gremlin()).thenReturn(gremlin);
+
+        OltpAlgoService service = this.serviceWithConfig();
+        this.setField(service, "historyService",
+                      Mockito.mock(ExecuteHistoryService.class));
+        KoutEntity basic = KoutEntity.builder().source("marko")
+                                     .direction(Direction.BOTH).maxDepth(1)
+                                     .maxDegree(100).capacity(100).limit(100)
+                                     .build();
+        GraphView basicView = service.kout(client, basic).getGraphView();
+        Assert.assertEquals(2, basicView.getVertices().size());
+        Assert.assertTrue(basicView.getEdges().contains(knows));
+
+        KoutRequest advanced = KoutRequest.builder().source("marko").build();
+        GraphView advancedView = service.koutPost(client, advanced).getGraphView();
+        Assert.assertEquals(2, advancedView.getVertices().size());
+        Assert.assertTrue(advancedView.getEdges().contains(knows));
+        Mockito.verify(traverser, Mockito.times(2)).kout(Mockito.any(KoutRequest.class));
+    }
 
     @Test
     public void testBuildPathGraphViewKeepsPathEdges() throws Exception {
