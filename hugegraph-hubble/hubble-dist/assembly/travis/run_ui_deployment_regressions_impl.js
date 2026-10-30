@@ -33,12 +33,23 @@ const spaces = [
     { name: 'DEFAULT', nickname: '默认图空间', create_time: '2026-10-13', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 100, storage_used_kb: 10752 },
     { name: 'soc_graph', nickname: '记忆库', create_time: '2026-10-15', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 10, storage_used_kb: 252590 },
 ];
-const graph = (name, nickname) => ({ name, nickname, status: 'CREATED' });
+const graph = (graphspace, name, nickname) => ({ graphspace, name, nickname, status: 'CREATED' });
 // The destination graph must not exist in DEFAULT: stale selector data cannot pass.
 const graphsBySpace = {
-    DEFAULT: [graph('hugegraph', '记忆图'), graph('default_only', '默认空间专属图')],
-    soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
+    DEFAULT: [graph('DEFAULT', 'hugegraph', '记忆图'), graph('DEFAULT', 'default_only', '默认空间专属图')],
+    soc_graph: [graph('soc_graph', 'hugegraph', '记忆图'), graph('soc_graph', 'second', '测试图')],
 };
+const hasFixtureScope = scope => Object.entries(graphsBySpace).some(([space, graphs]) => (
+    graphs.some(item => scope === `${space}/graphs/${item.name}`)
+));
+function graphViewFixture(method, pathname) {
+    const prefix = '/graphspaces/', suffix = '/schema/graphview';
+    const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+        ? pathname.slice(prefix.length, -suffix.length) : '';
+    if (!hasFixtureScope(scope)) return {status: 404};
+    if (method !== 'GET') return {status: 405};
+    return {status: 200, data: {vertices: [], edges: []}};
+}
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
@@ -81,7 +92,7 @@ function queryFixture(method, pathname, body, truncated = false) {
     const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
         ? pathname.slice(prefix.length, -suffix.length) : '';
     const queries = {'DEFAULT/graphs/hugegraph': 'g.V()', 'soc_graph/graphs/second': 'g.V().limit(2)'};
-    if (!Object.hasOwn(queries, scope) && scope !== 'soc_graph/graphs/hugegraph') return {status: 404};
+    if (!hasFixtureScope(scope)) return {status: 404};
     if (method === 'GET') return {status: 200, data: {vertexcount: null, edgecount: null}};
     if (method !== 'POST') return {status: 405};
     if (!queries[scope] || body?.content !== queries[scope] || body?.preview !== true) return {status: 400};
@@ -211,6 +222,12 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (p.endsWith('/schema/graphview')) {
+            const response = graphViewFixture(method, p);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json', body: JSON.stringify(response)});
+            return;
+        }
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -627,4 +644,4 @@ async function main() {
 if (require.main === module) {
     main().catch(error => { console.error(error.stack); process.exitCode = 1; });
 }
-module.exports = {sessionFixture, queryFixture};
+module.exports = {sessionFixture, queryFixture, graphViewFixture, graphsBySpace};
