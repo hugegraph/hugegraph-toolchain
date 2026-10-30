@@ -36,7 +36,8 @@ jest.mock('react-i18next', () => ({
         'task.detail.load_failed': 'Could not load task runs.',
         'task.detail.retry': 'Retry task runs',
         'task.detail.job_id': 'Run ID',
-        'task.detail.import_count': 'Imported',
+        'task.detail.import_count': 'Input records read',
+        'task.detail.input_count_help': 'May include headers and skipped rows; not successful writes.',
         'task.detail.create_time': 'Created',
         'task.detail.average_rate': 'Rate',
         'task.detail.duration': 'Duration',
@@ -156,4 +157,24 @@ it('does not restore task A when its response arrives after task B', async () =>
     await Promise.resolve();
     expect(screen.queryByText('11')).not.toBeInTheDocument();
     expect(screen.getByText('22')).toBeInTheDocument();
+});
+
+
+it('labels the input offset without presenting it as successful writes', async () => {
+    api.manage.getJobsList.mockResolvedValue({
+        status: 200,
+        data: {records: [{
+            job_id: 7,
+            job_status: 'SUCCEED',
+            job_metrics: {total_count: 2, avg_rate: 1, total_time: 2000},
+        }]},
+    });
+
+    render(<TaskDetail />);
+
+    expect(await screen.findByText('2')).toBeInTheDocument();
+    expect(screen.getAllByText('Input records read').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('img', {
+        name: 'Input records read: May include headers and skipped rows; not successful writes.',
+    }).length).toBeGreaterThan(0);
 });

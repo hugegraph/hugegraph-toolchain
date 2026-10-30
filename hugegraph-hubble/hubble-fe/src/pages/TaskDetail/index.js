@@ -23,6 +23,7 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router-dom';
 import * as api from '../../api';
 import DataPreparationNav from '../../components/DataPreparationNav';
+import FormHelpLabel from '../../components/FormHelpLabel';
 import {TaskStatus} from '../Task/status';
 import style from './index.module.scss';
 
@@ -36,13 +37,16 @@ const createColumns = t => [
         render: val => (val === null || val === undefined ? '-' : val.toString()),
     },
     {
-        title: t('task.detail.import_count'),
+        title: <FormHelpLabel
+            label={t('task.detail.import_count')}
+            help={t('task.detail.input_count_help')}
+        />,
         dataIndex: 'job_metrics',
         className: style.no_wrap,
         align: 'right',
-        width: 120,
+        width: 170,
         ellipsis: true,
-        render: val => val?.total_count,
+        render: val => val?.total_count ?? '-',
     },
     {
         title: t('task.detail.create_time'),

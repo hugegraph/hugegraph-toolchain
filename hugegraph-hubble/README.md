@@ -1130,3 +1130,16 @@ These screenshots come from a Chromium run with explicitly intercepted APIs in
 authenticated administrator mode. The corresponding anonymous PD flow, loading
 submission scope and GraphSpace switching were also checked. They demonstrate UI
 navigation and feedback; it does not establish live loading or algorithm results.
+
+### Import task guidance and input progress
+
+Demo actions appear below the target-graph guidance and wrap at compact widths.
+The task history shows input progress, which can include a CSV header and skipped
+or failed rows. It does not represent successfully written graph elements.
+
+![Demo guidance at desktop width](docs/assets/ingest/import-guidance-desktop.png)
+
+![Demo guidance at compact width](docs/assets/ingest/import-guidance-compact.png)
+
+These Chromium screenshots use intercepted API responses. They check layout with
+an empty selection; they do not verify a live import or the number of graph writes.
