@@ -702,7 +702,7 @@
       "running": "运行中",
       "job_id": "执行实例 ID",
       "import_count": "读取输入数",
-      "input_count_help": "读取进度可能包含 CSV 表头及跳过或失败的行，不等于成功写入的点边数量。",
+      "input_count_help": "读取进度可能包含 CSV 表头及跳过或失败的行，不等于成功写入的点边数量",
       "create_time": "创建时间",
       "average_rate": "输入读取速率",
       "records_per_second": "{{rate}} 条/s",
