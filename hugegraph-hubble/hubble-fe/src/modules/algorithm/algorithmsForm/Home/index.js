@@ -69,7 +69,7 @@ const AlgorithmFormHome = props => {
                 ]}
             />
             <div className={c.searchBar}>
-                <AlgorithmSearch onSearch={handleSearch} />
+                <AlgorithmSearch onSearch={handleSearch} disabled={!graphSpace || !graph} />
                 <Button type='link' onClick={resetParameters}>
                     {t('analysis.algorithm.reset_parameters')}
                 </Button>
