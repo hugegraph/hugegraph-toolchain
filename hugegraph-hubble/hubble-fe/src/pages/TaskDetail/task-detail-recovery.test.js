@@ -178,3 +178,20 @@ it('labels the input offset without presenting it as successful writes', async (
         name: 'Input records read: May include headers and skipped rows; not successful writes.',
     }).length).toBeGreaterThan(0);
 });
+
+it('distinguishes zero input records from an unavailable count', async () => {
+    api.manage.getJobsList.mockResolvedValue({
+        status: 200,
+        data: {records: [
+            {job_id: 7, job_status: 'SUCCEED', job_metrics: {total_count: 0}},
+            {job_id: 8, job_status: 'SUCCEED'},
+        ]},
+    });
+
+    render(<TaskDetail />);
+
+    const zeroRow = (await screen.findByText('7')).closest('tr');
+    const unknownRow = screen.getByText('8').closest('tr');
+    expect(zeroRow.querySelectorAll('td')[1]).toHaveTextContent(/^0$/);
+    expect(unknownRow.querySelectorAll('td')[1]).toHaveTextContent(/^-$/);
+});
