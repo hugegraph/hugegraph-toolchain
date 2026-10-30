@@ -236,7 +236,7 @@
       "load_loader_sample": "People & Software Demo Graph",
       "sample_data": "Sample data and resources",
       "load_rank_sample": "Tiny Movie Rank Demo",
-      "clone": "Clone Graph"
+      "clone": "Clone Schema"
     },
     "sample": {
       "hlm_title": "Build the Red Chamber demo graph?",

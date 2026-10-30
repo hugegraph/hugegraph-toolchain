@@ -304,7 +304,7 @@ async function main() {
         await check('clone graph schema without graph data', async () => {
             await page.goto(base + '/graphspace/DEFAULT');
             await page.getByRole('button', {name: /记忆图.*更多操作/}).click();
-            await page.getByRole('menuitem', {name: '克隆图', exact: true}).click();
+            await page.getByRole('menuitem', {name: '克隆 Schema', exact: true}).click();
             const dialog = page.getByRole('dialog');
             assert(await dialog.getByText(/不复制顶点或边数据/).isVisible());
             await dialog.getByLabel('克隆图名称').fill('copy');
