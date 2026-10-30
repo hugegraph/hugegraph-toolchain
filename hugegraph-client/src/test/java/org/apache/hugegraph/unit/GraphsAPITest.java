@@ -141,6 +141,38 @@ public class GraphsAPITest extends BaseUnitTest {
     }
 
     @Test
+    public void testSchemaCloneManagerOmitsBlankNicknameAndRejectsMissingNames() {
+        RestResult result = Mockito.mock(RestResult.class);
+        Mockito.when(result.readObject(Map.class)).thenReturn(ImmutableMap.of("name", "copy"));
+        Mockito.when(this.mockClient.post(Mockito.eq("graphspaces/DEFAULT/graphs/copy/schema-clone"),
+                                          Mockito.any(), Mockito.any(), Mockito.any()))
+               .thenReturn(result);
+        GraphsManager manager = new GraphsManager(this.mockClient, "DEFAULT");
+        Assert.assertEquals("copy", manager.cloneSchema("copy", "original", " ").get("name"));
+        Mockito.verify(this.mockClient).post(
+                Mockito.eq("graphspaces/DEFAULT/graphs/copy/schema-clone"),
+                Mockito.eq(ImmutableMap.of()), Mockito.any(RestHeaders.class),
+                Mockito.eq(ImmutableMap.of("source", "original")));
+        Assert.assertThrows(IllegalArgumentException.class,
+                            () -> manager.cloneSchema("", "original", null));
+        Assert.assertThrows(IllegalArgumentException.class,
+                            () -> manager.cloneSchema("copy", " ", null));
+        Mockito.verify(result).readObject(Map.class);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testLegacyCloneExtensionRemainsAvailableThroughManager() {
+        RestResult result = Mockito.mock(RestResult.class);
+        Mockito.when(result.readObject(Map.class)).thenReturn(ImmutableMap.of("task_id", "42"));
+        Map<String, Object> request = ImmutableMap.of("name", "copy");
+        Mockito.when(this.mockClient.post("graphspaces/DEFAULT/graphs/original/clone", request))
+               .thenReturn(result);
+        Assert.assertEquals("42", new GraphsManager(this.mockClient, "DEFAULT")
+                                  .clone("original", request));
+    }
+
+    @Test
     public void testSchemaCloneSendsExplicitRequestOverHttp() throws Exception {
         AtomicReference<String> path = new AtomicReference<>();
         AtomicReference<String> query = new AtomicReference<>();
