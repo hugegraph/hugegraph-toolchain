@@ -39,6 +39,15 @@ const graphsBySpace = {
     DEFAULT: [graph('hugegraph', '记忆图'), graph('default_only', '默认空间专属图')],
     soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
 };
+// Dense schema fixture exercises the card's readable, navigable summary.
+graphsBySpace.DEFAULT[1].schemaview = {
+    vertices: ['person', 'city', 'company', 'project'].map(name => ({id: name, label: name})),
+    edges: [
+        {id: 'lives', label: 'lives_in', source: 'person', target: 'city'},
+        {id: 'works', label: 'works_at', source: 'person', target: 'company'},
+        {id: 'owns', label: 'owns', source: 'company', target: 'project'},
+    ],
+};
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
@@ -191,6 +200,8 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (p.endsWith('/schema/graphview'))
+            data = {vertices: [], edges: []};
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -199,6 +210,8 @@ async function setup(browser, auth) {
             data = { records: [], total: 0 };
         else if (p.endsWith('/gremlin-query/async-task'))
             data = { task_id: 80001 };
+        else if (p.endsWith('/gremlin-query') && method === 'GET')
+            data = {vertexcount: null, edgecount: null};
         else if (p.endsWith('/gremlin-query')) {
             let body;
             try { body = req.postDataJSON(); } catch (_) { /* Invalid requests are rejected below. */ }
@@ -309,6 +322,21 @@ async function main() {
                     await card().locator('.ant-card-head').click({ position: { x: 12, y: 12 } });
                 await page.waitForURL('**/graphspace/soc_graph');
             }
+        });
+        await check('dense schema card keeps type names readable and opens the full schema', async () => {
+            await page.goto(base + '/graphspace');
+            const space = page.locator('.ant-card').filter({has: page.getByText('默认图空间', {exact: true})}).first();
+            await space.getByText('GraphSpace 名称：DEFAULT', {exact: true}).waitFor();
+            await space.getByRole('link', {name: '进入图空间'}).click();
+            await page.waitForURL('**/graphspace/DEFAULT');
+            const card = page.locator('.ant-card').filter({hasText: '默认空间专属图'}).first();
+            await card.getByText('类型较多，点击查看完整关系图', {exact: true}).waitFor();
+            for (const name of ['person', 'city', 'company', 'project', 'lives_in', 'works_at', 'owns']) {
+                assert(await card.getByText(name, {exact: true}).isVisible(), `${name} is not visible`);
+            }
+            await screenshot(page, 'dense-schema-card');
+            await card.getByRole('button', {name: '查看 默认空间专属图 的 Schema'}).click();
+            await page.waitForURL('**/graphspace/DEFAULT/graph/default_only/meta');
         });
         await check('GraphSpace menu edit does not navigate and current quota is editable', async () => {
             await page.goto(base + '/graphspace');
