@@ -96,7 +96,7 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
         operationsOverview: null, extraCapabilities: [], sessionSeconds: 172800, sessionUpdates: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
@@ -198,6 +198,9 @@ async function setup(browser, auth) {
         else if (p.endsWith('/graphs')) {
             const graphSpace = p.split('/')[2];
             assert(graphsBySpace[graphSpace], `Unexpected graph-list scope: ${graphSpace}`);
+            if (state.graphGate) {
+                await state.graphGate;
+            }
             data = pageResult(graphsBySpace[graphSpace], url.searchParams.get('selected'));
         }
         else if (p.endsWith('/graph_read_mode'))
@@ -585,6 +588,23 @@ async function main() {
             }
             await anonymous.page.getByText('图模式', { exact: true }).click();
             await screenshot(anonymous.page, 'graphspace-anonymous');
+        });
+        await check('algorithm search waits for selected graph in authenticated and anonymous modes', async () => {
+            for (const item of [{page, state}, anonymous]) {
+                let release;
+                item.state.graphGate = new Promise(resolve => { release = resolve; });
+                try {
+                    await item.page.goto(base + '/algorithms/DEFAULT/hugegraph');
+                    const search = item.page.getByPlaceholder('算法查询', {exact: true});
+                    await search.waitFor({state: 'visible'});
+                    assert(await search.isDisabled(), 'Search must be disabled while graph options are pending');
+                    release();
+                    await search.fill('查找最短路径');
+                    await item.page.getByText('查找最短路径', {exact: true}).first().waitFor({state: 'visible'});
+                    assert.equal(await search.inputValue(), '查找最短路径');
+                }
+                finally { release(); item.state.graphGate = null; }
+            }
         });
     }
     catch (e) {
