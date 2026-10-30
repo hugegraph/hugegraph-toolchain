@@ -97,7 +97,7 @@ async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
     const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
-        operationsOverview: null, extraCapabilities: [] };
+        operationsOverview: null, extraCapabilities: [], schemaClones: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
         const req = route.request();
@@ -191,6 +191,8 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (p.endsWith('/schema/graphview'))
+            data = {vertices: [], edges: []};
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -199,6 +201,8 @@ async function setup(browser, auth) {
             data = { records: [], total: 0 };
         else if (p.endsWith('/gremlin-query/async-task'))
             data = { task_id: 80001 };
+        else if (p === '/graphspaces/DEFAULT/graphs/default_only/gremlin-query' && method === 'GET')
+            data = {vertexcount: null, edgecount: null};
         else if (p.endsWith('/gremlin-query')) {
             let body;
             try { body = req.postDataJSON(); } catch (_) { /* Invalid requests are rejected below. */ }
@@ -223,6 +227,10 @@ async function setup(browser, auth) {
                 observed_at: now, stale: false, sources: state.operationsOverview.sources};
         else if (p === '/operations/overview')
             data = state.operationsOverview ?? { sources: { pd: source }, observed_at: now, stale: false, nodes: [] };
+        else if (p === '/graphspaces/DEFAULT/graphs/hugegraph/clone' && method === 'POST') {
+            state.schemaClones.push(req.postDataJSON());
+            data = {name: state.schemaClones.at(-1).name};
+        }
         else if (p.endsWith('/is_auth'))
             data = { auth: false };
         else if (p.endsWith('/get'))
@@ -292,6 +300,22 @@ async function main() {
             await page.getByTestId('graphspace-page-title').waitFor();
             assert(await page.locator('a[href="/account"]').isVisible());
             await screenshot(page, 'graphspace-authenticated');
+        });
+        await check('clone graph schema without graph data', async () => {
+            await page.goto(base + '/graphspace/DEFAULT');
+            await page.getByRole('button', {name: /记忆图.*更多操作/}).click();
+            await page.getByRole('menuitem', {name: '克隆图', exact: true}).click();
+            const dialog = page.getByRole('dialog');
+            assert(await dialog.getByText(/不复制顶点或边数据/).isVisible());
+            await dialog.getByLabel('克隆图名称').fill('copy');
+            await dialog.getByLabel('克隆图显示名称').fill('Copy');
+            await screenshot(page, 'graph-schema-clone-dialog');
+            const posted = page.waitForResponse(response => response.url().endsWith('/graphs/hugegraph/clone')
+                && response.request().method() === 'POST');
+            await dialog.getByRole('button', {name: /确\s*定/}).click();
+            assert.equal((await posted).status(), 200);
+            assert.deepEqual(state.schemaClones, [{graphspace: 'DEFAULT', name: 'copy', nickname: 'Copy', load_data: 0}]);
+            await screenshot(page, 'graph-schema-cloned');
         });
         await check('GraphSpace title date and header whitespace navigate exactly to selected space', async () => {
             const card = () => page.locator('.ant-card').filter({ has: page.getByText('记忆库', { exact: true }) }).first();

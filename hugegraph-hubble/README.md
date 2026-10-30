@@ -1130,3 +1130,10 @@ These screenshots come from a Chromium run with explicitly intercepted APIs in
 authenticated administrator mode. The corresponding anonymous PD flow, loading
 submission scope and GraphSpace switching were also checked. They demonstrate UI
 navigation and feedback; it does not establish live loading or algorithm results.
+
+### Cloning a graph Schema
+
+The graph list can copy a graph's Schema into a new graph in the same GraphSpace.
+This does not copy vertices or edges. It requires a Server implementing the
+`schema-clone` endpoint; older Servers reject the request. If cloning fails,
+inspect the target graph before retrying because it may already have been created.

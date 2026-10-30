@@ -53,7 +53,7 @@ jest.mock('../../api', () => ({
 jest.mock('./EditLayer', () => ({
     EditLayer: () => null,
     ViewLayer: () => null,
-    CloneLayer: () => null,
+    CloneLayer: ({open, graph}) => open ? <div data-testid='clone-layer'>{graph}</div> : null,
 }));
 
 jest.mock('./Card', () => ({menus}) => (
@@ -171,16 +171,11 @@ test('offers one conservative graph clear action and calls its canonical API', a
         .toHaveBeenCalledWith('space', 'graph-a'));
 });
 
-test('shows clone as unavailable instead of exposing a failing action', async () => {
+test('opens schema clone from the graph card', async () => {
     render(<Graph />);
-
     const menu = await screen.findByTestId('graph-card-menu');
-    const cloneItem = within(menu).getByRole('menuitem', {
-        name: /graph.menu.clone: graph.clone.unavailable/,
-    });
-    const clone = within(cloneItem).getByText('graph.menu.clone');
-    expect(cloneItem).toHaveAttribute('aria-disabled', 'true');
-    expect(clone.closest('a')).toBeNull();
+    fireEvent.click(within(menu).getByText('graph.menu.clone'));
+    expect(screen.getByTestId('clone-layer')).toHaveTextContent('default-graph');
 });
 
 test('keeps the graph card actions including example datasets', async () => {

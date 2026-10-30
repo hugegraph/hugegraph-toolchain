@@ -31,3 +31,11 @@ The [client homepage](https://hugegraph.apache.org/docs/quickstart/hugegraph-cli
 
 ## Licence
 The same as HugeGraph, hugegraph-client is also licensed under Apache 2.0 License.
+
+### Copy a graph Schema
+
+`client.graphs().cloneSchema(target, source, nickname)` creates a graph in the
+current GraphSpace and copies its Schema on a Server supporting the synchronous
+`schema-clone` endpoint. It does not copy graph data or cross GraphSpaces.
+Older Servers reject the endpoint. After an error, inspect the target before
+retrying because a partially initialized graph may remain.
