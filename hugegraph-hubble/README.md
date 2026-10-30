@@ -1130,3 +1130,15 @@ These screenshots come from a Chromium run with explicitly intercepted APIs in
 authenticated administrator mode. The corresponding anonymous PD flow, loading
 submission scope and GraphSpace switching were also checked. They demonstrate UI
 navigation and feedback; it does not establish live loading or algorithm results.
+
+### PD endpoint mapping and service state
+
+PD source diagnostics keep an endpoint mapping failure visible even when PD
+reports a higher-priority data fault. Registration, data state, cluster readiness
+and metric collection remain separate observations; a Service address is not
+attributed to a particular PD member.
+
+![PD endpoint mapping and data fault](docs/assets/operations/pd-mapping-and-data-fault.png)
+
+The screenshot uses Chromium with intercepted API responses. It demonstrates the
+combined diagnostic presentation, not the state of a deployed cluster.
