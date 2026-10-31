@@ -49,6 +49,24 @@ const createColumns = t => [
         render: val => val?.total_count ?? '-',
     },
     {
+        title: <FormHelpLabel label={t('task.detail.confirmed_vertices')}
+            help={t('task.detail.confirmed_writes_help')} />,
+        dataIndex: 'job_metrics',
+        className: style.no_wrap,
+        align: 'right',
+        width: 180,
+        render: val => val?.confirmed_vertex_writes ?? '-',
+    },
+    {
+        title: <FormHelpLabel label={t('task.detail.confirmed_edges')}
+            help={t('task.detail.confirmed_writes_help')} />,
+        dataIndex: 'job_metrics',
+        className: style.no_wrap,
+        align: 'right',
+        width: 180,
+        render: val => val?.confirmed_edge_writes ?? '-',
+    },
+    {
         title: t('task.detail.create_time'),
         dataIndex: 'create_time',
         className: style.no_wrap,

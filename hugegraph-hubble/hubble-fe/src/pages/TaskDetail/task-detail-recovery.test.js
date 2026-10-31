@@ -38,6 +38,9 @@ jest.mock('react-i18next', () => ({
         'task.detail.job_id': 'Run ID',
         'task.detail.import_count': 'Input records read',
         'task.detail.input_count_help': 'May include headers and skipped rows; not successful writes.',
+        'task.detail.confirmed_vertices': 'Confirmed vertex writes',
+        'task.detail.confirmed_edges': 'Confirmed edge writes',
+        'task.detail.confirmed_writes_help': 'Latest attempt; updates count again and interrupted requests may be missing',
         'task.detail.create_time': 'Created',
         'task.detail.average_rate': 'Rate',
         'task.detail.duration': 'Duration',
@@ -194,4 +197,29 @@ it('distinguishes zero input records from an unavailable count', async () => {
     const unknownRow = screen.getByText('8').closest('tr');
     expect(zeroRow.querySelectorAll('td')[1]).toHaveTextContent(/^0$/);
     expect(unknownRow.querySelectorAll('td')[1]).toHaveTextContent(/^-$/);
+});
+
+it('shows confirmed vertex and edge operations separately, preserving unknown and zero', async () => {
+    api.manage.getJobsList.mockResolvedValue({
+        status: 200,
+        data: {records: [
+            {job_id: 7, job_status: 'SUCCEED', job_metrics: {
+                total_count: 2, confirmed_vertex_writes: 1, confirmed_edge_writes: 0,
+            }},
+            {job_id: 8, job_status: 'SUCCEED', job_metrics: {total_count: 2}},
+        ]},
+    });
+
+    render(<TaskDetail />);
+
+    const row = (await screen.findByText('7')).closest('tr');
+    const legacyRow = screen.getByText('8').closest('tr');
+    expect(row.querySelectorAll('td')[1]).toHaveTextContent(/^2$/);
+    expect(row.querySelectorAll('td')[2]).toHaveTextContent(/^1$/);
+    expect(row.querySelectorAll('td')[3]).toHaveTextContent(/^0$/);
+    expect(legacyRow.querySelectorAll('td')[2]).toHaveTextContent(/^-$/);
+    expect(legacyRow.querySelectorAll('td')[3]).toHaveTextContent(/^-$/);
+    expect(screen.getAllByRole('img', {
+        name: /Latest attempt; updates count again/,
+    })).toHaveLength(2);
 });
