@@ -276,6 +276,36 @@ test('keeps old readiness stale through a retry until a successful node response
     expect(within(panel).getByText('Ready', {exact: true})).toBeVisible();
 });
 
+test('keeps a retained PD endpoint sample stale through a failed refresh and pending retry', async () => {
+    const pd = {...response, stale: false, node: {...response.node,
+        id: 'pd-safe', name: 'PD A', type: 'PD', metrics: {}, metric_statuses: {}},
+    sources: {pd: {status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', stale: false,
+        diagnostics: {pd_endpoint_metrics: {metrics: {process_cpu_usage: 0.125, heap_used_bytes: 1048576},
+            metric_status: {availability: 'AVAILABLE', fresh: true, stale: false, observed_at: 1000}}}}}};
+    let finishRetry;
+    getNode.mockResolvedValueOnce(pd).mockRejectedValueOnce(new Error('offline'))
+        .mockReturnValueOnce(new Promise(resolve => {finishRetry = resolve;}));
+    renderDetail();
+    await screen.findByRole('heading', {name: 'PD A'});
+    fireEvent.click(screen.getByText('Check addresses and how to fix'));
+    const sample = screen.getByText('Configured PD endpoint sample').parentElement;
+    expect(within(sample).getByText('12.5%')).toBeVisible();
+    expect(within(sample).getByText('1 MB')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', {name: /Refresh/}));
+    await waitFor(() => expect(within(sample).getAllByText('Stale').length).toBeGreaterThan(0));
+    expect(within(sample).queryByText('12.5%')).not.toBeInTheDocument();
+    expect(within(sample).queryByText('1 MB')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: /Refresh/}));
+    expect(within(sample).getAllByText('Stale').length).toBeGreaterThan(0);
+    expect(within(sample).queryByText('12.5%')).not.toBeInTheDocument();
+
+    await act(async () => finishRetry(pd));
+    expect(within(sample).getByText('12.5%')).toBeVisible();
+    expect(within(sample).getByText('1 MB')).toBeVisible();
+    expect(within(sample).queryByText('Stale')).not.toBeInTheDocument();
+});
+
 test('shows Store process lifecycle independently of readiness', async () => {
     getNode.mockResolvedValue({...response, stale: false, node: {...response.node,
         readiness: {status: 'NOT_READY', state: 'STARTING', stale: false},

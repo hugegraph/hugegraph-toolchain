@@ -94,6 +94,8 @@ public class OperationsPayloadParserTest {
         }
         for (String body : new String[]{"null", "[]", "{}", "{\"status\":0,\"text\":\"ONLINE\"}",
                                         "{\"status\":1,\"text\":\"STARTED\"}",
+                                        "{\"status\":4294967296,\"text\":\"STARTED\"}",
+                                        "{\"status\":18446744073709551616,\"text\":\"STARTED\"}",
                                         "{\"status\":0,\"text\":\"private-secret\"}"}) {
             OperationsModels.Lifecycle result = parser.parseStoreLifecycle(body, 200, 123L);
             Assert.assertEquals("UNKNOWN", result.getState());

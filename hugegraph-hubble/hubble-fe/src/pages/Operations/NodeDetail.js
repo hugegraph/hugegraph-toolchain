@@ -469,7 +469,9 @@ const NodeDetail = () => {
             }
             else {
                 setData(snapshot => snapshot && {...snapshot, stale: true,
-                    node: markNodeReadinessStale(snapshot.node)});
+                    node: markNodeReadinessStale(snapshot.node),
+                    sources: snapshot.sources && Object.fromEntries(Object.entries(snapshot.sources)
+                        .map(([name, source]) => [name, source && {...source, stale: true}]))});
             }
             setError(requestError);
         }

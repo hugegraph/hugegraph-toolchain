@@ -52,7 +52,8 @@ public class OperationsPayloadParser {
             JsonNode root = this.mapper.readTree(payload);
             JsonNode code = root == null ? null : root.get("status");
             String state = root == null ? null : this.text(root, "text");
-            if (httpStatus != 200 || code == null || !code.isIntegralNumber() || code.asInt(-1) != 0 ||
+            if (httpStatus != 200 || code == null || !code.isIntegralNumber() ||
+                !code.canConvertToInt() || code.intValue() != 0 ||
                 !List.of("STARTING", "STARTED", "STOPPING", "UNAVAILABLE").contains(state == null ? "" : state)) {
                 throw new MalformedUpstreamException("store_lifecycle");
             }
