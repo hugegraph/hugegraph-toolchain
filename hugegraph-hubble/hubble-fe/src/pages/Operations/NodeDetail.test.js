@@ -254,22 +254,55 @@ test('keeps the snapshot visible and reports a refresh failure', async () => {
 
 test('keeps old readiness stale through a retry until a successful node response arrives', async () => {
     const ready = {...response, stale: false,
-        node: {...response.node, readiness: {status: 'READY', stale: false, observed_at: 1000}}};
+        node: {...response.node, readiness: {status: 'READY', stale: false, observed_at: 1000},
+            process_lifecycle: {state: 'STARTED', stale: false, observed_at: 1000}}};
     let finishRetry;
     getNode.mockResolvedValueOnce(ready).mockRejectedValueOnce(new Error('offline'))
         .mockReturnValueOnce(new Promise(resolve => {finishRetry = resolve;}));
     renderDetail();
     const panel = await screen.findByRole('region', {name: 'Service readiness'});
+    const lifecycle = screen.getByRole('region', {name: 'Store process lifecycle'});
     expect(within(panel).getByText('Ready', {exact: true})).toBeVisible();
+    expect(within(lifecycle).getByText('Started', {exact: true})).toBeVisible();
 
     fireEvent.click(screen.getByRole('button', {name: /Refresh/}));
     await waitFor(() => expect(within(panel).getByText('Refresh needed')).toBeVisible());
+    expect(within(lifecycle).getByText('Stale', {exact: true})).toBeVisible();
     expect(within(panel).queryByText('Ready', {exact: true})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', {name: /Refresh/}));
     expect(within(panel).getByText('Refresh needed')).toBeVisible();
 
     await act(async () => finishRetry(ready));
     expect(within(panel).getByText('Ready', {exact: true})).toBeVisible();
+});
+
+test('shows Store process lifecycle independently of readiness', async () => {
+    getNode.mockResolvedValue({...response, stale: false, node: {...response.node,
+        readiness: {status: 'NOT_READY', state: 'STARTING', stale: false},
+        process_lifecycle: {state: 'STARTED', stale: false, observed_at: 1000}}});
+    renderDetail();
+    const lifecycle = await screen.findByRole('region', {name: 'Store process lifecycle'});
+    expect(within(lifecycle).getByText('Started', {exact: true})).toBeVisible();
+    expect(within(lifecycle).getByText(/does not establish PD membership, partition health or read\/write readiness/))
+        .toBeVisible();
+    expect(within(screen.getByRole('region', {name: 'Service readiness'})).getByText('Not ready', {exact: true}))
+        .toBeVisible();
+});
+
+test('old Store lifecycle endpoint degrades safely', async () => {
+    getNode.mockResolvedValue({...response, stale: false, node: {...response.node,
+        process_lifecycle: {state: 'UNKNOWN', reason: 'unsupported_version', stale: false}}});
+    renderDetail();
+    const lifecycle = await screen.findByRole('region', {name: 'Store process lifecycle'});
+    expect(within(lifecycle).getByText('Not supported by this Store version')).toBeVisible();
+    expect(within(lifecycle).queryByText('Started')).not.toBeInTheDocument();
+});
+
+test('older Hubble responses without lifecycle do not invent a state', async () => {
+    getNode.mockResolvedValue(response);
+    renderDetail();
+    await screen.findByRole('heading', {name: 'Store A'});
+    expect(screen.queryByRole('region', {name: 'Store process lifecycle'})).not.toBeInTheDocument();
 });
 
 test('recovers an initial node failure and keeps a canonical node-list action', async () => {

@@ -33,7 +33,7 @@ import {
 import {formatMetricValue, formatObservedAt, selectAttentionSources} from './topology';
 import {operationsReturnTo} from './navigation';
 import SourceDiagnostics from './SourceDiagnostics';
-import {ReadinessPanel, markNodeReadinessStale} from './Readiness';
+import {ProcessLifecyclePanel, ReadinessPanel, markNodeReadinessStale} from './Readiness';
 import './operations.scss';
 
 const GROUPS_BY_TYPE = {
@@ -605,6 +605,7 @@ const NodeDetail = () => {
                 />
             </section>
             <ReadinessPanel readiness={node.readiness} />
+            {node.type === 'STORE' && <ProcessLifecyclePanel lifecycle={node.process_lifecycle} />}
             <section
                 className='operations-metric-grid'
                 aria-label={t('operations.node_metrics')}
