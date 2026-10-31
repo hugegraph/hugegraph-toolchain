@@ -33,12 +33,23 @@ const spaces = [
     { name: 'DEFAULT', nickname: '默认图空间', create_time: '2026-10-13', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 100, storage_used_kb: 10752 },
     { name: 'soc_graph', nickname: '记忆库', create_time: '2026-10-15', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 10, storage_used_kb: 252590 },
 ];
-const graph = (name, nickname) => ({ name, nickname, status: 'CREATED' });
+const graph = (graphspace, name, nickname) => ({ graphspace, name, nickname, status: 'CREATED' });
 // The destination graph must not exist in DEFAULT: stale selector data cannot pass.
 const graphsBySpace = {
-    DEFAULT: [graph('hugegraph', '记忆图'), graph('default_only', '默认空间专属图')],
-    soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
+    DEFAULT: [graph('DEFAULT', 'hugegraph', '记忆图'), graph('DEFAULT', 'default_only', '默认空间专属图')],
+    soc_graph: [graph('soc_graph', 'hugegraph', '记忆图'), graph('soc_graph', 'second', '测试图')],
 };
+const hasFixtureScope = scope => Object.entries(graphsBySpace).some(([space, graphs]) => (
+    graphs.some(item => scope === `${space}/graphs/${item.name}`)
+));
+function graphViewFixture(method, pathname) {
+    const prefix = '/graphspaces/', suffix = '/schema/graphview';
+    const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+        ? pathname.slice(prefix.length, -suffix.length) : '';
+    if (!hasFixtureScope(scope)) return {status: 404};
+    if (method !== 'GET') return {status: 405};
+    return {status: 200, data: {vertices: [], edges: []}};
+}
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
@@ -81,7 +92,7 @@ function queryFixture(method, pathname, body, truncated = false) {
     const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
         ? pathname.slice(prefix.length, -suffix.length) : '';
     const queries = {'DEFAULT/graphs/hugegraph': 'g.V()', 'soc_graph/graphs/second': 'g.V().limit(2)'};
-    if (!Object.hasOwn(queries, scope) && scope !== 'soc_graph/graphs/hugegraph') return {status: 404};
+    if (!hasFixtureScope(scope)) return {status: 404};
     if (method === 'GET') return {status: 200, data: {vertexcount: null, edgecount: null}};
     if (method !== 'POST') return {status: 405};
     if (!queries[scope] || body?.content !== queries[scope] || body?.preview !== true) return {status: 400};
@@ -96,7 +107,8 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
+        statisticsScenario: false,
         operationsOverview: null, extraCapabilities: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
@@ -181,16 +193,33 @@ async function setup(browser, auth) {
         else if (p.endsWith('/graphs')) {
             const graphSpace = p.split('/')[2];
             assert(graphsBySpace[graphSpace], `Unexpected graph-list scope: ${graphSpace}`);
-            data = pageResult(graphsBySpace[graphSpace], url.searchParams.get('selected'));
+            if (state.graphGate) {
+                await state.graphGate;
+            }
+            data = pageResult(graphsBySpace[graphSpace].map(item => ({...item, graphspace: graphSpace})),
+                url.searchParams.get('selected'));
         }
         else if (p.endsWith('/graph_read_mode'))
             data = { status: '1' };
         else if (p === '/vermeer')
-            data = { enable: Boolean(state.operationsOverview?.vermeer?.configured) };
+            data = { enable: Boolean(state.statisticsScenario || state.operationsOverview?.vermeer?.configured),
+                statistics_available: state.statisticsScenario };
         else if (p === '/dashboard')
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (state.statisticsScenario && p === '/graphspaces/soc_graph/graphs/second/statistics/vermeer'
+                 && method === 'GET') {
+            await route.fulfill({status: 400, contentType: 'application/json', body: JSON.stringify({status: 400,
+                message: 'Load this graph from OLAP graph compute before collecting Vermeer statistics'})});
+            return;
+        }
+        else if (p.endsWith('/schema/graphview')) {
+            const response = graphViewFixture(method, p);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json', body: JSON.stringify(response)});
+            return;
+        }
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -226,7 +255,7 @@ async function setup(browser, auth) {
         else if (p.endsWith('/is_auth'))
             data = { auth: false };
         else if (p.endsWith('/get'))
-            data = { name: p.split('/')[4], nickname: '记忆图' };
+            data = { name: p.split('/')[4], nickname: '记忆图', ...(state.statisticsScenario ? {status: 'created'} : {}) };
         else {
             unexpected.add(`${method} ${p}`);
             data = {};
@@ -377,6 +406,26 @@ async function main() {
             await execute.click();
             await page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true}).waitFor();
             await screenshot(page, 'graph-context-switch');
+        });
+        await check('unloaded Vermeer statistics gives a scoped graph compute entry', async () => {
+            state.statisticsScenario = true;
+            await page.goto(base + '/graphspace/soc_graph');
+            const card = page.locator('.ant-card').filter({has: page.getByTitle('soc_graph-测试图', {exact: true})});
+            await card.waitFor();
+            const select = card.getByRole('button', {name: '选择点边统计来源'});
+            await assertUsableControl(select);
+            await select.click();
+            await page.getByRole('menuitem', {name: '图计算统计（已加载快照）'}).click();
+            const guidance = card.getByRole('status');
+            await guidance.getByText('请先将此图加载到 Vermeer，再采集图计算统计', {exact: true}).waitFor();
+            const open = guidance.getByRole('link', {name: '前往图计算', exact: true});
+            await assertUsableControl(open);
+            await screenshot(page, 'vermeer-statistics-load-guidance');
+            await open.click();
+            await page.waitForURL('**/algorithms/soc_graph/second?engine=olap');
+            await page.getByRole('button', {name: '加载到图计算', exact: true}).waitFor();
+            assert.equal(await page.getByRole('tab', {name: 'OLAP 全图计算'}).getAttribute('aria-selected'), 'true');
+            state.statisticsScenario = false;
         });
         await check('core query actions are usable at desktop and compact widths', async () => {
             for (const width of [1440, 1024]) {
@@ -553,6 +602,23 @@ async function main() {
             await anonymous.page.getByText('图模式', { exact: true }).click();
             await screenshot(anonymous.page, 'graphspace-anonymous');
         });
+        await check('algorithm search waits for selected graph in authenticated and anonymous modes', async () => {
+            for (const item of [{page, state}, anonymous]) {
+                let release;
+                item.state.graphGate = new Promise(resolve => { release = resolve; });
+                try {
+                    await item.page.goto(base + '/algorithms/DEFAULT/hugegraph');
+                    const search = item.page.getByPlaceholder('算法查询', {exact: true});
+                    await search.waitFor({state: 'visible'});
+                    assert(await search.isDisabled(), 'Search must be disabled while graph options are pending');
+                    release();
+                    await search.fill('查找最短路径');
+                    await item.page.getByText('查找最短路径', {exact: true}).first().waitFor({state: 'visible'});
+                    assert.equal(await search.inputValue(), '查找最短路径');
+                }
+                finally { release(); item.state.graphGate = null; }
+            }
+        });
     }
     catch (e) {
         failure = e.message;
@@ -574,4 +640,4 @@ async function main() {
 if (require.main === module) {
     main().catch(error => { console.error(error.stack); process.exitCode = 1; });
 }
-module.exports = {sessionFixture, queryFixture};
+module.exports = {sessionFixture, queryFixture, graphViewFixture, graphsBySpace};
