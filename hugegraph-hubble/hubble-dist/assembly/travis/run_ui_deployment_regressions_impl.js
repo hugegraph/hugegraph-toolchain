@@ -33,12 +33,23 @@ const spaces = [
     { name: 'DEFAULT', nickname: '默认图空间', create_time: '2026-10-13', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 100, storage_used_kb: 10752 },
     { name: 'soc_graph', nickname: '记忆库', create_time: '2026-10-15', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 10, storage_used_kb: 252590 },
 ];
-const graph = (name, nickname) => ({ name, nickname, status: 'CREATED' });
+const graph = (graphspace, name, nickname) => ({ graphspace, name, nickname, status: 'CREATED' });
 // The destination graph must not exist in DEFAULT: stale selector data cannot pass.
 const graphsBySpace = {
-    DEFAULT: [graph('hugegraph', '记忆图'), graph('default_only', '默认空间专属图')],
-    soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
+    DEFAULT: [graph('DEFAULT', 'hugegraph', '记忆图'), graph('DEFAULT', 'default_only', '默认空间专属图')],
+    soc_graph: [graph('soc_graph', 'hugegraph', '记忆图'), graph('soc_graph', 'second', '测试图')],
 };
+const hasFixtureScope = scope => Object.entries(graphsBySpace).some(([space, graphs]) => (
+    graphs.some(item => scope === `${space}/graphs/${item.name}`)
+));
+function graphViewFixture(method, pathname) {
+    const prefix = '/graphspaces/', suffix = '/schema/graphview';
+    const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+        ? pathname.slice(prefix.length, -suffix.length) : '';
+    if (!hasFixtureScope(scope)) return {status: 404};
+    if (method !== 'GET') return {status: 405};
+    return {status: 200, data: {vertices: [], edges: []}};
+}
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
@@ -81,7 +92,7 @@ function queryFixture(method, pathname, body, truncated = false) {
     const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
         ? pathname.slice(prefix.length, -suffix.length) : '';
     const queries = {'DEFAULT/graphs/hugegraph': 'g.V()', 'soc_graph/graphs/second': 'g.V().limit(2)'};
-    if (!Object.hasOwn(queries, scope) && scope !== 'soc_graph/graphs/hugegraph') return {status: 404};
+    if (!hasFixtureScope(scope)) return {status: 404};
     if (method === 'GET') return {status: 200, data: {vertexcount: null, edgecount: null}};
     if (method !== 'POST') return {status: 405};
     if (!queries[scope] || body?.content !== queries[scope] || body?.preview !== true) return {status: 400};
@@ -96,7 +107,7 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
         operationsOverview: null, extraCapabilities: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
@@ -181,6 +192,9 @@ async function setup(browser, auth) {
         else if (p.endsWith('/graphs')) {
             const graphSpace = p.split('/')[2];
             assert(graphsBySpace[graphSpace], `Unexpected graph-list scope: ${graphSpace}`);
+            if (state.graphGate) {
+                await state.graphGate;
+            }
             data = pageResult(graphsBySpace[graphSpace], url.searchParams.get('selected'));
         }
         else if (p.endsWith('/graph_read_mode'))
@@ -191,6 +205,12 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (p.endsWith('/schema/graphview')) {
+            const response = graphViewFixture(method, p);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json', body: JSON.stringify(response)});
+            return;
+        }
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -378,6 +398,97 @@ async function main() {
             await page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true}).waitFor();
             await screenshot(page, 'graph-context-switch');
         });
+        await check('canvas JSON upload targets the selected graph import endpoint', async () => {
+            const expectedPath = '/api/v1.3/graphspaces/DEFAULT/graphs/hugegraph/import';
+            const payload = JSON.stringify({vertices: [{id: '1', label: 'Memory', properties: {name: '1'}}], edges: []});
+            let uploads = 0;
+            const handler = async route => {
+                const request = route.request();
+                assert.equal(new URL(request.url()).pathname, expectedPath);
+                assert.equal(request.method(), 'POST');
+                assert.match(request.headers()['content-type'], /^multipart\/form-data; boundary=/);
+                assert(request.postData().includes(payload), 'Multipart request must contain the exported JSON');
+                uploads++;
+                await route.fulfill({status: 200, contentType: 'application/json',
+                    body: JSON.stringify({status: 200, data: JSON.parse(payload)})});
+            };
+            await page.route('**/api/v*/**/import', handler);
+            try {
+                await page.goto(base + '/gremlin/DEFAULT/hugegraph');
+                await page.getByText('尚未执行图查询，点击执行查询查看结果', {exact: true}).waitFor();
+                const upload = page.locator('input[type=file]').first();
+                await upload.setInputFiles({name: 'canvas.json', mimeType: 'application/json', buffer: Buffer.from(payload)});
+                const dialog = page.getByRole('dialog', {name: '确认导入图数据'});
+                await dialog.getByText(/导入会向 DEFAULT \/ hugegraph 写入点和边/).waitFor();
+                await dialog.getByRole('button', {name: /取\s*消/}).click();
+                assert.equal(uploads, 0, 'Cancelling must not upload or write graph data');
+                await dialog.waitFor({state: 'hidden'});
+                await upload.setInputFiles({name: 'canvas.json', mimeType: 'application/json', buffer: Buffer.from(payload)});
+                await dialog.getByRole('button', {name: /确\s*认/}).click();
+                await page.getByText('导入成功', {exact: true}).first().waitFor();
+                assert.equal(uploads, 1);
+            }
+            finally {
+                await page.unroute('**/api/v*/**/import', handler);
+            }
+        });
+        await check('late canvas upload cannot replace the newly selected graph result', async () => {
+            let release;
+            let received;
+            const requestReceived = new Promise(resolve => { received = resolve; });
+            const gate = new Promise(resolve => { release = resolve; });
+            const payload = {vertices: [{id: 'late-A', label: 'Memory', properties: {name: 'A'}}], edges: []};
+            const handler = async route => {
+                assert.equal(new URL(route.request().url()).pathname,
+                    '/api/v1.3/graphspaces/DEFAULT/graphs/hugegraph/import');
+                received();
+                await gate;
+                await route.fulfill({status: 200, contentType: 'application/json',
+                    body: JSON.stringify({status: 200, data: payload})});
+            };
+            await page.route('**/api/v*/**/import', handler);
+            try {
+                await page.goto(base + '/gremlin/DEFAULT/hugegraph');
+                await page.getByText('尚未执行图查询，点击执行查询查看结果', {exact: true}).waitFor();
+                await page.locator('input[type=file]').first().setInputFiles({
+                    name: 'canvas.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)),
+                });
+                const dialog = page.getByRole('dialog', {name: '确认导入图数据'});
+                await dialog.getByRole('button', {name: /确\s*认/}).click();
+                await requestReceived;
+
+                const spaceSelector = page.getByRole('combobox', {name: '当前 GraphSpace', exact: true});
+                await spaceSelector.click();
+                await page.getByRole('option', {name: /记忆库/}).waitFor({state: 'attached'});
+                await spaceSelector.press('ArrowDown');
+                await spaceSelector.press('Enter');
+                const graphSelector = page.getByRole('combobox', {name: '当前图', exact: true});
+                await graphSelector.click();
+                await page.getByRole('option', {name: /测试图/}).waitFor({state: 'attached'});
+                await graphSelector.press('ArrowDown');
+                const ready = page.waitForResponse(response => response.request().method() === 'GET'
+                    && new URL(response.url()).pathname === '/api/v1.3/graphspaces/soc_graph/graphs/second/schema/propertykeys');
+                await graphSelector.press('Enter');
+                await page.waitForURL('**/gremlin/soc_graph/second');
+                await (await ready).finished();
+                const execute = page.getByRole('button', {name: '执行查询', exact: true});
+                await execute.click({trial: true});
+                await page.locator('.cm-content').fill('g.V().limit(2)');
+                await execute.click();
+                const result = page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true});
+                await result.waitFor();
+                const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/import'));
+                release();
+                await (await response).finished();
+                await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+                assert(await result.isVisible(), 'The current graph result must survive the old upload response');
+                assert.equal(await page.getByText('导入成功', {exact: true}).count(), 0);
+            }
+            finally {
+                release();
+                await page.unroute('**/api/v*/**/import', handler);
+            }
+        });
         await check('core query actions are usable at desktop and compact widths', async () => {
             for (const width of [1440, 1024]) {
                 await page.setViewportSize({width, height: 1000});
@@ -553,6 +664,23 @@ async function main() {
             await anonymous.page.getByText('图模式', { exact: true }).click();
             await screenshot(anonymous.page, 'graphspace-anonymous');
         });
+        await check('algorithm search waits for selected graph in authenticated and anonymous modes', async () => {
+            for (const item of [{page, state}, anonymous]) {
+                let release;
+                item.state.graphGate = new Promise(resolve => { release = resolve; });
+                try {
+                    await item.page.goto(base + '/algorithms/DEFAULT/hugegraph');
+                    const search = item.page.getByPlaceholder('算法查询', {exact: true});
+                    await search.waitFor({state: 'visible'});
+                    assert(await search.isDisabled(), 'Search must be disabled while graph options are pending');
+                    release();
+                    await search.fill('查找最短路径');
+                    await item.page.getByText('查找最短路径', {exact: true}).first().waitFor({state: 'visible'});
+                    assert.equal(await search.inputValue(), '查找最短路径');
+                }
+                finally { release(); item.state.graphGate = null; }
+            }
+        });
     }
     catch (e) {
         failure = e.message;
@@ -574,4 +702,4 @@ async function main() {
 if (require.main === module) {
     main().catch(error => { console.error(error.stack); process.exitCode = 1; });
 }
-module.exports = {sessionFixture, queryFixture};
+module.exports = {sessionFixture, queryFixture, graphViewFixture, graphsBySpace};

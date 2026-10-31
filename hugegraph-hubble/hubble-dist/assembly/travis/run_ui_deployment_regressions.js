@@ -29,12 +29,15 @@ const REQUIRED_CHECKS = Object.freeze([
     'late GraphSpace details cannot overwrite a newly opened editor',
     'Graph context switches via actual header selectors',
     'core query actions are usable at desktop and compact widths',
+    'canvas JSON upload targets the selected graph import endpoint',
+    'late canvas upload cannot replace the newly selected graph result',
     'routine query limit is quiet canvas note without unknown totals',
     'truncation is compact with details on demand',
     'async task ID remains visible in the selected graph and failure is actionable',
     'PD unmapped metrics have localized three-node source diagnostics',
     'mobile operations preserves readable main tiers and Store-row compute access',
     'anonymous GraphSpaces visible with account and mutation actions hidden',
+    'algorithm search waits for selected graph in authenticated and anonymous modes',
 ]);
 
 function validateReport(report) {
