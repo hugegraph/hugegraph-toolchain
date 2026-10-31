@@ -599,8 +599,11 @@ async function main() {
                     await search.waitFor({state: 'visible'});
                     assert(await search.isDisabled(), 'Search must be disabled while graph options are pending');
                     release();
+                    const unrelated = item.page.getByText('查找所有路径（GET，基础版）', {exact: true}).first();
+                    await unrelated.waitFor({state: 'visible'});
                     await search.fill('查找最短路径');
                     await item.page.getByText('查找最短路径', {exact: true}).first().waitFor({state: 'visible'});
+                    await unrelated.waitFor({state: 'hidden'});
                     assert.equal(await search.inputValue(), '查找最短路径');
                 }
                 finally { release(); item.state.graphGate = null; }
