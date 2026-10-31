@@ -29,6 +29,7 @@ const REQUIRED_CHECKS = Object.freeze([
     'late GraphSpace details cannot overwrite a newly opened editor',
     'Graph context switches via actual header selectors',
     'core query actions are usable at desktop and compact widths',
+    'canvas JSON upload targets the selected graph import endpoint',
     'routine query limit is quiet canvas note without unknown totals',
     'truncation is compact with details on demand',
     'async task ID remains visible in the selected graph and failure is actionable',

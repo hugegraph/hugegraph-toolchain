@@ -20,9 +20,9 @@
  * @file  导入数据
  */
 
-import {useCallback, useContext} from 'react';
+import {useCallback, useContext, useEffect, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Tooltip, Upload, message} from 'antd';
+import {Button, Modal, Tooltip, Upload, message} from 'antd';
 import {UploadOutlined} from '@ant-design/icons';
 import GraphAnalysisContext from '../../Context';
 import {GRAPH_STATUS} from '../../../utils/constants';
@@ -43,6 +43,39 @@ const ImportData = props => {
     } = props;
 
     const {graphSpace, graph} = useContext(GraphAnalysisContext);
+    const scope = useRef({graphSpace, graph});
+    const mounted = useRef(false);
+    scope.current = {graphSpace, graph};
+
+    useEffect(() => {
+        mounted.current = true;
+        return () => { mounted.current = false; };
+    }, []);
+
+    const confirmImport = useCallback(() => {
+        if (!graphSpace || !graph) return Upload.LIST_IGNORE;
+        return new Promise(resolve => {
+            Modal.confirm({
+                title: t('analysis.canvas.import_confirm_title'),
+                content: t('analysis.canvas.import_confirm_warning', {graphSpace, graph}),
+                okText: t('common.action.confirm'),
+                cancelText: t('common.action.cancel'),
+                onOk: () => {
+                    if (!mounted.current) {
+                        resolve(Upload.LIST_IGNORE);
+                        return;
+                    }
+                    if (scope.current.graphSpace !== graphSpace || scope.current.graph !== graph) {
+                        message.warning(t('analysis.canvas.import_scope_changed'));
+                        resolve(Upload.LIST_IGNORE);
+                        return;
+                    }
+                    resolve(true);
+                },
+                onCancel: () => resolve(Upload.LIST_IGNORE),
+            });
+        });
+    }, [graphSpace, graph, t]);
 
     const handleUploadChange = useCallback(
         info => {
@@ -81,6 +114,7 @@ const ImportData = props => {
         <>
             <Upload
                 action={api.analysis.getUploadList(graphSpace, graph)}
+                beforeUpload={confirmImport}
                 onChange={handleUploadChange}
                 accept="application/json"
                 maxCount={1}

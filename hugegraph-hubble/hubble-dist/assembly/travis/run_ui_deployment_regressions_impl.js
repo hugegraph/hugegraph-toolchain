@@ -378,6 +378,40 @@ async function main() {
             await page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true}).waitFor();
             await screenshot(page, 'graph-context-switch');
         });
+        await check('canvas JSON upload targets the selected graph import endpoint', async () => {
+            const expectedPath = '/api/v1.3/graphspaces/DEFAULT/graphs/hugegraph/import';
+            const payload = JSON.stringify({vertices: [{id: '1', label: 'Memory', properties: {name: '1'}}], edges: []});
+            let uploads = 0;
+            const handler = async route => {
+                const request = route.request();
+                assert.equal(new URL(request.url()).pathname, expectedPath);
+                assert.equal(request.method(), 'POST');
+                assert.match(request.headers()['content-type'], /^multipart\/form-data; boundary=/);
+                assert(request.postData().includes(payload), 'Multipart request must contain the exported JSON');
+                uploads++;
+                await route.fulfill({status: 200, contentType: 'application/json',
+                    body: JSON.stringify({status: 200, data: JSON.parse(payload)})});
+            };
+            await page.route('**/api/v*/**/import', handler);
+            try {
+                await page.goto(base + '/gremlin/DEFAULT/hugegraph');
+                await page.getByText('尚未执行图查询，点击执行查询查看结果', {exact: true}).waitFor();
+                const upload = page.locator('input[type=file]').first();
+                await upload.setInputFiles({name: 'canvas.json', mimeType: 'application/json', buffer: Buffer.from(payload)});
+                const dialog = page.getByRole('dialog', {name: '确认导入图数据'});
+                await dialog.getByText(/导入会向 DEFAULT \/ hugegraph 写入点和边/).waitFor();
+                await dialog.getByRole('button', {name: /取\s*消/}).click();
+                assert.equal(uploads, 0, 'Cancelling must not upload or write graph data');
+                await dialog.waitFor({state: 'hidden'});
+                await upload.setInputFiles({name: 'canvas.json', mimeType: 'application/json', buffer: Buffer.from(payload)});
+                await dialog.getByRole('button', {name: /确\s*认/}).click();
+                await page.getByText('导入成功', {exact: true}).first().waitFor();
+                assert.equal(uploads, 1);
+            }
+            finally {
+                await page.unroute('**/api/v*/**/import', handler);
+            }
+        });
         await check('core query actions are usable at desktop and compact widths', async () => {
             for (const width of [1440, 1024]) {
                 await page.setViewportSize({width, height: 1000});
