@@ -214,6 +214,11 @@ it('shows confirmed vertex and edge operations separately, preserving unknown an
 
     const row = (await screen.findByText('7')).closest('tr');
     const legacyRow = screen.getByText('8').closest('tr');
+    // The two write-count columns must obey the same single-line layout as
+    // the existing columns, without fixing this test to a source-code count.
+    const cells = [...row.querySelectorAll('td')];
+    expect(cells).toHaveLength(9);
+    cells.forEach(cell => expect(cell).toHaveClass('no_wrap'));
     expect(row.querySelectorAll('td')[2]).toHaveTextContent(/^2$/);
     expect(row.querySelectorAll('td')[3]).toHaveTextContent(/^1$/);
     expect(row.querySelectorAll('td')[4]).toHaveTextContent(/^0$/);
