@@ -33,12 +33,23 @@ const spaces = [
     { name: 'DEFAULT', nickname: '默认图空间', create_time: '2026-10-13', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 100, storage_used_kb: 10752 },
     { name: 'soc_graph', nickname: '记忆库', create_time: '2026-10-15', auth: false, max_graph_number: 100, cpu_limit: 64, memory_limit: 128, compute_cpu_limit: 64, compute_memory_limit: 128, storage_limit: 10, storage_used_kb: 252590 },
 ];
-const graph = (name, nickname) => ({ name, nickname, status: 'CREATED' });
+const graph = (graphspace, name, nickname) => ({ graphspace, name, nickname, status: 'CREATED' });
 // The destination graph must not exist in DEFAULT: stale selector data cannot pass.
 const graphsBySpace = {
-    DEFAULT: [graph('hugegraph', '记忆图'), graph('default_only', '默认空间专属图')],
-    soc_graph: [graph('hugegraph', '记忆图'), graph('second', '测试图')],
+    DEFAULT: [graph('DEFAULT', 'hugegraph', '记忆图'), graph('DEFAULT', 'default_only', '默认空间专属图')],
+    soc_graph: [graph('soc_graph', 'hugegraph', '记忆图'), graph('soc_graph', 'second', '测试图')],
 };
+const hasFixtureScope = scope => Object.entries(graphsBySpace).some(([space, graphs]) => (
+    graphs.some(item => scope === `${space}/graphs/${item.name}`)
+));
+function graphViewFixture(method, pathname) {
+    const prefix = '/graphspaces/', suffix = '/schema/graphview';
+    const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+        ? pathname.slice(prefix.length, -suffix.length) : '';
+    if (!hasFixtureScope(scope)) return {status: 404};
+    if (method !== 'GET') return {status: 405};
+    return {status: 200, data: {vertices: [], edges: []}};
+}
 const now = 1792757451000;
 const node = (n) => ({ id: `pd-${n}`, name: `PD ${n}`, type: 'PD', role: n === 1 ? 'LEADER' : 'FOLLOWER', status: 'UP', observed_at: now, metrics: {}, metric_statuses: { system: { availability: 'UNSUPPORTED', reason: 'metrics_not_collected', observed_at: now, fresh: false, stale: false } } });
 const source = { status: 'UP', availability: 'PARTIAL', reason: 'pd_metrics_unmapped', observed_at: now, last_success_at: now, fresh: false, stale: false, diagnostics: { affected_node_count: 1, failed_metric_groups: ['system'], pd_metric_mapping: { configured_origin: 'http://pd-service:8620', status: 'no_match', matched_nodes: 0, discovered_nodes: 3, omitted_members: 0, members: [1, 2, 3].map(n => ({ node_id: 'pd-' + n, origin: 'http://pd-' + n + ':8620', endpoint_valid: true, origin_matches: false, base_path_matches: true })) } }, cluster_state: 'Cluster_Not_Ready', data_state: 'PState_Normal' };
@@ -81,7 +92,7 @@ function queryFixture(method, pathname, body, truncated = false) {
     const scope = pathname.startsWith(prefix) && pathname.endsWith(suffix)
         ? pathname.slice(prefix.length, -suffix.length) : '';
     const queries = {'DEFAULT/graphs/hugegraph': 'g.V()', 'soc_graph/graphs/second': 'g.V().limit(2)'};
-    if (!Object.hasOwn(queries, scope) && scope !== 'soc_graph/graphs/hugegraph') return {status: 404};
+    if (!hasFixtureScope(scope)) return {status: 404};
     if (method === 'GET') return {status: 200, data: {vertexcount: null, edgecount: null}};
     if (method !== 'POST') return {status: 405};
     if (!queries[scope] || body?.content !== queries[scope] || body?.preview !== true) return {status: 400};
@@ -96,8 +107,8 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, taskLookups: 0, taskSubmitted: false,
-        operationsOverview: null, extraCapabilities: [] };
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
+        operationsOverview: null, extraCapabilities: [], schemaClones: [], schemaCloneEnabled: true };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
         const req = route.request();
@@ -131,7 +142,7 @@ async function setup(browser, auth) {
         }
         let data;
         if (p === '/config')
-            data = { pd_enabled: true, auth_enabled: auth, server_capabilities_verified: true, graph_create_enabled: true, cypher_enabled: false };
+            data = { pd_enabled: true, auth_enabled: auth, server_capabilities_verified: true, graph_create_enabled: true, schema_clone_enabled: state.schemaCloneEnabled, cypher_enabled: false };
         else if (p === '/auth/login') {
             const credentials = method === 'POST' ? req.postDataJSON() : null;
             state.loginRequests.push({method, credentials});
@@ -181,6 +192,9 @@ async function setup(browser, auth) {
         else if (p.endsWith('/graphs')) {
             const graphSpace = p.split('/')[2];
             assert(graphsBySpace[graphSpace], `Unexpected graph-list scope: ${graphSpace}`);
+            if (state.graphGate) {
+                await state.graphGate;
+            }
             data = pageResult(graphsBySpace[graphSpace], url.searchParams.get('selected'));
         }
         else if (p.endsWith('/graph_read_mode'))
@@ -191,6 +205,12 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        else if (p.endsWith('/schema/graphview')) {
+            const response = graphViewFixture(method, p);
+            if (response.status !== 200) unexpected.add(`${method} ${p}`);
+            await route.fulfill({status: response.status, contentType: 'application/json', body: JSON.stringify(response)});
+            return;
+        }
         else if (p.endsWith('/schema/edgelabels') || p.endsWith('/schema/propertykeys'))
             data = { records: [] };
         else if (p.endsWith('/schema/vertexlabels'))
@@ -199,6 +219,8 @@ async function setup(browser, auth) {
             data = { records: [], total: 0 };
         else if (p.endsWith('/gremlin-query/async-task'))
             data = { task_id: 80001 };
+        else if (p === '/graphspaces/DEFAULT/graphs/default_only/gremlin-query' && method === 'GET')
+            data = {vertexcount: null, edgecount: null};
         else if (p.endsWith('/gremlin-query')) {
             let body;
             try { body = req.postDataJSON(); } catch (_) { /* Invalid requests are rejected below. */ }
@@ -223,6 +245,10 @@ async function setup(browser, auth) {
                 observed_at: now, stale: false, sources: state.operationsOverview.sources};
         else if (p === '/operations/overview')
             data = state.operationsOverview ?? { sources: { pd: source }, observed_at: now, stale: false, nodes: [] };
+        else if (p === '/graphspaces/DEFAULT/graphs/hugegraph/clone' && method === 'POST') {
+            state.schemaClones.push(req.postDataJSON());
+            data = {name: state.schemaClones.at(-1).name};
+        }
         else if (p.endsWith('/is_auth'))
             data = { auth: false };
         else if (p.endsWith('/get'))
@@ -292,6 +318,27 @@ async function main() {
             await page.getByTestId('graphspace-page-title').waitFor();
             assert(await page.locator('a[href="/account"]').isVisible());
             await screenshot(page, 'graphspace-authenticated');
+        });
+        await check('clone graph schema without graph data', async () => {
+            state.schemaCloneEnabled = false;
+            await page.goto(base + '/graphspace/DEFAULT');
+            await page.getByRole('button', {name: /记忆图.*更多操作/}).click();
+            assert.equal(await page.getByRole('menuitem', {name: '克隆 Schema', exact: true}).getAttribute('aria-disabled'), 'true');
+            state.schemaCloneEnabled = true;
+            await page.goto(base + '/graphspace/DEFAULT');
+            await page.getByRole('button', {name: /记忆图.*更多操作/}).click();
+            await page.getByRole('menuitem', {name: '克隆 Schema', exact: true}).click();
+            const dialog = page.getByRole('dialog');
+            assert(await dialog.getByText(/不复制顶点或边数据/).isVisible());
+            await dialog.getByLabel('克隆图名称').fill('copy');
+            await dialog.getByLabel('克隆图显示名称').fill('Copy');
+            await screenshot(page, 'graph-schema-clone-dialog');
+            const posted = page.waitForResponse(response => response.url().endsWith('/graphs/hugegraph/clone')
+                && response.request().method() === 'POST');
+            await dialog.getByRole('button', {name: /确\s*定/}).click();
+            assert.equal((await posted).status(), 200);
+            assert.deepEqual(state.schemaClones, [{graphspace: 'DEFAULT', name: 'copy', nickname: 'Copy', load_data: 0}]);
+            await screenshot(page, 'graph-schema-cloned');
         });
         await check('GraphSpace title date and header whitespace navigate exactly to selected space', async () => {
             const card = () => page.locator('.ant-card').filter({ has: page.getByText('记忆库', { exact: true }) }).first();
@@ -553,6 +600,23 @@ async function main() {
             await anonymous.page.getByText('图模式', { exact: true }).click();
             await screenshot(anonymous.page, 'graphspace-anonymous');
         });
+        await check('algorithm search waits for selected graph in authenticated and anonymous modes', async () => {
+            for (const item of [{page, state}, anonymous]) {
+                let release;
+                item.state.graphGate = new Promise(resolve => { release = resolve; });
+                try {
+                    await item.page.goto(base + '/algorithms/DEFAULT/hugegraph');
+                    const search = item.page.getByPlaceholder('算法查询', {exact: true});
+                    await search.waitFor({state: 'visible'});
+                    assert(await search.isDisabled(), 'Search must be disabled while graph options are pending');
+                    release();
+                    await search.fill('查找最短路径');
+                    await item.page.getByText('查找最短路径', {exact: true}).first().waitFor({state: 'visible'});
+                    assert.equal(await search.inputValue(), '查找最短路径');
+                }
+                finally { release(); item.state.graphGate = null; }
+            }
+        });
     }
     catch (e) {
         failure = e.message;
@@ -574,4 +638,4 @@ async function main() {
 if (require.main === module) {
     main().catch(error => { console.error(error.stack); process.exitCode = 1; });
 }
-module.exports = {sessionFixture, queryFixture};
+module.exports = {sessionFixture, queryFixture, graphViewFixture, graphsBySpace};

@@ -24,6 +24,7 @@ const {spawnSync} = require('child_process');
 
 const REQUIRED_CHECKS = Object.freeze([
     'authenticated login and GraphSpace/account visibility',
+    'clone graph schema without graph data',
     'GraphSpace title date and header whitespace navigate exactly to selected space',
     'GraphSpace menu edit does not navigate and current quota is editable',
     'late GraphSpace details cannot overwrite a newly opened editor',
@@ -35,6 +36,7 @@ const REQUIRED_CHECKS = Object.freeze([
     'PD unmapped metrics have localized three-node source diagnostics',
     'mobile operations preserves readable main tiers and Store-row compute access',
     'anonymous GraphSpaces visible with account and mutation actions hidden',
+    'algorithm search waits for selected graph in authenticated and anonymous modes',
 ]);
 
 function validateReport(report) {
