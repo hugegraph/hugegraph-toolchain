@@ -296,7 +296,7 @@
       "unavailable": "Clone is unavailable because the connected Server does not expose a compatible clone API.",
       "title": "Clone Graph Schema",
       "success": "Schema cloned",
-      "schema_only": "Copies Schema within this GraphSpace only. Vertices and edges are not copied. A Server with Schema clone support is required.",
+      "schema_only": "Copies Schema without edge labels within this GraphSpace only. Sources with edge labels are not yet supported. Vertices and edges are not copied. A compatible Server is required.",
       "failed": "Schema cloning failed. Check the Server version and permissions. The target may have been created; inspect it before retrying.",
       "name": "Cloned Graph Name",
       "name_duplicate": "Use a graph name not already present in the destination GraphSpace",

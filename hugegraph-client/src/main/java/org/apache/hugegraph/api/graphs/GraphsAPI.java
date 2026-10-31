@@ -326,7 +326,8 @@ public class GraphsAPI extends API {
 
     /**
      * Clone schema into a new graph in the same GraphSpace. Graph data is not copied.
-     * Requires a Server implementing the schema-clone endpoint; older Servers return 404.
+     * Sources with edge labels are currently rejected before the target is created.
+     * Requires a Server implementing schema-clone (API 0.73); older Servers return 404.
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> cloneSchema(String target, String source, String nickname) {

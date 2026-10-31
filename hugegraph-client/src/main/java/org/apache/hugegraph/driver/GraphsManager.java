@@ -147,7 +147,7 @@ public class GraphsManager {
         return this.graphsAPI.readMode(graph);
     }
 
-    /** Clone only schema in the same GraphSpace; no graph data is copied. */
+    /** Clone schema without edge labels in the same GraphSpace; no graph data is copied. */
     public Map<String, Object> cloneSchema(String target, String source, String nickname) {
         return this.graphsAPI.cloneSchema(target, source, nickname);
     }

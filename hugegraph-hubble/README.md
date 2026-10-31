@@ -1134,6 +1134,8 @@ navigation and feedback; it does not establish live loading or algorithm results
 ### Cloning a graph Schema
 
 The graph list can copy a graph's Schema into a new graph in the same GraphSpace.
+Sources containing any edge labels are currently rejected before creating the
+target, since persisted edge-label hierarchy cannot always be reconstructed.
 This does not copy vertices or edges. It requires a Server implementing the
-`schema-clone` endpoint; older Servers reject the request. If cloning fails,
+`schema-clone` endpoint (API 0.73 or later); older Servers disable the action. If cloning fails,
 inspect the target graph before retrying because it may already have been created.
