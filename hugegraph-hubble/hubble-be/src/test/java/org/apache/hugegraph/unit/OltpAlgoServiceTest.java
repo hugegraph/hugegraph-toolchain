@@ -35,6 +35,7 @@ import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.driver.TraverserManager;
 import org.apache.hugegraph.entity.algorithm.WeightedShortestPathEntity;
 import org.apache.hugegraph.entity.algorithm.KoutEntity;
+import org.apache.hugegraph.exception.ExternalException;
 import org.apache.hugegraph.entity.query.GraphView;
 import org.apache.hugegraph.options.HubbleOptions;
 import org.apache.hugegraph.service.query.ExecuteHistoryService;
@@ -43,11 +44,13 @@ import org.apache.hugegraph.structure.graph.Edge;
 import org.apache.hugegraph.structure.graph.Path;
 import org.apache.hugegraph.structure.graph.Vertex;
 import org.apache.hugegraph.structure.constant.Direction;
+import org.apache.hugegraph.structure.constant.Traverser;
 import org.apache.hugegraph.structure.gremlin.ResultSet;
 import org.apache.hugegraph.structure.traverser.Kout;
 import org.apache.hugegraph.structure.traverser.KoutRequest;
 import org.apache.hugegraph.structure.traverser.WeightedPath;
 import org.apache.hugegraph.testutil.Assert;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class OltpAlgoServiceTest {
 
@@ -94,16 +97,50 @@ public class OltpAlgoServiceTest {
         KoutEntity basic = KoutEntity.builder().source("marko")
                                      .direction(Direction.BOTH).maxDepth(1)
                                      .maxDegree(100).capacity(100).limit(100)
+                                     .algorithm("deep_first")
                                      .build();
         GraphView basicView = service.kout(client, basic).getGraphView();
         Assert.assertEquals(2, basicView.getVertices().size());
         Assert.assertTrue(basicView.getEdges().contains(knows));
+        Mockito.verify(traverser).kout(Mockito.argThat(request ->
+                Traverser.TRAVERSE_MODE_DFS.equals(request.traverseMode)));
+        basic.setAlgorithm("breadth_first");
+        service.kout(client, basic);
+        Mockito.verify(traverser).kout(Mockito.argThat(request ->
+                Traverser.TRAVERSE_MODE_BFS.equals(request.traverseMode)));
+        basic.setAlgorithm(null);
+        service.kout(client, basic);
+        Mockito.verify(traverser, Mockito.times(2)).kout(Mockito.argThat(request ->
+                Traverser.TRAVERSE_MODE_BFS.equals(request.traverseMode)));
+        basic.setAlgorithm("unknown");
+        Assert.assertThrows(ExternalException.class, () -> service.kout(client, basic));
 
-        KoutRequest advanced = KoutRequest.builder().source("marko").build();
+        ObjectMapper mapper = new ObjectMapper();
+        KoutRequest advanced = mapper.readValue(
+                "{\"source\":\"marko\",\"algorithm\":\"deep_first\"}", KoutRequest.class);
         GraphView advancedView = service.koutPost(client, advanced).getGraphView();
         Assert.assertEquals(2, advancedView.getVertices().size());
         Assert.assertTrue(advancedView.getEdges().contains(knows));
-        Mockito.verify(traverser, Mockito.times(2)).kout(Mockito.any(KoutRequest.class));
+        Assert.assertEquals(Traverser.TRAVERSE_MODE_DFS, advanced.traverseMode);
+        Assert.assertEquals(Traverser.TRAVERSE_MODE_DFS,
+                            mapper.readTree(mapper.writeValueAsString(advanced))
+                                  .get("traverse_mode").asText());
+
+        KoutRequest breadth = mapper.readValue(
+                "{\"source\":\"marko\",\"algorithm\":\"breadth_first\"}", KoutRequest.class);
+        service.koutPost(client, breadth);
+        Assert.assertEquals(Traverser.TRAVERSE_MODE_BFS, breadth.traverseMode);
+        KoutRequest canonical = mapper.readValue(
+                "{\"source\":\"marko\",\"traverse_mode\":\"depth_first_search\"}", KoutRequest.class);
+        service.koutPost(client, canonical);
+        Assert.assertEquals(Traverser.TRAVERSE_MODE_DFS, canonical.traverseMode);
+        KoutRequest defaultMode = mapper.readValue("{\"source\":\"marko\"}", KoutRequest.class);
+        service.koutPost(client, defaultMode);
+        Assert.assertEquals(Traverser.TRAVERSE_MODE_BFS, defaultMode.traverseMode);
+        KoutRequest invalid = mapper.readValue(
+                "{\"source\":\"marko\",\"algorithm\":\"unknown\"}", KoutRequest.class);
+        Assert.assertThrows(ExternalException.class, () -> service.koutPost(client, invalid));
+        Mockito.verify(traverser, Mockito.times(7)).kout(Mockito.any(KoutRequest.class));
     }
 
     @Test
