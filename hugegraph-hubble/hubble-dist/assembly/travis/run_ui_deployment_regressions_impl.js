@@ -412,6 +412,63 @@ async function main() {
                 await page.unroute('**/api/v*/**/import', handler);
             }
         });
+        await check('late canvas upload cannot replace the newly selected graph result', async () => {
+            let release;
+            let received;
+            const requestReceived = new Promise(resolve => { received = resolve; });
+            const gate = new Promise(resolve => { release = resolve; });
+            const payload = {vertices: [{id: 'late-A', label: 'Memory', properties: {name: 'A'}}], edges: []};
+            const handler = async route => {
+                assert.equal(new URL(route.request().url()).pathname,
+                    '/api/v1.3/graphspaces/DEFAULT/graphs/hugegraph/import');
+                received();
+                await gate;
+                await route.fulfill({status: 200, contentType: 'application/json',
+                    body: JSON.stringify({status: 200, data: payload})});
+            };
+            await page.route('**/api/v*/**/import', handler);
+            try {
+                await page.goto(base + '/gremlin/DEFAULT/hugegraph');
+                await page.getByText('尚未执行图查询，点击执行查询查看结果', {exact: true}).waitFor();
+                await page.locator('input[type=file]').first().setInputFiles({
+                    name: 'canvas.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)),
+                });
+                const dialog = page.getByRole('dialog', {name: '确认导入图数据'});
+                await dialog.getByRole('button', {name: /确\s*认/}).click();
+                await requestReceived;
+
+                const spaceSelector = page.getByRole('combobox', {name: '当前 GraphSpace', exact: true});
+                await spaceSelector.click();
+                await page.getByRole('option', {name: /记忆库/}).waitFor({state: 'attached'});
+                await spaceSelector.press('ArrowDown');
+                await spaceSelector.press('Enter');
+                const graphSelector = page.getByRole('combobox', {name: '当前图', exact: true});
+                await graphSelector.click();
+                await page.getByRole('option', {name: /测试图/}).waitFor({state: 'attached'});
+                await graphSelector.press('ArrowDown');
+                const ready = page.waitForResponse(response => response.request().method() === 'GET'
+                    && new URL(response.url()).pathname === '/api/v1.3/graphspaces/soc_graph/graphs/second/schema/propertykeys');
+                await graphSelector.press('Enter');
+                await page.waitForURL('**/gremlin/soc_graph/second');
+                await (await ready).finished();
+                const execute = page.getByRole('button', {name: '执行查询', exact: true});
+                await execute.click({trial: true});
+                await page.locator('.cm-content').fill('g.V().limit(2)');
+                await execute.click();
+                const result = page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true});
+                await result.waitFor();
+                const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/import'));
+                release();
+                await (await response).finished();
+                await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+                assert(await result.isVisible(), 'The current graph result must survive the old upload response');
+                assert.equal(await page.getByText('导入成功', {exact: true}).count(), 0);
+            }
+            finally {
+                release();
+                await page.unroute('**/api/v*/**/import', handler);
+            }
+        });
         await check('core query actions are usable at desktop and compact widths', async () => {
             for (const width of [1440, 1024]) {
                 await page.setViewportSize({width, height: 1000});
