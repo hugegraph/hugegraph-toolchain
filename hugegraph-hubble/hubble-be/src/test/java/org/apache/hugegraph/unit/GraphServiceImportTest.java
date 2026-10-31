@@ -22,9 +22,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Locale;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -421,6 +423,8 @@ public class GraphServiceImportTest {
         Assert.assertTrue(error instanceof ExternalException);
         Assert.assertEquals("graph.import.partial-failure", error.getMessage());
         Assert.assertEquals("write edge failed", error.getCause().getMessage());
+        Assert.assertEquals(2, ((ExternalException) error).args()[0]);
+        Assert.assertEquals(0, ((ExternalException) error).args()[1]);
     }
 
     @Test
@@ -459,6 +463,8 @@ public class GraphServiceImportTest {
         Mockito.verify(graph, Mockito.never()).deleteVertex(Mockito.any());
         Assert.assertTrue(error instanceof ExternalException);
         Assert.assertEquals("graph.import.partial-failure", error.getMessage());
+        Assert.assertEquals(2, ((ExternalException) error).args()[0]);
+        Assert.assertEquals(1, ((ExternalException) error).args()[1]);
     }
 
     @Test
@@ -476,8 +482,48 @@ public class GraphServiceImportTest {
         });
 
         Assert.assertEquals("graph.import.partial-failure", error.getMessage());
+        Assert.assertEquals(0, error.args()[0]);
+        Assert.assertEquals(0, error.args()[1]);
         Mockito.verify(graph, Mockito.never()).deleteVertex(Mockito.any());
         Mockito.verify(graph, Mockito.never()).deleteEdge(Mockito.anyString());
+    }
+
+    @Test
+    public void testImportJsonReportsOnlyAcknowledgedVertices() throws Exception {
+        GraphService service = this.serviceWithSchemas();
+        GraphManager graph = Mockito.mock(GraphManager.class);
+        HugeClient client = this.clientWithGraph(graph);
+        Mockito.when(graph.addVertex(Mockito.any(Vertex.class)))
+               .thenAnswer(invocation -> invocation.getArgument(0))
+               .thenThrow(new RuntimeException("response lost"));
+        String json = "{\"vertices\":[" +
+                      "{\"id\":\"source\",\"label\":\"person\",\"properties\":{}}," +
+                      "{\"id\":\"target\",\"label\":\"person\",\"properties\":{}}],\"edges\":[]}";
+
+        ExternalException error = (ExternalException) Assert.assertThrows(ExternalException.class, () -> {
+            service.importJson(client, this.file(json));
+        });
+
+        Assert.assertEquals("graph.import.partial-failure", error.getMessage());
+        Assert.assertEquals(1, error.args()[0]);
+        Assert.assertEquals(0, error.args()[1]);
+        Mockito.verify(graph, Mockito.never()).deleteVertex(Mockito.any());
+        Mockito.verify(graph, Mockito.never()).deleteEdge(Mockito.anyString());
+    }
+
+    @Test
+    public void testPartialImportMessageExplainsAcknowledgedCountsAndUncertainty() {
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("i18n/messages");
+        messages.setDefaultEncoding("UTF-8");
+        Object[] counts = {2, 1};
+        String english = messages.getMessage("graph.import.partial-failure", counts, Locale.ENGLISH);
+        String chinese = messages.getMessage("graph.import.partial-failure", counts, Locale.SIMPLIFIED_CHINESE);
+
+        Assert.assertTrue(english.contains("2 vertex and 1 edge"));
+        Assert.assertTrue(english.contains("failed request may also have succeeded"));
+        Assert.assertTrue(chinese.contains("2 次顶点写入和 1 次边写入"));
+        Assert.assertTrue(chinese.contains("失败的请求也可能已成功"));
     }
 
     @Test

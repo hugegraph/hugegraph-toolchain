@@ -81,6 +81,7 @@ function mobileOverviewFixture() {
 const task = { id: 80001, task_name: 'g.V().limit(100002)', task_type: 'gremlin', task_status: 'failed', task_create: now - 49000, task_update: now - 45602 };
 const taskResult = { ...task, task_result: 'org.apache.hugegraph.exception.LimitExceedException: Task result size 77849617 exceeded limit 16777216 bytes' };
 function pageResult(records, selected) { return { records, total: records.length, current: 1, size: 100, pages: 1, selected: records.find(x => x.name === selected) ?? null }; }
+const partialImportMessage = '导入失败。Server 已确认 2 次顶点写入和 1 次边写入；失败的请求也可能已成功。已有数据可能被覆盖，未自动回滚。请检查图数据和备份后再重试';
 function sessionFixture(state, method) {
     if (method !== 'GET') return {status: 405, message: 'Unexpected fixture session method'};
     if (!state.auth || !state.loggedIn) return {status: 401, message: 'Fixture session requires authenticated login'};
@@ -107,7 +108,7 @@ function queryFixture(method, pathname, body, truncated = false) {
 async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
-    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
+    const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false, partialImportRequests: 0,
         operationsOverview: null, extraCapabilities: [] };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
@@ -205,6 +206,15 @@ async function setup(browser, auth) {
             data = { configured: false, available: false };
         else if (p.endsWith('/text2gql/config'))
             data = { available: false, custom_available: true, reason: 'not_configured' };
+        // Exercise only the UI's handling of a failure response; the separate
+        // canonical-path fix is required before this works with a real Server.
+        else if (method === 'POST' && (p === '//graphspaces/DEFAULT/graphs/hugegraph/import' ||
+                                     p === '/graphspaces/DEFAULT/graphs/hugegraph/import')) {
+            state.partialImportRequests++;
+            await route.fulfill({status: 200, contentType: 'application/json',
+                body: JSON.stringify({status: 400, message: partialImportMessage})});
+            return;
+        }
         else if (p.endsWith('/schema/graphview')) {
             const response = graphViewFixture(method, p);
             if (response.status !== 200) unexpected.add(`${method} ${p}`);
@@ -397,6 +407,17 @@ async function main() {
             await execute.click();
             await page.getByRole('group', {name: '节点：当前结果 2；全图总数未获取', exact: true}).waitFor();
             await screenshot(page, 'graph-context-switch');
+        });
+        await check('partial import failure shows acknowledged writes and recovery guidance', async () => {
+            await page.goto(base + '/gremlin/DEFAULT/hugegraph');
+            const upload = page.locator('input[type=file]');
+            await upload.waitFor({state: 'attached'});
+            assert(await upload.isEnabled());
+            await upload.setInputFiles({name: 'import.json',
+                mimeType: 'application/json', buffer: Buffer.from('{"vertices":[],"edges":[]}')});
+            await page.getByText(partialImportMessage, {exact: true}).waitFor();
+            assert.equal(state.partialImportRequests, 1);
+            await screenshot(page, 'import-failure-progress');
         });
         await check('core query actions are usable at desktop and compact widths', async () => {
             for (const width of [1440, 1024]) {

@@ -246,10 +246,15 @@ public class GraphService {
         GraphManager graph = client.graph();
         Map<Object, Vertex> createdVertices = new HashMap<>(pendingVertices);
         List<Vertex> createdVertexList = new ArrayList<>(vertices.size());
+        int acknowledgedVertices = 0;
+        int acknowledgedEdges = 0;
         try {
             for (int i = 0; i < vertices.size(); i++) {
                 Vertex vertex = vertices.get(i);
                 Vertex created = graph.addVertex(vertex);
+                // Count only calls which returned successfully. A failed call
+                // may also have committed before its response was lost.
+                acknowledgedVertices++;
                 createdVertices.put(created.id(), created);
                 Object importId = vertexImportIds.get(i);
                 if (importId != null) {
@@ -261,6 +266,7 @@ public class GraphService {
                 EdgeHolder edgeHolder = this.buildEdge(client, entity,
                                                        createdVertices);
                 Edge edge = graph.addEdge(edgeHolder.edge);
+                acknowledgedEdges++;
                 edges.put(edge.id(), edge);
             }
         } catch (RuntimeException e) {
@@ -278,7 +284,8 @@ public class GraphService {
                     status = upstream;
                 }
             }
-            throw new ExternalException(status, "graph.import.partial-failure", e);
+            throw new ExternalException(status, "graph.import.partial-failure", e,
+                                        acknowledgedVertices, acknowledgedEdges);
         }
         return GraphView.builder()
                 .vertices(VertexQueryEntity.fromVertices(createdVertexList))
