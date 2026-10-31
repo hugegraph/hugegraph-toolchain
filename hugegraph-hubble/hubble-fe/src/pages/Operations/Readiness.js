@@ -30,6 +30,14 @@ const markNodeReadinessStale = node => node ? {
     ...(node.process_lifecycle ? {process_lifecycle: {...node.process_lifecycle, stale: true}} : {}),
 } : node;
 
+const markNodeStale = node => node ? {
+    ...markNodeReadinessStale(node),
+    ...(node.metric_statuses ? {metric_statuses: Object.fromEntries(
+        Object.entries(node.metric_statuses).map(([name, status]) => [name,
+            status && {...status, fresh: false, stale: true}])
+    )} : {}),
+} : node;
+
 const ProcessLifecyclePanel = ({lifecycle}) => {
     const {t, i18n} = useTranslation();
     if (!lifecycle) return null;
@@ -110,4 +118,4 @@ const ReadinessPanel = ({readiness}) => {
     );
 };
 
-export {ReadinessStatus, ReadinessPanel, ProcessLifecyclePanel, readinessLabel, markNodeReadinessStale};
+export {ReadinessStatus, ReadinessPanel, ProcessLifecyclePanel, readinessLabel, markNodeReadinessStale, markNodeStale};

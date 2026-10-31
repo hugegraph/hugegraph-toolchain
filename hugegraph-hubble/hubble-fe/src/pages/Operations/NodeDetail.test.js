@@ -276,6 +276,47 @@ test('keeps old readiness stale through a retry until a successful node response
     expect(within(panel).getByText('Ready', {exact: true})).toBeVisible();
 });
 
+test.each([
+    ['explicit metric status', {system: {availability: 'AVAILABLE', fresh: true, stale: false}}, 'AVAILABLE', true],
+    ['partial source fallback', undefined, 'PARTIAL', true],
+    ['available source fallback', undefined, 'AVAILABLE', false],
+])('keeps %s stale through refresh failure and pending retry', async (_, statuses, availability, initiallyFresh) => {
+    getNode.mockReset();
+    const snapshot = {...response, stale: false,
+        node: {...response.node, id: 'pd-safe', name: 'PD A', type: 'PD',
+            metrics: {system: {uptime_seconds: 12}}, metric_statuses: statuses},
+        sources: {pd: {status: 'UP', availability, fresh: true, stale: false, observed_at: 1000}}};
+    let finishRetry;
+    getNode.mockResolvedValueOnce(snapshot).mockRejectedValueOnce(new Error('offline'))
+        .mockReturnValueOnce(new Promise(resolve => {finishRetry = resolve;}));
+    renderDetail();
+    await screen.findByRole('heading', {name: 'PD A'});
+    const system = screen.getByRole('heading', {name: 'System'}).closest('section');
+    expect(Boolean(within(system).queryByRole('img', {name: 'Fresh'}))).toBe(initiallyFresh);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+    await waitFor(() => expect(within(system).getByText('Stale')).toBeVisible());
+    expect(within(system).queryByRole('img', {name: 'Fresh'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+    expect(within(system).getByText('Stale')).toBeVisible();
+    expect(within(system).queryByRole('img', {name: 'Fresh'})).not.toBeInTheDocument();
+
+    await act(async () => finishRetry(snapshot));
+    expect(within(system).queryByText('Stale')).not.toBeInTheDocument();
+    expect(Boolean(within(system).queryByRole('img', {name: 'Fresh'}))).toBe(initiallyFresh);
+});
+
+test('does not display a fresh icon when a metric response is also stale', async () => {
+    getNode.mockReset();
+    getNode.mockResolvedValue({...response, node: {...response.node,
+        metric_statuses: {system: {availability: 'AVAILABLE', fresh: true, stale: true}}}});
+    renderDetail();
+    await screen.findByRole('heading', {name: 'Store A'});
+    const system = screen.getByRole('heading', {name: 'System'}).closest('section');
+    expect(within(system).getByText('Stale')).toBeVisible();
+    expect(within(system).queryByRole('img', {name: 'Fresh'})).not.toBeInTheDocument();
+});
+
 test('keeps a retained PD endpoint sample stale through a failed refresh and pending retry', async () => {
     const pd = {...response, stale: false, node: {...response.node,
         id: 'pd-safe', name: 'PD A', type: 'PD', metrics: {}, metric_statuses: {}},
@@ -349,10 +390,10 @@ test('recovers an initial node failure and keeps a canonical node-list action', 
     expect(getNode).toHaveBeenCalledTimes(2);
 });
 
-test('removes an earlier privileged node detail when refresh is forbidden', async () => {
+test.each([401, 403])('removes an earlier privileged node detail when refresh returns %s', async status => {
     getNode
         .mockResolvedValueOnce(response)
-        .mockRejectedValueOnce(Object.assign(new Error('forbidden'), {status: 403}));
+        .mockRejectedValueOnce(Object.assign(new Error('forbidden'), {status}));
 
     renderDetail();
     expect(await screen.findByRole('heading', {name: 'Store A'})).toBeInTheDocument();

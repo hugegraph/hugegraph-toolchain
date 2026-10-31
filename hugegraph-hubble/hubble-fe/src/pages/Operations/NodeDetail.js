@@ -30,10 +30,10 @@ import {
     SourceStrip,
     TierIcon,
 } from './components';
-import {formatMetricValue, formatObservedAt, selectAttentionSources} from './topology';
+import {formatMetricValue, formatObservedAt, markSourcesStale, selectAttentionSources} from './topology';
 import {operationsReturnTo} from './navigation';
 import SourceDiagnostics from './SourceDiagnostics';
-import {ProcessLifecyclePanel, ReadinessPanel, markNodeReadinessStale} from './Readiness';
+import {ProcessLifecyclePanel, ReadinessPanel, markNodeStale} from './Readiness';
 import './operations.scss';
 
 const GROUPS_BY_TYPE = {
@@ -371,7 +371,7 @@ const MetricGroup = ({group, name, values, status = {}, emptyMessage}) => {
             role='status'
             aria-label={availabilityLabel}
         >
-            {status.fresh && (
+            {status.fresh && !status.stale && (
                 <Tooltip title={t('operations.fresh')}>
                     <CheckCircleFilled
                         className='operations-metric-fresh'
@@ -469,9 +469,8 @@ const NodeDetail = () => {
             }
             else {
                 setData(snapshot => snapshot && {...snapshot, stale: true,
-                    node: markNodeReadinessStale(snapshot.node),
-                    sources: snapshot.sources && Object.fromEntries(Object.entries(snapshot.sources)
-                        .map(([name, source]) => [name, source && {...source, stale: true}]))});
+                    node: markNodeStale(snapshot.node),
+                    sources: markSourcesStale(snapshot.sources)});
             }
             setError(requestError);
         }
@@ -541,7 +540,7 @@ const NodeDetail = () => {
                 reason: source.reason,
             };
         }
-        return {availability: node.metrics?.[group] ? 'AVAILABLE' : 'UNSUPPORTED'};
+        return {availability: node.metrics?.[group] ? 'AVAILABLE' : 'UNSUPPORTED', stale: data?.stale === true};
     };
     return (
         <main className='operations-page operations-node-detail'>
@@ -569,7 +568,7 @@ const NodeDetail = () => {
                                 }
                             </span>
                         </div>
-                        <HealthStatus status={node.status} size='large' />
+                        <HealthStatus status={node.status} stale={data?.stale} size='large' />
                     </section>
                     <div className='operations-overall-status'>
                         <span>{t('operations.last_observed')}: {observed}</span>
