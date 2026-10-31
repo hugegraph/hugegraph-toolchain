@@ -15,7 +15,7 @@
  * under the License.
  */
 
-import {render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {CloneLayer} from './EditLayer';
 import * as api from '../../api';
@@ -62,4 +62,32 @@ test('keeps the dialog open after an unsupported or failed server request', asyn
     await waitFor(() => expect(api.manage.cloneGraph).toHaveBeenCalled());
     expect(onCancel).not.toHaveBeenCalled();
     expect(await screen.findByText('graph.clone.failed')).toBeInTheDocument();
+});
+
+test('displays a server rejection instead of suggesting an existing graph is a partial clone', async () => {
+    api.manage.cloneGraph.mockResolvedValue({status: 400, message: "The graph 'copy' has existed"});
+    render(<CloneLayer open graphspace='DEFAULT' graph='source' onCancel={jest.fn()} refresh={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText('graph.clone.name'), 'copy');
+    await waitFor(() => expect(screen.getByLabelText('graph.clone.nickname_label')).toHaveValue('graph.clone.nickname'));
+    await userEvent.click(screen.getByRole('button', {name: /ok/i}));
+    expect(await screen.findByText("The graph 'copy' has existed")).toBeInTheDocument();
+});
+
+test('a previous clone response cannot close or refresh a reopened dialog', async () => {
+    let resolveClone;
+    api.manage.cloneGraph.mockReturnValue(new Promise(resolve => { resolveClone = resolve; }));
+    const onCancel = jest.fn();
+    const refresh = jest.fn();
+    const view = render(<CloneLayer open graphspace='DEFAULT' graph='source' onCancel={onCancel} refresh={refresh} />);
+    await userEvent.type(screen.getByLabelText('graph.clone.name'), 'copy');
+    await waitFor(() => expect(screen.getByLabelText('graph.clone.nickname_label')).toHaveValue('graph.clone.nickname'));
+    await userEvent.click(screen.getByRole('button', {name: /ok/i}));
+    await waitFor(() => expect(api.manage.cloneGraph).toHaveBeenCalled());
+    view.rerender(<CloneLayer open={false} graphspace='DEFAULT' graph='source' onCancel={onCancel} refresh={refresh} />);
+    view.rerender(<CloneLayer open graphspace='DEFAULT' graph='other' onCancel={onCancel} refresh={refresh} />);
+    await userEvent.type(screen.getByLabelText('graph.clone.name'), 'next');
+    await act(async () => resolveClone({status: 200, data: {name: 'copy'}}));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('graph.clone.name')).toHaveValue('next');
 });

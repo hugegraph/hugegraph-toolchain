@@ -108,7 +108,7 @@ async function setup(browser, auth) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'Asia/Taipei' });
     await context.addInitScript(() => localStorage.setItem('languageType', 'zh-CN'));
     const state = { auth, loggedIn: false, loginRequests: [], truncation: false, pendingDetail: null, graphGate: null, taskLookups: 0, taskSubmitted: false,
-        operationsOverview: null, extraCapabilities: [], schemaClones: [] };
+        operationsOverview: null, extraCapabilities: [], schemaClones: [], schemaCloneEnabled: true };
     const capabilities = ['graphspaces_read', 'operations_health_read', 'operations_topology_read', ...(auth ? ['accounts_manage', 'model_settings_manage'] : [])];
     await context.route('**/api/v*/**', async (route) => {
         const req = route.request();
@@ -142,7 +142,7 @@ async function setup(browser, auth) {
         }
         let data;
         if (p === '/config')
-            data = { pd_enabled: true, auth_enabled: auth, server_capabilities_verified: true, graph_create_enabled: true, cypher_enabled: false };
+            data = { pd_enabled: true, auth_enabled: auth, server_capabilities_verified: true, graph_create_enabled: true, schema_clone_enabled: state.schemaCloneEnabled, cypher_enabled: false };
         else if (p === '/auth/login') {
             const credentials = method === 'POST' ? req.postDataJSON() : null;
             state.loginRequests.push({method, credentials});
@@ -320,6 +320,11 @@ async function main() {
             await screenshot(page, 'graphspace-authenticated');
         });
         await check('clone graph schema without graph data', async () => {
+            state.schemaCloneEnabled = false;
+            await page.goto(base + '/graphspace/DEFAULT');
+            await page.getByRole('button', {name: /记忆图.*更多操作/}).click();
+            assert.equal(await page.getByRole('menuitem', {name: '克隆 Schema', exact: true}).getAttribute('aria-disabled'), 'true');
+            state.schemaCloneEnabled = true;
             await page.goto(base + '/graphspace/DEFAULT');
             await page.getByRole('button', {name: /记忆图.*更多操作/}).click();
             await page.getByRole('menuitem', {name: '克隆 Schema', exact: true}).click();

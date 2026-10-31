@@ -100,6 +100,7 @@ beforeEach(() => {
     sessionStorage.setItem('hubble_config_', JSON.stringify({
         pd_enabled: true,
         graph_create_enabled: true,
+        schema_clone_enabled: true,
     }));
     mockAuthContext = {
         context: {role: 'SUPERADMIN', scopes: {all_graphspaces: true}},
@@ -176,6 +177,19 @@ test('opens schema clone from the graph card', async () => {
     const menu = await screen.findByTestId('graph-card-menu');
     fireEvent.click(within(menu).getByText('graph.menu.clone'));
     expect(screen.getByTestId('clone-layer')).toHaveTextContent('default-graph');
+});
+
+test('keeps clone disabled when graph creation exists but schema cloning is unsupported', async () => {
+    sessionStorage.setItem('hubble_config_', JSON.stringify({pd_enabled: true, graph_create_enabled: true}));
+    render(<Graph />);
+    const menu = await screen.findByTestId('graph-card-menu');
+    expect(within(menu).getByText('graph.menu.clone').closest('[role="menuitem"]'))
+        .toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(screen.getByLabelText('common.label.list_mode'));
+    const disabledClone = await screen.findByText('graph.menu.clone');
+    expect(disabledClone.tagName).toBe('SPAN');
+    fireEvent.click(disabledClone);
+    expect(screen.queryByTestId('clone-layer')).not.toBeInTheDocument();
 });
 
 test('keeps the graph card actions including example datasets', async () => {

@@ -529,9 +529,12 @@ const ViewLayer = ({visible, onCancel, graphspace, graph}) => {
 const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const generation = useRef(0);
     const {t} = useTranslation();
 
     useEffect(() => {
+        generation.current += 1;
+        setLoading(false);
         if (!open) return;
         form.resetFields();
         let active = true;
@@ -542,10 +545,11 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
                 });
             }
         }).catch(() => {});
-        return () => { active = false; };
+        return () => { active = false; generation.current += 1; };
     }, [open, graphspace, graph, form, t]);
 
     const handleClone = async () => {
+        const requestGeneration = generation.current;
         let values;
         try {
             values = await form.validateFields();
@@ -553,21 +557,28 @@ const CloneLayer = ({open, onCancel, refresh, graphspace, graph}) => {
         catch {
             return;
         }
+        if (requestGeneration !== generation.current) return;
         setLoading(true);
         try {
             const res = await api.manage.cloneGraph(graphspace, graph, {
                 graphspace, name: values.name, nickname: values.nickname, load_data: 0,
             }, {suppressBusinessErrorToast: true});
-            if (res.status !== 200) throw new Error();
+            if (requestGeneration !== generation.current) return;
+            if (res.status !== 200) {
+                message.error(res.message || t('graph.clone.failed'));
+                return;
+            }
             message.success(t('graph.clone.success'));
             onCancel();
             refresh();
         }
-        catch {
-            message.error(t('graph.clone.failed'));
+        catch (error) {
+            if (requestGeneration === generation.current) {
+                message.error(error?.response?.data?.message || t('graph.clone.failed'));
+            }
         }
         finally {
-            setLoading(false);
+            if (requestGeneration === generation.current) setLoading(false);
         }
     };
 

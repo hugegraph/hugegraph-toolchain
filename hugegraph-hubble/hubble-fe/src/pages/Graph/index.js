@@ -42,7 +42,7 @@ import {PlusOutlined} from '@ant-design/icons';
 import {Link, useParams, useNavigate} from 'react-router-dom';
 import style from './index.module.scss';
 import * as api from '../../api';
-import {isGraphCreateEnabled, isPdEnabled} from '../../utils/config';
+import {isGraphCreateEnabled, isPdEnabled, isSchemaCloneEnabled} from '../../utils/config';
 import {
     DEFAULT_GRAPHSPACE,
     isGraphDefaultMutationEnabled,
@@ -110,8 +110,9 @@ const Graph = () => {
     const navigate = useNavigate();
     const pdMode = isPdEnabled();
     const graphCreateEnabled = isGraphCreateEnabled();
+    const schemaCloneEnabled = isSchemaCloneEnabled();
     const graphCreateUnavailableHint = t('graph.server_upgrade_hint');
-    const cloneUnavailableHint = graphCreateUnavailableHint;
+    const cloneUnavailableHint = t('graph.clone.unavailable');
     const graphDefaultMutationEnabled = isGraphDefaultMutationEnabled(pdMode);
     const {canManage, canWrite} = useGraphspaceAccess(graphspace);
     const {context: authContext, identityEpoch} = useAuthContext();
@@ -459,11 +460,13 @@ const Graph = () => {
                                     </GraphRowAction>
                                 )
                         )}
-                        {canManage && graphCreateEnabled
+                        {canManage && schemaCloneEnabled
                             ? <GraphRowAction onAction={showClone} graph={row.name}>
                                 {t('graph.menu.clone')}
                             </GraphRowAction>
-                            : <span className={style.disable}>{t('graph.menu.clone')}</span>}
+                            : <Tooltip title={!schemaCloneEnabled ? cloneUnavailableHint : undefined}>
+                                <span className={style.disable}>{t('graph.menu.clone')}</span>
+                            </Tooltip>}
                     </Space>
                 );
             },
@@ -536,11 +539,11 @@ const Graph = () => {
             },
             {
                 key: 'clone',
-                disabled: !canManage || !graphCreateEnabled,
-                label: !graphCreateEnabled
+                disabled: !canManage || !schemaCloneEnabled,
+                label: !schemaCloneEnabled
                     ? <Tooltip title={cloneUnavailableHint}>{t('graph.menu.clone')}</Tooltip>
                     : t('graph.menu.clone'),
-                onClick: canManage && graphCreateEnabled ? () => showClone(item.name) : undefined,
+                onClick: canManage && schemaCloneEnabled ? () => showClone(item.name) : undefined,
             },
         ].filter(Boolean);
     };
