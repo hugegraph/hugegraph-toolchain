@@ -37,6 +37,14 @@ const createColumns = t => [
         render: val => (val === null || val === undefined ? '-' : val.toString()),
     },
     {
+        title: t('task.detail.status'),
+        dataIndex: 'job_status',
+        className: style.no_wrap,
+        align: 'center',
+        width: 110,
+        render: val => <TaskStatus status={val} />,
+    },
+    {
         title: <FormHelpLabel
             label={t('task.detail.import_count')}
             help={t('task.detail.input_count_help')}
@@ -104,14 +112,6 @@ const createColumns = t => [
 
             return '-';
         },
-    },
-    {
-        title: t('task.detail.status'),
-        dataIndex: 'job_status',
-        className: style.no_wrap,
-        align: 'center',
-        width: 110,
-        render: val => <TaskStatus status={val} />,
     },
     {
         title: t('task.detail.other'),

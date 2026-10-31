@@ -195,8 +195,8 @@ it('distinguishes zero input records from an unavailable count', async () => {
 
     const zeroRow = (await screen.findByText('7')).closest('tr');
     const unknownRow = screen.getByText('8').closest('tr');
-    expect(zeroRow.querySelectorAll('td')[1]).toHaveTextContent(/^0$/);
-    expect(unknownRow.querySelectorAll('td')[1]).toHaveTextContent(/^-$/);
+    expect(zeroRow.querySelectorAll('td')[2]).toHaveTextContent(/^0$/);
+    expect(unknownRow.querySelectorAll('td')[2]).toHaveTextContent(/^-$/);
 });
 
 it('shows confirmed vertex and edge operations separately, preserving unknown and zero', async () => {
@@ -214,11 +214,11 @@ it('shows confirmed vertex and edge operations separately, preserving unknown an
 
     const row = (await screen.findByText('7')).closest('tr');
     const legacyRow = screen.getByText('8').closest('tr');
-    expect(row.querySelectorAll('td')[1]).toHaveTextContent(/^2$/);
-    expect(row.querySelectorAll('td')[2]).toHaveTextContent(/^1$/);
-    expect(row.querySelectorAll('td')[3]).toHaveTextContent(/^0$/);
-    expect(legacyRow.querySelectorAll('td')[2]).toHaveTextContent(/^-$/);
+    expect(row.querySelectorAll('td')[2]).toHaveTextContent(/^2$/);
+    expect(row.querySelectorAll('td')[3]).toHaveTextContent(/^1$/);
+    expect(row.querySelectorAll('td')[4]).toHaveTextContent(/^0$/);
     expect(legacyRow.querySelectorAll('td')[3]).toHaveTextContent(/^-$/);
+    expect(legacyRow.querySelectorAll('td')[4]).toHaveTextContent(/^-$/);
     expect(screen.getAllByRole('img', {
         name: /Latest attempt; updates count again/,
     })).toHaveLength(2);

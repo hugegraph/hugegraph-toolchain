@@ -603,12 +603,12 @@ async function main() {
                 const row = item.page.locator('tbody tr').filter({hasText: '7'}).first();
                 await row.waitFor({state: 'visible'});
                 const cells = row.locator('td');
-                assert.equal((await cells.nth(1).innerText()).trim(), '2');
-                assert.equal((await cells.nth(2).innerText()).trim(), '1');
-                assert.equal((await cells.nth(3).innerText()).trim(), '0');
+                assert.equal((await cells.nth(2).innerText()).trim(), '2');
+                assert.equal((await cells.nth(3).innerText()).trim(), '1');
+                assert.equal((await cells.nth(4).innerText()).trim(), '0');
                 const legacyCells = item.page.locator('tbody tr').filter({hasText: '8'}).first().locator('td');
-                assert.equal((await legacyCells.nth(2).innerText()).trim(), '-');
                 assert.equal((await legacyCells.nth(3).innerText()).trim(), '-');
+                assert.equal((await legacyCells.nth(4).innerText()).trim(), '-');
                 assert(await item.page.locator('thead').getByText('已确认写入顶点数', {exact: true}).isVisible());
                 assert(await item.page.locator('thead').getByText('已确认写入边数', {exact: true}).isVisible());
                 if (item.state.auth) await screenshot(item.page, 'import-write-metrics');
