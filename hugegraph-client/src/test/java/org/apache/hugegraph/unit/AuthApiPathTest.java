@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 
 import org.apache.hugegraph.api.auth.UserAPI;
+import org.apache.hugegraph.api.ip.WhiteIpListAPI;
 import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.structure.auth.User;
@@ -108,6 +109,37 @@ public class AuthApiPathTest {
                                 e -> Assert.assertContains(
                                         "User 'missing' does not exist",
                                         e.getMessage()));
+        } finally {
+            client.close();
+            server.stop(0);
+        }
+    }
+
+    @Test
+    public void testWhiteIpListUpdateSendsStatusAsQueryParameter() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        java.util.List<String> queries = new java.util.concurrent.CopyOnWriteArrayList<>();
+        server.createContext("/whiteiplist", exchange -> {
+            queries.add(exchange.getRequestMethod() + " " +
+                        exchange.getRequestURI().getRawQuery());
+            byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(body);
+            }
+        });
+        server.start();
+        RestClient client = new RestClient(
+                "http://127.0.0.1:" + server.getAddress().getPort(),
+                "admin", "password", 1);
+        try {
+            WhiteIpListAPI api = new WhiteIpListAPI(client);
+            api.update(true);
+            api.update(false);
+            Assert.assertEquals(2, queries.size());
+            Assert.assertEquals("PUT status=true", queries.get(0));
+            Assert.assertEquals("PUT status=false", queries.get(1));
         } finally {
             client.close();
             server.stop(0);
