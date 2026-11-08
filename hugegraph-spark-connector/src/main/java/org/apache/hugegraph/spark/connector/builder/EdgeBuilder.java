@@ -167,28 +167,26 @@ public class EdgeBuilder extends ElementBuilder<Edge> {
 
     private VertexIdsIndex extractVertexIdsIndex(String[] names) {
         VertexIdsIndex index = new VertexIdsIndex();
-        index.sourceIndexes = new int[this.mapping.sourceFields().size()];
-        int idx = 0;
-        for (String field : this.mapping.sourceFields()) {
-            for (int pos = 0; pos < names.length; pos++) {
-                String name = names[pos];
-                if (field.equals(name)) {
-                    index.sourceIndexes[idx++] = pos;
-                }
-            }
-        }
-
-        index.targetIndexes = new int[this.mapping.targetFields().size()];
-        idx = 0;
-        for (String field : this.mapping.targetFields()) {
-            for (int pos = 0; pos < names.length; pos++) {
-                String name = names[pos];
-                if (field.equals(name)) {
-                    index.targetIndexes[idx++] = pos;
-                }
-            }
-        }
+        index.sourceIndexes = findFieldIndexes(this.mapping.sourceFields(), names);
+        index.targetIndexes = findFieldIndexes(this.mapping.targetFields(), names);
         return index;
+    }
+
+    static int[] findFieldIndexes(List<String> fields, String[] names) {
+        int[] indexes = new int[fields.size()];
+        for (int i = 0; i < fields.size(); i++) {
+            String field = fields.get(i);
+            int match = -1;
+            for (int pos = 0; pos < names.length; pos++) {
+                if (field.equals(names[pos])) {
+                    E.checkArgument(match == -1, "Duplicate edge endpoint field '%s'", field);
+                    match = pos;
+                }
+            }
+            E.checkArgument(match != -1, "Missing edge endpoint field '%s'", field);
+            indexes[i] = match;
+        }
+        return indexes;
     }
 
     private static class VertexIdsIndex {
