@@ -58,4 +58,11 @@ public class EdgeBuilderFieldIndexesTest {
                                                               new String[]{"other", "id",
                                                                            "other"}));
     }
+
+    @Test
+    public void repeatedMappingFieldKeepsExistingBehavior() {
+        Assert.assertArrayEquals(new int[]{1, 1},
+                                 EdgeBuilder.findFieldIndexes(Arrays.asList("id", "id"),
+                                                              new String[]{"other", "id"}));
+    }
 }
