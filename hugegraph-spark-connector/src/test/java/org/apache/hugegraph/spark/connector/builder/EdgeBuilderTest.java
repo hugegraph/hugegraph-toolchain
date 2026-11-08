@@ -82,6 +82,45 @@ public class EdgeBuilderTest {
         Assert.assertEquals("2:lop", edge.targetId());
     }
 
+    @Test
+    public void testMissingSourceColumnIsRejected() {
+        EdgeMapping mapping = new EdgeMapping(Collections.singletonList("v1-name"),
+                                              Collections.singletonList("name"));
+        mapping.label("created");
+        EdgeBuilder builder = new EdgeBuilder(getEdgeLoadContext(), mapping);
+
+        Assert.assertThrows(IllegalArgumentException.class,
+                            () -> builder.build(new String[]{"name", "weight"},
+                                                new Object[]{"lop", 0.4}),
+                            e -> Assert.assertContains("v1-name", e.getMessage()));
+    }
+
+    @Test
+    public void testMissingTargetColumnIsRejected() {
+        EdgeMapping mapping = new EdgeMapping(Collections.singletonList("v1-name"),
+                                              Collections.singletonList("name"));
+        mapping.label("created");
+        EdgeBuilder builder = new EdgeBuilder(getEdgeLoadContext(), mapping);
+
+        Assert.assertThrows(IllegalArgumentException.class,
+                            () -> builder.build(new String[]{"v1-name", "weight"},
+                                                new Object[]{"josh", 0.4}),
+                            e -> Assert.assertContains("name", e.getMessage()));
+    }
+
+    @Test
+    public void testDuplicateEndpointColumnIsRejected() {
+        EdgeMapping mapping = new EdgeMapping(Collections.singletonList("v1-name"),
+                                              Collections.singletonList("name"));
+        mapping.label("created");
+        EdgeBuilder builder = new EdgeBuilder(getEdgeLoadContext(), mapping);
+
+        Assert.assertThrows(IllegalArgumentException.class,
+                            () -> builder.build(new String[]{"v1-name", "name", "name"},
+                                                new Object[]{"josh", "lop", "ripple"}),
+                            e -> Assert.assertContains("name", e.getMessage()));
+    }
+
     @NotNull
     private static HGLoadContext getEdgeLoadContext() {
         Map<String, String> configs = new HashMap<>();
