@@ -52,7 +52,7 @@ public class WhiteIpListAPI extends API {
 
     public Map<String, Object> update(boolean status) {
         Map<String, Object> params = ImmutableMap.of("status", status);
-        RestResult result = this.client.put(this.path(), null, params);
+        RestResult result = this.client.put(this.path(), null, null, params);
         return result.readObject(Map.class);
     }
 }
